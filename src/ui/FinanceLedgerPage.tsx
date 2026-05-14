@@ -272,8 +272,9 @@ function YearOverview({ transactions }: { transactions: LedgerTransaction[] }) {
         <SmallStat label="Resultaat" value={formatEuro(income - expenses)} />
         <SmallStat label="Transacties" value={String(yearTransactions.length)} />
       </div>
-      <div className="mt-5 rounded-[1.5rem] bg-[#f5f1ea] p-5 text-sm leading-6 text-[#6f6253]">
-        Balansoverdracht en begin-/eindbalans worden in een volgende datamodel-fase definitief gemaakt. Tot die tijd gebruikt dit overzicht de geïmporteerde transacties als basis.
+      <div className="mt-5 flex flex-col gap-3 rounded-[1.5rem] bg-[#f5f1ea] p-5 text-sm leading-6 text-[#6f6253] md:flex-row md:items-center md:justify-between">
+        <p>Voor beginbalans, eindbalans en ANBI-tekst gebruik je het rapportenscherm. Deze kaart blijft bewust simpel.</p>
+        <Link href={`/reports?year=${year}`} className="rounded-2xl bg-[#1f5f4a] px-4 py-2 text-center text-sm font-semibold text-[#fbf8f2]">Open rapport</Link>
       </div>
     </section>
   );
@@ -285,20 +286,6 @@ function SmallStat({ label, value }: { label: string; value: string }) {
       <p className="text-sm text-[#7d6d5a]">{label}</p>
       <p className="mt-2 text-2xl font-semibold tracking-[-0.04em]">{value}</p>
     </div>
-  );
-}
-
-function SettingsConcept() {
-  return (
-    <section id="instellingen" className="rounded-[2rem] border border-[#ded5c8] bg-[#fbf8f2] p-6 shadow-[0_24px_70px_rgba(87,67,45,0.08)]">
-      <p className="text-sm font-medium text-[#7d6d5a]">Instellingen</p>
-      <h3 className="mt-1 text-2xl font-semibold tracking-[-0.04em]">Beheermodus blijft verborgen</h3>
-      <div className="mt-5 grid gap-3 md:grid-cols-3">
-        {['Categorieën', 'Projecten/fondsen', 'E-mailontvangers', 'ING-importbestanden', 'Auditlog', 'Veilige beheermodus'].map((item) => (
-          <div key={item} className="rounded-[1.25rem] border border-[#ded5c8] bg-[#f8f3ec] p-4 text-sm font-semibold text-[#574b3f]">{item}</div>
-        ))}
-      </div>
-    </section>
   );
 }
 
@@ -335,7 +322,6 @@ export default function FinanceLedgerPage() {
         <ImportPanel />
         <TransactionTable transactions={monthTransactions} />
         <YearOverview transactions={transactions} />
-        <SettingsConcept />
       </div>
     </AppFrame>
   );

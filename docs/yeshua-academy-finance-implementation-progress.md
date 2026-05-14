@@ -1077,3 +1077,47 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 21. Ledger UI simplification pass
+
+Started from pushed main commit:
+
+- `1e549c3 Improve import feedback and review suggestions`
+
+### Ledger page cleanup
+
+Implemented:
+
+- `src/ui/FinanceLedgerPage.tsx`
+
+Result:
+
+- Removed the redundant settings concept block from the ledger page now that `/settings` is the real settings surface.
+- Replaced stale year-overview copy that said balance transfer still needed a future datamodel phase.
+- The year overview now points users directly to `/reports` for beginbalans, eindbalans, and ANBI/public report text.
+- Ledger remains focused on the core workflow: import, month KPIs, transactions, and simple year overview.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 8 test files passed.
+- 26 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
