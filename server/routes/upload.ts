@@ -97,7 +97,7 @@ export const handleImportUpload = async (req: Request, res: Response) => {
   }
 };
 
-const buildImportMessage = (summary: {
+export const buildImportMessage = (summary: {
   importedCount: number;
   duplicateCount: number;
   errorCount: number;

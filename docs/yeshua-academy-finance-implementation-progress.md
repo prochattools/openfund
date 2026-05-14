@@ -1465,3 +1465,48 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 29. Dutch import message regression-test pass
+
+Started from pushed main commit:
+
+- `30c176a Test audit log service payloads`
+
+### Import feedback tests
+
+Implemented:
+
+- `server/routes/upload.ts`
+- `tests/routes/upload.test.ts`
+
+Result:
+
+- Exported `buildImportMessage` for isolated regression testing.
+- Added tests for complete Dutch import summary feedback.
+- Added singular/plural Dutch wording coverage.
+- Added zero-count coverage so optional sections stay hidden when there is nothing to report.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 11 test files passed.
+- 35 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
