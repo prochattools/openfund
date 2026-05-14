@@ -1121,3 +1121,50 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 22. Pending-review import regression pass
+
+Started from pushed main commit:
+
+- `e741a0f Simplify ledger workflow UI`
+
+### Import summary regression fix
+
+Implemented:
+
+- `server/services/importService.ts`
+- `tests/import/integration.test.ts`
+
+Result:
+
+- Newly imported transactions that are not fully auto-categorized now increment `pendingReviewCount` correctly.
+- Existing/reprocessed duplicate imports and newly created imports now use the same pending-review counting rule.
+- Added regression coverage in the import integration tests so a no-history import asserts:
+  - `importedCount = 1`
+  - `autoCategorizedCount = 0`
+  - `pendingReviewCount = 1`
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 8 test files passed.
+- 26 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

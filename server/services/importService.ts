@@ -1345,6 +1345,8 @@ export const processImportBufferWithClient = async (
           classification.classificationSource === 'history' || classification.classificationSource === 'rule';
         if (isAutoCategorized) {
           autoCategorized += 1;
+        } else {
+          pendingReview += 1;
         }
 
         records.push({

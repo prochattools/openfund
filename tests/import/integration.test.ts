@@ -544,11 +544,15 @@ describe('import pipeline integration', () => {
       'NL89INGB0006369960;Support gift;Donor One;AB12;05-11-2025;Credit;250.00;Online Banking;New income',
     ].join('\n');
 
-    await processImportBufferWithClient(prisma as any, {
+    const creditSummary = await processImportBufferWithClient(prisma as any, {
       buffer: Buffer.from(creditCsv, 'utf-8'),
       filename: 'no-history-credit.csv',
       userId: 'demo-user',
     });
+
+    expect(creditSummary.importedCount).toBe(1);
+    expect(creditSummary.autoCategorizedCount).toBe(0);
+    expect(creditSummary.pendingReviewCount).toBe(1);
 
     const creditTx = prisma.transactions.find((tx) => tx.sourceFile === 'no-history-credit.csv');
     expect(creditTx).toBeTruthy();
