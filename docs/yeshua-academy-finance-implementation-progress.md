@@ -1874,3 +1874,47 @@ Planned validation for this doc/config-only pass:
 npm run build
 npm test
 ```
+
+
+## 38. Review suggestion accept-action pass
+
+Started from pushed main commit:
+
+- `05ce505 Correct env placeholder progress note`
+
+### Review action clarity
+
+Implemented:
+
+- `src/ui/FinanceReviewPage.tsx`
+
+Result:
+
+- The focused review card now has a direct `Suggestie accepteren` action in the suggestion block.
+- Admins can confirm the preselected suggestion without interpreting the dropdown/save controls as the primary workflow.
+- Viewer mode still disables the action and shows `Alleen beheerder`.
+- The existing `Opslaan` action remains available for manually adjusted categories or new category text.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 12 test files passed.
+- 37 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

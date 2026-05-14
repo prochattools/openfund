@@ -163,6 +163,7 @@ function ReviewCard({
   const isExpense = transaction.amount < 0;
   const availableSubs = mainId ? subcategories[mainId] ?? [] : [];
   const suggestedLabel = transaction.suggestedSubCategoryName ?? transaction.categoryName ?? transaction.suggestedMainCategoryName ?? transaction.mainCategoryName ?? 'Geen suggestie';
+  const canAcceptSuggestion = Boolean(canReview && (subId || mainId));
 
   const save = async () => {
     if (!canReview) {
@@ -202,9 +203,16 @@ function ReviewCard({
       </div>
 
       <div className="mt-6 rounded-[1.5rem] bg-[#f5f1ea] p-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8a7965]">Suggestie</p>
-        <p className="mt-2 font-semibold">{suggestedLabel}</p>
-        <p className="mt-1 text-sm text-[#6f6253]">Match: {translateSuggestionConfidence(transaction.suggestionConfidence)}</p>
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8a7965]">Suggestie</p>
+            <p className="mt-2 font-semibold">{suggestedLabel}</p>
+            <p className="mt-1 text-sm text-[#6f6253]">Match: {translateSuggestionConfidence(transaction.suggestionConfidence)}</p>
+          </div>
+          <button type="button" onClick={save} disabled={busy || !canAcceptSuggestion} className="rounded-2xl bg-[#1f5f4a] px-5 py-3 text-sm font-semibold text-[#fbf8f2] disabled:opacity-60">
+            {!canReview ? 'Alleen beheerder' : busy ? 'Opslaan…' : 'Suggestie accepteren'}
+          </button>
+        </div>
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_1fr_1fr_auto]">
