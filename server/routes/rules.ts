@@ -50,7 +50,7 @@ export const getRules = async (req: Request, res: Response) => {
     });
     return res.json(rules);
   } catch (error) {
-    console.error('Failed to load rules', error);
+    console.error('Categorisatieregels konden niet worden geladen', error);
     return res.status(500).json({ error: 'Categorisatieregels konden niet worden geladen.' });
   }
 };
@@ -124,7 +124,7 @@ export const postRule = async (req: Request, res: Response) => {
 
     return res.status(201).json(rule);
   } catch (error) {
-    console.error('Failed to create rule', error);
+    console.error('Categorisatieregel kon niet worden gemaakt', error);
     return res.status(500).json({ error: 'Categorisatieregel kon niet worden gemaakt.' });
   }
 };
@@ -211,7 +211,7 @@ export const patchRule = async (req: Request, res: Response) => {
     });
     return res.json(rule);
   } catch (error) {
-    console.error('Failed to update rule', error);
+    console.error('Categorisatieregel kon niet worden bijgewerkt', error);
     return res.status(500).json({ error: 'Categorisatieregel kon niet worden bijgewerkt.' });
   }
 };
@@ -247,7 +247,7 @@ export const previewRule = async (req: Request, res: Response) => {
     }));
     return res.json(safe);
   } catch (error) {
-    console.error('Failed to preview rule', error);
+    console.error('Voorbeeld van regel kon niet worden geladen', error);
     return res.status(500).json({ error: 'Voorbeeld van regel kon niet worden geladen.' });
   }
 };
@@ -290,7 +290,7 @@ export const applyRule = async (req: Request, res: Response) => {
     });
     return res.json({ updated: count });
   } catch (error) {
-    console.error('Failed to apply rule', error);
+    console.error('Categorisatieregel kon niet worden toegepast', error);
     return res.status(500).json({ error: 'Categorisatieregel kon niet worden toegepast.' });
   }
 };
@@ -332,7 +332,7 @@ export const removeRule = async (req: Request, res: Response) => {
     });
     return res.status(204).send();
   } catch (error) {
-    console.error('Failed to delete rule', error);
+    console.error('Categorisatieregel kon niet worden verwijderd', error);
     return res.status(500).json({ error: 'Categorisatieregel kon niet worden verwijderd.' });
   }
 };

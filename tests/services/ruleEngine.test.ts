@@ -106,8 +106,6 @@ describe('rule engine', () => {
 
     expect(findMatchingRule([inactiveMatch, activeMatch], baseContext)?.id).toBe('active');
   });
-});
-
 
   it('does not apply a rule when no transaction ids are selected', async () => {
     const fakeTx = {
@@ -173,3 +171,4 @@ describe('rule engine', () => {
       }],
     ]);
   });
+});

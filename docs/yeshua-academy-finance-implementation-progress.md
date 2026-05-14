@@ -3232,3 +3232,63 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 68. Rule route Dutch-log and test-structure pass
+
+Started from pushed main commit:
+
+- `c005948 Test empty review queue clearing`
+
+### Rule route server log localization
+
+Implemented:
+
+- `server/routes/rules.ts`
+
+Result:
+
+- Localized remaining rule-route server error logs to Dutch for:
+  - rule loading;
+  - rule creation;
+  - rule updates;
+  - rule previews;
+  - rule application;
+  - rule deletion.
+- Response bodies and route behavior remain unchanged.
+
+### Rule-engine test structure
+
+Implemented:
+
+- `tests/services/ruleEngine.test.ts`
+
+Result:
+
+- Moved the rule-application tests inside the existing `describe('rule engine')` suite.
+- Test behavior and assertions remain unchanged.
+- This keeps the rule-engine regression suite structured and easier to maintain.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 20 test files passed.
+- 87 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
