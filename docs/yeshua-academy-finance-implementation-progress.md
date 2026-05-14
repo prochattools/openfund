@@ -2918,3 +2918,49 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 61. Transaction matching normalization edge-test pass
+
+Started from pushed main commit:
+
+- `a778863 Localize notification route log`
+
+### Matching normalization coverage
+
+Implemented:
+
+- `tests/import/transactionMatching.test.ts`
+
+Result:
+
+- Added edge-case regression tests for transaction matching normalization.
+- Covered missing/blank descriptions returning `null` instead of creating weak match candidates.
+- Covered missing amount returning `null`.
+- Covered fallback counterparty extraction from normalized raw-row columns.
+- Covered numeric `Notifications` values from raw rows being normalized into comparable text.
+- This protects recurring-transaction matching and prevents weak or malformed imported rows from being matched too aggressively.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 20 test files passed.
+- 77 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

@@ -132,4 +132,43 @@ describe('transactionMatching helpers', () => {
     expect(match).not.toBeNull();
     expect(match?.categoryId).toBe('cat-expense');
   });
+
+  it('returns null when required match fields are missing', () => {
+    expect(normalizeMatchableTransaction({
+      description: '   ',
+      amountMinor: -100n,
+      direction: 'debit',
+    })).toBeNull();
+
+    expect(normalizeMatchableTransaction({
+      description: 'Valid description',
+      amountMinor: null,
+      direction: 'debit',
+    })).toBeNull();
+  });
+
+  it('falls back to counterparty and numeric notifications from raw rows', () => {
+    const normalized = normalizeMatchableTransaction({
+      description: 'Bankkosten',
+      amountMinor: -250n,
+      direction: 'debit',
+      accountIdentifier: 'NL89 INGB 0006 3699 60',
+      raw: {
+        columns: {
+          Counterparty: 'ING Bank',
+          Notifications: 12345,
+        },
+      },
+    });
+
+    expect(normalized).toMatchObject({
+      description: 'bankkosten',
+      signedAmountMinor: '-250',
+      absoluteAmountMinor: '250',
+      direction: 'debit',
+      accountIdentifier: 'NL89INGB0006369960',
+      counterparty: 'ing bank',
+      notifications: '12345',
+    });
+  });
 });
