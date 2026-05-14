@@ -2644,3 +2644,49 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 55. History-based categorization regression-test pass
+
+Started from pushed main commit:
+
+- `92c9157 Test transaction confirmation helper`
+
+### Automatic categorization history coverage
+
+Implemented:
+
+- `tests/services/categorizationService.test.ts`
+
+Result:
+
+- Added regression tests for `categorizeTransaction` history matching.
+- Covered exact source/amount history matching.
+- Covered normalized-description history fallback.
+- Covered popular historical category fallback when at least three previous matches exist.
+- Covered returning `none` when history is not strong enough.
+- This protects the automatic categorization behavior that feeds the manual review queue and keeps recurring transactions fast to approve.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 19 test files passed.
+- 63 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
