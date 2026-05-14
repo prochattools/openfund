@@ -1857,13 +1857,13 @@ Started from pushed main commit:
 
 Implemented:
 
-- `.env.example`
 - `docs/yeshua-academy-finance-auth-readiness.md`
 
 Result:
 
-- Added `NEXT_PUBLIC_API_USER_ROLE=admin` and `DEFAULT_USER_ROLE=admin` to the example environment.
+- Documented `NEXT_PUBLIC_API_USER_ROLE=admin` and `DEFAULT_USER_ROLE=admin` as local/internal role defaults.
 - Documented how to use `viewer` role values to test read-only UI/API behavior.
+- BuildFlow policy blocks staging env-template paths, so `.env.example` was not changed in the committed repo. Add those env placeholders locally when needed.
 - Keeps provider-neutral auth docs aligned with the role guardrails already implemented in the app.
 
 ### Validation
