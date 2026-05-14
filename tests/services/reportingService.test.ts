@@ -77,4 +77,59 @@ describe('reporting service', () => {
 
     expect(opening).toBe(115000);
   });
+
+  it('falls back through category, project, and uncategorized labels', () => {
+    const summary = buildPeriodReportSummary(
+      [
+        {
+          date: new Date('2026-04-01T00:00:00.000Z'),
+          amountMinor: 1000,
+          direction: 'credit',
+          mainCategoryName: ' ',
+          categoryName: 'Giften',
+        },
+        {
+          date: new Date('2026-04-02T00:00:00.000Z'),
+          amountMinor: 2000,
+          direction: 'credit',
+          categoryName: ' ',
+          projectName: 'Zending',
+        },
+        {
+          date: new Date('2026-04-03T00:00:00.000Z'),
+          amountMinor: 3000,
+          direction: 'credit',
+        },
+      ],
+      { year: 2026, month: 4 },
+    );
+
+    expect(summary.incomeByCategory).toEqual([
+      { label: 'Niet gecategoriseerd', amountMinor: 3000, transactionCount: 1 },
+      { label: 'Zending', amountMinor: 2000, transactionCount: 1 },
+      { label: 'Giften', amountMinor: 1000, transactionCount: 1 },
+    ]);
+  });
+
+  it('sorts equal breakdown totals by Dutch label order', () => {
+    const summary = buildPeriodReportSummary(
+      [
+        {
+          date: new Date('2026-04-01T00:00:00.000Z'),
+          amountMinor: 1000,
+          direction: 'debit',
+          mainCategoryName: 'Zorg',
+        },
+        {
+          date: new Date('2026-04-02T00:00:00.000Z'),
+          amountMinor: 1000,
+          direction: 'debit',
+          mainCategoryName: 'Administratie',
+        },
+      ],
+      { year: 2026, month: 4 },
+    );
+
+    expect(summary.expensesByCategory.map((item) => item.label)).toEqual(['Administratie', 'Zorg']);
+  });
 });

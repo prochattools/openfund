@@ -2828,3 +2828,50 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 59. Reporting category fallback regression-test pass
+
+Started from pushed main commit:
+
+- `853f8a0 Test reconciliation balance extraction`
+
+### Report breakdown label coverage
+
+Implemented:
+
+- `tests/services/reportingService.test.ts`
+
+Result:
+
+- Added regression tests for category-label fallback order in reports:
+  - main category;
+  - category;
+  - project;
+  - `Niet gecategoriseerd`.
+- Added deterministic Dutch label sorting coverage when breakdown totals are equal.
+- This protects monthly/yearly report readability and prevents unstable category ordering in the UI and exports.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 20 test files passed.
+- 75 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
