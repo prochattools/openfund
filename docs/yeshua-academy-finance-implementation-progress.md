@@ -2191,3 +2191,48 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 45. Report readiness warning pass
+
+Started from pushed main commit:
+
+- `dbcd1f2 Document import audit metadata pass`
+
+### Selected-period report readiness
+
+Implemented:
+
+- `src/ui/FinanceReportsPage.tsx`
+
+Result:
+
+- The reports page now reuses a shared selected-period transaction filter.
+- For the chosen year/month, the page counts transactions that still need manual review.
+- When review items remain, the page shows a visible Dutch warning before the KPI cards.
+- The warning links directly to `/review`, so admins can fix the issue before using the report for internal or ANBI publication.
+- This prevents reports from looking final while unresolved categorization work remains.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 14 test files passed.
+- 46 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

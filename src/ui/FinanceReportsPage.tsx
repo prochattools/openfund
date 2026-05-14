@@ -46,6 +46,14 @@ const toMinor = (amount: number) => Math.round(Math.abs(amount) * 100);
 const getCategoryLabel = (transaction: LedgerTransaction) =>
   transaction.mainCategoryName ?? transaction.categoryName ?? transaction.suggestedMainCategoryName ?? 'Niet gecategoriseerd';
 
+const getPeriodTransactions = (transactions: LedgerTransaction[], year: number, month: number | null) =>
+  transactions.filter((transaction) => {
+    const date = parseDate(transaction.date);
+    if (date.getUTCFullYear() !== year) return false;
+    if (month && date.getUTCMonth() + 1 !== month) return false;
+    return true;
+  });
+
 const buildLocalReportSummary = (
   transactions: LedgerTransaction[],
   year: number,
@@ -56,12 +64,7 @@ const buildLocalReportSummary = (
   let incomeMinor = 0;
   let expenseMinor = 0;
 
-  const matching = transactions.filter((transaction) => {
-    const date = parseDate(transaction.date);
-    if (date.getUTCFullYear() !== year) return false;
-    if (month && date.getUTCMonth() + 1 !== month) return false;
-    return true;
-  });
+  const matching = getPeriodTransactions(transactions, year, month);
 
   matching.forEach((transaction) => {
     const amountMinor = toMinor(transaction.amount);
@@ -226,6 +229,8 @@ export default function FinanceReportsPage({ initialYear, initialMonth }: { init
   }, [year, month]);
 
   const localSummary = useMemo(() => buildLocalReportSummary(transactions, year, month), [transactions, year, month]);
+  const periodTransactions = useMemo(() => getPeriodTransactions(transactions, year, month), [transactions, year, month]);
+  const periodReviewCount = periodTransactions.filter((transaction) => transaction.needsManualCategory).length;
   const report = remoteSummary ?? localSummary;
   const periodLabel = month ? monthFormatter.format(new Date(Date.UTC(year, month - 1, 1))) : String(year);
 
@@ -256,6 +261,12 @@ export default function FinanceReportsPage({ initialYear, initialMonth }: { init
         ) : null}
         {status === 'loading' ? (
           <div className="rounded-2xl bg-[#efe7db] p-4 text-sm text-[#6f6253]">Rapport wordt geladen…</div>
+        ) : null}
+        {periodReviewCount > 0 ? (
+          <div className="flex flex-col gap-3 rounded-2xl border border-[#e6b85c] bg-[#fff7df] p-4 text-sm text-[#7a5512] md:flex-row md:items-center md:justify-between">
+            <span>{periodReviewCount} transacties in deze periode hebben nog beoordeling nodig. Gebruik dit rapport pas na controle.</span>
+            <Link href="/review" className="rounded-full bg-[#7a5512] px-4 py-2 text-center text-xs font-semibold text-[#fff7df]">Open beoordeling</Link>
+          </div>
         ) : null}
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
