@@ -1510,3 +1510,46 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 30. Ledger context Dutch-copy cleanup pass
+
+Started from pushed main commit:
+
+- `51738fe Test Dutch import feedback messages`
+
+### Ledger context copy
+
+Implemented:
+
+- `src/context/ledger-context.tsx`
+
+Result:
+
+- Ledger context console messages for rule loading and API refresh failures now use Dutch wording.
+- Offline rule-management errors for create/update/delete rule flows now use Dutch wording.
+- This keeps fallback/local-mode errors aligned with the Dutch-only product direction.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 11 test files passed.
+- 35 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

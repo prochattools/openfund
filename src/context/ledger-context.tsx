@@ -1061,7 +1061,7 @@ export const LedgerProvider = ({ children }: { children: ReactNode }) => {
       const normalized = response.map(normalizeRuleResponse).sort(sortRules);
       setRules(normalized);
     } catch (error) {
-      console.error('Failed to load categorization rules', error);
+      console.error('Categorisatieregels konden niet worden geladen', error);
     }
   }, []);
 
@@ -1092,13 +1092,13 @@ export const LedgerProvider = ({ children }: { children: ReactNode }) => {
       }
       await refreshRules();
     } catch (error) {
-      console.error('Failed to refresh ledger from API', error);
+      console.error('Grootboek kon niet worden vernieuwd via de API', error);
     }
   }, [refreshRules]);
 
   const createRule = useCallback(async (payload: RuleInput) => {
     if (!USE_SERVER_PIPELINE) {
-      throw new Error('Rule management unavailable in offline mode');
+      throw new Error('Regelbeheer is niet beschikbaar in offline modus.');
     }
     const result = await createCategorizationRule(payload);
     const normalized = normalizeRuleResponse(result);
@@ -1107,7 +1107,7 @@ export const LedgerProvider = ({ children }: { children: ReactNode }) => {
 
   const updateRule = useCallback(async (id: string, payload: Partial<RuleInput>) => {
     if (!USE_SERVER_PIPELINE) {
-      throw new Error('Rule management unavailable in offline mode');
+      throw new Error('Regelbeheer is niet beschikbaar in offline modus.');
     }
     const result = await updateCategorizationRule(id, payload);
     const normalized = normalizeRuleResponse(result);
@@ -1116,7 +1116,7 @@ export const LedgerProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteRule = useCallback(async (id: string) => {
     if (!USE_SERVER_PIPELINE) {
-      throw new Error('Rule management unavailable in offline mode');
+      throw new Error('Regelbeheer is niet beschikbaar in offline modus.');
     }
     await deleteCategorizationRule(id);
     setRules((current) => current.filter((rule) => rule.id !== id));
