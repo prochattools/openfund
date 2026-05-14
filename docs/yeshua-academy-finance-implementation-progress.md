@@ -1737,3 +1737,66 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 35. Original ING file retention pass
+
+Started from pushed main commit:
+
+- `e330a36 Show import history in settings`
+
+### Original import file storage
+
+Implemented:
+
+- `prisma/schema.prisma`
+- `prisma/migrations/20260514204000_store_original_import_file/migration.sql`
+- `server/services/importService.ts`
+
+Result:
+
+- Import batches now store the original uploaded ING file bytes.
+- Import batches now store file size and SHA-256 checksum.
+- Newly imported files can be traced from import metadata to original source bytes.
+
+### Original import file download
+
+Implemented:
+
+- `server/routes/importBatches.ts`
+- `server/index.ts`
+- `next.config.js`
+- `src/libs/api.ts`
+- `src/ui/FinanceSettingsPage.tsx`
+
+Result:
+
+- Added `GET /api/import-batches/:id/download` for original file downloads.
+- Added Next rewrite for original file downloads.
+- Import history now shows whether the original file and checksum are stored.
+- Import history now offers `Download origineel` when a file is available.
+- Older import batches from before this migration may still show `geen bestand`.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed after route-param and Prisma Bytes typing fixes.
+- Next production build passed.
+
+Test result:
+
+- 11 test files passed.
+- 35 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

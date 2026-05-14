@@ -7,6 +7,7 @@ import {
   fetchAuditLogs,
   fetchEmailRecipients,
   fetchImportBatches,
+  getImportBatchDownloadUrl,
   saveEmailRecipient,
   type AuditLogEntry,
   type EmailRecipient,
@@ -235,10 +236,10 @@ function ImportHistoryPanel() {
           <p className="text-sm font-medium text-[#7d6d5a]">ING-imports</p>
           <h3 className="mt-1 text-2xl font-semibold tracking-[-0.04em]">Laatste importbestanden</h3>
         </div>
-        <span className="rounded-full bg-[#fff7df] px-3 py-1 text-xs font-semibold text-[#7a5512]">Download volgt later</span>
+        <span className="rounded-full bg-[#edf5ec] px-3 py-1 text-xs font-semibold text-[#1f5f4a]">Download beschikbaar</span>
       </div>
       <p className="mb-5 text-sm leading-6 text-[#6f6253]">
-        Deze lijst toont de opgeslagen importmetadata. De originele bestandsdownload vraagt nog een aparte bestandsopslagfase.
+        Deze lijst toont de opgeslagen importmetadata en geeft toegang tot het originele ING-bestand wanneer het vanaf nu is opgeslagen.
       </p>
       {error ? <p className="rounded-2xl bg-[#f7e9e4] p-4 text-sm text-[#7b4b3a]">{error}</p> : null}
       {!error && batches.length ? (
@@ -255,6 +256,8 @@ function ImportHistoryPanel() {
                   <span className="rounded-full bg-[#fbf8f2] px-3 py-1">{batch.autoCategorizedRows} automatisch</span>
                   <span className="rounded-full bg-[#fbf8f2] px-3 py-1">{batch.reviewRows} review</span>
                   <span className="rounded-full bg-[#fbf8f2] px-3 py-1">{batch.duplicateRows} dubbel</span>
+                  {batch.fileSha256 ? <span className="rounded-full bg-[#fbf8f2] px-3 py-1">hash opgeslagen</span> : null}
+                  {batch.hasOriginalFile ? <a href={getImportBatchDownloadUrl(batch.id)} className="rounded-full bg-[#1f5f4a] px-3 py-1 text-[#fbf8f2]">Download origineel</a> : <span className="rounded-full bg-[#fff7df] px-3 py-1 text-[#7a5512]">geen bestand</span>}
                 </div>
               </div>
             </div>

@@ -397,6 +397,9 @@ export type ImportBatchSummary = {
   importedRows: number;
   duplicateRows: number;
   errorRows: number;
+  fileSizeBytes: number | null;
+  fileSha256: string | null;
+  hasOriginalFile: boolean;
   autoCategorizedRows: number;
   reviewRows: number;
   startedAt: string;
@@ -416,3 +419,6 @@ export const fetchImportBatches = async (limit = 25): Promise<ImportBatchSummary
 
   return response.json();
 };
+
+export const getImportBatchDownloadUrl = (id: string): string =>
+  getApiUrl(`/api/import-batches/${id}/download`);

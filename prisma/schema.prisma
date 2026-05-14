@@ -95,6 +95,9 @@ model ImportBatch {
   userId              String
   filename            String
   fileType            String?
+  fileSizeBytes       Int?
+  fileSha256          String?
+  originalFile        Bytes?
   status              ImportBatchStatus    @default(pending)
   totalRows           Int                  @default(0)
   importedRows        Int                  @default(0)

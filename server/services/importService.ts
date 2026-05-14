@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { Prisma, PrismaClient, TransactionClassificationSource } from '@prisma/client';
 import { prisma } from '../prismaClient';
 import { parseIngCsv } from '../../lib/import/csv_ING';
@@ -42,6 +43,8 @@ type EnrichedImportRow = ParsedRowSuccess & {
 };
 
 const LOCKS_ENABLED = process.env.RECONCILIATION_LOCKS_ENABLED !== 'false';
+
+const sha256 = (buffer: Buffer): string => createHash('sha256').update(buffer).digest('hex');
 
 const HISTORY_MATCH_FIELD_GROUPS: Array<string[]> = [
   ['Name / Description'],
@@ -942,6 +945,9 @@ export const processImportBufferWithClient = async (
         userId,
         filename,
         fileType: format,
+        fileSizeBytes: buffer.byteLength,
+        fileSha256: sha256(buffer),
+        originalFile: Uint8Array.from(buffer),
         status: 'pending',
         totalRows,
         errorRows: parsed.errors.length,
