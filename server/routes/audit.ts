@@ -1,9 +1,8 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prismaClient';
+import { getRequestActor } from '../auth/requestContext';
 
-const DEFAULT_USER_ID = process.env.DEFAULT_USER_ID ?? 'demo-user';
-
-const readLimit = (value: unknown): number => {
+export const readAuditLogLimit = (value: unknown): number => {
   const parsed = Number(value);
   if (Number.isInteger(parsed) && parsed > 0 && parsed <= 100) {
     return parsed;
@@ -12,8 +11,8 @@ const readLimit = (value: unknown): number => {
 };
 
 export const listAuditLogs = async (req: Request, res: Response) => {
-  const userId = req.header('x-user-id') ?? DEFAULT_USER_ID;
-  const limit = readLimit(req.query.limit);
+  const { userId } = getRequestActor(req);
+  const limit = readAuditLogLimit(req.query.limit);
 
   try {
     const logs = await prisma.auditLog.findMany({
@@ -37,7 +36,7 @@ export const listAuditLogs = async (req: Request, res: Response) => {
       })),
     );
   } catch (error) {
-    console.error('Audit log fetch failed', error);
+    console.error('Auditlog kon niet worden geladen', error);
     return res.status(500).json({ error: 'De auditlog kon niet worden geladen.' });
   }
 };

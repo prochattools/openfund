@@ -2415,3 +2415,49 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 50. Audit route alignment and regression-test pass
+
+Started from pushed main commit:
+
+- `68777f5 Test route parameter helper`
+
+### Audit route cleanup
+
+Implemented:
+
+- `server/routes/audit.ts`
+- `tests/routes/audit.test.ts`
+
+Result:
+
+- The read-only audit-log route now uses the provider-neutral request actor helper instead of direct header parsing.
+- The audit-log limit parser is exported for isolated regression testing.
+- Added tests for valid limits from 1 through 100.
+- Added tests for invalid, missing, zero, negative, over-limit, and non-numeric values falling back to 25.
+- Localized the audit route server log message to Dutch.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 16 test files passed.
+- 51 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
