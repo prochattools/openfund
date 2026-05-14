@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../prismaClient';
 import { getRequestActor } from '../auth/requestContext';
 import { readRouteParam } from './routeParams';
+import { buildImportFileDownload } from '../services/importBatchDownload';
 
 export const readImportBatchLimit = (value: unknown): number => {
   const parsed = Number(value);
@@ -71,21 +72,18 @@ export const downloadImportBatchFile = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Importbestand niet gevonden.' });
     }
 
-    if (!batch.originalFile) {
+    const download = buildImportFileDownload(batch);
+    if (!download) {
       return res.status(404).json({ error: 'Het originele importbestand is niet opgeslagen voor deze import.' });
     }
 
-    const contentType = batch.fileType === 'xlsx_initial'
-      ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      : 'text/csv; charset=utf-8';
-
-    res.setHeader('Content-Type', contentType);
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(batch.filename)}"`);
-    if (batch.fileSha256) {
-      res.setHeader('X-File-Sha256', batch.fileSha256);
+    res.setHeader('Content-Type', download.contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(download.filename)}"`);
+    if (download.sha256) {
+      res.setHeader('X-File-Sha256', download.sha256);
     }
 
-    return res.send(Buffer.from(batch.originalFile));
+    return res.send(download.body);
   } catch (error) {
     console.error('Import batch download failed', error);
     return res.status(500).json({ error: 'Importbestand kon niet worden gedownload.' });

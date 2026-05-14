@@ -1965,3 +1965,48 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 40. Import file download regression-test pass
+
+Started from pushed main commit:
+
+- `d8d4408 Test original import retention`
+
+### Download helper extraction
+
+Implemented:
+
+- `server/services/importBatchDownload.ts`
+- `server/routes/importBatches.ts`
+- `tests/services/importBatchDownload.test.ts`
+
+Result:
+
+- Original import file download formatting is now isolated in a testable helper.
+- The route still returns stored bytes with filename, content type, and SHA-256 header.
+- Added tests for CSV download payloads, XLSX content type, and old import batches without stored files.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 13 test files passed.
+- 41 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
