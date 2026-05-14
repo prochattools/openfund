@@ -4,7 +4,7 @@ import { buildPeriodReportSummary, calculateOpeningBalanceMinor } from '../servi
 
 const DEFAULT_USER_ID = process.env.DEFAULT_USER_ID ?? 'demo-user';
 
-const readYear = (value: unknown): number => {
+export const readReportYear = (value: unknown): number => {
   const parsed = Number(value);
   if (Number.isInteger(parsed) && parsed >= 2000 && parsed <= 2100) {
     return parsed;
@@ -12,7 +12,7 @@ const readYear = (value: unknown): number => {
   return new Date().getUTCFullYear();
 };
 
-const readMonth = (value: unknown): number | null => {
+export const readReportMonth = (value: unknown): number | null => {
   if (value == null) return null;
   const parsed = Number(value);
   if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 12) {
@@ -21,7 +21,7 @@ const readMonth = (value: unknown): number | null => {
   return null;
 };
 
-const splitCategoryLabel = (value?: string | null): { main: string | null; sub: string | null } => {
+export const splitReportCategoryLabel = (value?: string | null): { main: string | null; sub: string | null } => {
   if (!value) return { main: null, sub: null };
   const parts = value.split(' — ');
   if (parts.length <= 1) {
@@ -33,7 +33,7 @@ const splitCategoryLabel = (value?: string | null): { main: string | null; sub: 
   return { main, sub };
 };
 
-const periodBounds = (year: number, month: number | null) => {
+export const getReportPeriodBounds = (year: number, month: number | null) => {
   const start = new Date(Date.UTC(year, month ? month - 1 : 0, 1));
   const end = month ? new Date(Date.UTC(year, month, 1)) : new Date(Date.UTC(year + 1, 0, 1));
   return { start, end };
@@ -83,9 +83,9 @@ const sumOpeningBalanceMinor = async (userId: string, periodStart: Date): Promis
 
 export const getReportSummary = async (req: Request, res: Response) => {
   const userId = req.header('x-user-id') ?? DEFAULT_USER_ID;
-  const year = readYear(req.query.year);
-  const month = readMonth(req.query.month);
-  const { start, end } = periodBounds(year, month);
+  const year = readReportYear(req.query.year);
+  const month = readReportMonth(req.query.month);
+  const { start, end } = getReportPeriodBounds(year, month);
 
   try {
     const [transactions, openingBalanceMinor] = await Promise.all([
@@ -109,7 +109,7 @@ export const getReportSummary = async (req: Request, res: Response) => {
 
     const summary = buildPeriodReportSummary(
       transactions.map((transaction) => {
-        const category = splitCategoryLabel(transaction.category?.name ?? null);
+        const category = splitReportCategoryLabel(transaction.category?.name ?? null);
         return {
           date: transaction.date,
           amountMinor: transaction.amountMinor,

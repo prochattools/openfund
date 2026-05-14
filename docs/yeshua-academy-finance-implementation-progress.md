@@ -2010,3 +2010,52 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 41. Report route regression-test pass
+
+Started from pushed main commit:
+
+- `0c6da7f Test import file download payloads`
+
+### Report route helper tests
+
+Implemented:
+
+- `server/routes/reports.ts`
+- `tests/routes/reports.test.ts`
+
+Result:
+
+- Exported report year/month parsing helpers for isolated testing.
+- Exported report period-bound helper for isolated testing.
+- Exported report category-label splitter for isolated testing.
+- Added regression tests for:
+  - valid/invalid report years;
+  - valid/invalid months;
+  - month and year UTC period bounds;
+  - main/subcategory label splitting.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 14 test files passed.
+- 45 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
