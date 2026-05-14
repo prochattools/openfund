@@ -245,6 +245,30 @@ function translateAuditAction(action: string) {
   switch (action) {
     case 'transaction.category.updated':
       return 'Categorie van transactie aangepast';
+    case 'categorizationRule.created':
+      return 'Categorisatieregel aangemaakt';
+    case 'categorizationRule.updated':
+      return 'Categorisatieregel aangepast';
+    case 'categorizationRule.applied':
+      return 'Categorisatieregel toegepast';
+    case 'categorizationRule.deleted':
+      return 'Categorisatieregel verwijderd';
+    case 'ledger.locked':
+      return 'Maand vergrendeld';
+    case 'ledger.unlocked':
+      return 'Maand ontgrendeld';
+    case 'openingBalance.created':
+      return 'Beginbalans aangemaakt';
+    case 'openingBalance.updated':
+      return 'Beginbalans aangepast';
+    case 'openingBalance.locked':
+      return 'Beginbalans vergrendeld';
+    case 'emailRecipient.created':
+      return 'E-mailontvanger toegevoegd';
+    case 'emailRecipient.updated':
+      return 'E-mailontvanger aangepast';
+    case 'emailRecipient.deactivated':
+      return 'E-mailontvanger uitgeschakeld';
     default:
       return action;
   }

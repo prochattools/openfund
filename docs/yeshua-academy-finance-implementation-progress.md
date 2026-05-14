@@ -1227,3 +1227,46 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 24. Audit log Dutch-label polish pass
+
+Started from pushed main commit:
+
+- `cfe2547 Respect viewer role in client UI`
+
+### Audit log readability
+
+Implemented:
+
+- `src/ui/FinanceSettingsPage.tsx`
+
+Result:
+
+- The settings audit log now translates all current finance audit actions into Dutch labels:
+  - transaction category changes;
+  - categorization rule changes;
+  - ledger locks/unlocks;
+  - opening balance changes;
+  - email recipient changes.
+- This keeps the audit log readable for admins and avoids raw technical action names in normal use.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 8 test files passed.
+- 26 tests passed.
