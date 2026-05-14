@@ -3476,3 +3476,45 @@ Build/test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 73. Export utility base64 regression-test pass
+
+Started from pushed main commit:
+
+- `0e4a4c3 Test transaction tooltip helper`
+
+### Export attachment helper coverage
+
+Implemented:
+
+- `tests/helpers/exportUtils.test.ts`
+
+Result:
+
+- Added focused regression tests for `blobToBase64`, which is used for e-mail export attachments.
+- Covered normal text blob conversion.
+- Covered binary blob conversion to ensure bytes are preserved without text encoding loss.
+- This protects monthly summary attachment handling for exported finance files.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Build/test result:
+
+- Server TypeScript build passed.
+- Next production build passed.
+- 23 test files passed.
+- 101 tests passed.
+- Secret scan passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
