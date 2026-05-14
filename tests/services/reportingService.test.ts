@@ -132,4 +132,51 @@ describe('reporting service', () => {
 
     expect(summary.expensesByCategory.map((item) => item.label)).toEqual(['Administratie', 'Zorg']);
   });
+
+  it('returns a balanced empty report when no transactions match the period', () => {
+    const summary = buildPeriodReportSummary(
+      [
+        {
+          date: new Date('2026-03-31T00:00:00.000Z'),
+          amountMinor: 5000,
+          direction: 'credit',
+          categoryName: 'Giften',
+        },
+      ],
+      { year: 2026, month: 4 },
+      { openingBalanceMinor: '12500' },
+    );
+
+    expect(summary).toEqual({
+      period: { year: 2026, month: 4 },
+      openingBalanceMinor: 12500,
+      closingBalanceMinor: 12500,
+      incomeMinor: 0,
+      expenseMinor: 0,
+      netMinor: 0,
+      transactionCount: 0,
+      incomeByCategory: [],
+      expensesByCategory: [],
+    });
+  });
+
+  it('treats non-numeric report amounts as zero instead of crashing', () => {
+    const summary = buildPeriodReportSummary(
+      [
+        {
+          date: new Date('2026-04-01T00:00:00.000Z'),
+          amountMinor: 'geen bedrag',
+          direction: 'credit',
+          categoryName: 'Giften',
+        },
+      ],
+      { year: 2026, month: 4 },
+    );
+
+    expect(summary.transactionCount).toBe(1);
+    expect(summary.incomeMinor).toBe(0);
+    expect(summary.incomeByCategory).toEqual([
+      { label: 'Giften', amountMinor: 0, transactionCount: 1 },
+    ]);
+  });
 });

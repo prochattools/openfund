@@ -3098,3 +3098,48 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 65. Reporting empty-period regression-test pass
+
+Started from pushed main commit:
+
+- `1cd90c2 Test import dedupe edge cases`
+
+### Empty and malformed report amount coverage
+
+Implemented:
+
+- `tests/services/reportingService.test.ts`
+
+Result:
+
+- Added regression coverage for periods with no matching transactions.
+- Verified empty periods preserve opening and closing balance continuity.
+- Verified income, expenses, net result, transaction count, and breakdown arrays stay zero/empty.
+- Added coverage for non-numeric report amounts being treated as zero instead of crashing report generation.
+- This protects monthly/yearly reporting from empty months and malformed historic data.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 20 test files passed.
+- 85 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
