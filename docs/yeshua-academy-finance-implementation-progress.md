@@ -2461,3 +2461,49 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 51. Email recipient route validation-test pass
+
+Started from pushed main commit:
+
+- `66b9105 Align audit route actor handling`
+
+### Email-recipient route polish
+
+Implemented:
+
+- `server/routes/emailRecipients.ts`
+- `tests/routes/emailRecipients.test.ts`
+
+Result:
+
+- Exported the email-recipient address validator for isolated regression tests.
+- Added tests for normal recipient addresses including `+` aliases and surrounding whitespace.
+- Added tests for missing and malformed e-mail addresses.
+- Localized the email-recipient route server log messages to Dutch.
+- Existing admin guardrails and audit logging remain unchanged.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 17 test files passed.
+- 53 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

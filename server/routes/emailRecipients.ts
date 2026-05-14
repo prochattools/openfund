@@ -4,7 +4,7 @@ import { getRequestActor, requireAdmin } from '../auth/requestContext';
 import { createAuditLog } from '../services/auditLogService';
 import { readRouteParam } from './routeParams';
 
-const isEmail = (value: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+export const isEmailRecipientAddress = (value: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 
 export const listEmailRecipients = async (req: Request, res: Response) => {
   const { userId } = getRequestActor(req);
@@ -26,7 +26,7 @@ export const listEmailRecipients = async (req: Request, res: Response) => {
       })),
     );
   } catch (error) {
-    console.error('Email recipient fetch failed', error);
+    console.error('E-mailontvangers konden niet worden geladen', error);
     return res.status(500).json({ error: 'E-mailontvangers konden niet worden geladen.' });
   }
 };
@@ -39,7 +39,7 @@ export const upsertEmailRecipient = async (req: Request, res: Response) => {
   const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
   const name = typeof req.body?.name === 'string' && req.body.name.trim() ? req.body.name.trim() : null;
 
-  if (!email || !isEmail(email)) {
+  if (!email || !isEmailRecipientAddress(email)) {
     return res.status(400).json({ error: 'Vul een geldig e-mailadres in.' });
   }
 
@@ -105,7 +105,7 @@ export const upsertEmailRecipient = async (req: Request, res: Response) => {
       updatedAt: recipient.updatedAt.toISOString(),
     });
   } catch (error) {
-    console.error('Email recipient save failed', error);
+    console.error('E-mailontvanger kon niet worden opgeslagen', error);
     return res.status(500).json({ error: 'E-mailontvanger kon niet worden opgeslagen.' });
   }
 };
@@ -173,7 +173,7 @@ export const deactivateEmailRecipient = async (req: Request, res: Response) => {
 
     return res.status(response.status).json(response.body);
   } catch (error) {
-    console.error('Email recipient deactivate failed', error);
+    console.error('E-mailontvanger kon niet worden gedeactiveerd', error);
     return res.status(500).json({ error: 'E-mailontvanger kon niet worden gedeactiveerd.' });
   }
 };
