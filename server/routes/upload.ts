@@ -101,6 +101,8 @@ const buildImportMessage = (summary: {
   importedCount: number;
   duplicateCount: number;
   errorCount: number;
+  autoCategorizedCount: number;
+  pendingReviewCount: number;
 }) => {
   const parts: string[] = [];
 
@@ -108,6 +110,18 @@ const buildImportMessage = (summary: {
     parts.push('1 transactie toegevoegd');
   } else {
     parts.push(`${summary.importedCount} transacties toegevoegd`);
+  }
+
+  if (summary.autoCategorizedCount === 1) {
+    parts.push('1 transactie automatisch gecategoriseerd');
+  } else if (summary.autoCategorizedCount > 1) {
+    parts.push(`${summary.autoCategorizedCount} transacties automatisch gecategoriseerd`);
+  }
+
+  if (summary.pendingReviewCount === 1) {
+    parts.push('1 transactie staat klaar om te beoordelen');
+  } else if (summary.pendingReviewCount > 1) {
+    parts.push(`${summary.pendingReviewCount} transacties staan klaar om te beoordelen`);
   }
 
   if (summary.duplicateCount === 1) {

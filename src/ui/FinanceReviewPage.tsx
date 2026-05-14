@@ -97,6 +97,15 @@ const getSuggestedMain = (transaction: LedgerTransaction) =>
 const getSuggestedSub = (transaction: LedgerTransaction) =>
   transaction.categoryId ?? transaction.suggestedSubCategoryName ?? transaction.rawCategoryName ?? '';
 
+const normalizeLabel = (value: string | null | undefined) =>
+  (value ?? '').trim().toLowerCase();
+
+const findCategoryIdByName = (categories: Category[], name: string | null | undefined) => {
+  const normalized = normalizeLabel(name);
+  if (!normalized) return '';
+  return categories.find((category) => normalizeLabel(category.name) === normalized)?.id ?? '';
+};
+
 function ReviewCard({
   transaction,
   mainCategories,
@@ -108,8 +117,17 @@ function ReviewCard({
   subcategories: Record<string, Category[]>;
   onAssign: (transactionId: string, payload: { categoryId?: string | null; mainCategoryId?: string | null; categoryName?: string }) => Promise<void>;
 }) {
-  const defaultMain = typeof getSuggestedMain(transaction) === 'string' && getSuggestedMain(transaction).startsWith('main:') ? getSuggestedMain(transaction) : transaction.mainCategoryId ?? '';
-  const defaultSub = typeof getSuggestedSub(transaction) === 'string' && !getSuggestedSub(transaction).includes(' — ') ? getSuggestedSub(transaction) : transaction.categoryId ?? '';
+  const suggestedMain = getSuggestedMain(transaction);
+  const defaultMain =
+    transaction.mainCategoryId ??
+    (typeof suggestedMain === 'string' && suggestedMain.startsWith('main:') ? suggestedMain : findCategoryIdByName(mainCategories, suggestedMain));
+  const initialSubs = defaultMain ? subcategories[defaultMain] ?? [] : [];
+  const suggestedSub = getSuggestedSub(transaction);
+  const defaultSub =
+    transaction.categoryId ??
+    (typeof suggestedSub === 'string' && suggestedSub.includes(' — ')
+      ? ''
+      : findCategoryIdByName(initialSubs, suggestedSub));
   const [mainId, setMainId] = useState(defaultMain);
   const [subId, setSubId] = useState(defaultSub);
   const [note, setNote] = useState('');

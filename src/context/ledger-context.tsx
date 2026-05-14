@@ -397,6 +397,7 @@ interface ImportSummary {
   importedCount: number;
   autoCategorized: number;
   reviewCount: number;
+  message?: string;
   duplicateCount?: number;
   errorCount?: number;
   totalRows?: number;
@@ -1164,6 +1165,7 @@ export const LedgerProvider = ({ children }: { children: ReactNode }) => {
           importedCount: summary.importedCount,
           autoCategorized: summary.autoCategorizedCount,
           reviewCount: summary.pendingReviewCount,
+          message: summary.message,
           duplicateCount: summary.duplicateCount,
           errorCount: summary.errorCount,
           totalRows: summary.totalRows,

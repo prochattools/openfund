@@ -13,6 +13,8 @@ type ImportSummaryWithMessage = {
   duplicateCount?: number;
   errorCount?: number;
   message?: string;
+  totalRows?: number;
+  batchId?: string;
   errors?: Array<{ rowNumber: number; message: string }>;
 };
 
@@ -38,8 +40,25 @@ export function UploadCsvButton() {
       const summary = (await importCsv(file)) as ImportSummaryWithMessage;
       const message = summary.message ?? buildDutchImportMessage(summary);
 
-      toast.success(message);
+      toast.success(message, { duration: 6500 });
       await refreshLedger();
+
+      const imported = summary.importedCount ?? 0;
+      const duplicates = summary.duplicateCount ?? 0;
+      const review = summary.reviewCount ?? summary.pendingReviewCount ?? 0;
+      const auto = summary.autoCategorized ?? summary.autoCategorizedCount ?? 0;
+
+      toast((t) => (
+        <div className="text-left text-sm">
+          <div className="mb-2 font-semibold">Importoverzicht</div>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+            <span>Nieuw</span><strong>{imported}</strong>
+            <span>Automatisch</span><strong>{auto}</strong>
+            <span>Te beoordelen</span><strong>{review}</strong>
+            <span>Dubbel genegeerd</span><strong>{duplicates}</strong>
+          </div>
+        </div>
+      ), { duration: 6500 });
 
       if (summary.errors && summary.errors.length) {
         console.warn('Import row issues', summary.errors);

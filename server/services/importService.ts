@@ -1164,6 +1164,7 @@ export const processImportBufferWithClient = async (
     const ledgerExactMatchIndex = buildLedgerExactMatchIndex(ledgerMatchCandidates);
     const ledgerFuzzyMatchIndex = buildFuzzyMatchIndex(ledgerMatchCandidates);
     let autoCategorized = 0;
+    let pendingReview = 0;
     let imported = 0;
     let reprocessed = 0;
     const reconciliationTargets = new Map<string, { accountId: string; month: number; year: number; ledgerId: string }>();
@@ -1241,6 +1242,8 @@ export const processImportBufferWithClient = async (
           classification.classificationSource === 'history' || classification.classificationSource === 'rule';
         if (isAutoCategorized) {
           autoCategorized += 1;
+        } else {
+          pendingReview += 1;
         }
 
         if (classification.categoryId && classification.categoryId !== reviewCategoryId) {
@@ -1410,7 +1413,6 @@ export const processImportBufferWithClient = async (
     }
 
     const duplicateCount = Math.max(0, duplicates.length - reprocessed) + (uniques.length - imported);
-    const pendingReview = imported;
 
     for (const target of reconciliationTargets.values()) {
       try {

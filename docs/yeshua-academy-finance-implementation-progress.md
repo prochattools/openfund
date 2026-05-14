@@ -1012,3 +1012,68 @@ Additional validation:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 20. Import feedback and review suggestion accuracy pass
+
+Started from pushed main commit:
+
+- `7947740 Add finance guardrails and summary recipients`
+
+### Import summary accuracy
+
+Implemented:
+
+- `server/services/importService.ts`
+- `server/routes/upload.ts`
+- `src/context/ledger-context.tsx`
+- `src/components/ledger/UploadCsvButton.tsx`
+
+Result:
+
+- Import summaries now track pending-review transactions separately from imported rows.
+- Auto-categorized rows are no longer counted as pending review just because they were imported.
+- Server import responses now include clearer Dutch natural-language feedback for:
+  - newly added transactions;
+  - automatically categorized transactions;
+  - transactions ready for review;
+  - duplicate transactions ignored;
+  - skipped/error rows.
+- The client now preserves the server-generated import message instead of rebuilding a less complete one.
+- After upload, the UI shows a compact Dutch import overview with counts for new, automatic, review, and duplicate rows.
+
+### Review suggestion preselection
+
+Implemented:
+
+- `src/ui/FinanceReviewPage.tsx`
+
+Result:
+
+- The review screen now resolves suggested category names to actual category IDs before preselecting dropdown values.
+- Suggestions such as `Inkomsten` or `Tienden` no longer get treated as invalid IDs.
+- This makes the one-transaction-at-a-time review flow less manual and more foolproof.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 8 test files passed.
+- 26 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
