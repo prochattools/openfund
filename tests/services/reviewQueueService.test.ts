@@ -33,4 +33,22 @@ describe('review queue service', () => {
       },
     });
   });
+
+  it('returns zero when there are no categorized suggestions to accept', async () => {
+    const calls: any[] = [];
+    const fakeTx = {
+      transaction: {
+        updateMany: async (args: any) => {
+          calls.push(args);
+          return { count: 0 };
+        },
+      },
+    } as any;
+
+    const cleared = await clearReviewQueue(fakeTx, 'user-empty');
+
+    expect(cleared).toBe(0);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].where.userId).toBe('user-empty');
+  });
 });

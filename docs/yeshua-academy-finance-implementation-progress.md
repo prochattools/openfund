@@ -3188,3 +3188,47 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 67. Review queue empty-result regression-test pass
+
+Started from pushed main commit:
+
+- `290fcef Test import normalizer helpers`
+
+### Review queue clear coverage
+
+Implemented:
+
+- `tests/services/reviewQueueService.test.ts`
+
+Result:
+
+- Added regression coverage for clearing the review queue when no categorized suggestions are available.
+- Verified the service returns `0` without deleting or modifying imported bank transactions outside the existing safe update scope.
+- Verified the update remains scoped to the requesting user id.
+- This protects the admin review workflow from treating an empty queue as an error or unsafe cleanup operation.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 20 test files passed.
+- 87 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
