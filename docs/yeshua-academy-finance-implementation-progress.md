@@ -1270,3 +1270,59 @@ Test result:
 
 - 8 test files passed.
 - 26 tests passed.
+
+
+## 25. Dashboard-to-report readiness pass
+
+Started from pushed main commit:
+
+- `7af48cc Translate audit log actions`
+
+### Dashboard next-step clarity
+
+Implemented:
+
+- `src/ui/FinanceDashboard.tsx`
+
+Result:
+
+- The dashboard month status card now shows whether the selected month is ready for reporting.
+- The card links directly to Review and Reports so admins can move from insight to action without hunting through menus.
+- The dashboard header now includes a direct `Maandrapport` action for the latest loaded month.
+
+### Report deep-link support
+
+Implemented:
+
+- `src/app/reports/page.tsx`
+- `src/ui/FinanceReportsPage.tsx`
+
+Result:
+
+- `/reports?year=YYYY&month=M` now opens the reports page with the selected period.
+- Query parsing is handled in the route page and passed into the client UI so Next can build without a `useSearchParams` suspense bailout.
+- The dashboard can now deep-link to the correct current-month report.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 8 test files passed.
+- 26 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

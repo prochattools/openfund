@@ -190,14 +190,16 @@ function ReportExplanation({ summary }: { summary: ReportSummary }) {
   );
 }
 
-export default function FinanceReportsPage() {
+export default function FinanceReportsPage({ initialYear, initialMonth }: { initialYear?: number; initialMonth?: number | null }) {
   const { transactions, summary: ledgerSummary } = useLedger();
   const years = useMemo(() => {
     const values = Array.from(new Set(transactions.map((transaction) => parseDate(transaction.date).getUTCFullYear()))).sort((a, b) => b - a);
     return values.length ? values : [new Date().getUTCFullYear()];
   }, [transactions]);
-  const [year, setYear] = useState(years[0] ?? new Date().getUTCFullYear());
-  const [month, setMonth] = useState<number | null>(null);
+  const selectedInitialYear = Number.isInteger(initialYear) && initialYear && initialYear > 2000 ? initialYear : years[0] ?? new Date().getUTCFullYear();
+  const selectedInitialMonth = Number.isInteger(initialMonth) && initialMonth && initialMonth >= 1 && initialMonth <= 12 ? initialMonth : null;
+  const [year, setYear] = useState(selectedInitialYear);
+  const [month, setMonth] = useState<number | null>(selectedInitialMonth);
   const [remoteSummary, setRemoteSummary] = useState<ReportSummary | null>(null);
   const [status, setStatus] = useState<'idle' | 'loading' | 'fallback'>('idle');
 

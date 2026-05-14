@@ -131,7 +131,7 @@ function AppFrame({ children, reviewCount }: { children: ReactNode; reviewCount:
   );
 }
 
-function PageHeader({ monthLabel }: { monthLabel: string }) {
+function PageHeader({ monthLabel, reportHref }: { monthLabel: string; reportHref: string }) {
   return (
     <header className="mb-6 flex flex-col gap-4 rounded-[2rem] border border-[#ded5c8] bg-[#fbf8f2] p-5 shadow-[0_24px_70px_rgba(87,67,45,0.08)] md:flex-row md:items-center md:justify-between">
       <div>
@@ -140,6 +140,9 @@ function PageHeader({ monthLabel }: { monthLabel: string }) {
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <span className="rounded-2xl border border-[#ded5c8] bg-[#f5f1ea] px-4 py-3 text-sm font-semibold capitalize text-[#574b3f]">{monthLabel}</span>
+        <Link className="rounded-2xl border border-[#ded5c8] bg-[#fbf8f2] px-5 py-3 text-sm font-semibold text-[#574b3f]" href={reportHref}>
+          Maandrapport
+        </Link>
         <Link className="rounded-2xl bg-[#1f5f4a] px-5 py-3 text-sm font-semibold text-[#fbf8f2] shadow-[0_14px_35px_rgba(31,95,74,0.22)]" href="/ledger#importeren">
           ING-export importeren
         </Link>
@@ -229,6 +232,8 @@ function MoneyFlowChart({ income, expenses }: { income: number; expenses: number
 }
 
 function ImportStatusCard({ total, reviewCount, autoCategorized }: { total: number; reviewCount: number; autoCategorized: number }) {
+  const ready = total > 0 && reviewCount === 0;
+
   return (
     <article className="rounded-[1.75rem] border border-[#ded5c8] bg-[#fbf8f2] p-5 shadow-[0_18px_55px_rgba(87,67,45,0.07)]">
       <h3 className="text-lg font-semibold tracking-[-0.03em]">Maandstatus</h3>
@@ -246,6 +251,13 @@ function ImportStatusCard({ total, reviewCount, autoCategorized }: { total: numb
           <p className="text-2xl font-semibold">{reviewCount}</p>
           <p className="text-sm text-[#7a5512]">nog te beoordelen</p>
         </div>
+      </div>
+      <div className={`mt-4 rounded-2xl p-4 text-sm ${ready ? 'bg-[#edf5ec] text-[#1f5f4a]' : 'bg-[#fff7df] text-[#7a5512]'}`}>
+        {ready ? 'Deze maand is klaar voor controle in Rapporten.' : 'Rond eerst de open transacties af voordat je de maand gebruikt voor rapportage.'}
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <Link href="/review" className="rounded-2xl border border-[#ded5c8] bg-[#fbf8f2] px-4 py-3 text-center text-sm font-semibold text-[#574b3f]">Beoordelen</Link>
+        <Link href="/reports" className="rounded-2xl bg-[#1f5f4a] px-4 py-3 text-center text-sm font-semibold text-[#fbf8f2]">Rapport openen</Link>
       </div>
     </article>
   );
@@ -295,12 +307,13 @@ export default function FinanceDashboard() {
       autoCategorized,
       incomeBreakdown: buildBreakdown(monthTransactions, 'income'),
       expenseBreakdown: buildBreakdown(monthTransactions, 'expense'),
+      reportHref: `/reports?year=${monthKey.slice(0, 4)}&month=${Number(monthKey.slice(5, 7))}`,
     };
   }, [transactions]);
 
   return (
     <AppFrame reviewCount={summary.reviewCount}>
-      <PageHeader monthLabel={dashboard.monthLabel} />
+      <PageHeader monthLabel={dashboard.monthLabel} reportHref={dashboard.reportHref} />
       {transactions.length ? (
         <>
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
