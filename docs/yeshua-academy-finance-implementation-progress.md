@@ -2281,3 +2281,48 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 47. Import status Dutch-label polish pass
+
+Started from pushed main commit:
+
+- `ee2bd6f Show latest import on dashboard`
+
+### Import history status labels
+
+Implemented:
+
+- `src/ui/FinanceSettingsPage.tsx`
+
+Result:
+
+- Import history now translates all import batch statuses into Dutch labels.
+- `completed` renders as `voltooid`.
+- `pending` renders as `bezig`.
+- `failed` renders as `mislukt`.
+- This avoids raw English status values appearing in the Dutch settings UI.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 14 test files passed.
+- 46 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

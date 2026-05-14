@@ -214,6 +214,19 @@ const formatFileSize = (bytes: number | null) => {
 
 const shortHash = (value: string | null) => value ? `${value.slice(0, 10)}…` : 'geen hash';
 
+const translateImportStatus = (status: ImportBatchSummary['status']) => {
+  switch (status) {
+    case 'completed':
+      return 'voltooid';
+    case 'pending':
+      return 'bezig';
+    case 'failed':
+      return 'mislukt';
+    default:
+      return status;
+  }
+};
+
 function ImportHistoryPanel() {
   const [batches, setBatches] = useState<ImportBatchSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -258,7 +271,7 @@ function ImportHistoryPanel() {
               <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                 <div>
                   <p className="font-semibold text-[#251f1a]">{batch.filename}</p>
-                  <p className="text-xs text-[#7d6d5a]">{formatImportDate(batch.completedAt ?? batch.startedAt)} · {batch.status === 'completed' ? 'voltooid' : batch.status}</p>
+                  <p className="text-xs text-[#7d6d5a]">{formatImportDate(batch.completedAt ?? batch.startedAt)} · {translateImportStatus(batch.status)}</p>
                 </div>
                 <div className="flex flex-wrap gap-2 text-xs font-semibold">
                   <span className="rounded-full bg-[#fbf8f2] px-3 py-1">{batch.importedRows} nieuw</span>
