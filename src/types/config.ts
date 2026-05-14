@@ -1,34 +1,9 @@
-export type Theme =
-  | "light"
-  | "dark"
-  | "cupcake"
-  | "bumblebee"
-  | "emerald"
-  | "corporate"
-  | "synthwave"
-  | "retro"
-  | "cyberpunk"
-  | "valentine"
-  | "halloween"
-  | "garden"
-  | "forest"
-  | "aqua"
-  | "lofi"
-  | "pastel"
-  | "fantasy"
-  | "wireframe"
-  | "black"
-  | "luxury"
-  | "dracula"
-  | "";
+export type Theme = 'light' | 'dark' | '';
 
 export interface ConfigProps {
   appName: string;
   appDescription: string;
   domainName: string;
-  stripe: {
-    products: StripeProduct[];
-  };
   colors: {
     theme: Theme;
     main: string;
@@ -38,7 +13,7 @@ export interface ConfigProps {
     supportEmail?: string;
     forwardRepliesTo?: string;
     subjects?: {
-      [key: string]: string
-    }
+      [key: string]: string;
+    };
   };
 }

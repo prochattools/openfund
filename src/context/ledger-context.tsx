@@ -491,7 +491,7 @@ const mapApiTransaction = (tx: ApiLedgerTransaction): LedgerTransaction => {
     : null;
   const classification = tx.classificationSource ?? 'none';
   const autoCategorized = classification === 'history' || classification === 'rule';
-  const needsManualCategory = classification !== 'manual';
+  const needsManualCategory = !tx.categoryId || classification === 'none' || classification === 'import';
 
   const {
     mainName,
@@ -1133,15 +1133,14 @@ export const LedgerProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const summary = useMemo(() => {
-    const approved = state.transactions.filter((tx) => tx.classificationSource === 'manual');
-    const reviewCount = state.transactions.length - approved.length;
+    const reviewCount = state.transactions.filter((tx) => tx.needsManualCategory).length;
     const autoCategorized = state.transactions.filter(
       (tx) => tx.classificationSource === 'history' || tx.classificationSource === 'rule',
     ).length;
-    const totalAmount = approved.reduce((acc, tx) => acc + tx.amount, 0);
+    const totalAmount = state.transactions.reduce((acc, tx) => acc + tx.amount, 0);
 
     return {
-      total: approved.length,
+      total: state.transactions.length,
       reviewCount,
       autoCategorized,
       totalAmount,

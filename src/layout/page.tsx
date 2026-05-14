@@ -1,13 +1,7 @@
-import { Header, Footer } from ".";
+import type { ReactNode } from 'react';
 
-const Layout = async ({ children }: any) => {
-  return (
-    <div className="min-h-[100vh] flex flex-col justify-between w-full bg-white dark:bg-[#010814]">
-      <Header />
-      {children}
-      <Footer />
-    </div>
-  );
+const Layout = ({ children }: { children: ReactNode }) => {
+  return <>{children}</>;
 };
 
 export default Layout;

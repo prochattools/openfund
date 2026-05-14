@@ -2,34 +2,35 @@ import { describe, expect, it } from 'vitest';
 import { clearReviewQueue } from '../../server/services/reviewQueueService';
 
 describe('review queue service', () => {
-  it('clears only non-manual transactions for the requested user', async () => {
-    const store: Array<{ id: string; userId: string; classificationSource: string }> = [
-      { id: 'tx-1', userId: 'user-1', classificationSource: 'import' },
-      { id: 'tx-2', userId: 'user-1', classificationSource: 'manual' },
-      { id: 'tx-3', userId: 'user-2', classificationSource: 'import' },
-    ];
-
+  it('accepts categorized suggestions without deleting imported transactions', async () => {
+    const calls: any[] = [];
     const fakeTx = {
       transaction: {
-        deleteMany: async ({ where }: any) => {
-          const before = store.length;
-          for (let index = store.length - 1; index >= 0; index -= 1) {
-            const entry = store[index];
-            if (entry.userId !== where.userId) continue;
-            if (where.classificationSource?.not === 'manual' && entry.classificationSource === 'manual') {
-              continue;
-            }
-            store.splice(index, 1);
-          }
-          return { count: before - store.length };
+        updateMany: async (args: any) => {
+          calls.push(args);
+          return { count: 2 };
         },
       },
     } as any;
 
     const cleared = await clearReviewQueue(fakeTx, 'user-1');
-    expect(cleared).toBe(1);
-    expect(store).toHaveLength(2);
-    expect(store.find((item) => item.id === 'tx-2')).toBeDefined();
-    expect(store.find((item) => item.id === 'tx-3')).toBeDefined();
+
+    expect(cleared).toBe(2);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toEqual({
+      where: {
+        userId: 'user-1',
+        categoryId: {
+          not: null,
+        },
+        classificationSource: {
+          not: 'manual',
+        },
+      },
+      data: {
+        classificationSource: 'manual',
+        classificationRuleId: null,
+      },
+    });
   });
 });

@@ -3,6 +3,13 @@ import { buildNormalizedTransaction, extractReference } from './normalizers';
 import type { ParseResult, ParsedRowSuccess, ParsedRowError } from './types';
 
 const ING_DELIMITER = ';';
+const REQUIRED_ING_COLUMNS = [
+  'Date',
+  'Name / Description',
+  'Account',
+  'Debit/credit',
+  'Amount (EUR)',
+];
 
 export const parseIngCsv = (buffer: Buffer): Promise<ParseResult> =>
   new Promise((resolve, reject) => {
@@ -10,13 +17,26 @@ export const parseIngCsv = (buffer: Buffer): Promise<ParseResult> =>
     const errors: ParsedRowError[] = [];
 
     let rowNumber = 1;
+    let fatalError = false;
 
-    parseString(buffer.toString('utf-8'), {
+    const stream = parseString(buffer.toString('utf-8'), {
       headers: true,
       delimiter: ING_DELIMITER,
       trim: true,
     })
-      .on('error', (error) => reject(error))
+      .on('headers', (headers: string[]) => {
+        const missing = REQUIRED_ING_COLUMNS.filter((column) => !headers.includes(column));
+        if (missing.length) {
+          fatalError = true;
+          reject(new Error(`Missing ING columns: ${missing.join(', ')}`));
+          stream.destroy();
+        }
+      })
+      .on('error', (error) => {
+        if (!fatalError) {
+          reject(error);
+        }
+      })
       .on('data', (row: Record<string, string>) => {
         rowNumber += 1;
 

@@ -65,7 +65,10 @@ export const uploadImportFile = async (formData: FormData) => {
   }));
 
   if (!response.ok) {
-    throw new Error('CSV upload failed');
+    const error = await response.json().catch(() => ({
+      error: 'De import is niet gelukt. Controleer het bestand en probeer het opnieuw.',
+    }));
+    throw new Error(error.error ?? 'De import is niet gelukt. Controleer het bestand en probeer het opnieuw.');
   }
 
   return response.json();
@@ -283,6 +286,51 @@ export const applyRule = async (id: string, transactionIds: string[]) => {
     const error = await response.json().catch(() => ({ error: 'Failed to apply rule' }));
     console.error('Failed to apply rule', { url, status: response.status, error });
     throw new Error(error.error ?? 'Failed to apply rule');
+  }
+
+  return response.json();
+};
+
+
+export const fetchReportSummary = async (params: { year: number; month?: number | null }) => {
+  const query = new URLSearchParams();
+  query.set('year', String(params.year));
+  if (params.month) {
+    query.set('month', String(params.month));
+  }
+
+  const response = await fetch(getApiUrl(`/api/reports/summary?${query.toString()}`), withUserHeader({ cache: 'no-store' }));
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Het rapport kon niet worden geladen.' }));
+    throw new Error(error.error ?? 'Het rapport kon niet worden geladen.');
+  }
+
+  return response.json();
+};
+
+export type AuditLogEntry = {
+  id: string;
+  actorId: string | null;
+  actorEmail: string | null;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  before: unknown;
+  after: unknown;
+  metadata: unknown;
+  createdAt: string;
+};
+
+export const fetchAuditLogs = async (limit = 25): Promise<AuditLogEntry[]> => {
+  const query = new URLSearchParams();
+  query.set('limit', String(limit));
+
+  const response = await fetch(getApiUrl(`/api/audit-log?${query.toString()}`), withUserHeader({ cache: 'no-store' }));
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'De auditlog kon niet worden geladen.' }));
+    throw new Error(error.error ?? 'De auditlog kon niet worden geladen.');
   }
 
   return response.json();

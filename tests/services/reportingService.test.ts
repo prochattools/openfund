@@ -1,0 +1,80 @@
+import { describe, expect, it } from 'vitest';
+import { buildPeriodReportSummary, calculateOpeningBalanceMinor } from '../../server/services/reportingService';
+
+describe('reporting service', () => {
+  it('builds monthly income and expense summaries by category', () => {
+    const summary = buildPeriodReportSummary(
+      [
+        {
+          date: new Date('2026-04-01T00:00:00.000Z'),
+          amountMinor: 10000n,
+          direction: 'credit',
+          mainCategoryName: 'Giften',
+        },
+        {
+          date: new Date('2026-04-02T00:00:00.000Z'),
+          amountMinor: 2500n,
+          direction: 'debit',
+          mainCategoryName: 'Administratie',
+        },
+        {
+          date: new Date('2026-05-01T00:00:00.000Z'),
+          amountMinor: 5000n,
+          direction: 'credit',
+          mainCategoryName: 'Giften',
+        },
+      ],
+      { year: 2026, month: 4 },
+      { openingBalanceMinor: 42000 },
+    );
+
+    expect(summary.transactionCount).toBe(2);
+    expect(summary.openingBalanceMinor).toBe(42000);
+    expect(summary.incomeMinor).toBe(10000);
+    expect(summary.expenseMinor).toBe(2500);
+    expect(summary.netMinor).toBe(7500);
+    expect(summary.closingBalanceMinor).toBe(49500);
+    expect(summary.incomeByCategory).toEqual([
+      { label: 'Giften', amountMinor: 10000, transactionCount: 1 },
+    ]);
+    expect(summary.expensesByCategory).toEqual([
+      { label: 'Administratie', amountMinor: 2500, transactionCount: 1 },
+    ]);
+  });
+
+  it('builds yearly summaries when no month is provided', () => {
+    const summary = buildPeriodReportSummary(
+      [
+        {
+          date: new Date('2026-01-01T00:00:00.000Z'),
+          amountMinor: 10000,
+          direction: 'credit',
+          categoryName: 'Giften',
+        },
+        {
+          date: new Date('2026-12-31T00:00:00.000Z'),
+          amountMinor: '4000',
+          direction: 'debit',
+          categoryName: 'Projecten',
+        },
+      ],
+      { year: 2026 },
+    );
+
+    expect(summary.period).toEqual({ year: 2026, month: null });
+    expect(summary.openingBalanceMinor).toBe(0);
+    expect(summary.incomeMinor).toBe(10000);
+    expect(summary.expenseMinor).toBe(4000);
+    expect(summary.netMinor).toBe(6000);
+    expect(summary.closingBalanceMinor).toBe(6000);
+  });
+
+  it('calculates opening balance from previous movement', () => {
+    const opening = calculateOpeningBalanceMinor(100000, [
+      { amountMinor: 25000, direction: 'credit' },
+      { amountMinor: 10000, direction: 'debit' },
+    ]);
+
+    expect(opening).toBe(115000);
+  });
+});

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prismaClient';
+import { readRouteParam } from './routeParams';
 
 const DEFAULT_USER_ID = process.env.DEFAULT_USER_ID ?? 'demo-user';
 const LOCKS_ENABLED = process.env.RECONCILIATION_LOCKS_ENABLED !== 'false';
@@ -10,8 +11,12 @@ export const lockLedger = async (req: Request, res: Response) => {
   }
 
   const userId = req.header('x-user-id') ?? DEFAULT_USER_ID;
-  const ledgerId = req.params.ledgerId;
+  const ledgerId = readRouteParam(req, 'ledgerId');
   const { note } = req.body as { note?: string };
+
+  if (!ledgerId) {
+    return res.status(400).json({ error: 'Ledger id ontbreekt.' });
+  }
 
   try {
     const ledger = await prisma.ledger.findFirst({
@@ -81,7 +86,11 @@ export const unlockLedger = async (req: Request, res: Response) => {
   }
 
   const userId = req.header('x-user-id') ?? DEFAULT_USER_ID;
-  const ledgerId = req.params.ledgerId;
+  const ledgerId = readRouteParam(req, 'ledgerId');
+
+  if (!ledgerId) {
+    return res.status(400).json({ error: 'Ledger id ontbreekt.' });
+  }
 
   try {
     const ledger = await prisma.ledger.findFirst({

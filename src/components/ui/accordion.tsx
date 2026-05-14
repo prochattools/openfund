@@ -2,9 +2,9 @@
 
 import * as React from "react";
 import * as AccordionPrimitive from "@radix-ui/react-accordion";
-import { Cross, OpenFaq, OpenFaq2 } from "@/icons";
+import { ChevronDown } from "lucide-react";
 
-import {cn} from "@/helpers/utils";
+import { cn } from "@/helpers/utils";
 
 const Accordion = AccordionPrimitive.Root;
 
@@ -28,23 +28,13 @@ const AccordionTrigger = React.forwardRef<
     <AccordionPrimitive.Trigger
       ref={ref}
       className={cn(
-        "flex flex-1 items-center justify-between py-4 font-medium transition-all outline-none hover:underline-none group",
-        className
+        "flex flex-1 items-center justify-between py-4 font-medium transition-all outline-none group",
+        className,
       )}
       {...props}
     >
-      <div className="text-black1 group-data-[state=open]:text-[#1364FF] dark:text-white dark:group-data-[state=open]:text-white outline-none">
-        {children}
-      </div>
-      <div className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:hidden dark:hidden">
-        <OpenFaq />
-      </div>
-      <div className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:hidden hidden dark:block">
-        <OpenFaq2 />
-      </div>
-      <div className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=closed]:hidden text-[#1364FF] dark:text-white">
-        <Cross />
-      </div>
+      <div>{children}</div>
+      <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
     </AccordionPrimitive.Trigger>
   </AccordionPrimitive.Header>
 ));
@@ -58,7 +48,7 @@ const AccordionContent = React.forwardRef<
     ref={ref}
     className={cn(
       "overflow-hidden text-sm transition-all data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down",
-      className
+      className,
     )}
     {...props}
   >

@@ -1,24 +1,5 @@
-import { Suspense } from "react";
-import Header from "@/components/Header";
-import Hero from "@/components/Hero";
-import Features from "@/components/Features";
-import Faq from "@/components/FAQ";
-import Footer from "@/components/Footer";
-import Comparison from "@/components/Comparison";
+import FinanceDashboard from '@/ui/FinanceDashboard';
 
 export default function Home() {
-  return (
-    <>
-      <Suspense>
-        <Header />
-      </Suspense>
-      <main>
-        <Hero />
-        <Comparison />
-        <Features />
-        <Faq />
-      </main>
-      <Footer />
-    </>
-  );
+  return <FinanceDashboard />;
 }

@@ -3,86 +3,108 @@ import { resendService } from '@/libs/resend';
 import config from '@/config';
 import type { ExportEmailContext } from '@/helpers/export-utils';
 
+type AttachmentPayload = {
+  filename: string;
+  mimeType?: string;
+  content: string;
+};
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const recipients = Array.isArray(body.recipients) ? body.recipients : [];
-    const attachment = body.attachment as { filename: string; mimeType?: string; content: string } | undefined;
+    const attachment = body.attachment as AttachmentPayload | undefined;
     const rawHtml = typeof body.html === 'string' ? body.html : '';
     const context = body.context as ExportEmailContext | undefined;
 
     if (!recipients.length) {
-      return NextResponse.json({ error: 'Recipients required' }, { status: 400 });
-    }
-
-    if (!attachment || !attachment.filename || !attachment.content) {
-      return NextResponse.json({ error: 'Attachment missing' }, { status: 400 });
+      return NextResponse.json({ error: 'Vul minimaal één ontvanger in.' }, { status: 400 });
     }
 
     const emailHtml = buildEmailHtml(rawHtml, context);
+    const subject = buildSubject(context, attachment?.filename);
 
     await resendService.sendEmail(
       {
         from: config.resend.fromAdmin,
         to: recipients,
-        subject: `Ledger export: ${attachment.filename}`,
+        subject,
         html: emailHtml,
-        attachments: [
-          {
-            filename: attachment.filename,
-            content: attachment.content,
-            contentType: attachment.mimeType ?? 'application/octet-stream',
-          },
-        ],
+        ...(attachment?.filename && attachment.content
+          ? {
+              attachments: [
+                {
+                  filename: attachment.filename,
+                  content: attachment.content,
+                  contentType: attachment.mimeType ?? 'application/octet-stream',
+                },
+              ],
+            }
+          : {}),
       },
-      'ledger export notification',
+      'monthly finance summary notification',
     );
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, message: 'Financiële samenvatting verzonden.' });
   } catch (error) {
     console.error('Notify export failed', error);
-    return NextResponse.json({ error: 'Failed to send notification' }, { status: 500 });
+    return NextResponse.json({ error: 'De financiële samenvatting kon niet worden verzonden.' }, { status: 500 });
   }
 }
 
-const buildEmailHtml = (exportHtml: string, context?: ExportEmailContext): string => {
-  const intro = buildExportIntro(context);
-  const closing = buildClosingHtml();
-  const safeExportHtml = exportHtml || '<p>Your ledger export is below.</p>';
+const buildSubject = (context?: ExportEmailContext, filename?: string): string => {
+  if (context?.view === 'monthly') {
+    return `Financieel maandoverzicht ${context.periodLabel}`;
+  }
+  if (context?.view === 'cashflow') {
+    return `Financiële geldstroom ${context.periodLabel}`;
+  }
+  if (context?.view === 'dashboard') {
+    return `Financiële samenvatting ${context.periodLabel ?? ''}`.trim();
+  }
+  if (filename) {
+    return `Financiële export: ${filename}`;
+  }
+  return 'Financiële samenvatting Yeshua Academy';
+};
+
+const buildEmailHtml = (summaryHtml: string, context?: ExportEmailContext): string => {
+  const intro = buildIntroHtml(context);
+  const body = summaryHtml || '<p>De financiële samenvatting staat klaar in Yeshua Academy Finance.</p>';
 
   return `
-    <div style="font-family: 'Inter', 'Segoe UI', sans-serif; font-size:14px; line-height:1.6; color:#0f172a;">
-      ${intro}
-      <div style="margin:24px 0; padding:16px; border:1px solid #e2e8f0; border-radius:12px;">
-        ${safeExportHtml}
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size:14px; line-height:1.6; color:#251f1a; background:#f5f1ea; padding:24px;">
+      <div style="max-width:720px; margin:0 auto; background:#fbf8f2; border:1px solid #ded5c8; border-radius:24px; padding:24px;">
+        ${intro}
+        <div style="margin:24px 0; padding:16px; border:1px solid #ded5c8; border-radius:16px; background:#ffffff;">
+          ${body}
+        </div>
+        ${buildClosingHtml()}
       </div>
-      ${closing}
     </div>
   `;
 };
 
-const buildExportIntro = (context?: ExportEmailContext): string => {
-  const greeting = '<p>Hi there,</p>';
+const buildIntroHtml = (context?: ExportEmailContext): string => {
   if (!context) {
-    return `${greeting}<p>You&#8217;re receiving the latest ledger export.</p>`;
+    return '<p>Beste lezer,</p><p>Hierbij ontvang je de financiële samenvatting van Yeshua Academy.</p>';
   }
+
   switch (context.view) {
     case 'monthly':
-      return `${greeting}<p>You&#8217;re receiving the monthly overview for ${context.accountLabel} covering ${context.periodLabel}.</p>`;
+      return `<p>Beste lezer,</p><p>Hierbij ontvang je het financiële maandoverzicht voor ${context.accountLabel} over ${context.periodLabel}.</p>`;
     case 'transactions':
-      return `${greeting}<p>You&#8217;re receiving the transaction overview for ${context.description}.</p>`;
+      return `<p>Beste lezer,</p><p>Hierbij ontvang je het transactieoverzicht voor ${context.description}.</p>`;
     case 'cashflow':
-      return `${greeting}<p>You&#8217;re receiving the cash flow overview for ${context.periodLabel}.</p>`;
+      return `<p>Beste lezer,</p><p>Hierbij ontvang je het overzicht van de geldstroom over ${context.periodLabel}.</p>`;
     case 'dashboard':
-      return `${greeting}<p>You&#8217;re receiving the performance summary for your ledger for ${context.periodLabel ?? 'the current period'}.</p>`;
+      return `<p>Beste lezer,</p><p>Hierbij ontvang je de financiële samenvatting${context.periodLabel ? ` over ${context.periodLabel}` : ''}.</p>`;
     default:
-      return `${greeting}<p>You&#8217;re receiving the latest ledger export.</p>`;
+      return '<p>Beste lezer,</p><p>Hierbij ontvang je de financiële samenvatting van Yeshua Academy.</p>';
   }
 };
 
-const buildClosingHtml = () => {
-  return `
-    <p style="margin-top:24px;">Thank you for using Yeshua Academy Finance.</p>
-    <p>If you have any questions, you can reply to this email or contact Steve at <a href="mailto:Steve@yeshua.academy">Steve@yeshua.academy</a>.</p>
-  `;
-};
+const buildClosingHtml = () => `
+  <p style="margin-top:24px;">Hartelijke groet,<br/>Yeshua Academy Finance</p>
+  <p style="font-size:12px; color:#7d6d5a;">Deze e-mail is verstuurd vanuit de interne financiële administratie.</p>
+`;

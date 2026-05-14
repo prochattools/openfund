@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prismaClient';
 import { createRule, deleteRule, updateRule, previewRuleMatchesForUser, applyRuleToTransactions } from '../services/ruleEngine';
+import { readRouteParam } from './routeParams';
 import type { RuleMatchField, RuleMatchType } from '@prisma/client';
 
 const DEFAULT_USER_ID = process.env.DEFAULT_USER_ID ?? 'demo-user';
@@ -110,7 +111,7 @@ export const postRule = async (req: Request, res: Response) => {
 export const patchRule = async (req: Request, res: Response) => {
   logRequest(req);
   const userId = req.header('x-user-id') ?? DEFAULT_USER_ID;
-  const ruleId = req.params.id;
+  const ruleId = readRouteParam(req, 'id');
   if (!ruleId) {
     return res.status(400).json({ error: 'Rule id required' });
   }
@@ -160,7 +161,7 @@ export const patchRule = async (req: Request, res: Response) => {
 export const previewRule = async (req: Request, res: Response) => {
   logRequest(req);
   const userId = req.header('x-user-id') ?? DEFAULT_USER_ID;
-  const ruleId = req.params.id;
+  const ruleId = readRouteParam(req, 'id');
   const scope = req.body?.scope;
   const importBatchId = req.body?.importBatchId;
 
@@ -196,7 +197,7 @@ export const previewRule = async (req: Request, res: Response) => {
 export const applyRule = async (req: Request, res: Response) => {
   logRequest(req);
   const userId = req.header('x-user-id') ?? DEFAULT_USER_ID;
-  const ruleId = req.params.id;
+  const ruleId = readRouteParam(req, 'id');
   const transactionIds: string[] = Array.isArray(req.body?.transactionIds) ? req.body.transactionIds : [];
 
   if (!ruleId || !transactionIds.length) {
@@ -220,7 +221,7 @@ export const applyRule = async (req: Request, res: Response) => {
 export const removeRule = async (req: Request, res: Response) => {
   logRequest(req);
   const userId = req.header('x-user-id') ?? DEFAULT_USER_ID;
-  const ruleId = req.params.id;
+  const ruleId = readRouteParam(req, 'id');
   if (!ruleId) {
     return res.status(400).json({ error: 'Rule id required' });
   }

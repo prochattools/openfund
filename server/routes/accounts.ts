@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prismaClient';
 import { toMinorUnits } from '../../lib/import/normalizers';
+import { readRouteParam } from './routeParams';
+import { getRequestActor, requireAdmin } from '../auth/requestContext';
 
 const DEFAULT_USER_ID = process.env.DEFAULT_USER_ID ?? 'demo-user';
 const LOCKS_ENABLED = process.env.RECONCILIATION_LOCKS_ENABLED !== 'false';
@@ -60,7 +62,11 @@ export const listAccounts = async (req: Request, res: Response) => {
 
 export const upsertOpeningBalance = async (req: Request, res: Response) => {
   const userId = req.header('x-user-id') ?? DEFAULT_USER_ID;
-  const accountId = req.params.accountId;
+  const accountId = readRouteParam(req, 'accountId');
+
+  if (!accountId) {
+    return res.status(400).json({ error: 'Account id ontbreekt.' });
+  }
   const { effectiveDate, amount, currency, note } = req.body as {
     effectiveDate?: string;
     amount?: number | string;
@@ -148,7 +154,11 @@ export const upsertOpeningBalance = async (req: Request, res: Response) => {
 
 export const lockOpeningBalance = async (req: Request, res: Response) => {
   const userId = req.header('x-user-id') ?? DEFAULT_USER_ID;
-  const balanceId = req.params.balanceId;
+  const balanceId = readRouteParam(req, 'balanceId');
+
+  if (!balanceId) {
+    return res.status(400).json({ error: 'Beginbalans id ontbreekt.' });
+  }
 
   try {
     const balance = await prisma.openingBalance.findFirst({

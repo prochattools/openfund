@@ -21,6 +21,12 @@ describe('statement parsers', () => {
     expect(tx.date.toISOString()).toMatch(/^2025-/);
   });
 
+  it('rejects non-ING CSV files with missing required columns', async () => {
+    const buffer = Buffer.from('foo;bar\n1;2\n', 'utf-8');
+
+    await expect(parseIngCsv(buffer)).rejects.toThrow(/Missing ING columns/);
+  });
+
   it('extracts transactions from the initial XLSX workbook', () => {
     const buffer = fs.readFileSync(xlsxPath);
     const result = parseInitialWorkbook(buffer, { sheetName: 'transacties 2025' });

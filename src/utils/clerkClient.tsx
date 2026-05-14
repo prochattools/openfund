@@ -1,5 +1,5 @@
 import React, { ReactNode } from "react";
-import { AUTH_ENABLED } from "@/utils/auth";
+import { CLERK_RUNTIME_ENABLED } from "@/utils/auth";
 
 type UseUserResponse = {
   isSignedIn: boolean;
@@ -34,7 +34,7 @@ const createStubExports = (): ClerkClientExports => ({
 
 let exportsObject: ClerkClientExports = createStubExports();
 
-if (AUTH_ENABLED) {
+if (CLERK_RUNTIME_ENABLED) {
   exportsObject = require("@clerk/nextjs");
 }
 

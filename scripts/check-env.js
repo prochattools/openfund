@@ -1,19 +1,32 @@
 const requiredEnvVars = [
-  "CLERK_SECRET_KEY",
-  "RESEND_API_KEY",
-  "STRIPE_SECRET_KEY",
-  "DATABASE_URL"
+  'DATABASE_URL',
+  'RESEND_API_KEY'
 ];
 
-const missing = requiredEnvVars.filter((key) => {
+const recommendedEnvVars = [
+  'NEXT_PUBLIC_APP_URL',
+  'NEXT_PUBLIC_API_BASE_URL',
+  'DEFAULT_USER_ID'
+];
+
+const missingRequired = requiredEnvVars.filter((key) => {
   const value = process.env[key];
-  return value === undefined || value === null || value.trim() === "";
+  return value === undefined || value === null || value.trim() === '';
 });
 
-if (missing.length > 0) {
-  console.error("❌ Missing required environment variables:", missing.join(", "));
-  console.error("Please configure them in Dokploy before starting the application.");
+const missingRecommended = recommendedEnvVars.filter((key) => {
+  const value = process.env[key];
+  return value === undefined || value === null || value.trim() === '';
+});
+
+if (missingRequired.length > 0) {
+  console.error('❌ Ontbrekende verplichte omgevingsvariabelen:', missingRequired.join(', '));
+  console.error('Configureer deze variabelen voordat Yeshua Academy Finance wordt gestart.');
   process.exit(1);
 }
 
-console.log("✅ All critical environment variables are present.");
+if (missingRecommended.length > 0) {
+  console.warn('⚠️ Aanbevolen omgevingsvariabelen ontbreken:', missingRecommended.join(', '));
+}
+
+console.log('✅ Verplichte omgevingsvariabelen zijn aanwezig.');

@@ -1,18 +1,23 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prismaClient';
 import { clearReviewQueue as clearReviewQueueForUser } from '../services/reviewQueueService';
-
-const DEFAULT_USER_ID = process.env.DEFAULT_USER_ID ?? 'demo-user';
+import { createAuditLog } from '../services/auditLogService';
+import { getRequestActor, requireAdmin } from '../auth/requestContext';
+import { readRouteParam } from './routeParams';
 
 export const getReviewTransactions = async (req: Request, res: Response) => {
-  const userId = req.header('x-user-id') ?? DEFAULT_USER_ID;
+  const { userId } = getRequestActor(req);
 
   try {
     const [transactions, categories] = await Promise.all([
       prisma.transaction.findMany({
         where: {
           userId,
-          categoryId: null,
+          OR: [
+            { categoryId: null },
+            { classificationSource: 'none' },
+            { classificationSource: 'import' },
+          ],
         },
         include: {
           account: true,
@@ -46,13 +51,22 @@ export const getReviewTransactions = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Review fetch failed', error);
-    return res.status(500).json({ error: 'Failed to load review queue.' });
+    return res.status(500).json({ error: 'De beoordelingsrij kon niet worden geladen.' });
   }
 };
 
 export const updateTransactionCategory = async (req: Request, res: Response) => {
-  const userId = req.header('x-user-id') ?? DEFAULT_USER_ID;
-  const transactionId = req.params.id;
+  const actor = requireAdmin(req, res);
+  if (!actor) {
+    return;
+  }
+
+  const { userId, actorId, actorEmail } = actor;
+  const transactionId = readRouteParam(req, 'id');
+
+  if (!transactionId) {
+    return res.status(400).json({ error: 'Transactie id ontbreekt.' });
+  }
   const { categoryId, categoryName } = req.body as {
     categoryId?: string | null;
     categoryName?: string;
@@ -64,8 +78,7 @@ export const updateTransactionCategory = async (req: Request, res: Response) => 
         id: transactionId,
         userId,
       },
-      select: {
-        id: true,
+      include: {
         ledger: {
           select: {
             lockedAt: true,
@@ -75,35 +88,59 @@ export const updateTransactionCategory = async (req: Request, res: Response) => 
     });
 
     if (!tx) {
-      return res.status(404).json({ error: 'Transaction not found.' });
+      return res.status(404).json({ error: 'Transactie niet gevonden.' });
     }
 
     if (process.env.RECONCILIATION_LOCKS_ENABLED !== 'false' && tx.ledger?.lockedAt) {
-      return res.status(423).json({ error: 'Ledger period is locked; cannot modify transaction.' });
+      return res.status(423).json({ error: 'Deze maand is vergrendeld. Ontgrendel de maand voordat je deze transactie wijzigt.' });
     }
 
-    let finalCategoryId = categoryId ?? null;
+    const updated = await prisma.$transaction(async (db) => {
+      let finalCategoryId = categoryId ?? null;
 
-    if (!finalCategoryId && categoryName) {
-      const category = await prisma.category.upsert({
-        where: { name: categoryName },
-        update: {},
-        create: { name: categoryName },
+      if (!finalCategoryId && categoryName) {
+        const category = await db.category.upsert({
+          where: { name: categoryName },
+          update: {},
+          create: { name: categoryName },
+        });
+
+        finalCategoryId = category.id;
+      }
+
+      const result = await db.transaction.update({
+        where: { id: transactionId },
+        data: {
+          categoryId: finalCategoryId,
+          classificationSource: 'manual',
+          classificationRuleId: null,
+        },
+        include: {
+          category: true,
+        },
       });
 
-      finalCategoryId = category.id;
-    }
+      await createAuditLog(db, {
+        userId,
+        actorId,
+        actorEmail,
+        action: 'transaction.category.updated',
+        entityType: 'transaction',
+        entityId: transactionId,
+        before: {
+          categoryId: tx.categoryId,
+          classificationSource: tx.classificationSource,
+          classificationRuleId: tx.classificationRuleId,
+        },
+        after: {
+          categoryId: result.categoryId,
+          categoryName: result.category?.name ?? null,
+          classificationSource: result.classificationSource,
+          classificationRuleId: result.classificationRuleId,
+        },
+      });
 
-    const updated = await prisma.transaction.update({
-      where: { id: transactionId },
-      data: {
-        categoryId: finalCategoryId,
-        classificationSource: 'manual',
-        classificationRuleId: null,
-      },
-      include: {
-        category: true,
-      },
+      return result;
     });
 
     return res.json({
@@ -113,18 +150,21 @@ export const updateTransactionCategory = async (req: Request, res: Response) => 
     });
   } catch (error) {
     console.error('Category update failed', error);
-    return res.status(500).json({ error: 'Failed to update category.' });
+    return res.status(500).json({ error: 'De categorie kon niet worden bijgewerkt.' });
   }
 };
 
 export const clearReviewQueue = async (req: Request, res: Response) => {
-  const userId = req.header('x-user-id') ?? DEFAULT_USER_ID;
+  const actor = requireAdmin(req, res);
+  if (!actor) {
+    return;
+  }
 
   try {
-    const cleared = await prisma.$transaction((tx) => clearReviewQueueForUser(tx, userId));
+    const cleared = await prisma.$transaction((tx) => clearReviewQueueForUser(tx, actor.userId));
     return res.json({ cleared });
   } catch (error) {
     console.error('Clear review queue failed', error);
-    return res.status(500).json({ error: 'Failed to clear review queue.' });
+    return res.status(500).json({ error: 'De beoordelingsrij kon niet worden afgerond.' });
   }
 };

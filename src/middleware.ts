@@ -1,53 +1,52 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { AUTH_ENABLED } from "@/utils/auth";
+import { CLERK_RUNTIME_ENABLED, ORY_ENABLED, getOryBaseUrl, getOryLoginUrl } from "@/utils/auth";
 
 /* eslint-disable @typescript-eslint/no-var-requires */
 let clerkExports: any = null;
 
-if (AUTH_ENABLED) {
+if (CLERK_RUNTIME_ENABLED) {
   clerkExports = require("@clerk/nextjs/server");
 }
 
-const isProtectedRoute =
-  AUTH_ENABLED && clerkExports
-    ? clerkExports.createRouteMatcher([
-        "/ledger(.*)",
-        "/review(.*)",
-        "/dashboard(.*)",
-      ])
-    : () => false;
+const publicRoutes = [
+  "/sign-in(.*)",
+  "/api/health",
+  "/api/health(.*)",
+];
 
 const isPublicRoute =
-  AUTH_ENABLED && clerkExports
-    ? clerkExports.createRouteMatcher([
-        "/",
-        "/sign-in(.*)",
-        "/sign-up(.*)",
-        "/blog(.*)",
-        "/api/waiting-list(.*)",
-        "/api/health",
-        "/api/link",
-        "/api/stripe/create-checkout",
-        "/api/stripe/create-portal",
-        "/api/webhook/:path*",
-        "/waiting-list(.*)",
-        "/privacy-policy(.*)",
-        "/tos(.*)",
-        "/success(.*)",
-      ])
+  CLERK_RUNTIME_ENABLED && clerkExports
+    ? clerkExports.createRouteMatcher(publicRoutes)
     : () => true;
 
-const handler = AUTH_ENABLED
+const oryHandler = (request: NextRequest) => {
+  const sessionCookie = request.cookies.get("ory_kratos_session") ?? request.cookies.get("ory_session");
+  if (sessionCookie) {
+    return NextResponse.next();
+  }
+
+  const oryBaseUrl = getOryBaseUrl();
+  const loginPath = getOryLoginUrl();
+  const redirectTo = request.nextUrl.pathname + request.nextUrl.search;
+  const loginUrl = oryBaseUrl
+    ? new URL(loginPath, oryBaseUrl)
+    : new URL("/sign-in", request.url);
+
+  loginUrl.searchParams.set("return_to", new URL(redirectTo, request.url).toString());
+  return NextResponse.redirect(loginUrl);
+};
+
+const handler = CLERK_RUNTIME_ENABLED
   ? clerkExports!.clerkMiddleware((auth: any, request: NextRequest) => {
       if (isPublicRoute(request)) {
         return;
       }
 
-      if (isProtectedRoute(request)) {
-        auth().protect();
-      }
+      auth().protect();
     })
+  : ORY_ENABLED
+  ? ((request: NextRequest) => oryHandler(request))
   : (() => NextResponse.next());
 
 export default handler;

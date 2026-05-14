@@ -4,32 +4,32 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 224 71% 4%;
-    --card: 0 0% 100%;
-    --card-foreground: 224 71% 4%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 224 71% 4%;
-    --primary: 226 84% 61%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 214 32% 91%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 214 32% 91%;
-    --muted-foreground: 215 20% 47%;
-    --accent: 214 32% 91%;
-    --accent-foreground: 222 47% 11%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 215 20% 65%;
+    --background: 38 41% 94%;
+    --foreground: 28 18% 12%;
+    --card: 40 55% 97%;
+    --card-foreground: 28 18% 12%;
+    --popover: 40 55% 97%;
+    --popover-foreground: 28 18% 12%;
+    --primary: 158 51% 25%;
+    --primary-foreground: 40 55% 97%;
+    --secondary: 36 36% 89%;
+    --secondary-foreground: 28 18% 12%;
+    --muted: 36 36% 89%;
+    --muted-foreground: 31 16% 42%;
+    --accent: 36 36% 89%;
+    --accent-foreground: 28 18% 12%;
+    --destructive: 12 48% 43%;
+    --destructive-foreground: 40 55% 97%;
+    --border: 35 28% 83%;
+    --input: 35 28% 83%;
+    --ring: 158 31% 39%;
     --radius: 1rem;
 
-    --body-gradient-accent-1: rgba(41, 112, 255, 0.14);
-    --body-gradient-accent-2: rgba(36, 196, 255, 0.12);
-    --body-gradient-base-start: rgba(247, 249, 255, 1);
-    --body-gradient-base-end: rgba(236, 241, 255, 1);
-    --body-gradient-fade: rgba(255, 255, 255, 0);
+    --body-gradient-accent-1: rgba(31, 95, 74, 0.08);
+    --body-gradient-accent-2: rgba(182, 106, 72, 0.08);
+    --body-gradient-base-start: rgba(245, 241, 234, 1);
+    --body-gradient-base-end: rgba(239, 231, 219, 1);
+    --body-gradient-fade: rgba(245, 241, 234, 0);
   }
 
   .dark {

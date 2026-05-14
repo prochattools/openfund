@@ -8,6 +8,8 @@ import { getReviewTransactions, updateTransactionCategory, clearReviewQueue } fr
 import { listAccounts, lockOpeningBalance, upsertOpeningBalance } from './routes/accounts';
 import { getReconciliation } from './routes/reconciliation';
 import { lockLedger, unlockLedger } from './routes/ledgers';
+import { getReportSummary } from './routes/reports';
+import { listAuditLogs } from './routes/audit';
 import { getRules, postRule, patchRule, removeRule, previewRule, applyRule } from './routes/rules';
 import { ensureCategorizationRuleConditionsColumn } from './db/ensureCategorizationRuleConditions';
 
@@ -30,6 +32,8 @@ app.get('/api/accounts', listAccounts);
 app.post('/api/accounts/:accountId/opening-balance', upsertOpeningBalance);
 app.post('/api/opening-balances/:balanceId/lock', lockOpeningBalance);
 app.get('/api/reconciliation', getReconciliation);
+app.get('/api/reports/summary', getReportSummary);
+app.get('/api/audit-log', listAuditLogs);
 app.post('/api/ledger/:ledgerId/lock', lockLedger);
 app.post('/api/ledger/:ledgerId/unlock', unlockLedger);
 app.get('/api/rules', getRules);

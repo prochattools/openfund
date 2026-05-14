@@ -8,7 +8,7 @@ import { Toaster } from "react-hot-toast";
 import { Tooltip } from "react-tooltip";
 import { LedgerProvider } from "@/context/ledger-context";
 import {
-  AUTH_ENABLED,
+  CLERK_RUNTIME_ENABLED,
   getPublishableKey,
   getSignInUrl,
   getSignUpUrl,
@@ -22,30 +22,32 @@ declare global {
   }
 }
 
+const AppProviders = ({ children }: { children: ReactNode }) => (
+  <ThemeProvider
+    attribute="class"
+    defaultTheme="light"
+    enableSystem={false}
+    disableTransitionOnChange
+  >
+    <LedgerProvider>
+      <div className="min-h-screen bg-[#f5f1ea]">{children}</div>
+    </LedgerProvider>
+
+    <Toaster
+      position="bottom-center"
+      toastOptions={{
+        duration: 3000,
+        className: "text-sm bg-[#251f1a] text-[#fbf8f2]",
+      }}
+    />
+
+    <Tooltip id="tooltip" className="z-[60] !opacity-100 max-w-sm shadow-lg" />
+  </ThemeProvider>
+);
+
 export function Providers({ children }: { children: ReactNode }) {
-  if (!AUTH_ENABLED) {
-    return (
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="system"
-        enableSystem
-        disableTransitionOnChange
-      >
-        <LedgerProvider>
-          <div className="min-h-screen bg-background">{children}</div>
-        </LedgerProvider>
-
-        <Toaster
-          position="bottom-center"
-          toastOptions={{
-            duration: 3000,
-            className: "text-sm dark:bg-black dark:text-white",
-          }}
-        />
-
-        <Tooltip id="tooltip" className="z-[60] !opacity-100 max-w-sm shadow-lg" />
-      </ThemeProvider>
-    );
+  if (!CLERK_RUNTIME_ENABLED) {
+    return <AppProviders>{children}</AppProviders>;
   }
 
   return (
@@ -53,31 +55,12 @@ export function Providers({ children }: { children: ReactNode }) {
       publishableKey={getPublishableKey()}
       signInUrl={getSignInUrl()}
       signUpUrl={getSignUpUrl()}
-      fallbackRedirectUrl="/ledger"
-      signInFallbackRedirectUrl="/ledger"
-      signUpFallbackRedirectUrl="/ledger"
+      fallbackRedirectUrl="/"
+      signInFallbackRedirectUrl="/"
+      signUpFallbackRedirectUrl="/"
     >
       <ClerkCacheRefreshPatch />
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="system"
-        enableSystem
-        disableTransitionOnChange
-      >
-        <LedgerProvider>
-          <div className="min-h-screen bg-background">{children}</div>
-        </LedgerProvider>
-      </ThemeProvider>
-
-      <Toaster
-        position="bottom-center"
-        toastOptions={{
-          duration: 3000,
-          className: "text-sm dark:bg-black dark:text-white",
-        }}
-      />
-
-      <Tooltip id="tooltip" className="z-[60] !opacity-100 max-w-sm shadow-lg" />
+      <AppProviders>{children}</AppProviders>
     </ClerkProvider>
   );
 }
@@ -87,7 +70,7 @@ const ClerkCacheRefreshPatch: FC = () => {
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
-    if (!AUTH_ENABLED || typeof window === "undefined") {
+    if (!CLERK_RUNTIME_ENABLED || typeof window === "undefined") {
       return;
     }
 
@@ -111,7 +94,7 @@ const ClerkCacheRefreshPatch: FC = () => {
   }, [router, startTransition]);
 
   useEffect(() => {
-    if (!AUTH_ENABLED || typeof window === "undefined") {
+    if (!CLERK_RUNTIME_ENABLED || typeof window === "undefined") {
       return;
     }
     if (!isPending) {

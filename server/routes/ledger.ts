@@ -212,12 +212,13 @@ export const getLedger = async (req: Request, res: Response) => {
       };
     });
 
-    const approvedTransactions = transactions.filter((tx) => tx.classificationSource === 'manual');
-    const reviewCount = transactions.filter((tx) => tx.classificationSource !== 'manual').length;
+    const reviewCount = transactions.filter(
+      (tx) => !tx.categoryId || tx.classificationSource === 'none' || tx.classificationSource === 'import',
+    ).length;
     const autoCategorized = transactions.filter(
       (tx) => tx.classificationSource === 'history' || tx.classificationSource === 'rule',
     ).length;
-    const totalAmount = approvedTransactions.reduce((acc, tx) => {
+    const totalAmount = transactions.reduce((acc, tx) => {
       const base = Number(tx.amountMinor) / 100;
       const signed = tx.direction === 'debit' ? -Math.abs(base) : Math.abs(base);
       return acc + signed;
@@ -226,7 +227,7 @@ export const getLedger = async (req: Request, res: Response) => {
     return res.json({
       transactions: payload,
       summary: {
-        total: approvedTransactions.length,
+        total: transactions.length,
         reviewCount,
         autoCategorized,
         totalAmount,
@@ -242,6 +243,6 @@ export const getLedger = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Ledger fetch failed', error);
-    return res.status(500).json({ error: 'Failed to load ledger.' });
+    return res.status(500).json({ error: 'Het grootboek kon niet worden geladen.' });
   }
 };
