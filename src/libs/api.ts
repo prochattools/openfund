@@ -387,3 +387,32 @@ export const deactivateEmailRecipient = async (id: string): Promise<EmailRecipie
 
   return response.json();
 };
+
+export type ImportBatchSummary = {
+  id: string;
+  filename: string;
+  fileType: string | null;
+  status: 'pending' | 'completed' | 'failed';
+  totalRows: number;
+  importedRows: number;
+  duplicateRows: number;
+  errorRows: number;
+  autoCategorizedRows: number;
+  reviewRows: number;
+  startedAt: string;
+  completedAt: string | null;
+};
+
+export const fetchImportBatches = async (limit = 25): Promise<ImportBatchSummary[]> => {
+  const query = new URLSearchParams();
+  query.set('limit', String(limit));
+
+  const response = await fetch(getApiUrl(`/api/import-batches?${query.toString()}`), withUserHeader({ cache: 'no-store' }));
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Importgeschiedenis kon niet worden geladen.' }));
+    throw new Error(error.error ?? 'Importgeschiedenis kon niet worden geladen.');
+  }
+
+  return response.json();
+};

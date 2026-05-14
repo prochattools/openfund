@@ -1684,3 +1684,56 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 34. Import history visibility pass
+
+Started from pushed main commit:
+
+- `d5465b3 Hide review placeholder categories`
+
+### Import batch history
+
+Implemented:
+
+- `server/routes/importBatches.ts`
+- `server/index.ts`
+- `next.config.js`
+- `src/libs/api.ts`
+- `src/ui/FinanceSettingsPage.tsx`
+
+Result:
+
+- Added read-only `GET /api/import-batches` endpoint for recent import metadata.
+- Added Next rewrite for `/api/import-batches`.
+- Added client import-history API helper and type.
+- `/settings` now shows the latest ING import batches with counts for:
+  - new rows;
+  - automatically categorized rows;
+  - review rows;
+  - duplicate rows.
+- The UI clearly states that original file download still needs a separate file-storage phase because the current schema stores import metadata, not the original file bytes.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 11 test files passed.
+- 35 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

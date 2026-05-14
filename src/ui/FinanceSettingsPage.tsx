@@ -6,9 +6,11 @@ import {
   deactivateEmailRecipient,
   fetchAuditLogs,
   fetchEmailRecipients,
+  fetchImportBatches,
   saveEmailRecipient,
   type AuditLogEntry,
   type EmailRecipient,
+  type ImportBatchSummary,
   isClientAdmin,
 } from '@/libs/api';
 import { useLedger } from '@/context/ledger-context';
@@ -197,6 +199,73 @@ function EmailRecipientsPanel() {
   );
 }
 
+const formatImportDate = (value: string | null) => {
+  if (!value) return 'Nog niet afgerond';
+  return new Date(value).toLocaleString('nl-NL');
+};
+
+function ImportHistoryPanel() {
+  const [batches, setBatches] = useState<ImportBatchSummary[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchImportBatches(10)
+      .then((items) => {
+        if (!cancelled) {
+          setBatches(items);
+          setError(null);
+        }
+      })
+      .catch((loadError) => {
+        if (!cancelled) {
+          setError(loadError instanceof Error ? loadError.message : 'Importgeschiedenis kon niet worden geladen.');
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <section className="rounded-[2rem] border border-[#ded5c8] bg-[#fbf8f2] p-6 shadow-[0_24px_70px_rgba(87,67,45,0.08)]">
+      <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="text-sm font-medium text-[#7d6d5a]">ING-imports</p>
+          <h3 className="mt-1 text-2xl font-semibold tracking-[-0.04em]">Laatste importbestanden</h3>
+        </div>
+        <span className="rounded-full bg-[#fff7df] px-3 py-1 text-xs font-semibold text-[#7a5512]">Download volgt later</span>
+      </div>
+      <p className="mb-5 text-sm leading-6 text-[#6f6253]">
+        Deze lijst toont de opgeslagen importmetadata. De originele bestandsdownload vraagt nog een aparte bestandsopslagfase.
+      </p>
+      {error ? <p className="rounded-2xl bg-[#f7e9e4] p-4 text-sm text-[#7b4b3a]">{error}</p> : null}
+      {!error && batches.length ? (
+        <div className="space-y-3">
+          {batches.map((batch) => (
+            <div key={batch.id} className="rounded-[1.25rem] bg-[#f5f1ea] p-4 text-sm text-[#574b3f]">
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="font-semibold text-[#251f1a]">{batch.filename}</p>
+                  <p className="text-xs text-[#7d6d5a]">{formatImportDate(batch.completedAt ?? batch.startedAt)} · {batch.status === 'completed' ? 'voltooid' : batch.status}</p>
+                </div>
+                <div className="flex flex-wrap gap-2 text-xs font-semibold">
+                  <span className="rounded-full bg-[#fbf8f2] px-3 py-1">{batch.importedRows} nieuw</span>
+                  <span className="rounded-full bg-[#fbf8f2] px-3 py-1">{batch.autoCategorizedRows} automatisch</span>
+                  <span className="rounded-full bg-[#fbf8f2] px-3 py-1">{batch.reviewRows} review</span>
+                  <span className="rounded-full bg-[#fbf8f2] px-3 py-1">{batch.duplicateRows} dubbel</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {!error && !batches.length ? <p className="rounded-2xl bg-[#f5f1ea] p-4 text-sm text-[#6f6253]">Nog geen imports gevonden.</p> : null}
+    </section>
+  );
+}
+
 function AuditLogPreview() {
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -325,6 +394,7 @@ export default function FinanceSettingsPage() {
         </section>
 
         <CategoryOverview />
+        <ImportHistoryPanel />
         <EmailRecipientsPanel />
         <AuditLogPreview />
         <GuardrailList />
