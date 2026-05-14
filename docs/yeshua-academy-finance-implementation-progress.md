@@ -3346,3 +3346,47 @@ Build/test result:
 - 20 test files passed.
 - 89 tests passed.
 - Secret scan passed.
+
+
+## 70. Notification helper extraction and regression-test pass
+
+Started from pushed main commit:
+
+- `dde7755 Test upload file type guard`
+
+### Notification helper extraction
+
+Implemented:
+
+- `src/app/api/ledger/notify/emailHelpers.ts`
+- `src/app/api/ledger/notify/route.ts`
+- `tests/routes/notify.test.ts`
+
+Result:
+
+- Moved notification subject and e-mail HTML builders out of the Next route file into `emailHelpers.ts`.
+- This keeps the Next route export contract valid while still allowing focused helper tests.
+- Localized the internal Resend action label used for monthly finance summary notifications.
+- Added tests for Dutch notification subjects for monthly, cashflow, dashboard, filename fallback, and default fallback cases.
+- Added tests for fallback e-mail body, Dutch intro text, closing text, and provided summary HTML passthrough.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Build/test result:
+
+- Server TypeScript build passed.
+- Next production build passed.
+- 21 test files passed.
+- 93 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
