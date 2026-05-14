@@ -2784,3 +2784,47 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 58. Reconciliation balance extraction regression-test pass
+
+Started from pushed main commit:
+
+- `64861fa Test rule application flow`
+
+### Statement balance extraction coverage
+
+Implemented:
+
+- `tests/services/reconciliationService.test.ts`
+
+Result:
+
+- Added regression tests for Dutch `Saldo` balance extraction.
+- Added regression tests for generic `Balance` extraction from normalized raw-row columns.
+- Added invalid/missing raw-row coverage returning `null` instead of producing misleading balances.
+- This protects monthly reconciliation from ING/export-format variations while keeping malformed files safe and non-crashing.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 20 test files passed.
+- 73 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
