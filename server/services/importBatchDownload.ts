@@ -10,6 +10,11 @@ export const getImportFileContentType = (fileType: string | null | undefined): s
     ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     : 'text/csv; charset=utf-8';
 
+export const buildContentDisposition = (filename: string): string => {
+  const safeFallback = filename.replace(/[^a-zA-Z0-9._-]/g, '_') || 'importbestand.csv';
+  return `attachment; filename="${safeFallback}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
+};
+
 export const buildImportFileDownload = (batch: StoredImportFile) => {
   if (!batch.originalFile) {
     return null;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildImportFileDownload, getImportFileContentType } from '../../server/services/importBatchDownload';
+import { buildContentDisposition, buildImportFileDownload, getImportFileContentType } from '../../server/services/importBatchDownload';
 
 describe('import batch download service', () => {
   it('builds a CSV download payload with checksum metadata', () => {
@@ -21,6 +21,10 @@ describe('import batch download service', () => {
 
   it('builds an XLSX content type for initial workbook imports', () => {
     expect(getImportFileContentType('xlsx_initial')).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  });
+
+  it('builds a safe content disposition header for UTF-8 filenames', () => {
+    expect(buildContentDisposition('NL89 ING maand mei.csv')).toBe("attachment; filename=\"NL89_ING_maand_mei.csv\"; filename*=UTF-8''NL89%20ING%20maand%20mei.csv");
   });
 
   it('returns null when no original file is stored', () => {

@@ -2059,3 +2059,48 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 42. Import download filename safety pass
+
+Started from pushed main commit:
+
+- `df535e9 Test report route helpers`
+
+### Download header safety
+
+Implemented:
+
+- `server/services/importBatchDownload.ts`
+- `server/routes/importBatches.ts`
+- `tests/services/importBatchDownload.test.ts`
+
+Result:
+
+- Original ING export downloads now use an ASCII-safe fallback filename plus UTF-8 `filename*` support in the `Content-Disposition` header.
+- This makes downloaded filenames more predictable across browsers while still preserving the real filename where supported.
+- Added regression coverage for safe filename header generation.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 14 test files passed.
+- 46 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

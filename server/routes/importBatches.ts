@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../prismaClient';
 import { getRequestActor } from '../auth/requestContext';
 import { readRouteParam } from './routeParams';
-import { buildImportFileDownload } from '../services/importBatchDownload';
+import { buildContentDisposition, buildImportFileDownload } from '../services/importBatchDownload';
 
 export const readImportBatchLimit = (value: unknown): number => {
   const parsed = Number(value);
@@ -78,7 +78,7 @@ export const downloadImportBatchFile = async (req: Request, res: Response) => {
     }
 
     res.setHeader('Content-Type', download.contentType);
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(download.filename)}"`);
+    res.setHeader('Content-Disposition', buildContentDisposition(download.filename));
     if (download.sha256) {
       res.setHeader('X-File-Sha256', download.sha256);
     }
