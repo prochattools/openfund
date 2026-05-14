@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { findMatchingRule, matchesRule, type RuleCondition } from '../../server/services/ruleEngine';
+import { applyRuleToTransactions, findMatchingRule, matchesRule, type RuleCondition } from '../../server/services/ruleEngine';
 import type { CategorizationRule } from '@prisma/client';
 
 const baseContext = {
@@ -107,3 +107,69 @@ describe('rule engine', () => {
     expect(findMatchingRule([inactiveMatch, activeMatch], baseContext)?.id).toBe('active');
   });
 });
+
+
+  it('does not apply a rule when no transaction ids are selected', async () => {
+    const fakeTx = {
+      categorizationRule: {
+        findFirst: async () => {
+          throw new Error('findFirst should not be called');
+        },
+      },
+    } as any;
+
+    await expect(applyRuleToTransactions(fakeTx, {
+      userId: 'user-1',
+      ruleId: 'rule-1',
+      transactionIds: [],
+    })).resolves.toBe(0);
+  });
+
+  it('applies a rule to selected transactions and confirms them', async () => {
+    const calls: any[] = [];
+    const fakeTx = {
+      categorizationRule: {
+        findFirst: async (args: any) => {
+          calls.push(['findRule', args]);
+          return makeRule({ id: 'rule-1', categoryId: 'cat-rent', conditions: [] });
+        },
+        update: async (args: any) => {
+          calls.push(['touchRule', args]);
+          return {};
+        },
+      },
+      transaction: {
+        updateMany: async (args: any) => {
+          calls.push(['updateTransactions', args]);
+          return { count: 2 };
+        },
+      },
+    } as any;
+
+    const count = await applyRuleToTransactions(fakeTx, {
+      userId: 'user-1',
+      ruleId: 'rule-1',
+      transactionIds: ['tx-1', 'tx-2'],
+    });
+
+    expect(count).toBe(2);
+    expect(calls).toEqual([
+      ['findRule', { where: { id: 'rule-1', userId: 'user-1' } }],
+      ['updateTransactions', {
+        where: { id: { in: ['tx-1', 'tx-2'] }, userId: 'user-1' },
+        data: { categoryId: 'cat-rent', classificationRuleId: 'rule-1' },
+      }],
+      ['updateTransactions', {
+        where: {
+          userId: 'user-1',
+          id: { in: ['tx-1', 'tx-2'] },
+          classificationSource: { not: 'manual' },
+        },
+        data: { classificationSource: 'manual' },
+      }],
+      ['touchRule', {
+        where: { id: 'rule-1' },
+        data: { lastMatchedAt: expect.any(Date) },
+      }],
+    ]);
+  });

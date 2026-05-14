@@ -2738,3 +2738,49 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 57. Rule application regression-test pass
+
+Started from pushed main commit:
+
+- `7550e7c Test rule engine matching`
+
+### Rule application coverage
+
+Implemented:
+
+- `tests/services/ruleEngine.test.ts`
+
+Result:
+
+- Added regression tests for `applyRuleToTransactions`.
+- Covered the no-op path when no transaction ids are selected.
+- Covered applying a rule category to selected transactions.
+- Covered confirming selected transactions after rule application.
+- Covered updating `lastMatchedAt` after a successful rule application.
+- This protects the bulk/selected rule-application flow used to move suggested transactions out of review safely.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 20 test files passed.
+- 71 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
