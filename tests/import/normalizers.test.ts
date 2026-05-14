@@ -5,6 +5,7 @@ import {
   parseDate,
   normalizeDescription,
   normalizeAccountIdentifier,
+  buildNormalizedTransaction,
 } from '../../lib/import/normalizers';
 
 describe('normalizers', () => {
@@ -31,5 +32,68 @@ describe('normalizers', () => {
   it('normalizes descriptions and account identifiers consistently', () => {
     expect(normalizeDescription('Community Outreach Supplies!')).toEqual('community outreach supplies');
     expect(normalizeAccountIdentifier('NL89 ingb 0006 369960')).toEqual('NL89INGB0006369960');
+  });
+
+  it('builds a normalized transaction from a valid raw row', () => {
+    const normalized = buildNormalizedTransaction({
+      rowNumber: 7,
+      accountIdentifier: ' NL89 ingb 0006 369960 ',
+      accountName: 'Betaalrekening',
+      currency: 'EUR',
+      date: '20260514',
+      description: '  Gift   voor   zending! ',
+      counterparty: ' Donor Naam ',
+      amount: '1.234,56',
+      debitCredit: 'Credit',
+      reference: ' REF-123 ',
+      source: 'ing_csv',
+      raw: { Date: '20260514' },
+    });
+
+    expect(normalized).toEqual({
+      rowNumber: 7,
+      result: {
+        accountIdentifier: 'NL89INGB0006369960',
+        accountName: 'Betaalrekening',
+        currency: 'EUR',
+        date: new Date('2026-05-14T00:00:00.000Z'),
+        description: 'Gift voor zending!',
+        counterparty: 'Donor Naam',
+        amountMinor: 123456n,
+        reference: 'REF-123',
+        normalizedDescription: 'gift voor zending',
+        source: 'ing_csv',
+        raw: { Date: '20260514' },
+      },
+    });
+  });
+
+  it('returns row-level errors for missing required normalized fields', () => {
+    const base = {
+      rowNumber: 3,
+      accountIdentifier: 'NL89INGB0006369960',
+      date: '20260514',
+      description: 'Gift',
+      amount: '10,00',
+      source: 'ing_csv',
+      raw: {},
+    };
+
+    expect(buildNormalizedTransaction({ ...base, accountIdentifier: '   ' })).toEqual({
+      rowNumber: 3,
+      error: 'Missing account identifier',
+    });
+    expect(buildNormalizedTransaction({ ...base, date: 'geen datum' })).toEqual({
+      rowNumber: 3,
+      error: 'Invalid or missing transaction date',
+    });
+    expect(buildNormalizedTransaction({ ...base, description: '   ' })).toEqual({
+      rowNumber: 3,
+      error: 'Missing description',
+    });
+    expect(buildNormalizedTransaction({ ...base, amount: 'geen bedrag' })).toEqual({
+      rowNumber: 3,
+      error: 'Invalid or missing amount',
+    });
   });
 });

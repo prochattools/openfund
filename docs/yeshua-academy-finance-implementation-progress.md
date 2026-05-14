@@ -2964,3 +2964,47 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 62. Import normalizer row-validation regression-test pass
+
+Started from pushed main commit:
+
+- `f714c21 Test transaction matching normalization`
+
+### Normalized row coverage
+
+Implemented:
+
+- `tests/import/normalizers.test.ts`
+
+Result:
+
+- Added regression coverage for building a full normalized transaction from a valid raw row.
+- Verified account identifier normalization, date parsing, whitespace cleanup, amount conversion, reference cleanup, and normalized description output.
+- Added row-level validation coverage for missing account identifier, invalid date, missing description, and invalid amount.
+- This protects ING import parsing from producing partial or misleading ledger rows when required source fields are absent or malformed.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 20 test files passed.
+- 79 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
