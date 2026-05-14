@@ -38,4 +38,46 @@ describe('statement parsers', () => {
     expect(tx.amountMinor).toBeTypeOf('bigint');
     expect(tx.source).toEqual('xlsx_initial');
   });
+
+  it('keeps valid ING CSV rows and reports invalid rows without crashing', async () => {
+    const csv = [
+      'Date;Name / Description;Account;Counterparty;Debit/credit;Amount (EUR);Notifications',
+      '20260514;Gift voor zending;NL89INGB0006369960;Donor Naam;Credit;25,00;Reference: GIFT-1',
+      'geen datum;Ongeldige datum;NL89INGB0006369960;Donor Naam;Debit;10,00;',
+      '',
+    ].join('\n');
+
+    const result = await parseIngCsv(Buffer.from(csv, 'utf-8'));
+
+    expect(result.format).toBe('csv_ing');
+    expect(result.successes).toHaveLength(1);
+    expect(result.errors).toHaveLength(1);
+    expect(result.successes[0]).toMatchObject({
+      accountIdentifier: 'NL89INGB0006369960',
+      description: 'Gift voor zending',
+      amountMinor: 2500n,
+      reference: 'GIFT-1',
+      source: 'ing_csv',
+    });
+    expect(result.errors[0]).toMatchObject({
+      rowNumber: 3,
+      message: 'Invalid or missing transaction date',
+    });
+  });
+
+  it('returns a workbook row error when the configured sheet is missing', () => {
+    const result = parseInitialWorkbook(Buffer.from([]), { sheetName: 'bestaat niet' });
+
+    expect(result).toEqual({
+      successes: [],
+      errors: [
+        {
+          rowNumber: 0,
+          message: 'Sheet "bestaat niet" not found',
+          raw: null,
+        },
+      ],
+      format: 'xlsx_initial',
+    });
+  });
 });

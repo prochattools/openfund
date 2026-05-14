@@ -3008,3 +3008,49 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 63. Import parser mixed-row regression-test pass
+
+Started from pushed main commit:
+
+- `baa983f Test import row normalization`
+
+### Parser edge coverage
+
+Implemented:
+
+- `tests/import/parsers.test.ts`
+
+Result:
+
+- Added ING CSV parser regression coverage for a mixed file containing both valid and invalid transaction rows.
+- Verified the valid row is retained and normalized.
+- Verified the invalid row becomes a row-level error instead of crashing the import.
+- Verified blank rows are ignored.
+- Added XLSX parser coverage for a missing configured sheet returning a structured row-level error.
+- This protects the foolproof import requirement: malformed rows should produce clear errors without mangling valid transactions.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 20 test files passed.
+- 81 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
