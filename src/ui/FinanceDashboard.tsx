@@ -257,7 +257,7 @@ function LatestImportCard({ latestImport }: { latestImport: ImportBatchSummary |
             <div className="rounded-2xl bg-[#edf5ec] p-3 text-[#1f5f4a]"><strong>{latestImport.importedRows}</strong><br />nieuw</div>
             <div className="rounded-2xl bg-[#f5f1ea] p-3 text-[#6f6253]"><strong>{latestImport.duplicateRows}</strong><br />dubbel</div>
             <div className="rounded-2xl bg-[#f5f1ea] p-3 text-[#6f6253]"><strong>{latestImport.autoCategorizedRows}</strong><br />automatisch</div>
-            <div className="rounded-2xl bg-[#fff7df] p-3 text-[#7a5512]"><strong>{latestImport.reviewRows}</strong><br />review</div>
+            <div className="rounded-2xl bg-[#fff7df] p-3 text-[#7a5512]"><strong>{latestImport.reviewRows}</strong><br />te beoordelen</div>
           </div>
           {latestImport.hasOriginalFile ? (
             <a href={getImportBatchDownloadUrl(latestImport.id)} className="block rounded-2xl bg-[#1f5f4a] px-4 py-3 text-center text-sm font-semibold text-[#fbf8f2]">Download origineel</a>

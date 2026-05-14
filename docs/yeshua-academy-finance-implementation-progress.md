@@ -2326,3 +2326,47 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 48. Import review-count Dutch-copy polish pass
+
+Started from pushed main commit:
+
+- `55e0655 Translate import history statuses`
+
+### Import count labels
+
+Implemented:
+
+- `src/ui/FinanceDashboard.tsx`
+- `src/ui/FinanceSettingsPage.tsx`
+
+Result:
+
+- Remaining import count chips that displayed `review` now use `te beoordelen`.
+- The dashboard latest-import card is fully Dutch in its count labels.
+- The settings import-history panel is fully Dutch in its count labels.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 14 test files passed.
+- 46 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

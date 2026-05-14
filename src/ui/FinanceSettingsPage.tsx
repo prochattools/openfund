@@ -276,7 +276,7 @@ function ImportHistoryPanel() {
                 <div className="flex flex-wrap gap-2 text-xs font-semibold">
                   <span className="rounded-full bg-[#fbf8f2] px-3 py-1">{batch.importedRows} nieuw</span>
                   <span className="rounded-full bg-[#fbf8f2] px-3 py-1">{batch.autoCategorizedRows} automatisch</span>
-                  <span className="rounded-full bg-[#fbf8f2] px-3 py-1">{batch.reviewRows} review</span>
+                  <span className="rounded-full bg-[#fbf8f2] px-3 py-1">{batch.reviewRows} te beoordelen</span>
                   <span className="rounded-full bg-[#fbf8f2] px-3 py-1">{batch.duplicateRows} dubbel</span>
                   <span className="rounded-full bg-[#fbf8f2] px-3 py-1">{formatFileSize(batch.fileSizeBytes)}</span>
                   <span className="rounded-full bg-[#fbf8f2] px-3 py-1">hash {shortHash(batch.fileSha256)}</span>
