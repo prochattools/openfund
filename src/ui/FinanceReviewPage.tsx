@@ -107,6 +107,11 @@ const findCategoryIdByName = (categories: Category[], name: string | null | unde
   return categories.find((category) => normalizeLabel(category.name) === normalized)?.id ?? '';
 };
 
+const isReviewPlaceholderCategory = (category: Category) => {
+  const normalized = normalizeLabel(category.name);
+  return category.id === 'cat-review' || category.id === 'sub-review-needs-category' || normalized === 'review' || normalized === 'needs review' || normalized === 'needs manual categorization';
+};
+
 const translateSuggestionConfidence = (confidence: LedgerTransaction['suggestionConfidence']) => {
   switch (confidence) {
     case 'exact':
@@ -263,11 +268,11 @@ function ReviewTableMode({ transactions }: { transactions: LedgerTransaction[] }
 
 export default function FinanceReviewPage() {
   const { reviewTransactions, categoryTree, assignCategory, summary } = useLedger();
-  const mainCategories = useMemo(() => categoryTree.main.filter((category) => category.id !== 'cat-review'), [categoryTree.main]);
+  const mainCategories = useMemo(() => categoryTree.main.filter((category) => !isReviewPlaceholderCategory(category)), [categoryTree.main]);
   const subcategories = useMemo(() => {
     const result: Record<string, Category[]> = {};
     mainCategories.forEach((main) => {
-      result[main.id] = (categoryTree.byParent[main.id] ?? []).filter((category) => category.id !== 'sub-review-needs-category');
+      result[main.id] = (categoryTree.byParent[main.id] ?? []).filter((category) => !isReviewPlaceholderCategory(category));
     });
     return result;
   }, [categoryTree.byParent, mainCategories]);

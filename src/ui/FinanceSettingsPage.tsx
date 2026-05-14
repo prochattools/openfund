@@ -60,9 +60,16 @@ function SettingCard({ title, body, status }: { title: string; body: string; sta
   );
 }
 
+const normalizeCategoryLabel = (value: string | null | undefined) => (value ?? '').trim().toLowerCase();
+
+const isReviewPlaceholderCategory = (category: { id: string; name: string }) => {
+  const normalized = normalizeCategoryLabel(category.name);
+  return category.id === 'cat-review' || category.id === 'sub-review-needs-category' || normalized === 'review' || normalized === 'needs review' || normalized === 'needs manual categorization';
+};
+
 function CategoryOverview() {
   const { categoryTree } = useLedger();
-  const mainCategories = useMemo(() => categoryTree.main.filter((category) => category.id !== 'cat-review'), [categoryTree.main]);
+  const mainCategories = useMemo(() => categoryTree.main.filter((category) => !isReviewPlaceholderCategory(category)), [categoryTree.main]);
 
   return (
     <section className="rounded-[2rem] border border-[#ded5c8] bg-[#fbf8f2] p-6 shadow-[0_24px_70px_rgba(87,67,45,0.08)]">
@@ -76,7 +83,7 @@ function CategoryOverview() {
       {mainCategories.length ? (
         <div className="grid gap-4 lg:grid-cols-2">
           {mainCategories.map((main) => {
-            const children = categoryTree.byParent[main.id] ?? [];
+            const children = (categoryTree.byParent[main.id] ?? []).filter((category) => !isReviewPlaceholderCategory(category));
             return (
               <div key={main.id} className="rounded-[1.5rem] border border-[#ded5c8] bg-[#f8f3ec] p-4">
                 <p className="font-semibold text-[#251f1a]">{main.name}</p>

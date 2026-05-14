@@ -1639,3 +1639,48 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 33. Review placeholder category cleanup pass
+
+Started from pushed main commit:
+
+- `9aefaca Translate review match labels`
+
+### Category choice cleanup
+
+Implemented:
+
+- `src/ui/FinanceReviewPage.tsx`
+- `src/ui/FinanceSettingsPage.tsx`
+
+Result:
+
+- Internal review placeholder categories such as `Review`, `Needs Review`, and `Needs manual categorization` are hidden from normal category choices.
+- The review page no longer offers review placeholders as assignable main/subcategories.
+- The settings category overview no longer presents review placeholders as normal administration categories.
+- This keeps the app focused on real income/expense categories while still preserving review internals.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 11 test files passed.
+- 35 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
