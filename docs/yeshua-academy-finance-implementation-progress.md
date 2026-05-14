@@ -1168,3 +1168,62 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 23. Viewer/admin client-role UX pass
+
+Started from pushed main commit:
+
+- `054d8b8 Fix pending review import counts`
+
+### Client role propagation
+
+Implemented:
+
+- `src/libs/api.ts`
+
+Result:
+
+- Added a simple client role setting via `NEXT_PUBLIC_API_USER_ROLE`.
+- Client requests now include `x-user-role` along with `x-user-id`.
+- The default remains `admin` for current internal/local behavior.
+
+### Viewer-safe mutation affordances
+
+Implemented:
+
+- `src/components/ledger/UploadCsvButton.tsx`
+- `src/ui/FinanceReviewPage.tsx`
+- `src/ui/FinanceSettingsPage.tsx`
+
+Result:
+
+- Viewers no longer get active import buttons.
+- Viewers no longer get active review-save buttons.
+- Viewers no longer get active email-recipient add/deactivate buttons.
+- Viewer screens explain in Dutch that only beheerders may perform those actions.
+- Server-side admin guards remain the source of truth; this is UI clarity, not a security replacement.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 8 test files passed.
+- 26 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

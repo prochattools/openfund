@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useMemo, useState, type ReactNode } from 'react';
 import toast from 'react-hot-toast';
 import { useLedger, type Category, type LedgerTransaction } from '@/context/ledger-context';
+import { isClientAdmin } from '@/libs/api';
 
 const euroFormatter = new Intl.NumberFormat('nl-NL', {
   style: 'currency',
@@ -132,11 +133,17 @@ function ReviewCard({
   const [subId, setSubId] = useState(defaultSub);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
+  const canReview = isClientAdmin();
   const isExpense = transaction.amount < 0;
   const availableSubs = mainId ? subcategories[mainId] ?? [] : [];
   const suggestedLabel = transaction.suggestedSubCategoryName ?? transaction.categoryName ?? transaction.suggestedMainCategoryName ?? transaction.mainCategoryName ?? 'Geen suggestie';
 
   const save = async () => {
+    if (!canReview) {
+      toast.error('Alleen beheerders mogen transacties categoriseren.');
+      return;
+    }
+
     if (!mainId && !subId && !note.trim()) {
       toast.error('Kies een categorie of vul een nieuwe categorie in.');
       return;
@@ -194,8 +201,8 @@ function ReviewCard({
           <input value={note} onChange={(event) => setNote(event.target.value)} placeholder="Optioneel" className="mt-2 w-full rounded-2xl border border-[#ded5c8] bg-[#f5f1ea] px-4 py-3 text-sm outline-none focus:border-[#1f5f4a]" />
         </label>
         <div className="flex items-end">
-          <button onClick={save} disabled={busy} className="w-full rounded-2xl bg-[#1f5f4a] px-5 py-3 text-sm font-semibold text-[#fbf8f2] disabled:opacity-60 lg:w-auto">
-            {busy ? 'Opslaan…' : 'Opslaan'}
+          <button onClick={save} disabled={busy || !canReview} className="w-full rounded-2xl bg-[#1f5f4a] px-5 py-3 text-sm font-semibold text-[#fbf8f2] disabled:opacity-60 lg:w-auto">
+            {!canReview ? 'Alleen beheerder' : busy ? 'Opslaan…' : 'Opslaan'}
           </button>
         </div>
       </div>

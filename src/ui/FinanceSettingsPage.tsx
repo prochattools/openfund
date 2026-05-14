@@ -9,6 +9,7 @@ import {
   saveEmailRecipient,
   type AuditLogEntry,
   type EmailRecipient,
+  isClientAdmin,
 } from '@/libs/api';
 import { useLedger } from '@/context/ledger-context';
 
@@ -100,6 +101,7 @@ function CategoryOverview() {
 }
 
 function EmailRecipientsPanel() {
+  const canManageRecipients = isClientAdmin();
   const [recipients, setRecipients] = useState<EmailRecipient[]>([]);
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
@@ -123,6 +125,10 @@ function EmailRecipientsPanel() {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!canManageRecipients) {
+      setError('Alleen beheerders mogen e-mailontvangers beheren.');
+      return;
+    }
     setBusy(true);
     try {
       await saveEmailRecipient({ email, name: name || null });
@@ -137,6 +143,10 @@ function EmailRecipientsPanel() {
   };
 
   const deactivate = async (id: string) => {
+    if (!canManageRecipients) {
+      setError('Alleen beheerders mogen e-mailontvangers beheren.');
+      return;
+    }
     setBusy(true);
     try {
       await deactivateEmailRecipient(id);
@@ -153,11 +163,12 @@ function EmailRecipientsPanel() {
       <p className="text-sm font-medium text-[#7d6d5a]">E-mailupdates</p>
       <h3 className="mt-1 text-2xl font-semibold tracking-[-0.04em]">Ontvangers maandoverzicht</h3>
       <p className="mt-2 text-sm leading-6 text-[#6f6253]">Beheer de mensen die de financiële samenvatting per e-mail mogen ontvangen.</p>
+      {!canManageRecipients ? <p className="mt-4 rounded-2xl bg-[#f5f1ea] p-4 text-sm text-[#6f6253]">Je kijkt mee als viewer. Alleen beheerders kunnen ontvangers toevoegen of uitschakelen.</p> : null}
 
       <form onSubmit={handleSubmit} className="mt-5 grid gap-3 lg:grid-cols-[1fr_1fr_auto]">
         <input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="e-mailadres" className="rounded-2xl border border-[#ded5c8] bg-[#f5f1ea] px-4 py-3 text-sm outline-none focus:border-[#1f5f4a]" />
         <input value={name} onChange={(event) => setName(event.target.value)} placeholder="naam optioneel" className="rounded-2xl border border-[#ded5c8] bg-[#f5f1ea] px-4 py-3 text-sm outline-none focus:border-[#1f5f4a]" />
-        <button disabled={busy} className="rounded-2xl bg-[#1f5f4a] px-5 py-3 text-sm font-semibold text-[#fbf8f2] disabled:opacity-60">Toevoegen</button>
+        <button disabled={busy || !canManageRecipients} className="rounded-2xl bg-[#1f5f4a] px-5 py-3 text-sm font-semibold text-[#fbf8f2] disabled:opacity-60">{canManageRecipients ? 'Toevoegen' : 'Alleen beheerder'}</button>
       </form>
 
       {error ? <p className="mt-4 rounded-2xl bg-[#f7e9e4] p-4 text-sm text-[#7b4b3a]">{error}</p> : null}
@@ -170,7 +181,7 @@ function EmailRecipientsPanel() {
               <p className="text-xs text-[#7d6d5a]">{recipient.email} · {recipient.isActive ? 'actief' : 'uitgeschakeld'}</p>
             </div>
             {recipient.isActive ? (
-              <button type="button" disabled={busy} onClick={() => deactivate(recipient.id)} className="rounded-full border border-[#ded5c8] px-3 py-1 text-xs font-semibold text-[#7b4b3a] disabled:opacity-60">Uitschakelen</button>
+              <button type="button" disabled={busy || !canManageRecipients} onClick={() => deactivate(recipient.id)} className="rounded-full border border-[#ded5c8] px-3 py-1 text-xs font-semibold text-[#7b4b3a] disabled:opacity-60">{canManageRecipients ? 'Uitschakelen' : 'Alleen beheerder'}</button>
             ) : null}
           </div>
         )) : <p className="rounded-2xl bg-[#f5f1ea] p-4 text-sm text-[#6f6253]">Nog geen e-mailontvangers toegevoegd.</p>}

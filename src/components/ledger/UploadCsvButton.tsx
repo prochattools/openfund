@@ -3,6 +3,7 @@
 import React, { useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useLedger } from '@/context/ledger-context';
+import { isClientAdmin } from '@/libs/api';
 
 type ImportSummaryWithMessage = {
   importedCount: number;
@@ -22,8 +23,13 @@ export function UploadCsvButton() {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [busy, setBusy] = useState(false);
   const { importCsv, refreshLedger } = useLedger();
+  const canImport = isClientAdmin();
 
   const handleClick = () => {
+    if (!canImport) {
+      toast.error('Alleen beheerders mogen ING-exportbestanden importeren.');
+      return;
+    }
     inputRef.current?.click();
   };
 
@@ -94,9 +100,9 @@ export function UploadCsvButton() {
         type="button"
         onClick={handleClick}
         className="rounded-2xl bg-[#1f5f4a] px-5 py-3 text-sm font-semibold text-[#fbf8f2] shadow-[0_14px_35px_rgba(31,95,74,0.22)] transition hover:-translate-y-0.5 hover:bg-[#174d3b] disabled:cursor-not-allowed disabled:opacity-60"
-        disabled={busy}
+        disabled={busy || !canImport}
       >
-        {busy ? 'Importeren…' : 'ING-export importeren'}
+        {!canImport ? 'Alleen beheerder' : busy ? 'Importeren…' : 'ING-export importeren'}
       </button>
       <input
         ref={inputRef}
