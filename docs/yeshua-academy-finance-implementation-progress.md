@@ -2507,3 +2507,48 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 52. Account and ledger route Dutch-log polish pass
+
+Started from pushed main commit:
+
+- `6219a63 Test email recipient validation`
+
+### Server log localization
+
+Implemented:
+
+- `server/routes/accounts.ts`
+- `server/routes/ledgers.ts`
+
+Result:
+
+- Localized remaining account-route server error log messages to Dutch.
+- Localized opening-balance save and lock server log messages to Dutch.
+- Localized ledger lock and unlock server log messages to Dutch.
+- No route behavior, response shape, audit behavior, or authorization behavior was changed.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 17 test files passed.
+- 53 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

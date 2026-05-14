@@ -55,7 +55,7 @@ export const listAccounts = async (req: Request, res: Response) => {
       }),
     );
   } catch (error) {
-    console.error('listAccounts failed', error);
+    console.error('Rekeningen konden niet worden geladen', error);
     return res.status(500).json({ error: 'Rekeningen konden niet worden geladen.' });
   }
 };
@@ -184,7 +184,7 @@ export const upsertOpeningBalance = async (req: Request, res: Response) => {
 
     return res.status(response.status).json(response.body);
   } catch (error) {
-    console.error('upsertOpeningBalance failed', error);
+    console.error('Beginbalans kon niet worden opgeslagen', error);
     return res.status(500).json({ error: 'Beginbalans kon niet worden opgeslagen.' });
   }
 };
@@ -268,7 +268,7 @@ export const lockOpeningBalance = async (req: Request, res: Response) => {
 
     return res.status(response.status).json(response.body);
   } catch (error) {
-    console.error('lockOpeningBalance failed', error);
+    console.error('Beginbalans kon niet worden vergrendeld', error);
     return res.status(500).json({ error: 'Beginbalans kon niet worden vergrendeld.' });
   }
 };

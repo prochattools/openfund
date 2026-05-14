@@ -108,7 +108,7 @@ export const lockLedger = async (req: Request, res: Response) => {
 
     return res.status(response.status).json(response.body);
   } catch (error) {
-    console.error('lockLedger failed', error);
+    console.error('Maand kon niet worden vergrendeld', error);
     return res.status(500).json({ error: 'Maand kon niet worden vergrendeld.' });
   }
 };
@@ -199,7 +199,7 @@ export const unlockLedger = async (req: Request, res: Response) => {
 
     return res.status(response.status).json(response.body);
   } catch (error) {
-    console.error('unlockLedger failed', error);
+    console.error('Maand kon niet worden ontgrendeld', error);
     return res.status(500).json({ error: 'Maand kon niet worden ontgrendeld.' });
   }
 };
