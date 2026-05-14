@@ -2875,3 +2875,46 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 60. Notification route Dutch-log polish pass
+
+Started from pushed main commit:
+
+- `845e59c Test report category fallbacks`
+
+### Notification route log localization
+
+Implemented:
+
+- `src/app/api/ledger/notify/route.ts`
+
+Result:
+
+- Replaced the remaining English notification-route server error log with Dutch wording.
+- No response shape, recipient logic, authorization logic, or e-mail content was changed.
+- This keeps server/admin diagnostics aligned with the Dutch-only product direction.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 20 test files passed.
+- 75 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

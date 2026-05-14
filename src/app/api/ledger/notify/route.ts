@@ -68,7 +68,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, message: 'Financiële samenvatting verzonden.' });
   } catch (error) {
-    console.error('Notify export failed', error);
+    console.error('Financiële samenvatting kon niet worden verzonden', error);
     return NextResponse.json({ error: 'De financiële samenvatting kon niet worden verzonden.' }, { status: 500 });
   }
 }
