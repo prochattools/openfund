@@ -1376,3 +1376,48 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 27. Request guard regression-test pass
+
+Started from pushed main commit:
+
+- `3d975a7 Use Dutch client API errors`
+
+### Admin/viewer guard tests
+
+Implemented:
+
+- `tests/auth/requestContext.test.ts`
+
+Result:
+
+- Added coverage for provider-neutral request actor parsing.
+- Verified the internal/local default role remains `admin`.
+- Verified viewer role and actor metadata are parsed from headers.
+- Verified `requireAdmin` blocks viewers with the Dutch `403` response.
+- Verified admins pass through mutation guards without a response side effect.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 9 test files passed.
+- 30 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
