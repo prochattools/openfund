@@ -2690,3 +2690,51 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 56. Active rule-engine regression-test pass
+
+Started from pushed main commit:
+
+- `1160482 Test history based categorization`
+
+### Active rule-engine coverage
+
+Implemented:
+
+- `tests/services/ruleEngine.test.ts`
+
+Result:
+
+- Added active Vitest coverage for the rule engine under the main `tests/` tree.
+- Covered description condition matching.
+- Covered combined description and amount matching.
+- Covered mismatched amount rejection.
+- Covered legacy pattern/match-field compatibility.
+- Covered safe regex matching and invalid-regex rejection with the expected warning asserted and suppressed.
+- Covered inactive-rule skipping in `findMatchingRule`.
+- This protects the explicit categorization-rule path that runs before history-based categorization.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 20 test files passed.
+- 69 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
