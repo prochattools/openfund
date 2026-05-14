@@ -3,7 +3,6 @@ import { LockedPeriodError, processImportBuffer } from '../services/importServic
 import { LedgerMismatchError, MissingOpeningBalanceError } from '../services/reconciliationService';
 import { requireAdmin } from '../auth/requestContext';
 
-const DEFAULT_USER_ID = process.env.DEFAULT_USER_ID ?? 'demo-user';
 const ALLOWED_MIME_TYPES = new Set([
   'text/csv',
   'application/csv',
@@ -11,7 +10,7 @@ const ALLOWED_MIME_TYPES = new Set([
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 ]);
 
-const isAllowedUpload = (file: Express.Multer.File): boolean => {
+export const isAllowedUpload = (file: Pick<Express.Multer.File, 'originalname' | 'mimetype'>): boolean => {
   const filename = file.originalname.toLowerCase();
   const extensionAllowed =
     filename.endsWith('.csv') ||
@@ -80,7 +79,7 @@ export const handleImportUpload = async (req: Request, res: Response) => {
       message: buildImportMessage(summary),
     });
   } catch (error) {
-    console.error('Import upload failed', error);
+    console.error('Import upload kon niet worden verwerkt', error);
     const message = getDutchErrorMessage(error);
 
     if (error instanceof LockedPeriodError) {

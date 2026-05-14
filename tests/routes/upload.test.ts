@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildImportMessage } from '../../server/routes/upload';
+import { buildImportMessage, isAllowedUpload } from '../../server/routes/upload';
 
 describe('upload route import message', () => {
   it('builds a complete Dutch success message with all counters', () => {
@@ -40,5 +40,16 @@ describe('upload route import message', () => {
     });
 
     expect(message).toBe('Import voltooid. 0 transacties toegevoegd.');
+  });
+
+  it('allows ING CSV and Excel uploads by extension or MIME type', () => {
+    expect(isAllowedUpload({ originalname: 'mei.csv', mimetype: 'text/csv' })).toBe(true);
+    expect(isAllowedUpload({ originalname: 'mei.xlsx', mimetype: 'application/octet-stream' })).toBe(true);
+    expect(isAllowedUpload({ originalname: 'mei.unknown', mimetype: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })).toBe(true);
+  });
+
+  it('rejects unsupported upload file types', () => {
+    expect(isAllowedUpload({ originalname: 'bon.pdf', mimetype: 'application/pdf' })).toBe(false);
+    expect(isAllowedUpload({ originalname: 'notities.txt', mimetype: 'text/plain' })).toBe(false);
   });
 });

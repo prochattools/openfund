@@ -50,7 +50,7 @@ export const getReviewTransactions = async (req: Request, res: Response) => {
       categories,
     });
   } catch (error) {
-    console.error('Review fetch failed', error);
+    console.error('Beoordelingsrij kon niet worden geladen', error);
     return res.status(500).json({ error: 'De beoordelingsrij kon niet worden geladen.' });
   }
 };
@@ -149,7 +149,7 @@ export const updateTransactionCategory = async (req: Request, res: Response) => 
       categoryName: updated.category?.name ?? null,
     });
   } catch (error) {
-    console.error('Category update failed', error);
+    console.error('Categorie kon niet worden bijgewerkt', error);
     return res.status(500).json({ error: 'De categorie kon niet worden bijgewerkt.' });
   }
 };
@@ -164,7 +164,7 @@ export const clearReviewQueue = async (req: Request, res: Response) => {
     const cleared = await prisma.$transaction((tx) => clearReviewQueueForUser(tx, actor.userId));
     return res.json({ cleared });
   } catch (error) {
-    console.error('Clear review queue failed', error);
+    console.error('Beoordelingsrij kon niet worden afgerond', error);
     return res.status(500).json({ error: 'De beoordelingsrij kon niet worden afgerond.' });
   }
 };

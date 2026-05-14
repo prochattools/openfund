@@ -3292,3 +3292,57 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 69. Upload guard and review-route Dutch-log pass
+
+Started from pushed main commit:
+
+- `81fb54f Localize rule route logs`
+
+### Upload route guard coverage
+
+Implemented:
+
+- `server/routes/upload.ts`
+- `tests/routes/upload.test.ts`
+
+Result:
+
+- Removed unused upload-route `DEFAULT_USER_ID` constant.
+- Exported the upload file-type guard for focused regression tests.
+- Added tests for allowed ING CSV/Excel uploads by extension or MIME type.
+- Added tests for unsupported upload file types such as PDF and plain text.
+- Localized the upload-route server error log to Dutch.
+
+### Review route log localization
+
+Implemented:
+
+- `server/routes/review.ts`
+
+Result:
+
+- Localized remaining review-route server logs for review fetching, category updates, and clearing the review queue.
+- Response bodies and route behavior remain unchanged.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build:server
+npm test
+```
+
+Validation note:
+
+- Full `npm run build` was attempted repeatedly, but BuildFlow returned Cloudflare 504 gateway timeouts before returning command output.
+- Because this chunk only changes server routes and route tests, `npm run build:server`, `npm test`, and the secret scan were used as validation evidence.
+
+Build/test result:
+
+- Server TypeScript build passed.
+- 20 test files passed.
+- 89 tests passed.
+- Secret scan passed.
