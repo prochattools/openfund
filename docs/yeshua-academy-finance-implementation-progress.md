@@ -2104,3 +2104,46 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 43. Reconciliation route alignment pass
+
+Started from pushed main commit:
+
+- `07d80a5 Harden import download filenames`
+
+### Reconciliation route cleanup
+
+Implemented:
+
+- `server/routes/reconciliation.ts`
+
+Result:
+
+- Reconciliation now uses the provider-neutral request actor helper instead of direct header parsing.
+- Remaining English reconciliation validation/error messages were replaced with Dutch natural-language responses.
+- Reconciliation logging now uses Dutch wording as well.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 14 test files passed.
+- 46 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

@@ -1,14 +1,13 @@
 import { Request, Response } from 'express';
+import { getRequestActor } from '../auth/requestContext';
 import { computeReconciliation } from '../services/reconciliationService';
 
-const DEFAULT_USER_ID = process.env.DEFAULT_USER_ID ?? 'demo-user';
-
 export const getReconciliation = async (req: Request, res: Response) => {
-  const userId = req.header('x-user-id') ?? DEFAULT_USER_ID;
+  const { userId } = getRequestActor(req);
   const accountId = req.query.accountId;
 
   if (typeof accountId !== 'string' || !accountId) {
-    return res.status(400).json({ error: 'accountId is required' });
+    return res.status(400).json({ error: 'Rekening is verplicht voor reconciliatie.' });
   }
 
   const month = req.query.month ? Number(req.query.month) : undefined;
@@ -27,7 +26,7 @@ export const getReconciliation = async (req: Request, res: Response) => {
 
     return res.json(result);
   } catch (error) {
-    console.error('Reconciliation failed', error);
-    return res.status(500).json({ error: 'Failed to compute reconciliation' });
+    console.error('Reconciliatie kon niet worden berekend', error);
+    return res.status(500).json({ error: 'Reconciliatie kon niet worden berekend.' });
   }
 };
