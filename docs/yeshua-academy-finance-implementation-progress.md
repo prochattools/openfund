@@ -1421,3 +1421,47 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 28. Audit log service regression-test pass
+
+Started from pushed main commit:
+
+- `d8845c1 Test admin viewer request guards`
+
+### Audit log service tests
+
+Implemented:
+
+- `tests/services/auditLogService.test.ts`
+
+Result:
+
+- Added coverage for audit-log payload normalization.
+- Verified optional actor/entity fields are stored as `null` where appropriate.
+- Verified omitted JSON fields stay undefined instead of creating misleading empty values.
+- Verified before/after/metadata JSON payloads are preserved for audit entries.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 10 test files passed.
+- 32 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
