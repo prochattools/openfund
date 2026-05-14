@@ -22,6 +22,17 @@ Supported values:
 - `ory` — Ory-ready middleware using session cookie detection and login redirect;
 - `clerk` — temporary legacy fallback when valid Clerk keys are present.
 
+Current local/internal role defaults:
+
+```bash
+NEXT_PUBLIC_API_USER_ID=demo-user
+NEXT_PUBLIC_API_USER_ROLE=admin
+DEFAULT_USER_ID=demo-user
+DEFAULT_USER_ROLE=admin
+```
+
+Use `viewer` for the role values when testing read-only UI and API behavior.
+
 ## Ory-ready environment
 
 ```bash
