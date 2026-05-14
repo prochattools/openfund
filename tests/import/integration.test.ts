@@ -35,7 +35,14 @@ class FakePrismaClient {
   accounts: Array<{ id: string; userId: string; identifier: string; name: string; currency: string }> = [];
   ledgers: Array<{ id: string; userId: string; month: number; year: number; lockedAt: Date | null; lockedBy: string | null }> = [];
   transactions: StoredTransaction[] = [];
-  importBatches: Array<{ id: string; userId: string }> = [];
+  importBatches: Array<{
+    id: string;
+    userId: string;
+    filename?: string;
+    fileSizeBytes?: number;
+    fileSha256?: string;
+    originalFile?: Uint8Array;
+  }> = [];
   rules: Array<{ id: string; userId: string; isActive: boolean; priority: number; updatedAt: Date }> = [];
   openingBalances: Array<{ accountId: string; amountMinor: bigint; effectiveDate: Date }> = [];
   categories: Array<{ id: string; name: string }> = [];
@@ -252,7 +259,14 @@ class FakePrismaClient {
       },
       importBatch: {
         create: async ({ data }: any) => {
-          const record = { id: crypto.randomUUID(), userId: data.userId };
+          const record = {
+            id: crypto.randomUUID(),
+            userId: data.userId,
+            filename: data.filename,
+            fileSizeBytes: data.fileSizeBytes,
+            fileSha256: data.fileSha256,
+            originalFile: data.originalFile,
+          };
           this.importBatches.push(record);
           return record;
         },
@@ -366,6 +380,17 @@ describe('import pipeline integration', () => {
     expect(second.duplicateCount).toBe(0);
     expect(prisma.transactions).toHaveLength(first.importedCount);
     expect(prisma.transactions.every((tx) => typeof tx.importFingerprint === 'string' && tx.importFingerprint.length > 0)).toBe(true);
+  });
+
+  it('stores original import file bytes, size, and checksum on the batch', async () => {
+    await runImport('statement.csv');
+
+    const batch = prisma.importBatches[0];
+    expect(batch).toBeTruthy();
+    expect(batch.filename).toBe('statement.csv');
+    expect(batch.fileSizeBytes).toBe(csvBuffer.byteLength);
+    expect(batch.fileSha256).toBe(crypto.createHash('sha256').update(csvBuffer).digest('hex'));
+    expect(Buffer.from(batch.originalFile ?? [])).toEqual(csvBuffer);
   });
 
   it('preserves manual overrides when re-importing the same CSV', async () => {

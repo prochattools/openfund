@@ -1918,3 +1918,50 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 39. Original import retention regression-test pass
+
+Started from pushed main commit:
+
+- `e527edf Add accept suggestion review action`
+
+### Import retention test coverage
+
+Implemented:
+
+- `tests/import/integration.test.ts`
+
+Result:
+
+- The fake Prisma import batch model now captures file-retention fields used by the real import service.
+- Added regression coverage that verifies imports store:
+  - original filename;
+  - file size;
+  - SHA-256 checksum;
+  - original file bytes.
+- This protects the original ING file retention requirement from silent regressions.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 12 test files passed.
+- 38 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
