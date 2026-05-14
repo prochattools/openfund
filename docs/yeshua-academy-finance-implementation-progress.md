@@ -2598,3 +2598,49 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 54. Categorization confirmation regression-test pass
+
+Started from pushed main commit:
+
+- `e26fcce Test transaction import fingerprints`
+
+### Confirmation helper coverage
+
+Implemented:
+
+- `tests/services/categorizationService.test.ts`
+
+Result:
+
+- Added focused regression tests for `confirmTransactions`.
+- Covered the no-op path when no transaction ids are supplied.
+- Covered safe confirmation of selected non-manual transactions.
+- Verified the helper scopes updates by user id and transaction ids.
+- Verified manually confirmed transactions are excluded from accidental re-confirmation.
+- This protects the review queue flow where suggested transactions are accepted into the ledger without deleting or duplicating imported bank transactions.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 19 test files passed.
+- 59 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
