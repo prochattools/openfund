@@ -10,6 +10,7 @@ import { getReconciliation } from './routes/reconciliation';
 import { lockLedger, unlockLedger } from './routes/ledgers';
 import { getReportSummary } from './routes/reports';
 import { listAuditLogs } from './routes/audit';
+import { deactivateEmailRecipient, listEmailRecipients, upsertEmailRecipient } from './routes/emailRecipients';
 import { getRules, postRule, patchRule, removeRule, previewRule, applyRule } from './routes/rules';
 import { ensureCategorizationRuleConditionsColumn } from './db/ensureCategorizationRuleConditions';
 
@@ -34,6 +35,9 @@ app.post('/api/opening-balances/:balanceId/lock', lockOpeningBalance);
 app.get('/api/reconciliation', getReconciliation);
 app.get('/api/reports/summary', getReportSummary);
 app.get('/api/audit-log', listAuditLogs);
+app.get('/api/email-recipients', listEmailRecipients);
+app.post('/api/email-recipients', upsertEmailRecipient);
+app.delete('/api/email-recipients/:id', deactivateEmailRecipient);
 app.post('/api/ledger/:ledgerId/lock', lockLedger);
 app.post('/api/ledger/:ledgerId/unlock', unlockLedger);
 app.get('/api/rules', getRules);

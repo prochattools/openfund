@@ -123,11 +123,19 @@ export const extractStatementBalance = (rawRow: Prisma.JsonValue | null | undefi
   }
 
   const row = rawRow as Record<string, unknown>;
+  const columns =
+    row.columns && typeof row.columns === 'object' && !Array.isArray(row.columns)
+      ? (row.columns as Record<string, unknown>)
+      : null;
   const candidates = [
     row['Resulting balance'],
+    columns?.['Resulting balance'],
     row['resulting balance'],
+    columns?.['resulting balance'],
     row['Saldo'],
+    columns?.Saldo,
     row['Balance'],
+    columns?.Balance,
   ];
 
   for (const candidate of candidates) {

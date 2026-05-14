@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { resendService } from '@/libs/resend';
+import prisma from '@/libs/prisma';
 import config from '@/config';
 import type { ExportEmailContext } from '@/helpers/export-utils';
 
@@ -9,10 +10,30 @@ type AttachmentPayload = {
   content: string;
 };
 
+const isAdminRequest = (request: Request) => {
+  const role = request.headers.get('x-user-role') ?? process.env.DEFAULT_USER_ROLE ?? 'admin';
+  return role.toLowerCase() === 'admin';
+};
+
 export async function POST(request: Request) {
+  if (!isAdminRequest(request)) {
+    return NextResponse.json({ error: 'Alleen beheerders mogen financiële samenvattingen verzenden.' }, { status: 403 });
+  }
+
   try {
     const body = await request.json();
-    const recipients = Array.isArray(body.recipients) ? body.recipients : [];
+    const explicitRecipients = Array.isArray(body.recipients) ? body.recipients : [];
+    const userId = request.headers.get('x-user-id') ?? process.env.DEFAULT_USER_ID ?? 'demo-user';
+    const storedRecipients = explicitRecipients.length
+      ? []
+      : await prisma.emailRecipient.findMany({
+          where: { userId, isActive: true },
+          select: { email: true },
+          orderBy: { email: 'asc' },
+        });
+    const recipients = explicitRecipients.length
+      ? explicitRecipients
+      : storedRecipients.map((recipient) => recipient.email);
     const attachment = body.attachment as AttachmentPayload | undefined;
     const rawHtml = typeof body.html === 'string' ? body.html : '';
     const context = body.context as ExportEmailContext | undefined;

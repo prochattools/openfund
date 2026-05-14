@@ -3,12 +3,12 @@ import { prisma } from '../prismaClient';
 import { toMinorUnits } from '../../lib/import/normalizers';
 import { readRouteParam } from './routeParams';
 import { getRequestActor, requireAdmin } from '../auth/requestContext';
+import { createAuditLog } from '../services/auditLogService';
 
-const DEFAULT_USER_ID = process.env.DEFAULT_USER_ID ?? 'demo-user';
 const LOCKS_ENABLED = process.env.RECONCILIATION_LOCKS_ENABLED !== 'false';
 
 export const listAccounts = async (req: Request, res: Response) => {
-  const userId = req.header('x-user-id') ?? DEFAULT_USER_ID;
+  const { userId } = getRequestActor(req);
 
   try {
     const accounts = await prisma.account.findMany({
@@ -56,12 +56,15 @@ export const listAccounts = async (req: Request, res: Response) => {
     );
   } catch (error) {
     console.error('listAccounts failed', error);
-    return res.status(500).json({ error: 'Failed to load accounts' });
+    return res.status(500).json({ error: 'Rekeningen konden niet worden geladen.' });
   }
 };
 
 export const upsertOpeningBalance = async (req: Request, res: Response) => {
-  const userId = req.header('x-user-id') ?? DEFAULT_USER_ID;
+  const actor = requireAdmin(req, res);
+  if (!actor) return;
+
+  const { userId, actorId, actorEmail } = actor;
   const accountId = readRouteParam(req, 'accountId');
 
   if (!accountId) {
@@ -75,85 +78,122 @@ export const upsertOpeningBalance = async (req: Request, res: Response) => {
   };
 
   if (!effectiveDate || amount == null) {
-    return res.status(400).json({ error: 'effectiveDate and amount are required' });
+    return res.status(400).json({ error: 'Begindatum en bedrag zijn verplicht.' });
   }
 
   try {
-    const account = await prisma.account.findFirst({
-      where: {
-        id: accountId,
-        userId,
-      },
-    });
-
-    if (!account) {
-      return res.status(404).json({ error: 'Account not found' });
-    }
-
-    const amountMinor = toMinorUnits(amount);
-    if (amountMinor == null) {
-      return res.status(400).json({ error: 'Invalid amount' });
-    }
-
-    const effective = new Date(effectiveDate);
-    if (Number.isNaN(effective.getTime())) {
-      return res.status(400).json({ error: 'Invalid effective date' });
-    }
-
-    const isoDate = new Date(Date.UTC(effective.getUTCFullYear(), effective.getUTCMonth(), effective.getUTCDate()));
-
-    const existing = await prisma.openingBalance.findUnique({
-      where: {
-        accountId_effectiveDate: {
-          accountId: account.id,
-          effectiveDate: isoDate,
+    const response = await prisma.$transaction(async (tx) => {
+      const account = await tx.account.findFirst({
+        where: {
+          id: accountId,
+          userId,
         },
-      },
-    });
+      });
 
-    if (existing && existing.lockedAt && LOCKS_ENABLED) {
-      return res.status(423).json({ error: 'Opening balance is locked' });
-    }
+      if (!account) {
+        return { status: 404 as const, body: { error: 'Rekening niet gevonden.' } };
+      }
 
-    const createdBy = req.header('x-user-email') ?? req.header('x-user-id') ?? 'system';
+      const amountMinor = toMinorUnits(amount);
+      if (amountMinor == null) {
+        return { status: 400 as const, body: { error: 'Bedrag is ongeldig.' } };
+      }
 
-    const updated = existing
-      ? await prisma.openingBalance.update({
-          where: { id: existing.id },
-          data: {
-            amountMinor,
-            currency: currency ?? existing.currency,
-            note: note ?? existing.note,
-            createdBy,
-            createdAt: new Date(),
-          },
-        })
-      : await prisma.openingBalance.create({
-          data: {
+      const effective = new Date(effectiveDate);
+      if (Number.isNaN(effective.getTime())) {
+        return { status: 400 as const, body: { error: 'Begindatum is ongeldig.' } };
+      }
+
+      const isoDate = new Date(Date.UTC(effective.getUTCFullYear(), effective.getUTCMonth(), effective.getUTCDate()));
+
+      const existing = await tx.openingBalance.findUnique({
+        where: {
+          accountId_effectiveDate: {
             accountId: account.id,
             effectiveDate: isoDate,
-            amountMinor,
-            currency: currency ?? account.currency,
-            note,
-            createdBy,
           },
-        });
+        },
+      });
 
-    return res.json({
-      id: updated.id,
-      accountId: updated.accountId,
-      amountMinor: updated.amountMinor.toString(),
-      effectiveDate: updated.effectiveDate.toISOString(),
-      lockedAt: updated.lockedAt ? updated.lockedAt.toISOString() : null,
+      if (existing && existing.lockedAt && LOCKS_ENABLED) {
+        return { status: 423 as const, body: { error: 'Deze beginbalans is vergrendeld.' } };
+      }
+
+      const createdBy = actorEmail ?? actorId ?? 'system';
+
+      const updated = existing
+        ? await tx.openingBalance.update({
+            where: { id: existing.id },
+            data: {
+              amountMinor,
+              currency: currency ?? existing.currency,
+              note: note ?? existing.note,
+              createdBy,
+              createdAt: new Date(),
+            },
+          })
+        : await tx.openingBalance.create({
+            data: {
+              accountId: account.id,
+              effectiveDate: isoDate,
+              amountMinor,
+              currency: currency ?? account.currency,
+              note,
+              createdBy,
+            },
+          });
+
+      await createAuditLog(tx, {
+        userId,
+        actorId,
+        actorEmail,
+        action: existing ? 'openingBalance.updated' : 'openingBalance.created',
+        entityType: 'openingBalance',
+        entityId: updated.id,
+        before: existing
+          ? {
+              amountMinor: existing.amountMinor.toString(),
+              currency: existing.currency,
+              effectiveDate: existing.effectiveDate.toISOString(),
+              note: existing.note,
+            }
+          : null,
+        after: {
+          amountMinor: updated.amountMinor.toString(),
+          currency: updated.currency,
+          effectiveDate: updated.effectiveDate.toISOString(),
+          note: updated.note,
+        },
+        metadata: {
+          accountId: account.id,
+          accountIdentifier: account.identifier,
+        },
+      });
+
+      return {
+        status: 200 as const,
+        body: {
+          id: updated.id,
+          accountId: updated.accountId,
+          amountMinor: updated.amountMinor.toString(),
+          effectiveDate: updated.effectiveDate.toISOString(),
+          lockedAt: updated.lockedAt ? updated.lockedAt.toISOString() : null,
+        },
+      };
     });
+
+    return res.status(response.status).json(response.body);
   } catch (error) {
     console.error('upsertOpeningBalance failed', error);
-    return res.status(500).json({ error: 'Failed to save opening balance' });
+    return res.status(500).json({ error: 'Beginbalans kon niet worden opgeslagen.' });
   }
 };
 
 export const lockOpeningBalance = async (req: Request, res: Response) => {
-  const userId = req.header('x-user-id') ?? DEFAULT_USER_ID;
+  const actor = requireAdmin(req, res);
+  if (!actor) return;
+
+  const { userId, actorId, actorEmail } = actor;
   const balanceId = readRouteParam(req, 'balanceId');
 
   if (!balanceId) {
@@ -161,40 +201,74 @@ export const lockOpeningBalance = async (req: Request, res: Response) => {
   }
 
   try {
-    const balance = await prisma.openingBalance.findFirst({
-      where: {
-        id: balanceId,
-        account: {
-          userId,
+    const response = await prisma.$transaction(async (tx) => {
+      const balance = await tx.openingBalance.findFirst({
+        where: {
+          id: balanceId,
+          account: {
+            userId,
+          },
         },
-      },
-    });
-
-    if (!balance) {
-      return res.status(404).json({ error: 'Opening balance not found' });
-    }
-
-    if (balance.lockedAt && LOCKS_ENABLED) {
-      return res.status(200).json({
-        id: balance.id,
-        lockedAt: balance.lockedAt.toISOString(),
+        include: {
+          account: true,
+        },
       });
-    }
 
-    const updated = await prisma.openingBalance.update({
-      where: { id: balance.id },
-      data: {
-        lockedAt: new Date(),
-        lockedBy: req.header('x-user-id') ?? 'system',
-      },
+      if (!balance) {
+        return { status: 404 as const, body: { error: 'Beginbalans niet gevonden.' } };
+      }
+
+      if (balance.lockedAt && LOCKS_ENABLED) {
+        return {
+          status: 200 as const,
+          body: {
+            id: balance.id,
+            lockedAt: balance.lockedAt.toISOString(),
+          },
+        };
+      }
+
+      const updated = await tx.openingBalance.update({
+        where: { id: balance.id },
+        data: {
+          lockedAt: new Date(),
+          lockedBy: actorEmail ?? actorId ?? 'system',
+        },
+      });
+
+      await createAuditLog(tx, {
+        userId,
+        actorId,
+        actorEmail,
+        action: 'openingBalance.locked',
+        entityType: 'openingBalance',
+        entityId: balance.id,
+        before: {
+          lockedAt: balance.lockedAt?.toISOString() ?? null,
+          lockedBy: balance.lockedBy,
+        },
+        after: {
+          lockedAt: updated.lockedAt?.toISOString() ?? null,
+          lockedBy: updated.lockedBy,
+        },
+        metadata: {
+          accountId: balance.accountId,
+          accountIdentifier: balance.account.identifier,
+        },
+      });
+
+      return {
+        status: 200 as const,
+        body: {
+          id: updated.id,
+          lockedAt: updated.lockedAt ? updated.lockedAt.toISOString() : null,
+        },
+      };
     });
 
-    return res.json({
-      id: updated.id,
-      lockedAt: updated.lockedAt ? updated.lockedAt.toISOString() : null,
-    });
+    return res.status(response.status).json(response.body);
   } catch (error) {
     console.error('lockOpeningBalance failed', error);
-    return res.status(500).json({ error: 'Failed to lock opening balance' });
+    return res.status(500).json({ error: 'Beginbalans kon niet worden vergrendeld.' });
   }
 };

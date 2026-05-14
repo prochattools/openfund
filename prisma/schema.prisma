@@ -14,6 +14,7 @@ model User {
   accounts            Account[]
   auditLogs           AuditLog[]
   categorizationRules CategorizationRule[]
+  emailRecipients     EmailRecipient[]
   importBatches       ImportBatch[]
   ledgers             Ledger[]
   transactions        Transaction[]
@@ -147,6 +148,20 @@ model Transaction {
   @@index([userId, normalizedKey, amountMinor])
   @@index([userId, accountId, date])
   @@index([classificationRuleId])
+}
+
+model EmailRecipient {
+  id        String   @id @default(uuid())
+  userId    String
+  email     String
+  name      String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, email])
+  @@index([userId, isActive])
 }
 
 model AuditLog {

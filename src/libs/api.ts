@@ -335,3 +335,49 @@ export const fetchAuditLogs = async (limit = 25): Promise<AuditLogEntry[]> => {
 
   return response.json();
 };
+
+export type EmailRecipient = {
+  id: string;
+  email: string;
+  name: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export const fetchEmailRecipients = async (): Promise<EmailRecipient[]> => {
+  const response = await fetch(getApiUrl('/api/email-recipients'), withUserHeader({ cache: 'no-store' }));
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'E-mailontvangers konden niet worden geladen.' }));
+    throw new Error(error.error ?? 'E-mailontvangers konden niet worden geladen.');
+  }
+
+  return response.json();
+};
+
+export const saveEmailRecipient = async (payload: { email: string; name?: string | null }): Promise<EmailRecipient> => {
+  const response = await fetch(getApiUrl('/api/email-recipients'), withUserHeader({
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  }));
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'E-mailontvanger kon niet worden opgeslagen.' }));
+    throw new Error(error.error ?? 'E-mailontvanger kon niet worden opgeslagen.');
+  }
+
+  return response.json();
+};
+
+export const deactivateEmailRecipient = async (id: string): Promise<EmailRecipient> => {
+  const response = await fetch(getApiUrl(`/api/email-recipients/${id}`), withUserHeader({ method: 'DELETE' }));
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'E-mailontvanger kon niet worden gedeactiveerd.' }));
+    throw new Error(error.error ?? 'E-mailontvanger kon niet worden gedeactiveerd.');
+  }
+
+  return response.json();
+};

@@ -2,7 +2,14 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { fetchAuditLogs, type AuditLogEntry } from '@/libs/api';
+import {
+  deactivateEmailRecipient,
+  fetchAuditLogs,
+  fetchEmailRecipients,
+  saveEmailRecipient,
+  type AuditLogEntry,
+  type EmailRecipient,
+} from '@/libs/api';
 import { useLedger } from '@/context/ledger-context';
 
 function AppFrame({ children, reviewCount }: { children: ReactNode; reviewCount: number }) {
@@ -88,6 +95,86 @@ function CategoryOverview() {
       ) : (
         <p className="rounded-2xl bg-[#f5f1ea] p-5 text-sm text-[#6f6253]">Nog geen categorieën geladen.</p>
       )}
+    </section>
+  );
+}
+
+function EmailRecipientsPanel() {
+  const [recipients, setRecipients] = useState<EmailRecipient[]>([]);
+  const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const loadRecipients = () => {
+    fetchEmailRecipients()
+      .then((items) => {
+        setRecipients(items);
+        setError(null);
+      })
+      .catch((loadError) => {
+        setError(loadError instanceof Error ? loadError.message : 'E-mailontvangers konden niet worden geladen.');
+      });
+  };
+
+  useEffect(() => {
+    loadRecipients();
+  }, []);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setBusy(true);
+    try {
+      await saveEmailRecipient({ email, name: name || null });
+      setEmail('');
+      setName('');
+      loadRecipients();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'E-mailontvanger kon niet worden opgeslagen.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const deactivate = async (id: string) => {
+    setBusy(true);
+    try {
+      await deactivateEmailRecipient(id);
+      loadRecipients();
+    } catch (deactivateError) {
+      setError(deactivateError instanceof Error ? deactivateError.message : 'E-mailontvanger kon niet worden gedeactiveerd.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="rounded-[2rem] border border-[#ded5c8] bg-[#fbf8f2] p-6 shadow-[0_24px_70px_rgba(87,67,45,0.08)]">
+      <p className="text-sm font-medium text-[#7d6d5a]">E-mailupdates</p>
+      <h3 className="mt-1 text-2xl font-semibold tracking-[-0.04em]">Ontvangers maandoverzicht</h3>
+      <p className="mt-2 text-sm leading-6 text-[#6f6253]">Beheer de mensen die de financiële samenvatting per e-mail mogen ontvangen.</p>
+
+      <form onSubmit={handleSubmit} className="mt-5 grid gap-3 lg:grid-cols-[1fr_1fr_auto]">
+        <input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="e-mailadres" className="rounded-2xl border border-[#ded5c8] bg-[#f5f1ea] px-4 py-3 text-sm outline-none focus:border-[#1f5f4a]" />
+        <input value={name} onChange={(event) => setName(event.target.value)} placeholder="naam optioneel" className="rounded-2xl border border-[#ded5c8] bg-[#f5f1ea] px-4 py-3 text-sm outline-none focus:border-[#1f5f4a]" />
+        <button disabled={busy} className="rounded-2xl bg-[#1f5f4a] px-5 py-3 text-sm font-semibold text-[#fbf8f2] disabled:opacity-60">Toevoegen</button>
+      </form>
+
+      {error ? <p className="mt-4 rounded-2xl bg-[#f7e9e4] p-4 text-sm text-[#7b4b3a]">{error}</p> : null}
+
+      <div className="mt-5 space-y-3">
+        {recipients.length ? recipients.map((recipient) => (
+          <div key={recipient.id} className="flex flex-col gap-3 rounded-[1.25rem] bg-[#f5f1ea] p-4 text-sm md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="font-semibold text-[#251f1a]">{recipient.name || recipient.email}</p>
+              <p className="text-xs text-[#7d6d5a]">{recipient.email} · {recipient.isActive ? 'actief' : 'uitgeschakeld'}</p>
+            </div>
+            {recipient.isActive ? (
+              <button type="button" disabled={busy} onClick={() => deactivate(recipient.id)} className="rounded-full border border-[#ded5c8] px-3 py-1 text-xs font-semibold text-[#7b4b3a] disabled:opacity-60">Uitschakelen</button>
+            ) : null}
+          </div>
+        )) : <p className="rounded-2xl bg-[#f5f1ea] p-4 text-sm text-[#6f6253]">Nog geen e-mailontvangers toegevoegd.</p>}
+      </div>
     </section>
   );
 }
@@ -196,6 +283,7 @@ export default function FinanceSettingsPage() {
         </section>
 
         <CategoryOverview />
+        <EmailRecipientsPanel />
         <AuditLogPreview />
         <GuardrailList />
       </div>

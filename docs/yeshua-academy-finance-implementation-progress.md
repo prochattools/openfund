@@ -844,3 +844,171 @@ Additional validation:
 
 - Secret-material scan passed for changed auth/server/doc files. `.env.example` could not be scanned by BuildFlow because env paths are blocked by scan policy.
 - `package.json` and `package-lock.json` are valid JSON.
+
+
+## 18. Mutation guardrail and audit expansion pass
+
+Started from clean committed state:
+
+- `2d67c15 Refactor finance app into Yeshua Academy ledger`
+
+### Admin guards added
+
+Implemented admin role checks for additional mutation surfaces:
+
+- `server/routes/rules.ts`
+- `server/routes/ledgers.ts`
+- `server/routes/accounts.ts`
+- `src/app/api/ledger/notify/route.ts`
+
+Result:
+
+- Creating, updating, applying, and deleting categorization rules now requires admin role.
+- Locking and unlocking ledger months now requires admin role.
+- Creating/updating and locking opening balances now requires admin role.
+- Sending financial summary emails now requires admin role.
+- Read-only surfaces remain available to viewers where appropriate.
+
+### Audit logging expanded
+
+Audit log records are now created for:
+
+- categorization rule creation;
+- categorization rule updates;
+- categorization rule application;
+- categorization rule deletion;
+- ledger month lock;
+- ledger month unlock;
+- opening balance creation/update;
+- opening balance lock.
+
+### Dutch error cleanup
+
+Several remaining English mutation errors were converted to Dutch natural-language errors.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 7 test files passed.
+- 24 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 19. Finance recipient and reconciliation guardrail pass
+
+### Admin guardrails completed for more mutation routes
+
+Implemented:
+
+- `server/routes/rules.ts`
+- `server/routes/ledgers.ts`
+- `server/routes/accounts.ts`
+- `src/app/api/ledger/notify/route.ts`
+
+Result:
+
+- Categorization rule create/update/apply/delete now requires admin role.
+- Ledger month lock/unlock now requires admin role.
+- Opening balance create/update/lock now requires admin role.
+- Financial summary email sending now requires admin role.
+- Related actions are audit logged where they mutate server-side finance data.
+
+### Audit logging expanded
+
+New audit actions include:
+
+- `categorizationRule.created`
+- `categorizationRule.updated`
+- `categorizationRule.applied`
+- `categorizationRule.deleted`
+- `ledger.locked`
+- `ledger.unlocked`
+- `openingBalance.created`
+- `openingBalance.updated`
+- `openingBalance.locked`
+- `emailRecipient.created`
+- `emailRecipient.updated`
+- `emailRecipient.deactivated`
+
+### ING resulting balance extraction
+
+Implemented:
+
+- `server/services/reconciliationService.ts`
+- `tests/services/reconciliationService.test.ts`
+
+Result:
+
+- Reconciliation now reads ING `Resulting balance` from both top-level raw row data and normalized `rawRow.columns` data.
+- Added tests for Dutch amount formats such as `12.345,67` and `987,65`.
+- `Resulting balance` remains optional for compatibility with valid test/custom ING-like exports that do not contain the column.
+
+### Monthly finance summary recipients
+
+Implemented:
+
+- `prisma/schema.prisma`
+- `prisma/migrations/20260514194000_add_email_recipients/migration.sql`
+- `server/routes/emailRecipients.ts`
+- `server/index.ts`
+- `next.config.js`
+- `src/libs/api.ts`
+- `src/ui/FinanceSettingsPage.tsx`
+- `src/app/api/ledger/notify/route.ts`
+
+Result:
+
+- Added `EmailRecipient` model for monthly finance summary recipients.
+- Added API endpoints:
+  - `GET /api/email-recipients`
+  - `POST /api/email-recipients`
+  - `DELETE /api/email-recipients/:id`
+- Added settings UI to add, list, and deactivate recipients.
+- Recipient changes are audit logged.
+- Financial summary sending now uses explicitly supplied recipients if provided, otherwise it uses active stored recipients for the current user.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 8 test files passed.
+- 26 tests passed.
+
+Additional validation:
+
+- Secret-material scan passed for changed finance/security files.
+- `package.json` and `package-lock.json` are valid JSON.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

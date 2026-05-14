@@ -41,6 +41,8 @@ const nextConfig = {
       { source: '/api/reconciliation', destination: `${apiOrigin}/api/reconciliation` },
       { source: '/api/reports/summary', destination: `${apiOrigin}/api/reports/summary` },
       { source: '/api/audit-log', destination: `${apiOrigin}/api/audit-log` },
+      { source: '/api/email-recipients', destination: `${apiOrigin}/api/email-recipients` },
+      { source: '/api/email-recipients/:id', destination: `${apiOrigin}/api/email-recipients/:id` },
       {
         source: '/api/ledger/:ledgerId/lock',
         destination: `${apiOrigin}/api/ledger/:ledgerId/lock`,

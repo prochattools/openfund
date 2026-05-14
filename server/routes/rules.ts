@@ -1,10 +1,10 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prismaClient';
 import { createRule, deleteRule, updateRule, previewRuleMatchesForUser, applyRuleToTransactions } from '../services/ruleEngine';
+import { createAuditLog } from '../services/auditLogService';
+import { getRequestActor, requireAdmin } from '../auth/requestContext';
 import { readRouteParam } from './routeParams';
 import type { RuleMatchField, RuleMatchType } from '@prisma/client';
-
-const DEFAULT_USER_ID = process.env.DEFAULT_USER_ID ?? 'demo-user';
 
 const logRequest = (req: Request) => {
   console.log(`[rules] ${req.method} ${req.originalUrl} user=${req.header('x-user-id') ?? 'unknown'}`);
@@ -29,7 +29,7 @@ const isMatchField = (value: string): value is RuleMatchField =>
 
 export const getRules = async (req: Request, res: Response) => {
   logRequest(req);
-  const userId = req.header('x-user-id') ?? DEFAULT_USER_ID;
+  const { userId } = getRequestActor(req);
 
   try {
     const rules = await prisma.categorizationRule.findMany({
@@ -51,17 +51,20 @@ export const getRules = async (req: Request, res: Response) => {
     return res.json(rules);
   } catch (error) {
     console.error('Failed to load rules', error);
-    return res.status(500).json({ error: 'Unable to load rules' });
+    return res.status(500).json({ error: 'Categorisatieregels konden niet worden geladen.' });
   }
 };
 
 export const postRule = async (req: Request, res: Response) => {
   logRequest(req);
-  const userId = req.header('x-user-id') ?? DEFAULT_USER_ID;
+  const actor = requireAdmin(req, res);
+  if (!actor) return;
+
+  const { userId, actorId, actorEmail } = actor;
   const { label, pattern, categoryId, conditions } = req.body ?? {};
 
   if (!label || !categoryId) {
-    return res.status(400).json({ error: 'label and categoryId are required' });
+    return res.status(400).json({ error: 'Naam en categorie zijn verplicht.' });
   }
 
   const matchType = typeof req.body.matchType === 'string' && isMatchType(req.body.matchType)
@@ -72,7 +75,7 @@ export const postRule = async (req: Request, res: Response) => {
     : undefined;
   const priority = parsePriority(req.body.priority);
   const isActive = req.body.isActive === undefined ? undefined : Boolean(req.body.isActive);
-  const createdBy = req.header('x-user-email') ?? req.header('x-user-id') ?? 'system';
+  const createdBy = actorEmail ?? actorId ?? 'system';
 
   try {
     const rule = await prisma.$transaction(async (tx) => {
@@ -86,6 +89,24 @@ export const postRule = async (req: Request, res: Response) => {
         isActive,
         createdBy,
         conditions,
+      });
+
+      await createAuditLog(tx, {
+        userId,
+        actorId,
+        actorEmail,
+        action: 'categorizationRule.created',
+        entityType: 'categorizationRule',
+        entityId: created.id,
+        after: {
+          label: created.label,
+          categoryId: created.categoryId,
+          pattern: created.pattern,
+          matchType: created.matchType,
+          matchField: created.matchField,
+          priority: created.priority,
+          isActive: created.isActive,
+        },
       });
 
       return tx.categorizationRule.findUnique({
@@ -104,16 +125,19 @@ export const postRule = async (req: Request, res: Response) => {
     return res.status(201).json(rule);
   } catch (error) {
     console.error('Failed to create rule', error);
-    return res.status(500).json({ error: 'Unable to create rule' });
+    return res.status(500).json({ error: 'Categorisatieregel kon niet worden gemaakt.' });
   }
 };
 
 export const patchRule = async (req: Request, res: Response) => {
   logRequest(req);
-  const userId = req.header('x-user-id') ?? DEFAULT_USER_ID;
+  const actor = requireAdmin(req, res);
+  if (!actor) return;
+
+  const { userId, actorId, actorEmail } = actor;
   const ruleId = readRouteParam(req, 'id');
   if (!ruleId) {
-    return res.status(400).json({ error: 'Rule id required' });
+    return res.status(400).json({ error: 'Regel id ontbreekt.' });
   }
 
   const updates: Record<string, unknown> = {};
@@ -131,15 +155,16 @@ export const patchRule = async (req: Request, res: Response) => {
   }
   if (Array.isArray(req.body.conditions)) {
     updates.conditions = req.body.conditions;
-    if (!updates.pattern && Array.isArray(req.body.conditions) && req.body.conditions.length) {
+    if (!updates.pattern && req.body.conditions.length) {
       updates.pattern = req.body.conditions[0].value ?? updates.pattern;
     }
   }
 
   try {
     const rule = await prisma.$transaction(async (tx) => {
+      const before = await tx.categorizationRule.findFirst({ where: { id: ruleId, userId } });
       await updateRule(tx, userId, ruleId, updates);
-      return tx.categorizationRule.findUnique({
+      const updated = await tx.categorizationRule.findUnique({
         where: { id: ruleId },
         include: {
           category: {
@@ -150,23 +175,56 @@ export const patchRule = async (req: Request, res: Response) => {
           },
         },
       });
+
+      await createAuditLog(tx, {
+        userId,
+        actorId,
+        actorEmail,
+        action: 'categorizationRule.updated',
+        entityType: 'categorizationRule',
+        entityId: ruleId,
+        before: before
+          ? {
+              label: before.label,
+              categoryId: before.categoryId,
+              pattern: before.pattern,
+              matchType: before.matchType,
+              matchField: before.matchField,
+              priority: before.priority,
+              isActive: before.isActive,
+            }
+          : null,
+        after: updated
+          ? {
+              label: updated.label,
+              categoryId: updated.categoryId,
+              pattern: updated.pattern,
+              matchType: updated.matchType,
+              matchField: updated.matchField,
+              priority: updated.priority,
+              isActive: updated.isActive,
+            }
+          : null,
+      });
+
+      return updated;
     });
     return res.json(rule);
   } catch (error) {
     console.error('Failed to update rule', error);
-    return res.status(500).json({ error: 'Unable to update rule' });
+    return res.status(500).json({ error: 'Categorisatieregel kon niet worden bijgewerkt.' });
   }
 };
 
 export const previewRule = async (req: Request, res: Response) => {
   logRequest(req);
-  const userId = req.header('x-user-id') ?? DEFAULT_USER_ID;
+  const { userId } = getRequestActor(req);
   const ruleId = readRouteParam(req, 'id');
   const scope = req.body?.scope;
   const importBatchId = req.body?.importBatchId;
 
   if (!ruleId || !scope) {
-    return res.status(400).json({ error: 'ruleId and scope are required' });
+    return res.status(400).json({ error: 'Regel en bereik zijn verplicht.' });
   }
 
   try {
@@ -190,47 +248,91 @@ export const previewRule = async (req: Request, res: Response) => {
     return res.json(safe);
   } catch (error) {
     console.error('Failed to preview rule', error);
-    return res.status(500).json({ error: 'Unable to preview rule' });
+    return res.status(500).json({ error: 'Voorbeeld van regel kon niet worden geladen.' });
   }
 };
 
 export const applyRule = async (req: Request, res: Response) => {
   logRequest(req);
-  const userId = req.header('x-user-id') ?? DEFAULT_USER_ID;
+  const actor = requireAdmin(req, res);
+  if (!actor) return;
+
+  const { userId, actorId, actorEmail } = actor;
   const ruleId = readRouteParam(req, 'id');
   const transactionIds: string[] = Array.isArray(req.body?.transactionIds) ? req.body.transactionIds : [];
 
   if (!ruleId || !transactionIds.length) {
-    return res.status(400).json({ error: 'ruleId and transactionIds are required' });
+    return res.status(400).json({ error: 'Regel en transacties zijn verplicht.' });
   }
 
   try {
-    const count = await prisma.$transaction((tx) =>
-      applyRuleToTransactions(tx, {
+    const count = await prisma.$transaction(async (tx) => {
+      const updated = await applyRuleToTransactions(tx, {
         userId,
         ruleId,
         transactionIds,
-      }),
-    );
+      });
+
+      await createAuditLog(tx, {
+        userId,
+        actorId,
+        actorEmail,
+        action: 'categorizationRule.applied',
+        entityType: 'categorizationRule',
+        entityId: ruleId,
+        metadata: {
+          transactionCount: transactionIds.length,
+          updated,
+        },
+      });
+
+      return updated;
+    });
     return res.json({ updated: count });
   } catch (error) {
     console.error('Failed to apply rule', error);
-    return res.status(500).json({ error: 'Unable to apply rule' });
+    return res.status(500).json({ error: 'Categorisatieregel kon niet worden toegepast.' });
   }
 };
+
 export const removeRule = async (req: Request, res: Response) => {
   logRequest(req);
-  const userId = req.header('x-user-id') ?? DEFAULT_USER_ID;
+  const actor = requireAdmin(req, res);
+  if (!actor) return;
+
+  const { userId, actorId, actorEmail } = actor;
   const ruleId = readRouteParam(req, 'id');
   if (!ruleId) {
-    return res.status(400).json({ error: 'Rule id required' });
+    return res.status(400).json({ error: 'Regel id ontbreekt.' });
   }
 
   try {
-    await prisma.$transaction((tx) => deleteRule(tx, userId, ruleId));
+    await prisma.$transaction(async (tx) => {
+      const existing = await tx.categorizationRule.findFirst({ where: { id: ruleId, userId } });
+      await deleteRule(tx, userId, ruleId);
+      await createAuditLog(tx, {
+        userId,
+        actorId,
+        actorEmail,
+        action: 'categorizationRule.deleted',
+        entityType: 'categorizationRule',
+        entityId: ruleId,
+        before: existing
+          ? {
+              label: existing.label,
+              categoryId: existing.categoryId,
+              pattern: existing.pattern,
+              matchType: existing.matchType,
+              matchField: existing.matchField,
+              priority: existing.priority,
+              isActive: existing.isActive,
+            }
+          : null,
+      });
+    });
     return res.status(204).send();
   } catch (error) {
     console.error('Failed to delete rule', error);
-    return res.status(500).json({ error: 'Unable to delete rule' });
+    return res.status(500).json({ error: 'Categorisatieregel kon niet worden verwijderd.' });
   }
 };

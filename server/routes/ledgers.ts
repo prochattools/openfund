@@ -1,16 +1,20 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prismaClient';
 import { readRouteParam } from './routeParams';
+import { requireAdmin } from '../auth/requestContext';
+import { createAuditLog } from '../services/auditLogService';
 
-const DEFAULT_USER_ID = process.env.DEFAULT_USER_ID ?? 'demo-user';
 const LOCKS_ENABLED = process.env.RECONCILIATION_LOCKS_ENABLED !== 'false';
 
 export const lockLedger = async (req: Request, res: Response) => {
   if (!LOCKS_ENABLED) {
-    return res.status(200).json({ message: 'Locks disabled' });
+    return res.status(200).json({ message: 'Vergrendelen is uitgeschakeld.' });
   }
 
-  const userId = req.header('x-user-id') ?? DEFAULT_USER_ID;
+  const actor = requireAdmin(req, res);
+  if (!actor) return;
+
+  const { userId, actorId, actorEmail } = actor;
   const ledgerId = readRouteParam(req, 'ledgerId');
   const { note } = req.body as { note?: string };
 
@@ -19,73 +23,105 @@ export const lockLedger = async (req: Request, res: Response) => {
   }
 
   try {
-    const ledger = await prisma.ledger.findFirst({
-      where: {
-        id: ledgerId,
-        userId,
-      },
-      include: {
-        lock: true,
-      },
-    });
-
-    if (!ledger) {
-      return res.status(404).json({ error: 'Ledger not found' });
-    }
-
-    if (ledger.lockedAt) {
-      return res.json({
-        id: ledger.id,
-        lockedAt: ledger.lockedAt.toISOString(),
-        lockedBy: ledger.lockedBy,
-        lockNote: ledger.lockNote,
+    const response = await prisma.$transaction(async (tx) => {
+      const ledger = await tx.ledger.findFirst({
+        where: {
+          id: ledgerId,
+          userId,
+        },
+        include: {
+          lock: true,
+        },
       });
-    }
 
-    const updated = await prisma.ledger.update({
-      where: { id: ledger.id },
-      data: {
-        lockedAt: new Date(),
-        lockedBy: userId,
-        lockNote: note ?? ledger.lockNote,
-      },
+      if (!ledger) {
+        return { status: 404 as const, body: { error: 'Maand niet gevonden.' } };
+      }
+
+      if (ledger.lockedAt) {
+        return {
+          status: 200 as const,
+          body: {
+            id: ledger.id,
+            lockedAt: ledger.lockedAt.toISOString(),
+            lockedBy: ledger.lockedBy,
+            lockNote: ledger.lockNote,
+          },
+        };
+      }
+
+      const updated = await tx.ledger.update({
+        where: { id: ledger.id },
+        data: {
+          lockedAt: new Date(),
+          lockedBy: actorEmail ?? actorId ?? userId,
+          lockNote: note ?? ledger.lockNote,
+        },
+      });
+
+      await tx.ledgerLock.upsert({
+        where: {
+          ledgerId: ledger.id,
+        },
+        create: {
+          ledgerId: ledger.id,
+          lockedAt: updated.lockedAt ?? new Date(),
+          lockedBy: updated.lockedBy,
+          note: updated.lockNote,
+        },
+        update: {
+          lockedAt: updated.lockedAt ?? new Date(),
+          lockedBy: updated.lockedBy,
+          note: updated.lockNote,
+        },
+      });
+
+      await createAuditLog(tx, {
+        userId,
+        actorId,
+        actorEmail,
+        action: 'ledger.locked',
+        entityType: 'ledger',
+        entityId: ledger.id,
+        before: {
+          lockedAt: ledger.lockedAt?.toISOString() ?? null,
+          lockedBy: ledger.lockedBy,
+          lockNote: ledger.lockNote,
+        },
+        after: {
+          lockedAt: updated.lockedAt?.toISOString() ?? null,
+          lockedBy: updated.lockedBy,
+          lockNote: updated.lockNote,
+        },
+      });
+
+      return {
+        status: 200 as const,
+        body: {
+          id: updated.id,
+          lockedAt: updated.lockedAt ? updated.lockedAt.toISOString() : null,
+          lockedBy: updated.lockedBy,
+          lockNote: updated.lockNote,
+        },
+      };
     });
 
-    await prisma.ledgerLock.upsert({
-      where: {
-        ledgerId: ledger.id,
-      },
-      create: {
-        ledgerId: ledger.id,
-        lockedAt: updated.lockedAt ?? new Date(),
-        lockedBy: updated.lockedBy,
-        note: updated.lockNote,
-      },
-      update: {
-        lockedAt: updated.lockedAt ?? new Date(),
-        lockedBy: updated.lockedBy,
-        note: updated.lockNote,
-      },
-    });
-
-    return res.json({
-      id: updated.id,
-      lockedAt: updated.lockedAt ? updated.lockedAt.toISOString() : null,
-      lockedBy: updated.lockedBy,
-      lockNote: updated.lockNote,
-    });
+    return res.status(response.status).json(response.body);
   } catch (error) {
     console.error('lockLedger failed', error);
-    return res.status(500).json({ error: 'Failed to lock ledger' });
+    return res.status(500).json({ error: 'Maand kon niet worden vergrendeld.' });
   }
 };
 
 export const unlockLedger = async (req: Request, res: Response) => {
   if (!LOCKS_ENABLED) {
-    return res.status(200).json({ message: 'Locks disabled' });
+    return res.status(200).json({ message: 'Vergrendelen is uitgeschakeld.' });
   }
 
-  const userId = req.header('x-user-id') ?? DEFAULT_USER_ID;
+  const actor = requireAdmin(req, res);
+  if (!actor) return;
+
+  const { userId, actorId, actorEmail } = actor;
   const ledgerId = readRouteParam(req, 'ledgerId');
 
   if (!ledgerId) {
@@ -93,48 +129,77 @@ export const unlockLedger = async (req: Request, res: Response) => {
   }
 
   try {
-    const ledger = await prisma.ledger.findFirst({
-      where: {
-        id: ledgerId,
-        userId,
-      },
-      include: {
-        lock: true,
-      },
-    });
-
-    if (!ledger) {
-      return res.status(404).json({ error: 'Ledger not found' });
-    }
-
-    if (!ledger.lockedAt) {
-      return res.json({
-        id: ledger.id,
-        lockedAt: null,
+    const response = await prisma.$transaction(async (tx) => {
+      const ledger = await tx.ledger.findFirst({
+        where: {
+          id: ledgerId,
+          userId,
+        },
+        include: {
+          lock: true,
+        },
       });
-    }
 
-    const updated = await prisma.ledger.update({
-      where: { id: ledger.id },
-      data: {
-        lockedAt: null,
-        lockedBy: null,
-        lockNote: null,
-      },
+      if (!ledger) {
+        return { status: 404 as const, body: { error: 'Maand niet gevonden.' } };
+      }
+
+      if (!ledger.lockedAt) {
+        return {
+          status: 200 as const,
+          body: {
+            id: ledger.id,
+            lockedAt: null,
+          },
+        };
+      }
+
+      const updated = await tx.ledger.update({
+        where: { id: ledger.id },
+        data: {
+          lockedAt: null,
+          lockedBy: null,
+          lockNote: null,
+        },
+      });
+
+      await tx.ledgerLock.deleteMany({
+        where: {
+          ledgerId: ledger.id,
+        },
+      });
+
+      await createAuditLog(tx, {
+        userId,
+        actorId,
+        actorEmail,
+        action: 'ledger.unlocked',
+        entityType: 'ledger',
+        entityId: ledger.id,
+        before: {
+          lockedAt: ledger.lockedAt?.toISOString() ?? null,
+          lockedBy: ledger.lockedBy,
+          lockNote: ledger.lockNote,
+        },
+        after: {
+          lockedAt: null,
+          lockedBy: null,
+          lockNote: null,
+        },
+      });
+
+      return {
+        status: 200 as const,
+        body: {
+          id: updated.id,
+          lockedAt: null,
+        },
+      };
     });
 
-    await prisma.ledgerLock.deleteMany({
-      where: {
-        ledgerId: ledger.id,
-      },
-    });
-
-    return res.json({
-      id: updated.id,
-      lockedAt: null,
-    });
+    return res.status(response.status).json(response.body);
   } catch (error) {
     console.error('unlockLedger failed', error);
-    return res.status(500).json({ error: 'Failed to unlock ledger' });
+    return res.status(500).json({ error: 'Maand kon niet worden ontgrendeld.' });
   }
 };
