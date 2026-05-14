@@ -11,8 +11,9 @@ export const getImportFileContentType = (fileType: string | null | undefined): s
     : 'text/csv; charset=utf-8';
 
 export const buildContentDisposition = (filename: string): string => {
-  const safeFallback = filename.replace(/[^a-zA-Z0-9._-]/g, '_') || 'importbestand.csv';
-  return `attachment; filename="${safeFallback}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
+  const originalFilename = filename.trim() || 'importbestand.csv';
+  const safeFallback = originalFilename.replace(/[^a-zA-Z0-9._-]/g, '_') || 'importbestand.csv';
+  return `attachment; filename="${safeFallback}"; filename*=UTF-8''${encodeURIComponent(originalFilename)}`;
 };
 
 export const buildImportFileDownload = (batch: StoredImportFile) => {

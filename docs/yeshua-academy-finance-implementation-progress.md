@@ -3390,3 +3390,46 @@ Build/test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 71. Import download filename fallback hardening pass
+
+Started from pushed main commit:
+
+- `d9fcbd1 Test notification email helpers`
+
+### Download filename safety
+
+Implemented:
+
+- `server/services/importBatchDownload.ts`
+- `tests/services/importBatchDownload.test.ts`
+
+Result:
+
+- Hardened `Content-Disposition` generation for retained original ING import downloads.
+- Blank or whitespace-only filenames now fall back to `importbestand.csv` for both `filename` and UTF-8 `filename*` metadata.
+- Non-ASCII filenames keep UTF-8 metadata while retaining an ASCII-safe fallback filename.
+- Added regression tests for blank and non-ASCII filenames.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Build/test result:
+
+- Server TypeScript build passed.
+- Next production build passed.
+- 21 test files passed.
+- 95 tests passed.
+- Secret scan passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
