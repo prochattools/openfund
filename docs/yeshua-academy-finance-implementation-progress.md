@@ -2370,3 +2370,48 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 49. Route parameter regression-test pass
+
+Started from pushed main commit:
+
+- `9a56a8d Use Dutch import review labels`
+
+### Shared route-param helper coverage
+
+Implemented:
+
+- `tests/routes/routeParams.test.ts`
+
+Result:
+
+- Added isolated regression tests for the shared Express route parameter helper.
+- Covered normal string route parameters.
+- Covered Express array-style route parameters by using the first non-empty value.
+- Covered missing, blank, whitespace-only, and empty-array route parameters returning `null`.
+- This protects account, ledger, review, and rule routes from accidentally passing `string[]` or blank IDs into Prisma filters.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 15 test files passed.
+- 49 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
