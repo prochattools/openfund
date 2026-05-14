@@ -2552,3 +2552,49 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 53. Transaction fingerprint regression-test pass
+
+Started from pushed main commit:
+
+- `2694037 Localize account ledger server logs`
+
+### Import dedupe fingerprint coverage
+
+Implemented:
+
+- `tests/services/transactionFingerprint.test.ts`
+
+Result:
+
+- Added focused regression tests for the transaction import fingerprint helper.
+- Covered normalization of account identifiers, whitespace, and case.
+- Covered direct ING notification fields in the fingerprint.
+- Covered normalized raw-row `columns.Notifications` handling.
+- Covered amount/date changes producing different fingerprints.
+- This protects duplicate import detection from silent regressions around ING row normalization.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 18 test files passed.
+- 57 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
