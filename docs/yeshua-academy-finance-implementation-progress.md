@@ -1553,3 +1553,46 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 31. Reports result-card clarity pass
+
+Started from pushed main commit:
+
+- `7ff58d2 Use Dutch ledger context errors`
+
+### Report KPI clarity
+
+Implemented:
+
+- `src/ui/FinanceReportsPage.tsx`
+
+Result:
+
+- Added a dedicated `Resultaat` card to the report KPI row.
+- The reports page now shows beginbalans, inkomsten, uitgaven, resultaat, and eindbalans together.
+- This makes the income-minus-expense view clearer for monthly and yearly reporting without changing the data model.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 11 test files passed.
+- 35 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

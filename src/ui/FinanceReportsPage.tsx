@@ -258,10 +258,11 @@ export default function FinanceReportsPage({ initialYear, initialMonth }: { init
           <div className="rounded-2xl bg-[#efe7db] p-4 text-sm text-[#6f6253]">Rapport wordt geladen…</div>
         ) : null}
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <SummaryCard label="Beginbalans" value={formatEuro(report.openingBalanceMinor)} helper={periodLabel} />
           <SummaryCard label="Inkomsten" value={formatEuro(report.incomeMinor)} helper="Totaal ontvangen" />
           <SummaryCard label="Uitgaven" value={formatEuro(report.expenseMinor)} helper="Totaal besteed" />
+          <SummaryCard label="Resultaat" value={formatEuro(report.netMinor)} helper="Inkomsten min uitgaven" />
           <SummaryCard label="Eindbalans" value={formatEuro(report.closingBalanceMinor)} helper={`${report.transactionCount} transacties`} />
         </section>
 
