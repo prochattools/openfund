@@ -3433,3 +3433,46 @@ Build/test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 72. Transaction tooltip helper regression-test pass
+
+Started from pushed main commit:
+
+- `1bcc587 Harden import download filename fallback`
+
+### Transaction detail tooltip coverage
+
+Implemented:
+
+- `tests/helpers/transactionTooltip.test.ts`
+
+Result:
+
+- Added focused regression tests for the transaction tooltip helper used to keep detailed transaction metadata hidden until needed.
+- Covered notification/source/account detail output.
+- Covered duplicate suppression when source or account values match existing labels.
+- Covered fallback to description when no richer detail fields are available.
+- Covered returning `null` when no usable tooltip data exists.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Build/test result:
+
+- Server TypeScript build passed.
+- Next production build passed.
+- 22 test files passed.
+- 99 tests passed.
+- Secret scan passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
