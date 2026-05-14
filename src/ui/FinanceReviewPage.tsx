@@ -107,6 +107,27 @@ const findCategoryIdByName = (categories: Category[], name: string | null | unde
   return categories.find((category) => normalizeLabel(category.name) === normalized)?.id ?? '';
 };
 
+const translateSuggestionConfidence = (confidence: LedgerTransaction['suggestionConfidence']) => {
+  switch (confidence) {
+    case 'exact':
+      return 'volledige historische match';
+    case 'rule':
+      return 'categorisatieregel';
+    case 'description':
+      return 'omschrijving herkend';
+    case 'account':
+      return 'rekening herkend';
+    case 'overall':
+      return 'beste historische suggestie';
+    case 'fuzzy':
+      return 'waarschijnlijke suggestie';
+    case 'review':
+      return 'handmatige controle nodig';
+    default:
+      return 'geen volledige historische match';
+  }
+};
+
 function ReviewCard({
   transaction,
   mainCategories,
@@ -178,7 +199,7 @@ function ReviewCard({
       <div className="mt-6 rounded-[1.5rem] bg-[#f5f1ea] p-4">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8a7965]">Suggestie</p>
         <p className="mt-2 font-semibold">{suggestedLabel}</p>
-        <p className="mt-1 text-sm text-[#6f6253]">{transaction.suggestionConfidence ? `Match: ${transaction.suggestionConfidence}` : 'Geen volledige historische match'}</p>
+        <p className="mt-1 text-sm text-[#6f6253]">Match: {translateSuggestionConfidence(transaction.suggestionConfidence)}</p>
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_1fr_1fr_auto]">

@@ -1596,3 +1596,46 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 32. Review match-label Dutch polish pass
+
+Started from pushed main commit:
+
+- `596f437 Show report result KPI`
+
+### Review suggestion labels
+
+Implemented:
+
+- `src/ui/FinanceReviewPage.tsx`
+
+Result:
+
+- The review card no longer shows raw match values such as `fuzzy`, `rule`, or `exact`.
+- Match confidence is now shown with Dutch labels such as `waarschijnlijke suggestie`, `categorisatieregel`, and `volledige historische match`.
+- This makes the review queue more understandable for non-technical admin users.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 11 test files passed.
+- 35 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
