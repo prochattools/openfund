@@ -3054,3 +3054,47 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 64. Import dedupe regression-test pass
+
+Started from pushed main commit:
+
+- `449bc3a Test import parser mixed rows`
+
+### Dedupe hash and partition coverage
+
+Implemented:
+
+- `tests/import/dedupe.test.ts`
+
+Result:
+
+- Added transaction hash regression coverage for case-insensitive account identifiers and references.
+- Added duplicate partitioning coverage for duplicates inside the same import file, not only duplicates already present in the database.
+- Verified the first row stays unique and later identical rows are marked duplicate.
+- This protects repeated/monthly ING imports from duplicating data even when the same file or repeated rows are imported again.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 20 test files passed.
+- 83 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
