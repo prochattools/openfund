@@ -1800,3 +1800,48 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 36. Import history route regression-test pass
+
+Started from pushed main commit:
+
+- `7db17ad Store original ING import files`
+
+### Import history route tests
+
+Implemented:
+
+- `server/routes/importBatches.ts`
+- `tests/routes/importBatches.test.ts`
+
+Result:
+
+- Exported the import-history limit parser for isolated regression testing.
+- Added tests for valid limits from 1 through 100.
+- Added tests for invalid values such as empty, zero, negative, over-limit, and non-numeric inputs.
+- This keeps the read-only import-history endpoint bounded and predictable.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 12 test files passed.
+- 37 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
