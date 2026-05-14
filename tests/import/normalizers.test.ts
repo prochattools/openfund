@@ -6,6 +6,8 @@ import {
   normalizeDescription,
   normalizeAccountIdentifier,
   buildNormalizedTransaction,
+  extractReference,
+  toISODateString,
 } from '../../lib/import/normalizers';
 
 describe('normalizers', () => {
@@ -19,19 +21,33 @@ describe('normalizers', () => {
     const base = toMinorUnits('250')!;
     expect(applyDebitCredit(base, 'Credit')).toEqual(25000n);
     expect(applyDebitCredit(base, 'Debit')).toEqual(-25000n);
+    expect(applyDebitCredit(-25000n, 'Debit')).toEqual(-25000n);
+    expect(applyDebitCredit(-25000n, 'Credit')).toEqual(25000n);
   });
 
-  it('parses YYYYMMDD and DD/MM/YYYY dates into UTC dates', () => {
+  it('parses YYYYMMDD, DD/MM/YYYY, Date objects, and ISO dates into UTC dates', () => {
     const iso = parseDate('20250109');
     expect(iso?.toISOString()).toEqual('2025-01-09T00:00:00.000Z');
 
     const alt = parseDate('09/01/2025');
     expect(alt?.toISOString()).toEqual('2025-01-09T00:00:00.000Z');
+
+    const dateObject = parseDate(new Date('2025-01-09T14:30:00.000Z'));
+    expect(dateObject?.toISOString()).toEqual('2025-01-09T00:00:00.000Z');
+
+    const isoText = parseDate('2025-01-09');
+    expect(isoText?.toISOString()).toEqual('2025-01-09T00:00:00.000Z');
   });
 
   it('normalizes descriptions and account identifiers consistently', () => {
     expect(normalizeDescription('Community Outreach Supplies!')).toEqual('community outreach supplies');
     expect(normalizeAccountIdentifier('NL89 ingb 0006 369960')).toEqual('NL89INGB0006369960');
+  });
+
+  it('extracts references and ISO date strings for import metadata', () => {
+    expect(extractReference('Naam: Test; Reference: ABC-123 ; Omschrijving: Gift')).toEqual('ABC-123');
+    expect(extractReference('Geen reference')).toBeNull();
+    expect(toISODateString(new Date('2026-05-14T22:30:00.000Z'))).toBe('2026-05-14');
   });
 
   it('builds a normalized transaction from a valid raw row', () => {

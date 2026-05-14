@@ -3143,3 +3143,48 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 66. Import normalizer helper regression-test pass
+
+Started from pushed main commit:
+
+- `682d9e4 Test empty report periods`
+
+### Import normalizer helper coverage
+
+Implemented:
+
+- `tests/import/normalizers.test.ts`
+
+Result:
+
+- Expanded `parseDate` coverage for Date objects and ISO date strings.
+- Added already-signed debit/credit amount behavior coverage.
+- Added `extractReference` coverage for ING notification text.
+- Added `toISODateString` coverage for date-only metadata output.
+- This protects small helper behavior used throughout CSV/XLSX import normalization and source-file metadata handling.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 20 test files passed.
+- 86 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
