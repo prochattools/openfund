@@ -205,6 +205,15 @@ const formatImportDate = (value: string | null) => {
   return new Date(value).toLocaleString('nl-NL');
 };
 
+const formatFileSize = (bytes: number | null) => {
+  if (!bytes || bytes <= 0) return 'onbekende grootte';
+  if (bytes < 1024) return `${bytes} bytes`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const shortHash = (value: string | null) => value ? `${value.slice(0, 10)}…` : 'geen hash';
+
 function ImportHistoryPanel() {
   const [batches, setBatches] = useState<ImportBatchSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -256,7 +265,8 @@ function ImportHistoryPanel() {
                   <span className="rounded-full bg-[#fbf8f2] px-3 py-1">{batch.autoCategorizedRows} automatisch</span>
                   <span className="rounded-full bg-[#fbf8f2] px-3 py-1">{batch.reviewRows} review</span>
                   <span className="rounded-full bg-[#fbf8f2] px-3 py-1">{batch.duplicateRows} dubbel</span>
-                  {batch.fileSha256 ? <span className="rounded-full bg-[#fbf8f2] px-3 py-1">hash opgeslagen</span> : null}
+                  <span className="rounded-full bg-[#fbf8f2] px-3 py-1">{formatFileSize(batch.fileSizeBytes)}</span>
+                  <span className="rounded-full bg-[#fbf8f2] px-3 py-1">hash {shortHash(batch.fileSha256)}</span>
                   {batch.hasOriginalFile ? <a href={getImportBatchDownloadUrl(batch.id)} className="rounded-full bg-[#1f5f4a] px-3 py-1 text-[#fbf8f2]">Download origineel</a> : <span className="rounded-full bg-[#fff7df] px-3 py-1 text-[#7a5512]">geen bestand</span>}
                 </div>
               </div>
