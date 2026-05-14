@@ -1326,3 +1326,53 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 26. Dutch client API error-copy pass
+
+Started from pushed main commit:
+
+- `fc3b052 Link dashboard to monthly reports`
+
+### Client API error copy
+
+Implemented:
+
+- `src/libs/api.ts`
+
+Result:
+
+- Replaced remaining English client-side finance API error messages with Dutch natural-language messages for:
+  - ledger loading;
+  - review queue loading/clearing;
+  - transaction category updates;
+  - accounts and opening balances;
+  - reconciliation data;
+  - ledger locking/unlocking;
+  - categorization rules;
+  - rule preview/apply actions.
+- Console messages for rule preview/apply failures now also use Dutch labels.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 8 test files passed.
+- 26 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

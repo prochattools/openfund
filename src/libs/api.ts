@@ -35,7 +35,7 @@ export const fetchLedger = async () => {
   const response = await fetch(getApiUrl('/api/ledger'), withUserHeader({ cache: 'no-store' }));
 
   if (!response.ok) {
-    throw new Error('Failed to load ledger');
+    throw new Error('Het grootboek kon niet worden geladen.');
   }
 
   return response.json();
@@ -45,7 +45,7 @@ export const fetchReview = async () => {
   const response = await fetch(getApiUrl('/api/review'), withUserHeader({ cache: 'no-store' }));
 
   if (!response.ok) {
-    throw new Error('Failed to load review queue');
+    throw new Error('De beoordelingsrij kon niet worden geladen.');
   }
 
   return response.json();
@@ -57,8 +57,8 @@ export const clearReviewQueue = async () => {
   }));
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to clear review queue' }));
-    throw new Error(error.error ?? 'Failed to clear review queue');
+    const error = await response.json().catch(() => ({ error: 'De beoordelingsrij kon niet worden afgerond.' }));
+    throw new Error(error.error ?? 'De beoordelingsrij kon niet worden afgerond.');
   }
 
   return response.json();
@@ -90,7 +90,7 @@ export const updateCategory = async (id: string, payload: { categoryId?: string 
   }));
 
   if (!response.ok) {
-    throw new Error('Failed to update transaction category');
+    throw new Error('De categorie kon niet worden bijgewerkt.');
   }
 
   return response.json();
@@ -100,7 +100,7 @@ export const fetchAccounts = async () => {
   const response = await fetch(getApiUrl('/api/accounts'), withUserHeader({ cache: 'no-store' }));
 
   if (!response.ok) {
-    throw new Error('Failed to load accounts');
+    throw new Error('Rekeningen konden niet worden geladen.');
   }
 
   return response.json();
@@ -121,8 +121,8 @@ export const saveOpeningBalance = async (accountId: string, payload: {
   }));
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to save opening balance' }));
-    throw new Error(error.error ?? 'Failed to save opening balance');
+    const error = await response.json().catch(() => ({ error: 'Beginbalans kon niet worden opgeslagen.' }));
+    throw new Error(error.error ?? 'Beginbalans kon niet worden opgeslagen.');
   }
 
   return response.json();
@@ -134,8 +134,8 @@ export const lockOpeningBalance = async (balanceId: string) => {
   }));
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to lock opening balance' }));
-    throw new Error(error.error ?? 'Failed to lock opening balance');
+    const error = await response.json().catch(() => ({ error: 'Beginbalans kon niet worden vergrendeld.' }));
+    throw new Error(error.error ?? 'Beginbalans kon niet worden vergrendeld.');
   }
 
   return response.json();
@@ -158,8 +158,8 @@ export const fetchReconciliation = async (params: {
   const response = await fetch(getApiUrl(`/api/reconciliation?${query.toString()}`), withUserHeader({ cache: 'no-store' }));
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to load reconciliation data' }));
-    throw new Error(error.error ?? 'Failed to load reconciliation data');
+    const error = await response.json().catch(() => ({ error: 'Reconciliatiegegevens konden niet worden geladen.' }));
+    throw new Error(error.error ?? 'Reconciliatiegegevens konden niet worden geladen.');
   }
 
   return response.json();
@@ -175,8 +175,8 @@ export const lockLedgerPeriod = async (ledgerId: string, payload?: { note?: stri
   }));
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to lock ledger' }));
-    throw new Error(error.error ?? 'Failed to lock ledger');
+    const error = await response.json().catch(() => ({ error: 'Maand kon niet worden vergrendeld.' }));
+    throw new Error(error.error ?? 'Maand kon niet worden vergrendeld.');
   }
 
   return response.json();
@@ -188,8 +188,8 @@ export const unlockLedgerPeriod = async (ledgerId: string) => {
   }));
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to unlock ledger' }));
-    throw new Error(error.error ?? 'Failed to unlock ledger');
+    const error = await response.json().catch(() => ({ error: 'Maand kon niet worden ontgrendeld.' }));
+    throw new Error(error.error ?? 'Maand kon niet worden ontgrendeld.');
   }
 
   return response.json();
@@ -210,7 +210,7 @@ export const fetchCategorizationRules = async () => {
   const response = await fetch(getApiUrl('/api/rules'), withUserHeader({ cache: 'no-store' }));
 
   if (!response.ok) {
-    throw new Error('Failed to load rules');
+    throw new Error('Categorisatieregels konden niet worden geladen.');
   }
 
   return response.json();
@@ -226,8 +226,8 @@ export const createCategorizationRule = async (payload: RulePayload) => {
   }));
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to create rule' }));
-    throw new Error(error.error ?? 'Failed to create rule');
+    const error = await response.json().catch(() => ({ error: 'Categorisatieregel kon niet worden gemaakt.' }));
+    throw new Error(error.error ?? 'Categorisatieregel kon niet worden gemaakt.');
   }
 
   return response.json();
@@ -243,8 +243,8 @@ export const updateCategorizationRule = async (id: string, payload: Partial<Rule
   }));
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to update rule' }));
-    throw new Error(error.error ?? 'Failed to update rule');
+    const error = await response.json().catch(() => ({ error: 'Categorisatieregel kon niet worden bijgewerkt.' }));
+    throw new Error(error.error ?? 'Categorisatieregel kon niet worden bijgewerkt.');
   }
 
   return response.json();
@@ -256,8 +256,8 @@ export const deleteCategorizationRule = async (id: string): Promise<void> => {
   }));
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to delete rule' }));
-    throw new Error(error.error ?? 'Failed to delete rule');
+    const error = await response.json().catch(() => ({ error: 'Categorisatieregel kon niet worden verwijderd.' }));
+    throw new Error(error.error ?? 'Categorisatieregel kon niet worden verwijderd.');
   }
 
   return;
@@ -272,9 +272,9 @@ export const previewRule = async (id: string, scope: 'review-queue' | { importBa
   }));
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to preview rule' }));
-    console.error('Failed to preview rule', { url, status: response.status, error });
-    throw new Error(error.error ?? 'Failed to preview rule');
+    const error = await response.json().catch(() => ({ error: 'Voorbeeld van regel kon niet worden geladen.' }));
+    console.error('Voorbeeld van regel kon niet worden geladen', { url, status: response.status, error });
+    throw new Error(error.error ?? 'Voorbeeld van regel kon niet worden geladen.');
   }
 
   return response.json();
@@ -289,9 +289,9 @@ export const applyRule = async (id: string, transactionIds: string[]) => {
   }));
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to apply rule' }));
-    console.error('Failed to apply rule', { url, status: response.status, error });
-    throw new Error(error.error ?? 'Failed to apply rule');
+    const error = await response.json().catch(() => ({ error: 'Categorisatieregel kon niet worden toegepast.' }));
+    console.error('Categorisatieregel kon niet worden toegepast', { url, status: response.status, error });
+    throw new Error(error.error ?? 'Categorisatieregel kon niet worden toegepast.');
   }
 
   return response.json();
