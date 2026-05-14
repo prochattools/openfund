@@ -2147,3 +2147,47 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 44. Import file audit metadata UI pass
+
+Started from pushed main commit:
+
+- `64dcf1f Align reconciliation route copy`
+
+### Import history audit metadata
+
+Implemented:
+
+- `src/ui/FinanceSettingsPage.tsx`
+
+Result:
+
+- Settings import history now shows retained original-file size when available.
+- Settings import history now shows a shortened SHA-256 checksum prefix when available.
+- Original ING export download availability remains visible per import batch.
+- This improves traceability from an import row back to the retained source file without making the settings page noisy.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 14 test files passed.
+- 46 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
