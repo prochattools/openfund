@@ -2236,3 +2236,48 @@ Test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 46. Dashboard latest import visibility pass
+
+Started from pushed main commit:
+
+- `b24b692 Warn when reports still need review`
+
+### Dashboard import source visibility
+
+Implemented:
+
+- `src/ui/FinanceDashboard.tsx`
+
+Result:
+
+- The dashboard now loads the most recent import batch metadata.
+- A new `Laatste ING-import` card shows the source filename and import timestamp.
+- The card shows new, duplicate, automatically categorized, and review-row counts.
+- When the original ING export is retained, the dashboard includes a `Download origineel` link.
+- This makes the dashboard reflect both financial state and the latest source-file state without requiring admins to open settings first.
+
+### Validation
+
+Successful:
+
+```bash
+npm run build
+npm test
+```
+
+Build result:
+
+- Prisma client generation passed.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Test result:
+
+- 14 test files passed.
+- 46 tests passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

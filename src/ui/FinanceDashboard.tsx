@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useLedger, type LedgerTransaction } from '@/context/ledger-context';
+import { fetchImportBatches, getImportBatchDownloadUrl, type ImportBatchSummary } from '@/libs/api';
 
 const euroFormatter = new Intl.NumberFormat('nl-NL', {
   style: 'currency',
@@ -33,6 +34,11 @@ const navItems = [
 ];
 
 const formatEuro = (value: number) => euroFormatter.format(value);
+
+const formatImportDate = (value: string | null) => {
+  if (!value) return 'nog niet afgerond';
+  return new Date(value).toLocaleString('nl-NL');
+};
 
 const getTransactionDate = (transaction: LedgerTransaction) => {
   const date = new Date(transaction.date);
@@ -231,6 +237,39 @@ function MoneyFlowChart({ income, expenses }: { income: number; expenses: number
   );
 }
 
+function LatestImportCard({ latestImport }: { latestImport: ImportBatchSummary | null }) {
+  return (
+    <article className="rounded-[1.75rem] border border-[#ded5c8] bg-[#fbf8f2] p-5 shadow-[0_18px_55px_rgba(87,67,45,0.07)]">
+      <div className="mb-5 flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-semibold tracking-[-0.03em]">Laatste ING-import</h3>
+          <p className="mt-1 text-sm text-[#7d6d5a]">Bronbestand en importresultaat.</p>
+        </div>
+        <Link href="/settings" className="rounded-full bg-[#f5f1ea] px-3 py-1 text-xs font-semibold text-[#7d6d5a]">Alle imports</Link>
+      </div>
+      {latestImport ? (
+        <div className="space-y-3">
+          <div className="rounded-[1.5rem] bg-[#f5f1ea] p-4">
+            <p className="font-semibold text-[#251f1a]">{latestImport.filename}</p>
+            <p className="mt-1 text-xs text-[#7d6d5a]">{formatImportDate(latestImport.completedAt ?? latestImport.startedAt)}</p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="rounded-2xl bg-[#edf5ec] p-3 text-[#1f5f4a]"><strong>{latestImport.importedRows}</strong><br />nieuw</div>
+            <div className="rounded-2xl bg-[#f5f1ea] p-3 text-[#6f6253]"><strong>{latestImport.duplicateRows}</strong><br />dubbel</div>
+            <div className="rounded-2xl bg-[#f5f1ea] p-3 text-[#6f6253]"><strong>{latestImport.autoCategorizedRows}</strong><br />automatisch</div>
+            <div className="rounded-2xl bg-[#fff7df] p-3 text-[#7a5512]"><strong>{latestImport.reviewRows}</strong><br />review</div>
+          </div>
+          {latestImport.hasOriginalFile ? (
+            <a href={getImportBatchDownloadUrl(latestImport.id)} className="block rounded-2xl bg-[#1f5f4a] px-4 py-3 text-center text-sm font-semibold text-[#fbf8f2]">Download origineel</a>
+          ) : null}
+        </div>
+      ) : (
+        <p className="rounded-2xl bg-[#f5f1ea] p-4 text-sm text-[#7d6d5a]">Nog geen importgeschiedenis gevonden.</p>
+      )}
+    </article>
+  );
+}
+
 function ImportStatusCard({ total, reviewCount, autoCategorized }: { total: number; reviewCount: number; autoCategorized: number }) {
   const ready = total > 0 && reviewCount === 0;
 
@@ -278,6 +317,26 @@ function EmptyState() {
 
 export default function FinanceDashboard() {
   const { transactions, summary } = useLedger();
+  const [latestImport, setLatestImport] = useState<ImportBatchSummary | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchImportBatches(1)
+      .then((batches) => {
+        if (!cancelled) {
+          setLatestImport(batches[0] ?? null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setLatestImport(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const dashboard = useMemo(() => {
     const monthKey = getLatestMonthKey(transactions);
@@ -326,6 +385,10 @@ export default function FinanceDashboard() {
           <section className="mt-6 grid gap-6 xl:grid-cols-[1fr_0.9fr]">
             <MoneyFlowChart income={dashboard.income} expenses={dashboard.expenses} />
             <ImportStatusCard total={dashboard.monthTransactions.length} reviewCount={dashboard.reviewCount} autoCategorized={dashboard.autoCategorized} />
+          </section>
+
+          <section className="mt-6">
+            <LatestImportCard latestImport={latestImport} />
           </section>
 
           <section className="mt-6 grid gap-6 xl:grid-cols-2">
