@@ -3569,3 +3569,46 @@ Build/test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 75. Shared UI helper regression-test pass
+
+Started from pushed main commit:
+
+- `ba699a5 Test XLSX export helpers`
+
+### Shared UI helper coverage
+
+Implemented:
+
+- `tests/helpers/utils.test.ts`
+
+Result:
+
+- Added focused regression tests for the shared `cn` class-name helper.
+- Covered joining plain, conditional, null, and undefined class values.
+- Covered Tailwind conflict resolution where the latest class wins.
+- This protects the small helper used across the simplified finance UI styling layer.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Build/test result:
+
+- Server TypeScript build passed.
+- Next production build passed.
+- 25 test files passed.
+- 108 tests passed.
+- Secret scan passed.
+
+Known warnings still present:
+
+- Prisma reports a major update is available. No dependency upgrade was performed.
+- Next reports missing SWC lockfile metadata. Build passes.
