@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildEmailHtml, buildSubject, escapeHtml } from '../../src/app/api/ledger/notify/emailHelpers';
+import { buildEmailHtml, buildSubject, escapeHtml, normalizeEmailRecipients } from '../../src/app/api/ledger/notify/emailHelpers';
 
 describe('notify route helpers', () => {
   it('builds Dutch subjects for known finance summary contexts', () => {
@@ -41,5 +41,17 @@ describe('notify route helpers', () => {
     expect(html).toContain('Betaalrekening &amp; kas over mei &lt;2026&gt;');
     expect(html).toContain('<strong>Veilige samenvatting</strong>');
     expect(html).not.toContain('mei <2026>');
+  });
+
+  it('normalizes recipient lists before notification e-mails are sent', () => {
+    expect(normalizeEmailRecipients([
+      ' finance@example.test ',
+      '',
+      'finance@example.test',
+      null,
+      'boekhouding@example.test',
+      '   ',
+      42,
+    ])).toEqual(['finance@example.test', 'boekhouding@example.test']);
   });
 });

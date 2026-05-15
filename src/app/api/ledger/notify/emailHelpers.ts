@@ -8,6 +8,16 @@ export const escapeHtml = (value: string): string =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
+export const normalizeEmailRecipients = (values: unknown[]): string[] =>
+  Array.from(
+    new Set(
+      values
+        .filter((value): value is string => typeof value === 'string')
+        .map((value) => value.trim())
+        .filter(Boolean),
+    ),
+  );
+
 export const buildSubject = (context?: ExportEmailContext, filename?: string): string => {
   if (context?.view === 'monthly') {
     return `Financieel maandoverzicht ${context.periodLabel}`;

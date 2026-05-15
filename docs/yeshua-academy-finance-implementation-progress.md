@@ -5037,3 +5037,49 @@ Build result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+## 62. Notification recipient normalization pass
+
+Started from pushed main commit:
+
+- `1d55f6a Escape notification email context labels`
+
+### Notification recipient cleanup
+
+Implemented:
+
+- `src/app/api/ledger/notify/emailHelpers.ts`
+- `src/app/api/ledger/notify/route.ts`
+- `tests/routes/notify.test.ts`
+
+Result:
+
+- Added a focused `normalizeEmailRecipients` helper for notification recipient lists.
+- Explicit recipients are now trimmed, empty/non-string entries are dropped, and duplicates are removed before sending.
+- Stored recipients are also normalized as a final guard before handing the list to Resend.
+- Added regression coverage for trimming, filtering, and deduplicating recipient lists.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Test result:
+
+- 48 test files passed.
+- 204 tests passed.
+
+Build result:
+
+- Prisma client generation passed during full build.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

@@ -3,7 +3,7 @@ import { resendService } from '@/libs/resend';
 import prisma from '@/libs/prisma';
 import config from '@/config';
 import type { ExportEmailContext } from '@/helpers/export-utils';
-import { buildEmailHtml, buildSubject } from './emailHelpers';
+import { buildEmailHtml, buildSubject, normalizeEmailRecipients } from './emailHelpers';
 
 type AttachmentPayload = {
   filename: string;
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const explicitRecipients = Array.isArray(body.recipients) ? body.recipients : [];
+    const explicitRecipients = Array.isArray(body.recipients) ? normalizeEmailRecipients(body.recipients) : [];
     const userId = request.headers.get('x-user-id') ?? process.env.DEFAULT_USER_ID ?? 'demo-user';
     const storedRecipients = explicitRecipients.length
       ? []
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
         });
     const recipients = explicitRecipients.length
       ? explicitRecipients
-      : storedRecipients.map((recipient) => recipient.email);
+      : normalizeEmailRecipients(storedRecipients.map((recipient) => recipient.email));
     const attachment = body.attachment as AttachmentPayload | undefined;
     const rawHtml = typeof body.html === 'string' ? body.html : '';
     const context = body.context as ExportEmailContext | undefined;
