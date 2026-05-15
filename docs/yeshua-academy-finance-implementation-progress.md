@@ -5175,3 +5175,53 @@ Build result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+## 65. API client query helper pass
+
+Started from pushed main commit:
+
+- `de71699 Use dynamic XLSX worksheet names`
+
+### Client query-string helper extraction
+
+Implemented:
+
+- `src/helpers/api-client.ts`
+- `src/libs/api.ts`
+- `tests/helpers/apiClient.test.ts`
+
+Result:
+
+- Added focused client-side query helpers for list limits, report summaries, and reconciliation requests.
+- Replaced repeated `URLSearchParams` construction in `src/libs/api.ts` with tested helpers.
+- Added regression coverage for audit/import limit queries, report year/month queries, and reconciliation period queries.
+- Kept existing endpoint URLs, Dutch error messages, and request headers unchanged.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Test result:
+
+- 49 test files passed.
+- 207 tests passed.
+
+Build result:
+
+- Prisma client generation passed during full build.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Note:
+
+- The first full-build command attempt hit a BuildFlow/Cloudflare 504 gateway timeout while starting. A retry completed successfully with exit 0.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

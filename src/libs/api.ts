@@ -1,3 +1,5 @@
+import { buildLimitQuery, buildReconciliationQuery, buildReportSummaryQuery } from '@/helpers/api-client';
+
 const rawEnvBase = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
 
 const resolveApiBaseUrl = (): string => {
@@ -148,14 +150,7 @@ export const fetchReconciliation = async (params: {
   start?: string;
   end?: string;
 }) => {
-  const query = new URLSearchParams();
-  query.set('accountId', params.accountId);
-  if (params.month) query.set('month', String(params.month));
-  if (params.year) query.set('year', String(params.year));
-  if (params.start) query.set('start', params.start);
-  if (params.end) query.set('end', params.end);
-
-  const response = await fetch(getApiUrl(`/api/reconciliation?${query.toString()}`), withUserHeader({ cache: 'no-store' }));
+  const response = await fetch(getApiUrl(`/api/reconciliation?${buildReconciliationQuery(params)}`), withUserHeader({ cache: 'no-store' }));
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Reconciliatiegegevens konden niet worden geladen.' }));
@@ -299,13 +294,7 @@ export const applyRule = async (id: string, transactionIds: string[]) => {
 
 
 export const fetchReportSummary = async (params: { year: number; month?: number | null }) => {
-  const query = new URLSearchParams();
-  query.set('year', String(params.year));
-  if (params.month) {
-    query.set('month', String(params.month));
-  }
-
-  const response = await fetch(getApiUrl(`/api/reports/summary?${query.toString()}`), withUserHeader({ cache: 'no-store' }));
+  const response = await fetch(getApiUrl(`/api/reports/summary?${buildReportSummaryQuery(params)}`), withUserHeader({ cache: 'no-store' }));
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Het rapport kon niet worden geladen.' }));
@@ -329,10 +318,7 @@ export type AuditLogEntry = {
 };
 
 export const fetchAuditLogs = async (limit = 25): Promise<AuditLogEntry[]> => {
-  const query = new URLSearchParams();
-  query.set('limit', String(limit));
-
-  const response = await fetch(getApiUrl(`/api/audit-log?${query.toString()}`), withUserHeader({ cache: 'no-store' }));
+  const response = await fetch(getApiUrl(`/api/audit-log?${buildLimitQuery(limit)}`), withUserHeader({ cache: 'no-store' }));
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'De auditlog kon niet worden geladen.' }));
@@ -407,10 +393,7 @@ export type ImportBatchSummary = {
 };
 
 export const fetchImportBatches = async (limit = 25): Promise<ImportBatchSummary[]> => {
-  const query = new URLSearchParams();
-  query.set('limit', String(limit));
-
-  const response = await fetch(getApiUrl(`/api/import-batches?${query.toString()}`), withUserHeader({ cache: 'no-store' }));
+  const response = await fetch(getApiUrl(`/api/import-batches?${buildLimitQuery(limit)}`), withUserHeader({ cache: 'no-store' }));
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Importgeschiedenis kon niet worden geladen.' }));
