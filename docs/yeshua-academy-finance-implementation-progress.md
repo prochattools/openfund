@@ -3612,3 +3612,48 @@ Known warnings still present:
 
 - Prisma reports a major update is available. No dependency upgrade was performed.
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 76. Auth utility regression-test pass
+
+Started from pushed main commit:
+
+- `d6075d3 Test shared UI class helper`
+
+### Auth utility coverage
+
+Implemented:
+
+- `tests/auth/clientAuth.test.ts`
+
+Result:
+
+- Added isolated module tests for environment-driven auth utility behavior.
+- Covered default disabled auth mode.
+- Covered explicit disabled aliases such as `false`.
+- Covered Ory mode and configured Ory URL helpers.
+- Covered Clerk mode staying runtime-disabled when only stub keys are configured.
+- Covered default internal sign-in/sign-up URL fallbacks.
+- Tests use stub placeholders only; no real secret material is introduced.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Build/test result:
+
+- Server TypeScript build passed.
+- Next production build passed.
+- 26 test files passed.
+- 113 tests passed.
+- Secret scan passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
