@@ -4947,3 +4947,48 @@ Build result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+## 60. Legacy UI primitive cleanup pass
+
+Started from pushed main commit:
+
+- `ad6f372 Wire sidebar active states`
+
+### Removed unused legacy UI primitives
+
+Removed:
+
+- `src/ui/Card.tsx`
+- `src/ui/PageHeader.tsx`
+- `src/ui/Section.tsx`
+
+Result:
+
+- Removed unused dark-theme UI primitives that were not part of the current Yeshua Academy Finance interface.
+- Kept the modern Dutch finance pages on the dedicated finance components and shared `FinanceAppFrame` shell.
+- Reduced stale UI surface area after the shared frame extraction.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Test result:
+
+- 48 test files passed.
+- 202 tests passed.
+
+Build result:
+
+- Prisma client generation passed during full build.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
