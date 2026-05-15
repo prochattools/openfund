@@ -4090,3 +4090,54 @@ Build/test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 86. Offline categorization helper extraction pass
+
+Started from pushed main commit:
+
+- `ff6807d Extract server category merge helper`
+
+### Offline categorization helper extraction
+
+Implemented:
+
+- `src/helpers/offline-categorization.ts`
+- `src/context/ledger-context.tsx`
+- `tests/helpers/offlineCategorization.test.ts`
+
+Result:
+
+- Extracted offline/client categorization suggestion logic out of the large ledger context.
+- Ledger context now imports `categorizeTransactions` from a focused helper module and passes the configured review category metadata explicitly.
+- Added regression tests for:
+  - key normalization;
+  - direct history keys;
+  - suggestion identifiers;
+  - filling missing suggestion names from the category index;
+  - direct source/amount auto-categorization;
+  - fallback suggestions that remain in manual review;
+  - review-category fallback when no history exists.
+- This keeps the offline import categorization behavior testable while further reducing ledger context helper bulk.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Build/test result:
+
+- Server TypeScript build passed.
+- Next production build passed.
+- 37 test files passed.
+- 150 tests passed.
+- Secret scan passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
