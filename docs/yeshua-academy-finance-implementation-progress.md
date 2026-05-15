@@ -4755,3 +4755,50 @@ Build result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+## 56. Import feedback helper extraction pass
+
+Started from pushed main commit:
+
+- `2144a99 Extract reports display helpers`
+
+### Import feedback helper extraction
+
+Implemented:
+
+- `src/helpers/import-feedback.ts`
+- `src/components/ledger/UploadCsvButton.tsx`
+- `tests/helpers/importFeedback.test.ts`
+
+Result:
+
+- Extracted Dutch import feedback count normalization and fallback message construction from the upload button into a focused pure helper module.
+- `UploadCsvButton` now stays more UI-focused while preserving server-provided import messages and the Dutch import overview toast.
+- Added focused regression tests for old/new import response count fields, singular/plural Dutch feedback wording, zero-section omission, and preserving server-provided messages.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+```
+
+Test result:
+
+- 48 test files passed.
+- 201 tests passed.
+
+Server build result:
+
+- Server TypeScript build passed.
+
+Full production build caveat:
+
+- `npm run build` could not be verified for this pass because BuildFlow returned Cloudflare 504 gateway time-outs three times while starting the command.
+- No compiler/build error output was returned from Next or TypeScript during those attempts.
+
+Known warning from earlier successful builds still applies:
+
+- Next reports missing SWC lockfile metadata. Build passes when the command completes successfully.

@@ -3,21 +3,8 @@
 import React, { useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useLedger } from '@/context/ledger-context';
+import { getImportFeedbackCounts, getImportFeedbackMessage, type ImportSummaryWithMessage } from '@/helpers/import-feedback';
 import { isClientAdmin } from '@/libs/api';
-
-type ImportSummaryWithMessage = {
-  importedCount: number;
-  autoCategorized?: number;
-  autoCategorizedCount?: number;
-  reviewCount?: number;
-  pendingReviewCount?: number;
-  duplicateCount?: number;
-  errorCount?: number;
-  message?: string;
-  totalRows?: number;
-  batchId?: string;
-  errors?: Array<{ rowNumber: number; message: string }>;
-};
 
 export function UploadCsvButton() {
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -44,15 +31,12 @@ export function UploadCsvButton() {
 
     try {
       const summary = (await importCsv(file)) as ImportSummaryWithMessage;
-      const message = summary.message ?? buildDutchImportMessage(summary);
+      const message = getImportFeedbackMessage(summary);
 
       toast.success(message, { duration: 6500 });
       await refreshLedger();
 
-      const imported = summary.importedCount ?? 0;
-      const duplicates = summary.duplicateCount ?? 0;
-      const review = summary.reviewCount ?? summary.pendingReviewCount ?? 0;
-      const auto = summary.autoCategorized ?? summary.autoCategorizedCount ?? 0;
+      const { imported, duplicates, review, auto } = getImportFeedbackCounts(summary);
 
       toast((t) => (
         <div className="text-left text-sm">
@@ -114,30 +98,3 @@ export function UploadCsvButton() {
     </>
   );
 }
-
-const buildDutchImportMessage = (summary: ImportSummaryWithMessage) => {
-  const imported = summary.importedCount ?? 0;
-  const duplicates = summary.duplicateCount ?? 0;
-  const errors = summary.errorCount ?? 0;
-  const review = summary.reviewCount ?? summary.pendingReviewCount ?? 0;
-  const auto = summary.autoCategorized ?? summary.autoCategorizedCount ?? 0;
-
-  const parts = [
-    imported === 1 ? '1 transactie toegevoegd' : `${imported} transacties toegevoegd`,
-  ];
-
-  if (auto > 0) {
-    parts.push(auto === 1 ? '1 automatisch gecategoriseerd' : `${auto} automatisch gecategoriseerd`);
-  }
-  if (review > 0) {
-    parts.push(review === 1 ? '1 te beoordelen' : `${review} te beoordelen`);
-  }
-  if (duplicates > 0) {
-    parts.push(duplicates === 1 ? '1 dubbele transactie genegeerd' : `${duplicates} dubbele transacties genegeerd`);
-  }
-  if (errors > 0) {
-    parts.push(errors === 1 ? '1 rij overgeslagen' : `${errors} rijen overgeslagen`);
-  }
-
-  return `Import voltooid. ${parts.join('. ')}.`;
-};
