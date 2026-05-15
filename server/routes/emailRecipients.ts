@@ -6,6 +6,24 @@ import { readRouteParam } from './routeParams';
 
 export const isEmailRecipientAddress = (value: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 
+export type EmailRecipientResponseInput = {
+  id: string;
+  email: string;
+  name: string | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export const serializeEmailRecipient = (recipient: EmailRecipientResponseInput) => ({
+  id: recipient.id,
+  email: recipient.email,
+  name: recipient.name,
+  isActive: recipient.isActive,
+  createdAt: recipient.createdAt.toISOString(),
+  updatedAt: recipient.updatedAt.toISOString(),
+});
+
 export const listEmailRecipients = async (req: Request, res: Response) => {
   const { userId } = getRequestActor(req);
 
@@ -15,16 +33,7 @@ export const listEmailRecipients = async (req: Request, res: Response) => {
       orderBy: [{ isActive: 'desc' }, { email: 'asc' }],
     });
 
-    return res.json(
-      recipients.map((recipient) => ({
-        id: recipient.id,
-        email: recipient.email,
-        name: recipient.name,
-        isActive: recipient.isActive,
-        createdAt: recipient.createdAt.toISOString(),
-        updatedAt: recipient.updatedAt.toISOString(),
-      })),
-    );
+    return res.json(recipients.map(serializeEmailRecipient));
   } catch (error) {
     console.error('E-mailontvangers konden niet worden geladen', error);
     return res.status(500).json({ error: 'E-mailontvangers konden niet worden geladen.' });
@@ -96,14 +105,7 @@ export const upsertEmailRecipient = async (req: Request, res: Response) => {
       return updated;
     });
 
-    return res.status(200).json({
-      id: recipient.id,
-      email: recipient.email,
-      name: recipient.name,
-      isActive: recipient.isActive,
-      createdAt: recipient.createdAt.toISOString(),
-      updatedAt: recipient.updatedAt.toISOString(),
-    });
+    return res.status(200).json(serializeEmailRecipient(recipient));
   } catch (error) {
     console.error('E-mailontvanger kon niet worden opgeslagen', error);
     return res.status(500).json({ error: 'E-mailontvanger kon niet worden opgeslagen.' });
@@ -160,14 +162,7 @@ export const deactivateEmailRecipient = async (req: Request, res: Response) => {
 
       return {
         status: 200 as const,
-        body: {
-          id: updated.id,
-          email: updated.email,
-          name: updated.name,
-          isActive: updated.isActive,
-          createdAt: updated.createdAt.toISOString(),
-          updatedAt: updated.updatedAt.toISOString(),
-        },
+        body: serializeEmailRecipient(updated),
       };
     });
 

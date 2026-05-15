@@ -5462,3 +5462,48 @@ Build result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+## 71. E-mail recipient response serializer pass
+
+Started from pushed main commit:
+
+- `8d84c2b Reuse route query helper for rule priority`
+
+### E-mail recipient response serialization
+
+Implemented:
+
+- `server/routes/emailRecipients.ts`
+- `tests/routes/emailRecipients.test.ts`
+
+Result:
+
+- Added a focused `serializeEmailRecipient` helper for e-mail recipient API responses.
+- Reused the serializer in list, upsert, and deactivate response paths.
+- Preserved the existing response shape while removing repeated timestamp serialization.
+- Added regression coverage for ISO timestamp serialization and recipient response fields.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Test result:
+
+- 50 test files passed.
+- 215 tests passed.
+
+Build result:
+
+- Prisma client generation passed during full build.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
