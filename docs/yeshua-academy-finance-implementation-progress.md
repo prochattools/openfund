@@ -3701,3 +3701,52 @@ Build/test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 78. Account metadata helper extraction pass
+
+Started from pushed main commit:
+
+- `0b34367 Test app config and sitemap`
+
+### Account metadata helper extraction
+
+Implemented:
+
+- `src/helpers/account-metadata.ts`
+- `src/context/ledger-context.tsx`
+- `tests/helpers/accountMetadata.test.ts`
+
+Result:
+
+- Extracted account-label and account-identifier resolution out of the large ledger context into a focused helper module.
+- Ledger context now imports `resolveAccountMetadata` instead of carrying local account lookup definitions.
+- Added regression tests for:
+  - account key normalization;
+  - exact known account matching;
+  - embedded known account matching;
+  - Vila Solidária alternate label matching;
+  - missing, blank, and unknown account values.
+- This keeps the finance account-label behavior testable without changing the UI or import flow.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Build/test result:
+
+- Server TypeScript build passed.
+- Next production build passed.
+- 29 test files passed.
+- 122 tests passed.
+- Secret scan passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
