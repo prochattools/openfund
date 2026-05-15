@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useMemo, useState, type ReactNode } from 'react';
-import { useLedger, type LedgerTransaction } from '@/context/ledger-context';
+import { useLedger } from '@/context/ledger-context';
+import type { LedgerTransaction } from '@/helpers/api-transaction-mapper';
 import { UploadCsvButton } from '@/components/ledger/UploadCsvButton';
 
 const euroFormatter = new Intl.NumberFormat('nl-NL', {

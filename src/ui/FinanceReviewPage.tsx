@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useMemo, useState, type ReactNode } from 'react';
 import toast from 'react-hot-toast';
-import { useLedger, type Category, type LedgerTransaction } from '@/context/ledger-context';
+import { useLedger, type Category } from '@/context/ledger-context';
+import type { LedgerTransaction } from '@/helpers/api-transaction-mapper';
 import { isClientAdmin } from '@/libs/api';
 
 const euroFormatter = new Intl.NumberFormat('nl-NL', {

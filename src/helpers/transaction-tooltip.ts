@@ -1,4 +1,4 @@
-import type { LedgerTransaction } from '@/context/ledger-context';
+import type { LedgerTransaction } from '@/helpers/api-transaction-mapper';
 
 const normalizeValue = (value?: string | null): string | null => {
   if (value === undefined || value === null) {

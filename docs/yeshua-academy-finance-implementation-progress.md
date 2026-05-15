@@ -4141,3 +4141,61 @@ Build/test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 87. API transaction mapper extraction pass
+
+Started from pushed main commit:
+
+- `5398c31 Extract offline categorization helper`
+
+### API transaction mapper extraction
+
+Implemented:
+
+- `src/helpers/api-transaction-mapper.ts`
+- `src/context/ledger-context.tsx`
+- `src/helpers/transaction-tooltip.ts`
+- `src/ui/FinanceDashboard.tsx`
+- `src/ui/FinanceLedgerPage.tsx`
+- `src/ui/FinanceReportsPage.tsx`
+- `src/ui/FinanceReviewPage.tsx`
+- `tests/helpers/apiTransactionMapper.test.ts`
+
+Result:
+
+- Extracted API ledger transaction mapping out of the large ledger context.
+- Ledger context now imports `mapApiTransaction`, `ApiLedgerTransaction`, and `LedgerTransaction` from a focused helper module.
+- Updated UI/helper type imports to use the extracted `LedgerTransaction` type instead of relying on the context module.
+- Added regression tests for:
+  - categorized API transaction mapping;
+  - signed debit/credit amount behavior;
+  - normalized descriptions;
+  - running balance minor/value conversion;
+  - classification-derived auto/manual-review flags;
+  - invalid date fallback behavior;
+  - `amountMinor` fallback handling;
+  - raw category label fallback mapping.
+- This keeps server-ledger display mapping testable while reducing ledger context helper bulk.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Build/test result:
+
+- Server TypeScript build passed.
+- Next production build passed.
+- 38 test files passed.
+- 153 tests passed.
+- Secret scan passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

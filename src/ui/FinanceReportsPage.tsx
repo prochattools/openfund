@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { fetchReportSummary } from '@/libs/api';
-import { useLedger, type LedgerTransaction } from '@/context/ledger-context';
+import { useLedger } from '@/context/ledger-context';
+import type { LedgerTransaction } from '@/helpers/api-transaction-mapper';
 
 const euroFormatter = new Intl.NumberFormat('nl-NL', {
   style: 'currency',
