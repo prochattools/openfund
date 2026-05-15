@@ -4,49 +4,25 @@ import Link from 'next/link';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useLedger } from '@/context/ledger-context';
 import type { LedgerTransaction } from '@/helpers/api-transaction-mapper';
+import {
+  buildLatestYearOverview,
+  buildMonthOptions,
+  filterLedgerTransactions,
+  filterTransactionsByMonth,
+  formatEuro,
+  getLedgerCategoryLabel,
+  parseLedgerDate,
+  resolveActiveMonth,
+  summarizeLedgerTransactions,
+  type MonthOption,
+} from '@/helpers/ledger-page';
 import { UploadCsvButton } from '@/components/ledger/UploadCsvButton';
-
-const euroFormatter = new Intl.NumberFormat('nl-NL', {
-  style: 'currency',
-  currency: 'EUR',
-  maximumFractionDigits: 2,
-});
-
-const monthFormatter = new Intl.DateTimeFormat('nl-NL', {
-  month: 'long',
-  year: 'numeric',
-});
 
 const dateFormatter = new Intl.DateTimeFormat('nl-NL', {
   day: '2-digit',
   month: 'short',
   year: 'numeric',
 });
-
-type MonthOption = {
-  key: string;
-  label: string;
-};
-
-const formatEuro = (value: number) => euroFormatter.format(value);
-
-const parseDate = (value: string) => {
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? new Date(0) : parsed;
-};
-
-const monthKeyFor = (transaction: LedgerTransaction) => {
-  const date = parseDate(transaction.date);
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
-};
-
-const monthLabelForKey = (key: string) => {
-  const [year, month] = key.split('-').map(Number);
-  return monthFormatter.format(new Date(Date.UTC(year ?? 1970, (month ?? 1) - 1, 1)));
-};
-
-const getCategoryLabel = (transaction: LedgerTransaction) =>
-  transaction.mainCategoryName ?? transaction.categoryName ?? transaction.suggestedMainCategoryName ?? 'Nog te beoordelen';
 
 function AppFrame({ children, reviewCount }: { children: ReactNode; reviewCount: number }) {
   const navItems = [
@@ -166,15 +142,7 @@ function StateCard({ title, body }: { title: string; body: string }) {
 
 function TransactionTable({ transactions }: { transactions: LedgerTransaction[] }) {
   const [query, setQuery] = useState('');
-  const filtered = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    if (!normalized) return transactions;
-    return transactions.filter((transaction) =>
-      [transaction.description, transaction.counterpartyAccount, transaction.notificationDetail, transaction.categoryName, transaction.mainCategoryName]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(normalized)),
-    );
-  }, [query, transactions]);
+  const filtered = useMemo(() => filterLedgerTransactions(transactions, query), [query, transactions]);
 
   return (
     <section id="transacties" className="rounded-[2rem] border border-[#ded5c8] bg-[#fbf8f2] p-6 shadow-[0_24px_70px_rgba(87,67,45,0.08)]">
@@ -207,7 +175,7 @@ function TransactionTable({ transactions }: { transactions: LedgerTransaction[] 
                 const isExpense = transaction.amount < 0;
                 return (
                   <tr key={transaction.id} className="border-t border-[#ded5c8]">
-                    <td className="px-4 py-4 text-[#6f6253]">{dateFormatter.format(parseDate(transaction.date))}</td>
+                    <td className="px-4 py-4 text-[#6f6253]">{dateFormatter.format(parseLedgerDate(transaction.date))}</td>
                     <td className="px-4 py-4">
                       <details>
                         <summary className="cursor-pointer font-semibold text-[#251f1a] marker:text-[#8a7965]">{transaction.description}</summary>
@@ -219,7 +187,7 @@ function TransactionTable({ transactions }: { transactions: LedgerTransaction[] 
                         </div>
                       </details>
                     </td>
-                    <td className="px-4 py-4 text-[#6f6253]">{getCategoryLabel(transaction)}</td>
+                    <td className="px-4 py-4 text-[#6f6253]">{getLedgerCategoryLabel(transaction)}</td>
                     <td className="px-4 py-4">
                       <span className={`rounded-full px-3 py-1 text-xs font-semibold ${transaction.needsManualCategory ? 'bg-[#f5e9c8] text-[#7a5512]' : 'bg-[#e7f0e7] text-[#1f5f4a]'}`}>
                         {transaction.needsManualCategory ? 'Te beoordelen' : 'Verwerkt'}
@@ -240,27 +208,14 @@ function TransactionTable({ transactions }: { transactions: LedgerTransaction[] 
 }
 
 function YearOverview({ transactions }: { transactions: LedgerTransaction[] }) {
-  const byYear = useMemo(() => {
-    const years = new Map<number, LedgerTransaction[]>();
-    transactions.forEach((transaction) => {
-      const year = parseDate(transaction.date).getUTCFullYear();
-      years.set(year, [...(years.get(year) ?? []), transaction]);
-    });
-    return Array.from(years.entries()).sort(([a], [b]) => b - a);
-  }, [transactions]);
-
-  const latest = byYear[0];
-  const year = latest?.[0] ?? new Date().getUTCFullYear();
-  const yearTransactions = latest?.[1] ?? [];
-  const income = yearTransactions.filter((tx) => tx.amount > 0).reduce((sum, tx) => sum + tx.amount, 0);
-  const expenses = yearTransactions.filter((tx) => tx.amount < 0).reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+  const overview = useMemo(() => buildLatestYearOverview(transactions), [transactions]);
 
   return (
     <section id="jaaroverzicht" className="rounded-[2rem] border border-[#ded5c8] bg-[#fbf8f2] p-6 shadow-[0_24px_70px_rgba(87,67,45,0.08)]">
       <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-sm font-medium text-[#7d6d5a]">Jaaroverzicht</p>
-          <h3 className="mt-1 text-2xl font-semibold tracking-[-0.04em]">{year} in balans</h3>
+          <h3 className="mt-1 text-2xl font-semibold tracking-[-0.04em]">{overview.year} in balans</h3>
         </div>
         <div className="flex gap-2 rounded-full bg-[#f5f1ea] p-1 text-sm font-semibold">
           <span className="rounded-full bg-[#1f5f4a] px-4 py-2 text-[#fbf8f2]">Intern</span>
@@ -268,14 +223,14 @@ function YearOverview({ transactions }: { transactions: LedgerTransaction[] }) {
         </div>
       </div>
       <div className="grid gap-4 md:grid-cols-4">
-        <SmallStat label="Inkomsten" value={formatEuro(income)} />
-        <SmallStat label="Uitgaven" value={formatEuro(expenses)} />
-        <SmallStat label="Resultaat" value={formatEuro(income - expenses)} />
-        <SmallStat label="Transacties" value={String(yearTransactions.length)} />
+        <SmallStat label="Inkomsten" value={formatEuro(overview.income)} />
+        <SmallStat label="Uitgaven" value={formatEuro(overview.expenses)} />
+        <SmallStat label="Resultaat" value={formatEuro(overview.result)} />
+        <SmallStat label="Transacties" value={String(overview.transactionCount)} />
       </div>
       <div className="mt-5 flex flex-col gap-3 rounded-[1.5rem] bg-[#f5f1ea] p-5 text-sm leading-6 text-[#6f6253] md:flex-row md:items-center md:justify-between">
         <p>Voor beginbalans, eindbalans en ANBI-tekst gebruik je het rapportenscherm. Deze kaart blijft bewust simpel.</p>
-        <Link href={`/reports?year=${year}`} className="rounded-2xl bg-[#1f5f4a] px-4 py-2 text-center text-sm font-semibold text-[#fbf8f2]">Open rapport</Link>
+        <Link href={`/reports?year=${overview.year}`} className="rounded-2xl bg-[#1f5f4a] px-4 py-2 text-center text-sm font-semibold text-[#fbf8f2]">Open rapport</Link>
       </div>
     </section>
   );
@@ -293,32 +248,23 @@ function SmallStat({ label, value }: { label: string; value: string }) {
 export default function FinanceLedgerPage() {
   const { transactions, summary } = useLedger();
 
-  const monthOptions = useMemo<MonthOption[]>(() => {
-    const keys = Array.from(new Set(transactions.map(monthKeyFor))).sort().reverse();
-    if (!keys.length) {
-      const now = new Date();
-      keys.push(`${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`);
-    }
-    return keys.map((key) => ({ key, label: monthLabelForKey(key) }));
-  }, [transactions]);
+  const monthOptions = useMemo<MonthOption[]>(() => buildMonthOptions(transactions), [transactions]);
 
   const [selectedMonth, setSelectedMonth] = useState(monthOptions[0]?.key ?? '');
-  const activeMonth = monthOptions.some((option) => option.key === selectedMonth) ? selectedMonth : monthOptions[0]?.key ?? selectedMonth;
+  const activeMonth = resolveActiveMonth(monthOptions, selectedMonth);
 
-  const monthTransactions = useMemo(() => transactions.filter((transaction) => monthKeyFor(transaction) === activeMonth), [activeMonth, transactions]);
-  const income = monthTransactions.filter((tx) => tx.amount > 0).reduce((sum, tx) => sum + tx.amount, 0);
-  const expenses = monthTransactions.filter((tx) => tx.amount < 0).reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
-  const reviewCount = monthTransactions.filter((tx) => tx.needsManualCategory).length;
+  const monthTransactions = useMemo(() => filterTransactionsByMonth(transactions, activeMonth), [activeMonth, transactions]);
+  const monthSummary = useMemo(() => summarizeLedgerTransactions(monthTransactions), [monthTransactions]);
 
   return (
     <AppFrame reviewCount={summary.reviewCount}>
       <Header monthOptions={monthOptions} selectedMonth={activeMonth} onMonthChange={setSelectedMonth} />
       <div className="space-y-6">
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <Kpi label="Inkomsten" value={formatEuro(income)} helper="Ontvangen in deze maand" tone="income" />
-          <Kpi label="Uitgaven" value={formatEuro(expenses)} helper="Besteed in deze maand" tone="expense" />
-          <Kpi label="Saldo verandering" value={formatEuro(income - expenses)} helper="Inkomsten min uitgaven" />
-          <Kpi label="Nog te beoordelen" value={String(reviewCount)} helper="Transacties zonder definitieve categorie" tone="review" />
+          <Kpi label="Inkomsten" value={formatEuro(monthSummary.income)} helper="Ontvangen in deze maand" tone="income" />
+          <Kpi label="Uitgaven" value={formatEuro(monthSummary.expenses)} helper="Besteed in deze maand" tone="expense" />
+          <Kpi label="Saldo verandering" value={formatEuro(monthSummary.result)} helper="Inkomsten min uitgaven" />
+          <Kpi label="Nog te beoordelen" value={String(monthSummary.reviewCount)} helper="Transacties zonder definitieve categorie" tone="review" />
         </section>
         <ImportPanel />
         <TransactionTable transactions={monthTransactions} />

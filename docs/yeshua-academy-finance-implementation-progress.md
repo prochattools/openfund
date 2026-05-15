@@ -4570,3 +4570,53 @@ Not completed due BuildFlow infrastructure issue:
 Known warning from prior successful builds:
 
 - Next reports missing SWC lockfile metadata. Prior production builds passed with that warning.
+
+
+## 52. Ledger page helper extraction pass
+
+Started from pushed main commit:
+
+- `082ff44 Add finance handoff document`
+
+### Ledger page pure helper extraction
+
+Implemented:
+
+- `src/helpers/ledger-page.ts`
+- `src/ui/FinanceLedgerPage.tsx`
+- `tests/helpers/ledgerPage.test.ts`
+
+Result:
+
+- Extracted ledger page money formatting, safe date parsing, month key/label building, active-month resolution, month filtering, transaction search filtering, category label selection, month KPI summaries, and latest-year overview calculations into a focused pure helper module.
+- `FinanceLedgerPage.tsx` now stays more UI-focused while preserving the same Dutch ledger workflow and visual behavior.
+- Added focused regression tests for the extracted helper behavior, including Dutch month labels, search fields, category-label priority, invalid-date fallback, KPI totals, review counts, and latest-year fallback behavior.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Test result:
+
+- 46 test files passed.
+- 190 tests passed.
+
+Build result:
+
+- Prisma client generation passed during full build.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
+
+Note:
+
+- The first post-change full-build command attempt hit a BuildFlow/Cloudflare 504 gateway timeout while starting. A retry completed successfully with exit 0.
