@@ -16,6 +16,7 @@ import { resolveAccountMetadata } from '@/helpers/account-metadata';
 import { deriveMainCategoryId, distinctFrom, firstNonEmpty, splitCategoryLabel } from '@/helpers/category-labels';
 import { normaliseDescription, parseAmount, parseDateString, sanitizeNotification } from '@/helpers/client-import-normalizers';
 import { normalizeRuleResponse, sortRules, type RuleCondition, type RuleInput, type RuleSummary } from '@/helpers/rule-summaries';
+import { ensureCategoryIndex, type CategoryTree } from '@/helpers/category-tree';
 
 type UUID = string;
 
@@ -206,11 +207,6 @@ interface ImportSummary {
 interface LedgerState {
   transactions: LedgerTransaction[];
   categories: Category[];
-}
-
-export interface CategoryTree {
-  main: Category[];
-  byParent: Record<string, Category[]>;
 }
 
 interface LedgerContextValue {
@@ -448,32 +444,6 @@ const buildTransactionFromRow = (row: ParsedRow): Omit<LedgerTransaction, 'categ
     ledgerMonth: parsedDate.getUTCMonth() + 1,
     ledgerYear: parsedDate.getUTCFullYear(),
     createdAt: new Date().toISOString(),
-  };
-};
-
-const ensureCategoryIndex = (categories: Category[]): { map: Map<string, Category>; tree: CategoryTree } => {
-  const map = new Map<string, Category>();
-  const byParent: Record<string, Category[]> = {};
-
-  categories.forEach((category) => {
-    map.set(category.id, category);
-    if (category.parentId) {
-      if (!byParent[category.parentId]) {
-        byParent[category.parentId] = [];
-      }
-      byParent[category.parentId].push(category);
-    }
-  });
-
-  const main = categories.filter((cat) => !cat.parentId).sort((a, b) => a.name.localeCompare(b.name));
-  Object.values(byParent).forEach((list) => list.sort((a, b) => a.name.localeCompare(b.name)));
-
-  return {
-    map,
-    tree: {
-      main,
-      byParent,
-    },
   };
 };
 

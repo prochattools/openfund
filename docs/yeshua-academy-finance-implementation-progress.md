@@ -3943,3 +3943,52 @@ Build/test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 83. Category tree helper extraction pass
+
+Started from pushed main commit:
+
+- `4e8afb2 Extract rule summary helpers`
+
+### Category tree helper extraction
+
+Implemented:
+
+- `src/helpers/category-tree.ts`
+- `src/context/ledger-context.tsx`
+- `tests/helpers/categoryTree.test.ts`
+
+Result:
+
+- Extracted category index/tree creation out of the large ledger context.
+- Ledger context now imports `ensureCategoryIndex` and `CategoryTree` from a focused helper module.
+- Added regression tests for:
+  - lookup-map creation;
+  - sorted main categories;
+  - parent-grouped subcategories;
+  - sorted subcategories;
+  - preservation of extra category fields such as color.
+- This keeps category navigation and review UI grouping behavior testable while further reducing ledger context helper bulk.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Build/test result:
+
+- Server TypeScript build passed.
+- Next production build passed.
+- 34 test files passed.
+- 137 tests passed.
+- Secret scan passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
