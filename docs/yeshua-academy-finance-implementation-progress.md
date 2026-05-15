@@ -3894,3 +3894,52 @@ Build/test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 82. Rule summary helper extraction pass
+
+Started from pushed main commit:
+
+- `d00f066 Extract client import normalizers`
+
+### Rule summary helper extraction
+
+Implemented:
+
+- `src/helpers/rule-summaries.ts`
+- `src/context/ledger-context.tsx`
+- `tests/helpers/ruleSummaries.test.ts`
+
+Result:
+
+- Extracted rule response normalization and rule sorting out of the large ledger context.
+- Ledger context now imports `normalizeRuleResponse`, `sortRules`, and rule-related types from a focused helper module.
+- Added regression tests for:
+  - category-derived main category metadata;
+  - safe non-array condition handling;
+  - missing category handling;
+  - priority-first rule sorting;
+  - newest-update tie-breaking.
+- This further reduces ledger context helper bulk while preserving rule-management behavior.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Build/test result:
+
+- Server TypeScript build passed.
+- Next production build passed.
+- 33 test files passed.
+- 134 tests passed.
+- Secret scan passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
