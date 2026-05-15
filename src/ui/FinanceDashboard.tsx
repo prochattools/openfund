@@ -3,14 +3,15 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useLedger } from '@/context/ledger-context';
-import { buildDashboardSummary, type DashboardBreakdownItem } from '@/helpers/dashboard-summary';
+import {
+  buildDashboardSummary,
+  calculateMoneyFlowHeight,
+  formatDashboardEuro,
+  formatDashboardImportDate,
+  isDashboardPeriodReady,
+  type DashboardBreakdownItem,
+} from '@/helpers/dashboard-summary';
 import { fetchImportBatches, getImportBatchDownloadUrl, type ImportBatchSummary } from '@/libs/api';
-
-const euroFormatter = new Intl.NumberFormat('nl-NL', {
-  style: 'currency',
-  currency: 'EUR',
-  maximumFractionDigits: 0,
-});
 
 type MoneyTone = 'neutral' | 'income' | 'expense' | 'review';
 
@@ -23,12 +24,8 @@ const navItems = [
   { label: 'Instellingen', href: '/settings' },
 ];
 
-const formatEuro = (value: number) => euroFormatter.format(value);
-
-const formatImportDate = (value: string | null) => {
-  if (!value) return 'nog niet afgerond';
-  return new Date(value).toLocaleString('nl-NL');
-};
+const formatEuro = formatDashboardEuro;
+const formatImportDate = formatDashboardImportDate;
 
 function AppFrame({ children, reviewCount }: { children: ReactNode; reviewCount: number }) {
   return (
@@ -138,8 +135,8 @@ function BreakdownCard({ title, items, emptyText }: { title: string; items: Dash
 
 function MoneyFlowChart({ income, expenses }: { income: number; expenses: number }) {
   const max = Math.max(income, expenses, 1);
-  const incomeHeight = Math.max((income / max) * 170, 16);
-  const expenseHeight = Math.max((expenses / max) * 170, 16);
+  const incomeHeight = calculateMoneyFlowHeight(income, max);
+  const expenseHeight = calculateMoneyFlowHeight(expenses, max);
 
   return (
     <article className="rounded-[1.75rem] border border-[#ded5c8] bg-[#fbf8f2] p-5 shadow-[0_18px_55px_rgba(87,67,45,0.07)]">
@@ -203,7 +200,7 @@ function LatestImportCard({ latestImport }: { latestImport: ImportBatchSummary |
 }
 
 function ImportStatusCard({ total, reviewCount, autoCategorized }: { total: number; reviewCount: number; autoCategorized: number }) {
-  const ready = total > 0 && reviewCount === 0;
+  const ready = isDashboardPeriodReady(total, reviewCount);
 
   return (
     <article className="rounded-[1.75rem] border border-[#ded5c8] bg-[#fbf8f2] p-5 shadow-[0_18px_55px_rgba(87,67,45,0.07)]">

@@ -20,6 +20,26 @@ export type DashboardSummary = {
   reportHref: string;
 };
 
+const dashboardEuroFormatter = new Intl.NumberFormat('nl-NL', {
+  style: 'currency',
+  currency: 'EUR',
+  maximumFractionDigits: 0,
+});
+
+export const formatDashboardEuro = (value: number): string => dashboardEuroFormatter.format(value);
+
+export const formatDashboardImportDate = (value: string | null): string => {
+  if (!value) return 'nog niet afgerond';
+  return new Date(value).toLocaleString('nl-NL');
+};
+
+export const calculateMoneyFlowHeight = (value: number, max: number, maxHeight = 170, minHeight = 16): number => {
+  const safeMax = Math.max(max, 1);
+  return Math.max((value / safeMax) * maxHeight, minHeight);
+};
+
+export const isDashboardPeriodReady = (total: number, reviewCount: number): boolean => total > 0 && reviewCount === 0;
+
 export const getTransactionDate = (transaction: LedgerTransaction): Date => {
   const date = new Date(transaction.date);
   return Number.isNaN(date.getTime()) ? new Date(0) : date;

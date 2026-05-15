@@ -4665,3 +4665,48 @@ Build result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+## 54. Dashboard display helper extraction pass
+
+Started from pushed main commit:
+
+- `211a9e1 Extract settings page helpers`
+
+### Dashboard display helper extraction
+
+Implemented:
+
+- `src/helpers/dashboard-summary.ts`
+- `src/ui/FinanceDashboard.tsx`
+- `tests/helpers/dashboardSummary.test.ts`
+
+Result:
+
+- Extended the dashboard helper with display-only formatting and state helpers for Dutch euro amounts, latest-import timestamps, money-flow bar height calculation, and report-readiness state.
+- `FinanceDashboard.tsx` now delegates those remaining pure display calculations to tested helpers while preserving the same Dutch dashboard UI and workflow.
+- Added regression coverage for dashboard display formatting, import-date fallback text, money-flow bar heights, and period readiness rules.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Test result:
+
+- 47 test files passed.
+- 196 tests passed.
+
+Build result:
+
+- Prisma client generation passed during full build.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

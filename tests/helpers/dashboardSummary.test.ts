@@ -2,10 +2,14 @@ import { describe, expect, it } from 'vitest';
 import {
   buildBreakdown,
   buildDashboardSummary,
+  calculateMoneyFlowHeight,
+  formatDashboardEuro,
+  formatDashboardImportDate,
   getCategoryLabel,
   getLatestMonthKey,
   getMonthLabel,
   getTransactionDate,
+  isDashboardPeriodReady,
 } from '../../src/helpers/dashboard-summary';
 import type { LedgerTransaction } from '../../src/helpers/api-transaction-mapper';
 
@@ -43,8 +47,20 @@ describe('dashboard summary helpers', () => {
     ])).toBe('2026-06');
   });
 
-  it('builds Dutch month labels from month keys', () => {
+  it('builds Dutch month labels and display values for the dashboard UI', () => {
     expect(getMonthLabel('2026-05')).toBe('mei 2026');
+    expect(formatDashboardEuro(1234.56)).toBe('€ 1.235');
+    expect(formatDashboardImportDate(null)).toBe('nog niet afgerond');
+    expect(formatDashboardImportDate('2026-05-15T12:30:00.000Z')).toContain('2026');
+  });
+
+  it('calculates money-flow bar heights and report readiness', () => {
+    expect(calculateMoneyFlowHeight(50, 100)).toBe(85);
+    expect(calculateMoneyFlowHeight(0, 100)).toBe(16);
+    expect(calculateMoneyFlowHeight(250, 0)).toBe(42500);
+    expect(isDashboardPeriodReady(3, 0)).toBe(true);
+    expect(isDashboardPeriodReady(0, 0)).toBe(false);
+    expect(isDashboardPeriodReady(3, 1)).toBe(false);
   });
 
   it('chooses category labels in the same priority order as the dashboard UI', () => {
