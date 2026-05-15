@@ -4507,3 +4507,66 @@ Build/test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 94. Review page helper extraction pass
+
+Started from pushed main commit:
+
+- `601fb24 Extract report summary helper`
+
+### Review page helper extraction
+
+Implemented:
+
+- `src/helpers/review-page.ts`
+- `src/ui/FinanceReviewPage.tsx`
+- `tests/helpers/reviewPage.test.ts`
+
+Result:
+
+- Extracted review-page helper logic out of the review UI component.
+- FinanceReviewPage now imports focused helpers for:
+  - safe review date parsing;
+  - suggested main/subcategory fallback values;
+  - label normalization;
+  - category lookup by name;
+  - review-placeholder category filtering;
+  - Dutch suggestion-confidence labels;
+  - default review category selection;
+  - filtered subcategory map creation.
+- Added regression tests for:
+  - invalid review date fallback;
+  - case-insensitive category name lookup;
+  - review placeholder detection;
+  - suggested main/sub fallback order;
+  - Dutch confidence-label translation;
+  - default review selection by id/name;
+  - filtered subcategory map generation.
+- This keeps review selection behavior testable while reducing review UI component logic.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+security scan
+```
+
+Build/test result:
+
+- Server TypeScript build passed.
+- 45 test files passed.
+- 184 tests passed.
+- Secret scan passed.
+
+Not completed due BuildFlow infrastructure issue:
+
+- `npm run build` could not be verified in BuildFlow during this pass because the BuildFlow host returned Cloudflare 504 gateway time-out responses three times while starting the full production build command.
+- `type_check_web` is not applicable for this repo layout because the allowlisted command expects `apps/web`, which does not exist in this repo.
+
+Known warning from prior successful builds:
+
+- Next reports missing SWC lockfile metadata. Prior production builds passed with that warning.

@@ -5,6 +5,14 @@ import { useMemo, useState, type ReactNode } from 'react';
 import toast from 'react-hot-toast';
 import { useLedger, type Category } from '@/context/ledger-context';
 import type { LedgerTransaction } from '@/helpers/api-transaction-mapper';
+import {
+  buildReviewSubcategoryMap,
+  findCategoryIdByName,
+  isReviewPlaceholderCategory,
+  parseReviewDate,
+  resolveDefaultReviewSelection,
+  translateSuggestionConfidence,
+} from '@/helpers/review-page';
 import { isClientAdmin } from '@/libs/api';
 
 const euroFormatter = new Intl.NumberFormat('nl-NL', {
@@ -20,11 +28,6 @@ const dateFormatter = new Intl.DateTimeFormat('nl-NL', {
 });
 
 const formatEuro = (value: number) => euroFormatter.format(value);
-
-const parseDate = (value: string) => {
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? new Date(0) : parsed;
-};
 
 function AppFrame({ children, reviewCount }: { children: ReactNode; reviewCount: number }) {
   const navItems = [
@@ -93,47 +96,6 @@ function EmptyReviewState() {
   );
 }
 
-const getSuggestedMain = (transaction: LedgerTransaction) =>
-  transaction.mainCategoryId ?? transaction.suggestedMainCategoryName ?? transaction.rawMainCategoryName ?? '';
-
-const getSuggestedSub = (transaction: LedgerTransaction) =>
-  transaction.categoryId ?? transaction.suggestedSubCategoryName ?? transaction.rawCategoryName ?? '';
-
-const normalizeLabel = (value: string | null | undefined) =>
-  (value ?? '').trim().toLowerCase();
-
-const findCategoryIdByName = (categories: Category[], name: string | null | undefined) => {
-  const normalized = normalizeLabel(name);
-  if (!normalized) return '';
-  return categories.find((category) => normalizeLabel(category.name) === normalized)?.id ?? '';
-};
-
-const isReviewPlaceholderCategory = (category: Category) => {
-  const normalized = normalizeLabel(category.name);
-  return category.id === 'cat-review' || category.id === 'sub-review-needs-category' || normalized === 'review' || normalized === 'needs review' || normalized === 'needs manual categorization';
-};
-
-const translateSuggestionConfidence = (confidence: LedgerTransaction['suggestionConfidence']) => {
-  switch (confidence) {
-    case 'exact':
-      return 'volledige historische match';
-    case 'rule':
-      return 'categorisatieregel';
-    case 'description':
-      return 'omschrijving herkend';
-    case 'account':
-      return 'rekening herkend';
-    case 'overall':
-      return 'beste historische suggestie';
-    case 'fuzzy':
-      return 'waarschijnlijke suggestie';
-    case 'review':
-      return 'handmatige controle nodig';
-    default:
-      return 'geen volledige historische match';
-  }
-};
-
 function ReviewCard({
   transaction,
   mainCategories,
@@ -145,19 +107,9 @@ function ReviewCard({
   subcategories: Record<string, Category[]>;
   onAssign: (transactionId: string, payload: { categoryId?: string | null; mainCategoryId?: string | null; categoryName?: string }) => Promise<void>;
 }) {
-  const suggestedMain = getSuggestedMain(transaction);
-  const defaultMain =
-    transaction.mainCategoryId ??
-    (typeof suggestedMain === 'string' && suggestedMain.startsWith('main:') ? suggestedMain : findCategoryIdByName(mainCategories, suggestedMain));
-  const initialSubs = defaultMain ? subcategories[defaultMain] ?? [] : [];
-  const suggestedSub = getSuggestedSub(transaction);
-  const defaultSub =
-    transaction.categoryId ??
-    (typeof suggestedSub === 'string' && suggestedSub.includes(' — ')
-      ? ''
-      : findCategoryIdByName(initialSubs, suggestedSub));
-  const [mainId, setMainId] = useState(defaultMain);
-  const [subId, setSubId] = useState(defaultSub);
+  const defaultSelection = resolveDefaultReviewSelection(transaction, mainCategories, subcategories);
+  const [mainId, setMainId] = useState(defaultSelection.mainId);
+  const [subId, setSubId] = useState(defaultSelection.subId);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const canReview = isClientAdmin();
@@ -196,7 +148,7 @@ function ReviewCard({
     <article className="rounded-[2rem] border border-[#ded5c8] bg-[#fbf8f2] p-6 shadow-[0_24px_70px_rgba(87,67,45,0.08)]">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
-          <p className="text-sm font-medium text-[#7d6d5a]">{dateFormatter.format(parseDate(transaction.date))}</p>
+          <p className="text-sm font-medium text-[#7d6d5a]">{dateFormatter.format(parseReviewDate(transaction.date))}</p>
           <h3 className="mt-2 text-2xl font-semibold tracking-[-0.04em]">{transaction.description}</h3>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[#6f6253]">{transaction.notificationDetail ?? 'Geen extra omschrijving'}</p>
         </div>
@@ -262,7 +214,7 @@ function ReviewTableMode({ transactions }: { transactions: LedgerTransaction[] }
           <tbody>
             {transactions.map((transaction) => (
               <tr key={transaction.id} className="border-t border-[#ded5c8]">
-                <td className="px-4 py-4 text-[#6f6253]">{dateFormatter.format(parseDate(transaction.date))}</td>
+                <td className="px-4 py-4 text-[#6f6253]">{dateFormatter.format(parseReviewDate(transaction.date))}</td>
                 <td className="px-4 py-4 font-semibold">{transaction.description}</td>
                 <td className="px-4 py-4 text-[#6f6253]">{transaction.suggestedSubCategoryName ?? transaction.categoryName ?? 'Geen suggestie'}</td>
                 <td className={`px-4 py-4 text-right font-semibold ${transaction.amount < 0 ? 'text-[#914f35]' : 'text-[#1f5f4a]'}`}>{formatEuro(transaction.amount)}</td>
@@ -278,13 +230,10 @@ function ReviewTableMode({ transactions }: { transactions: LedgerTransaction[] }
 export default function FinanceReviewPage() {
   const { reviewTransactions, categoryTree, assignCategory, summary } = useLedger();
   const mainCategories = useMemo(() => categoryTree.main.filter((category) => !isReviewPlaceholderCategory(category)), [categoryTree.main]);
-  const subcategories = useMemo(() => {
-    const result: Record<string, Category[]> = {};
-    mainCategories.forEach((main) => {
-      result[main.id] = (categoryTree.byParent[main.id] ?? []).filter((category) => !isReviewPlaceholderCategory(category));
-    });
-    return result;
-  }, [categoryTree.byParent, mainCategories]);
+  const subcategories = useMemo(
+    () => buildReviewSubcategoryMap(mainCategories, categoryTree.byParent),
+    [categoryTree.byParent, mainCategories],
+  );
 
   return (
     <AppFrame reviewCount={summary.reviewCount}>
@@ -302,7 +251,7 @@ export default function FinanceReviewPage() {
                   <div key={transaction.id} className="rounded-[1.25rem] border border-[#ded5c8] bg-[#f8f3ec] p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-xs text-[#8a7965]">{dateFormatter.format(parseDate(transaction.date))}</p>
+                        <p className="text-xs text-[#8a7965]">{dateFormatter.format(parseReviewDate(transaction.date))}</p>
                         <p className="mt-1 font-semibold">{transaction.description}</p>
                       </div>
                       <p className={`font-semibold ${transaction.amount < 0 ? 'text-[#914f35]' : 'text-[#1f5f4a]'}`}>{formatEuro(transaction.amount)}</p>
