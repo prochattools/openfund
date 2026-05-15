@@ -4710,3 +4710,48 @@ Build result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+## 55. Reports display helper extraction pass
+
+Started from pushed main commit:
+
+- `cc13048 Extract dashboard display helpers`
+
+### Reports display helper extraction
+
+Implemented:
+
+- `src/helpers/report-summary.ts`
+- `src/ui/FinanceReportsPage.tsx`
+- `tests/helpers/reportSummary.test.ts`
+
+Result:
+
+- Extended the report summary helper with tested display helpers for category-breakdown totals, category-breakdown share calculations, and selected-period review counts.
+- `FinanceReportsPage.tsx` now delegates report readiness warning counts and breakdown bar share calculations to pure helpers while preserving the same Dutch report UI.
+- Added regression coverage for breakdown shares and selected-period review warning counts.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Test result:
+
+- 47 test files passed.
+- 197 tests passed.
+
+Build result:
+
+- Prisma client generation passed during full build.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

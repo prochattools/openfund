@@ -119,3 +119,15 @@ export const getReportPeriodLabel = (
   month: number | null,
   formatter: Intl.DateTimeFormat = new Intl.DateTimeFormat('nl-NL', { month: 'long', year: 'numeric' }),
 ): string => (month ? formatter.format(new Date(Date.UTC(year, month - 1, 1))) : String(year));
+
+export const getReportBreakdownTotal = (items: ReportBreakdownItem[]): number =>
+  items.reduce((sum, item) => sum + item.amountMinor, 0);
+
+export const getReportBreakdownShare = (item: ReportBreakdownItem, totalMinor: number): number =>
+  totalMinor > 0 ? item.amountMinor / totalMinor : 0;
+
+export const getPeriodReviewCount = (
+  transactions: LedgerTransaction[],
+  year: number,
+  month: number | null,
+): number => getPeriodTransactions(transactions, year, month).filter((transaction) => transaction.needsManualCategory).length;

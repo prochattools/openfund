@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   buildLocalReportSummary,
   formatEuroMinor,
+  getPeriodReviewCount,
   getPeriodTransactions,
+  getReportBreakdownShare,
+  getReportBreakdownTotal,
   getReportCategoryLabel,
   getReportPeriodLabel,
   getReportYears,
@@ -102,5 +105,23 @@ describe('report summary helpers', () => {
   it('builds Dutch period labels for month and year reports', () => {
     expect(getReportPeriodLabel(2026, 5)).toBe('mei 2026');
     expect(getReportPeriodLabel(2026, null)).toBe('2026');
+  });
+
+  it('calculates report breakdown shares and period review counts', () => {
+    const items = [
+      { label: 'Giften', amountMinor: 7500, transactionCount: 2 },
+      { label: 'Collecte', amountMinor: 2500, transactionCount: 1 },
+    ];
+    const transactions = [
+      makeTx({ id: 'review', date: '2026-05-01T00:00:00.000Z', needsManualCategory: true }),
+      makeTx({ id: 'done', date: '2026-05-02T00:00:00.000Z', needsManualCategory: false }),
+      makeTx({ id: 'other-month', date: '2026-06-01T00:00:00.000Z', needsManualCategory: true }),
+    ];
+
+    expect(getReportBreakdownTotal(items)).toBe(10000);
+    expect(getReportBreakdownShare(items[0], 10000)).toBe(0.75);
+    expect(getReportBreakdownShare(items[0], 0)).toBe(0);
+    expect(getPeriodReviewCount(transactions, 2026, 5)).toBe(1);
+    expect(getPeriodReviewCount(transactions, 2026, null)).toBe(2);
   });
 });

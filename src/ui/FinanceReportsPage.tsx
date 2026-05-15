@@ -7,7 +7,9 @@ import { useLedger } from '@/context/ledger-context';
 import {
   buildLocalReportSummary,
   formatEuroMinor,
-  getPeriodTransactions,
+  getPeriodReviewCount,
+  getReportBreakdownShare,
+  getReportBreakdownTotal,
   getReportPeriodLabel,
   getReportYears,
   normalizeInitialReportPeriod,
@@ -66,7 +68,7 @@ function SummaryCard({ label, value, helper }: { label: string; value: string; h
 }
 
 function BreakdownList({ title, items }: { title: string; items: ReportBreakdownItem[] }) {
-  const total = items.reduce((sum, item) => sum + item.amountMinor, 0);
+  const total = getReportBreakdownTotal(items);
 
   return (
     <section className="rounded-[2rem] border border-[#ded5c8] bg-[#fbf8f2] p-6 shadow-[0_24px_70px_rgba(87,67,45,0.08)]">
@@ -77,7 +79,7 @@ function BreakdownList({ title, items }: { title: string; items: ReportBreakdown
       {items.length ? (
         <div className="space-y-4">
           {items.map((item) => {
-            const share = total > 0 ? item.amountMinor / total : 0;
+            const share = getReportBreakdownShare(item, total);
             return (
               <div key={item.label}>
                 <div className="mb-2 flex items-center justify-between gap-4 text-sm">
@@ -152,8 +154,7 @@ export default function FinanceReportsPage({ initialYear, initialMonth }: { init
   }, [year, month]);
 
   const localSummary = useMemo(() => buildLocalReportSummary(transactions, year, month), [transactions, year, month]);
-  const periodTransactions = useMemo(() => getPeriodTransactions(transactions, year, month), [transactions, year, month]);
-  const periodReviewCount = periodTransactions.filter((transaction) => transaction.needsManualCategory).length;
+  const periodReviewCount = useMemo(() => getPeriodReviewCount(transactions, year, month), [transactions, year, month]);
   const report = remoteSummary ?? localSummary;
   const periodLabel = getReportPeriodLabel(year, month, monthFormatter);
 
