@@ -3518,3 +3518,54 @@ Build/test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 74. XLSX export helper extraction regression-test pass
+
+Started from pushed main commit:
+
+- `db57ed6 Test export base64 helper`
+
+### Export helper extraction
+
+Implemented:
+
+- `src/app/api/ledger/export-xlsx/exportHelpers.ts`
+- `src/app/api/ledger/export-xlsx/route.ts`
+- `tests/routes/exportXlsxHelpers.test.ts`
+
+Result:
+
+- Moved pure XLSX export helper logic out of the Next route file into `exportHelpers.ts`.
+- Kept the Next route export contract valid while making the helper behavior directly testable.
+- Added regression tests for:
+  - raw-record guarding;
+  - nested raw-row column reading;
+  - UTC date formatting for ING-style export dates;
+  - Dutch and US amount parsing with thousands separators;
+  - invalid amount rejection;
+  - main/subcategory label splitting;
+  - debit/credit derivation.
+- Improved export amount parsing so `€ 1.234,56` and `1,234.56` both parse correctly.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Build/test result:
+
+- Server TypeScript build passed.
+- Next production build passed.
+- 24 test files passed.
+- 106 tests passed.
+- Secret scan passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

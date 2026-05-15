@@ -1,96 +1,18 @@
 import { NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
 import prisma from '@/libs/prisma';
+import {
+  HEADERS,
+  SHEET_NAME,
+  deriveDebitCredit,
+  ensureRawRecord,
+  formatDateAsNumeric,
+  parseAmount,
+  readRawValue,
+  splitCategoryLabel,
+} from './exportHelpers';
 
 const DEFAULT_USER_ID = process.env.DEFAULT_USER_ID ?? 'demo-user';
-const SHEET_NAME = 'transacties 2025';
-const HEADERS = [
-  'Date',
-  'Name / Description',
-  'Account',
-  'Counterparty',
-  'Code',
-  'Debit/credit',
-  'Amount (EUR)',
-  'Transaction type',
-  'Categorie',
-  'bestemming',
-  'Notifications',
-];
-
-type RawRecord = Record<string, unknown>;
-
-const ensureRawRecord = (value: unknown): RawRecord | null => {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return null;
-  }
-  return value as RawRecord;
-};
-
-const readRawValue = (raw: RawRecord | null, key: string): string | null => {
-  if (!raw) return null;
-  const fromRecord = raw[key];
-  const columns = ensureRawRecord(raw.columns);
-  const fromColumns = columns ? columns[key] : undefined;
-  const candidate = fromRecord ?? fromColumns;
-  if (candidate == null) {
-    return null;
-  }
-  if (typeof candidate === 'string') {
-    return candidate;
-  }
-  if (typeof candidate === 'number') {
-    if (Number.isNaN(candidate)) return null;
-    return candidate.toString();
-  }
-  if (typeof candidate === 'boolean') {
-    return candidate ? 'true' : 'false';
-  }
-  return null;
-};
-
-const formatDateAsNumeric = (date: Date): string => {
-  const year = date.getUTCFullYear();
-  const month = `${date.getUTCMonth() + 1}`.padStart(2, '0');
-  const day = `${date.getUTCDate()}`.padStart(2, '0');
-  return `${year}${month}${day}`;
-};
-
-const parseAmount = (value: string | null): number | null => {
-  if (!value) return null;
-  const normalized = value.replace(/[^\d.,-]/g, '').replace(',', '.');
-  if (!normalized) return null;
-  const parsed = Number(normalized);
-  if (Number.isNaN(parsed)) {
-    return null;
-  }
-  return parsed;
-};
-
-const splitCategoryLabel = (
-  value?: string | null,
-): { main: string | null; sub: string | null } => {
-  if (!value) {
-    return { main: null, sub: null };
-  }
-  const parts = value.split(' — ');
-  if (parts.length === 1) {
-    const trimmed = parts[0]!.trim();
-    const safe = trimmed.length ? trimmed : null;
-    return { main: safe, sub: safe };
-  }
-  const main = parts[0]!.trim();
-  const sub = parts.slice(1).join(' — ').trim();
-  return {
-    main: main.length ? main : null,
-    sub: sub.length ? sub : main.length ? main : null,
-  };
-};
-
-const deriveDebitCredit = (direction: string | null | undefined): 'Debit' | 'Credit' => {
-  if (!direction) return 'Credit';
-  return direction.toLowerCase().startsWith('debit') ? 'Debit' : 'Credit';
-};
 
 export async function GET(request: Request) {
   const userId = request.headers.get('x-user-id') ?? DEFAULT_USER_ID;
