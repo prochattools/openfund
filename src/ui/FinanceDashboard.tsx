@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useLedger } from '@/context/ledger-context';
-import type { LedgerTransaction } from '@/helpers/api-transaction-mapper';
+import { buildDashboardSummary, type DashboardBreakdownItem } from '@/helpers/dashboard-summary';
 import { fetchImportBatches, getImportBatchDownloadUrl, type ImportBatchSummary } from '@/libs/api';
 
 const euroFormatter = new Intl.NumberFormat('nl-NL', {
@@ -12,18 +12,7 @@ const euroFormatter = new Intl.NumberFormat('nl-NL', {
   maximumFractionDigits: 0,
 });
 
-const monthFormatter = new Intl.DateTimeFormat('nl-NL', {
-  month: 'long',
-  year: 'numeric',
-});
-
 type MoneyTone = 'neutral' | 'income' | 'expense' | 'review';
-
-type BreakdownItem = {
-  label: string;
-  amount: number;
-  share: number;
-};
 
 const navItems = [
   { label: 'Dashboard', href: '/' },
@@ -39,64 +28,6 @@ const formatEuro = (value: number) => euroFormatter.format(value);
 const formatImportDate = (value: string | null) => {
   if (!value) return 'nog niet afgerond';
   return new Date(value).toLocaleString('nl-NL');
-};
-
-const getTransactionDate = (transaction: LedgerTransaction) => {
-  const date = new Date(transaction.date);
-  return Number.isNaN(date.getTime()) ? new Date(0) : date;
-};
-
-const getLatestMonthKey = (transactions: LedgerTransaction[]) => {
-  if (!transactions.length) {
-    const now = new Date();
-    return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
-  }
-
-  const latest = transactions.reduce((current, transaction) => {
-    const nextDate = getTransactionDate(transaction);
-    return nextDate.getTime() > current.getTime() ? nextDate : current;
-  }, getTransactionDate(transactions[0]!));
-
-  return `${latest.getUTCFullYear()}-${String(latest.getUTCMonth() + 1).padStart(2, '0')}`;
-};
-
-const getMonthLabel = (monthKey: string) => {
-  const [year, month] = monthKey.split('-').map(Number);
-  return monthFormatter.format(new Date(Date.UTC(year ?? 1970, (month ?? 1) - 1, 1)));
-};
-
-const getCategoryLabel = (transaction: LedgerTransaction) => {
-  return (
-    transaction.mainCategoryName ??
-    transaction.categoryName ??
-    transaction.suggestedMainCategoryName ??
-    transaction.suggestedSubCategoryName ??
-    'Nog te beoordelen'
-  );
-};
-
-const buildBreakdown = (transactions: LedgerTransaction[], direction: 'income' | 'expense'): BreakdownItem[] => {
-  const filtered = transactions.filter((transaction) =>
-    direction === 'income' ? transaction.amount > 0 : transaction.amount < 0,
-  );
-  const totals = new Map<string, number>();
-
-  filtered.forEach((transaction) => {
-    const label = getCategoryLabel(transaction);
-    const amount = Math.abs(transaction.amount);
-    totals.set(label, (totals.get(label) ?? 0) + amount);
-  });
-
-  const total = Array.from(totals.values()).reduce((sum, amount) => sum + amount, 0);
-
-  return Array.from(totals.entries())
-    .map(([label, amount]) => ({
-      label,
-      amount,
-      share: total > 0 ? amount / total : 0,
-    }))
-    .sort((a, b) => b.amount - a.amount)
-    .slice(0, 5);
 };
 
 function AppFrame({ children, reviewCount }: { children: ReactNode; reviewCount: number }) {
@@ -177,7 +108,7 @@ function KpiCard({ label, value, helper, tone = 'neutral' }: { label: string; va
   );
 }
 
-function BreakdownCard({ title, items, emptyText }: { title: string; items: BreakdownItem[]; emptyText: string }) {
+function BreakdownCard({ title, items, emptyText }: { title: string; items: DashboardBreakdownItem[]; emptyText: string }) {
   return (
     <article className="rounded-[1.75rem] border border-[#ded5c8] bg-[#fbf8f2] p-5 shadow-[0_18px_55px_rgba(87,67,45,0.07)]">
       <div className="mb-5 flex items-center justify-between">
@@ -339,37 +270,7 @@ export default function FinanceDashboard() {
     };
   }, []);
 
-  const dashboard = useMemo(() => {
-    const monthKey = getLatestMonthKey(transactions);
-    const monthTransactions = transactions.filter((transaction) => {
-      const date = getTransactionDate(transaction);
-      const key = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
-      return key === monthKey;
-    });
-
-    const income = monthTransactions
-      .filter((transaction) => transaction.amount > 0)
-      .reduce((sum, transaction) => sum + transaction.amount, 0);
-    const expenses = monthTransactions
-      .filter((transaction) => transaction.amount < 0)
-      .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0);
-    const reviewCount = monthTransactions.filter((transaction) => transaction.needsManualCategory).length;
-    const autoCategorized = monthTransactions.filter((transaction) => transaction.autoCategorized).length;
-
-    return {
-      monthKey,
-      monthLabel: getMonthLabel(monthKey),
-      monthTransactions,
-      income,
-      expenses,
-      net: income - expenses,
-      reviewCount,
-      autoCategorized,
-      incomeBreakdown: buildBreakdown(monthTransactions, 'income'),
-      expenseBreakdown: buildBreakdown(monthTransactions, 'expense'),
-      reportHref: `/reports?year=${monthKey.slice(0, 4)}&month=${Number(monthKey.slice(5, 7))}`,
-    };
-  }, [transactions]);
+  const dashboard = useMemo(() => buildDashboardSummary(transactions), [transactions]);
 
   return (
     <AppFrame reviewCount={summary.reviewCount}>

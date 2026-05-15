@@ -4401,3 +4401,55 @@ Build/test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 92. Dashboard summary helper extraction pass
+
+Started from pushed main commit:
+
+- `6c5ca98 Extract client CSV parser`
+
+### Dashboard summary helper extraction
+
+Implemented:
+
+- `src/helpers/dashboard-summary.ts`
+- `src/ui/FinanceDashboard.tsx`
+- `tests/helpers/dashboardSummary.test.ts`
+
+Result:
+
+- Extracted dashboard month selection, money-flow totals, review counts, report links, and category breakdown calculations out of the dashboard UI component.
+- FinanceDashboard now imports `buildDashboardSummary` and the dashboard breakdown item type from a focused helper module.
+- Added regression tests for:
+  - invalid transaction date fallback;
+  - empty dashboard current-month fallback;
+  - latest transaction month detection;
+  - Dutch month label formatting;
+  - category label priority;
+  - income and expense breakdown totals/shares;
+  - latest-month-only dashboard summary;
+  - report link generation.
+- This keeps the simplified dashboard calculations testable while reducing UI component logic.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Build/test result:
+
+- Server TypeScript build passed.
+- Next production build passed.
+- 43 test files passed.
+- 171 tests passed.
+- Secret scan passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
