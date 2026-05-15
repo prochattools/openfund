@@ -3792,3 +3792,53 @@ Build/test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 80. Category label helper extraction pass
+
+Started from pushed main commit:
+
+- `886b06d Test health endpoint`
+
+### Category label helper extraction
+
+Implemented:
+
+- `src/helpers/category-labels.ts`
+- `src/context/ledger-context.tsx`
+- `tests/helpers/categoryLabels.test.ts`
+
+Result:
+
+- Extracted pure category label helpers out of the large ledger context.
+- Ledger context now imports `deriveMainCategoryId`, `splitCategoryLabel`, `firstNonEmpty`, and `distinctFrom` from a focused helper module.
+- Added regression tests for:
+  - slug generation;
+  - stable main category ids;
+  - main/subcategory label splitting;
+  - nested subcategory labels;
+  - first non-empty fallback behavior;
+  - distinct-value suppression.
+- This reduces ledger context helper bulk without changing ledger behavior.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Build/test result:
+
+- Server TypeScript build passed.
+- Next production build passed.
+- 31 test files passed.
+- 127 tests passed.
+- Secret scan passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
