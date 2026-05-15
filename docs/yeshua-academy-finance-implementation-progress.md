@@ -4620,3 +4620,48 @@ Known warning still present:
 Note:
 
 - The first post-change full-build command attempt hit a BuildFlow/Cloudflare 504 gateway timeout while starting. A retry completed successfully with exit 0.
+
+## 53. Settings page helper extraction pass
+
+Started from pushed main commit:
+
+- `ce16619 Extract ledger page helpers`
+
+### Settings page pure helper extraction
+
+Implemented:
+
+- `src/helpers/settings-page.ts`
+- `src/ui/FinanceSettingsPage.tsx`
+- `tests/helpers/settingsPage.test.ts`
+
+Result:
+
+- Extracted settings page category placeholder detection, import date formatting, file-size formatting, retained-file checksum shortening, import status translation, and audit-action translation into a focused pure helper module.
+- `FinanceSettingsPage.tsx` now stays more UI-focused while preserving the same Dutch settings, import-history, recipient, audit-log, and guardrail behavior.
+- Added focused regression tests for hidden review placeholder categories, Dutch import/file labels, hash shortening, import status labels, and finance audit action labels.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Test result:
+
+- 47 test files passed.
+- 195 tests passed.
+
+Build result:
+
+- Prisma client generation passed during full build.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
