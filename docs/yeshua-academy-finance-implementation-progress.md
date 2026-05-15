@@ -5417,3 +5417,48 @@ Build result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+## 70. Rule priority query helper reuse pass
+
+Started from pushed main commit:
+
+- `45a7943 Reuse route query helpers for reports`
+
+### Categorization rule priority parsing reuse
+
+Implemented:
+
+- `server/routes/rules.ts`
+- `tests/routes/queryParams.test.ts`
+
+Result:
+
+- Removed the private duplicated `parsePriority` helper from the categorization rules route.
+- Reused shared `readOptionalNumber` for rule priority parsing in create and update rule flows.
+- Hardened the shared helper coverage to prove non-finite values such as `Infinity` are rejected.
+- Preserved normal rule priority behavior for missing, blank, and numeric values while reducing duplicate route parsing logic.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Test result:
+
+- 50 test files passed.
+- 214 tests passed.
+
+Build result:
+
+- Prisma client generation passed during full build.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

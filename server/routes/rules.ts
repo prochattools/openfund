@@ -4,21 +4,11 @@ import { createRule, deleteRule, updateRule, previewRuleMatchesForUser, applyRul
 import { createAuditLog } from '../services/auditLogService';
 import { getRequestActor, requireAdmin } from '../auth/requestContext';
 import { readRouteParam } from './routeParams';
+import { readOptionalNumber } from './queryParams';
 import type { RuleMatchField, RuleMatchType } from '@prisma/client';
 
 const logRequest = (req: Request) => {
   console.log(`[rules] ${req.method} ${req.originalUrl} user=${req.header('x-user-id') ?? 'unknown'}`);
-};
-
-const parsePriority = (value: unknown): number | undefined => {
-  if (value === undefined || value === null || value === '') {
-    return undefined;
-  }
-  const parsed = Number(value);
-  if (Number.isNaN(parsed)) {
-    return undefined;
-  }
-  return parsed;
 };
 
 const isMatchType = (value: string): value is RuleMatchType =>
@@ -73,7 +63,7 @@ export const postRule = async (req: Request, res: Response) => {
   const matchField = typeof req.body.matchField === 'string' && isMatchField(req.body.matchField)
     ? req.body.matchField
     : undefined;
-  const priority = parsePriority(req.body.priority);
+  const priority = readOptionalNumber(req.body.priority);
   const isActive = req.body.isActive === undefined ? undefined : Boolean(req.body.isActive);
   const createdBy = actorEmail ?? actorId ?? 'system';
 
@@ -145,7 +135,7 @@ export const patchRule = async (req: Request, res: Response) => {
   if (typeof req.body.label === 'string') updates.label = req.body.label;
   if (typeof req.body.pattern === 'string') updates.pattern = req.body.pattern;
   if (typeof req.body.categoryId === 'string') updates.categoryId = req.body.categoryId;
-  if (req.body.priority !== undefined) updates.priority = parsePriority(req.body.priority);
+  if (req.body.priority !== undefined) updates.priority = readOptionalNumber(req.body.priority);
   if (req.body.isActive !== undefined) updates.isActive = Boolean(req.body.isActive);
   if (typeof req.body.matchType === 'string' && isMatchType(req.body.matchType)) {
     updates.matchType = req.body.matchType;

@@ -44,6 +44,7 @@ describe('query param route helpers', () => {
     expect(readOptionalNumber(undefined)).toBeUndefined();
     expect(readOptionalNumber('')).toBeUndefined();
     expect(readOptionalNumber('abc')).toBeUndefined();
+    expect(readOptionalNumber('Infinity')).toBeUndefined();
   });
 
   it('reads optional trimmed-present strings for routes like reconciliation', () => {
