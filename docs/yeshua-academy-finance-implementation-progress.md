@@ -4802,3 +4802,52 @@ Full production build caveat:
 Known warning from earlier successful builds still applies:
 
 - Next reports missing SWC lockfile metadata. Build passes when the command completes successfully.
+
+## 57. Review display helper extraction pass
+
+Started from pushed main commit:
+
+- `26551a5 Extract import feedback helpers`
+
+### Review display helper extraction
+
+Implemented:
+
+- `src/helpers/review-page.ts`
+- `src/ui/FinanceReviewPage.tsx`
+- `tests/helpers/reviewPage.test.ts`
+
+Result:
+
+- Extended the review page helper with tested display helpers for Dutch euro formatting, suggestion-label fallback order, and accept-suggestion availability.
+- `FinanceReviewPage.tsx` now delegates those remaining pure display decisions to helper functions while preserving the same Dutch one-transaction-at-a-time review workflow.
+- Added regression coverage for review amount formatting, suggestion label fallback behavior, and admin/suggestion-gated accept-action availability.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Test result:
+
+- 48 test files passed.
+- 202 tests passed.
+
+Build result:
+
+- Prisma client generation passed during full build.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
+
+Note:
+
+- This successful full build also proves the codebase builds after the previous import-feedback helper extraction, whose own full-build attempt had been blocked by repeated BuildFlow 504 time-outs.

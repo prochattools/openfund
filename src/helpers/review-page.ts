@@ -6,6 +6,24 @@ export type ReviewCategory = {
   parentId: string | null;
 };
 
+const reviewEuroFormatter = new Intl.NumberFormat('nl-NL', {
+  style: 'currency',
+  currency: 'EUR',
+  maximumFractionDigits: 2,
+});
+
+export const formatReviewEuro = (value: number): string => reviewEuroFormatter.format(value);
+
+export const getReviewSuggestedLabel = (transaction: LedgerTransaction): string =>
+  transaction.suggestedSubCategoryName
+  ?? transaction.categoryName
+  ?? transaction.suggestedMainCategoryName
+  ?? transaction.mainCategoryName
+  ?? 'Geen suggestie';
+
+export const canAcceptReviewSuggestion = (canReview: boolean, mainId: string, subId: string): boolean =>
+  Boolean(canReview && (subId || mainId));
+
 export const parseReviewDate = (value: string): Date => {
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? new Date(0) : parsed;

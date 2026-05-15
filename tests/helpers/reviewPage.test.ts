@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildReviewSubcategoryMap,
+  canAcceptReviewSuggestion,
   findCategoryIdByName,
+  formatReviewEuro,
+  getReviewSuggestedLabel,
   getSuggestedMain,
   getSuggestedSub,
   isReviewPlaceholderCategory,
@@ -72,6 +75,19 @@ describe('review page helpers', () => {
     expect(translateSuggestionConfidence('fuzzy')).toBe('waarschijnlijke suggestie');
     expect(translateSuggestionConfidence('review')).toBe('handmatige controle nodig');
     expect(translateSuggestionConfidence(null)).toBe('geen volledige historische match');
+  });
+
+  it('formats review display values and accept-action availability', () => {
+    expect(formatReviewEuro(1234.56)).toBe('€ 1.234,56');
+    expect(getReviewSuggestedLabel(makeTx({ suggestedSubCategoryName: 'Giften', categoryName: 'Fallback' }))).toBe('Giften');
+    expect(getReviewSuggestedLabel(makeTx({ categoryName: 'Bankkosten' }))).toBe('Bankkosten');
+    expect(getReviewSuggestedLabel(makeTx({ suggestedMainCategoryName: 'Inkomsten' }))).toBe('Inkomsten');
+    expect(getReviewSuggestedLabel(makeTx({ mainCategoryName: 'Uitgaven' }))).toBe('Uitgaven');
+    expect(getReviewSuggestedLabel(makeTx({}))).toBe('Geen suggestie');
+    expect(canAcceptReviewSuggestion(true, 'main-income', '')).toBe(true);
+    expect(canAcceptReviewSuggestion(true, '', 'cat-gifts')).toBe(true);
+    expect(canAcceptReviewSuggestion(false, 'main-income', 'cat-gifts')).toBe(false);
+    expect(canAcceptReviewSuggestion(true, '', '')).toBe(false);
   });
 
   it('resolves default review selection from ids or category names', () => {

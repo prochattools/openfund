@@ -7,7 +7,9 @@ import { useLedger, type Category } from '@/context/ledger-context';
 import type { LedgerTransaction } from '@/helpers/api-transaction-mapper';
 import {
   buildReviewSubcategoryMap,
-  findCategoryIdByName,
+  canAcceptReviewSuggestion,
+  formatReviewEuro,
+  getReviewSuggestedLabel,
   isReviewPlaceholderCategory,
   parseReviewDate,
   resolveDefaultReviewSelection,
@@ -15,19 +17,13 @@ import {
 } from '@/helpers/review-page';
 import { isClientAdmin } from '@/libs/api';
 
-const euroFormatter = new Intl.NumberFormat('nl-NL', {
-  style: 'currency',
-  currency: 'EUR',
-  maximumFractionDigits: 2,
-});
-
 const dateFormatter = new Intl.DateTimeFormat('nl-NL', {
   day: '2-digit',
   month: 'short',
   year: 'numeric',
 });
 
-const formatEuro = (value: number) => euroFormatter.format(value);
+const formatEuro = formatReviewEuro;
 
 function AppFrame({ children, reviewCount }: { children: ReactNode; reviewCount: number }) {
   const navItems = [
@@ -115,8 +111,8 @@ function ReviewCard({
   const canReview = isClientAdmin();
   const isExpense = transaction.amount < 0;
   const availableSubs = mainId ? subcategories[mainId] ?? [] : [];
-  const suggestedLabel = transaction.suggestedSubCategoryName ?? transaction.categoryName ?? transaction.suggestedMainCategoryName ?? transaction.mainCategoryName ?? 'Geen suggestie';
-  const canAcceptSuggestion = Boolean(canReview && (subId || mainId));
+  const suggestedLabel = getReviewSuggestedLabel(transaction);
+  const canAcceptSuggestion = canAcceptReviewSuggestion(canReview, mainId, subId);
 
   const save = async () => {
     if (!canReview) {
