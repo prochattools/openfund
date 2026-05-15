@@ -4352,3 +4352,52 @@ Build/test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 91. Client CSV parser extraction pass
+
+Started from pushed main commit:
+
+- `e0c20e1 Extract ledger response mappers`
+
+### Client CSV parser extraction
+
+Implemented:
+
+- `src/helpers/client-csv-parser.ts`
+- `src/context/ledger-context.tsx`
+- `tests/helpers/clientCsvParser.test.ts`
+
+Result:
+
+- Extracted client CSV parsing out of the ledger context.
+- Ledger context now imports `parseCsvFile` from a focused helper module.
+- Changed parser internals to read `file.text()` before handing content to PapaParse, avoiding `FileReaderSync` issues in Node/Vitest while preserving browser behavior.
+- Added regression tests for:
+  - comma-separated CSV parsing;
+  - header trimming;
+  - semicolon-separated CSV fallback;
+  - empty-line skipping.
+- This keeps offline/client CSV parsing testable while reducing ledger context helper bulk.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Build/test result:
+
+- Server TypeScript build passed.
+- Next production build passed.
+- 42 test files passed.
+- 166 tests passed.
+- Secret scan passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

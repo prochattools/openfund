@@ -1,6 +1,5 @@
 'use client';
 
-import Papa, { ParseResult } from 'papaparse';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
   fetchLedger,
@@ -12,7 +11,8 @@ import {
   clearReviewQueue as clearReviewQueueRequest,
   updateCategory,
 } from '@/libs/api';
-import { buildTransactionFromRow, createLedgerId as createId, type ParsedRow } from '@/helpers/client-row-transaction';
+import { buildTransactionFromRow, createLedgerId as createId } from '@/helpers/client-row-transaction';
+import { parseCsvFile } from '@/helpers/client-csv-parser';
 import { mapApiTransaction, type ApiLedgerTransaction, type LedgerTransaction } from '@/helpers/api-transaction-mapper';
 import { normalizeRuleResponse, sortRules, type RuleCondition, type RuleInput, type RuleSummary } from '@/helpers/rule-summaries';
 import { ensureCategoryIndex, type CategoryTree } from '@/helpers/category-tree';
@@ -102,29 +102,6 @@ const REVIEW_SUB_CATEGORY: Category = {
   parentId: REVIEW_MAIN_CATEGORY.id,
   color: '#FFA94D',
 };
-
-const parseCsvFile = (file: File): Promise<ParsedRow[]> =>
-  new Promise((resolve, reject) => {
-    const runParse = (delimiter?: string) => {
-      Papa.parse<ParsedRow>(file, {
-        header: true,
-        skipEmptyLines: true,
-        transformHeader: (header) => header.trim(),
-        delimiter,
-        complete: (results: ParseResult<ParsedRow>) => {
-          const rows = results.data ?? [];
-          if (!rows.length && delimiter === undefined) {
-            runParse(';');
-          } else {
-            resolve(rows);
-          }
-        },
-        error: (error) => reject(error),
-      });
-    };
-
-    runParse();
-  });
 
 const DEFAULT_STATE: LedgerState = {
   categories: [REVIEW_MAIN_CATEGORY, REVIEW_SUB_CATEGORY],
