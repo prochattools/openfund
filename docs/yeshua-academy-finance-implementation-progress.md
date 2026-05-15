@@ -4199,3 +4199,56 @@ Build/test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 88. Client row transaction helper extraction pass
+
+Started from pushed main commit:
+
+- `e3ac4d5 Extract API transaction mapper`
+
+### Client row transaction helper extraction
+
+Implemented:
+
+- `src/helpers/client-row-transaction.ts`
+- `src/context/ledger-context.tsx`
+- `tests/helpers/clientRowTransaction.test.ts`
+
+Result:
+
+- Extracted client CSV row-to-transaction mapping out of the large ledger context.
+- Ledger context now imports `buildTransactionFromRow`, `createLedgerId`, and `ParsedRow` from a focused helper module.
+- Kept the extracted ID helper available for offline manual category creation.
+- Added regression tests for:
+  - ING-style row mapping;
+  - account metadata detection;
+  - notification cleanup;
+  - debit row mapping;
+  - description-as-source fallback;
+  - incomplete row rejection;
+  - invalid date and invalid amount rejection;
+  - UUID creation when `crypto.randomUUID` is available.
+- This keeps client/offline import row behavior testable while further reducing ledger context helper bulk.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Build/test result:
+
+- Server TypeScript build passed.
+- Next production build passed.
+- 39 test files passed.
+- 157 tests passed.
+- Secret scan passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
