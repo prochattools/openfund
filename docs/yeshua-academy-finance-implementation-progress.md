@@ -3750,3 +3750,45 @@ Build/test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 79. Health route regression-test pass
+
+Started from pushed main commit:
+
+- `948f019 Extract account metadata helper`
+
+### Health endpoint coverage
+
+Implemented:
+
+- `tests/app/health.test.ts`
+
+Result:
+
+- Added focused regression coverage for the health endpoint.
+- Verified the route returns HTTP 200.
+- Verified the JSON response shape stays `{ status: 'ok' }`.
+- This protects the lightweight health check used by deployment/runtime monitoring without changing route behavior.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Build/test result:
+
+- Server TypeScript build passed.
+- Next production build passed.
+- 30 test files passed.
+- 123 tests passed.
+- Secret scan passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
