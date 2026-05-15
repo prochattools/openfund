@@ -3,14 +3,9 @@ import { prisma } from '../prismaClient';
 import { getRequestActor } from '../auth/requestContext';
 import { readRouteParam } from './routeParams';
 import { buildContentDisposition, buildImportFileDownload } from '../services/importBatchDownload';
+import { readListLimit } from './queryParams';
 
-export const readImportBatchLimit = (value: unknown): number => {
-  const parsed = Number(value);
-  if (Number.isInteger(parsed) && parsed > 0 && parsed <= 100) {
-    return parsed;
-  }
-  return 25;
-};
+export const readImportBatchLimit = readListLimit;
 
 export const listImportBatches = async (req: Request, res: Response) => {
   const { userId } = getRequestActor(req);

@@ -5275,3 +5275,52 @@ Note:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+## 67. Shared route query parameter helper pass
+
+Started from pushed main commit:
+
+- `79c0810 Encode client API path IDs`
+
+### Shared bounded query parameter parsing
+
+Implemented:
+
+- `server/routes/queryParams.ts`
+- `server/routes/audit.ts`
+- `server/routes/importBatches.ts`
+- `tests/routes/queryParams.test.ts`
+
+Result:
+
+- Added a focused `readBoundedInteger` helper for route query parameter parsing.
+- Added `readListLimit` to preserve the existing list-limit contract: values from 1 through 100 are accepted, and invalid values fall back to 25.
+- Replaced duplicated limit parsing in audit-log and import-batch routes with the shared helper.
+- Added regression coverage for valid bounds, missing values, fractional values, out-of-range values, and the shared list-limit behavior.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+```
+
+Test result:
+
+- 50 test files passed.
+- 211 tests passed.
+
+Server build result:
+
+- Server TypeScript build passed.
+
+Full production build caveat:
+
+- `npm run build` could not be verified for this pass because BuildFlow returned Cloudflare 504 gateway time-outs three times while starting the command.
+- No compiler/build error output was returned from Next or TypeScript during those attempts.
+
+Known warning from earlier successful builds still applies:
+
+- Next reports missing SWC lockfile metadata. Build passes when the command completes successfully.

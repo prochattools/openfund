@@ -1,0 +1,25 @@
+import { describe, expect, it } from 'vitest';
+import { readBoundedInteger, readListLimit } from '../../server/routes/queryParams';
+
+describe('query param route helpers', () => {
+  it('reads bounded integers within the configured range', () => {
+    expect(readBoundedInteger('1', { fallback: 10, min: 1, max: 12 })).toBe(1);
+    expect(readBoundedInteger('12', { fallback: 10, min: 1, max: 12 })).toBe(12);
+    expect(readBoundedInteger(7, { fallback: 10, min: 1, max: 12 })).toBe(7);
+  });
+
+  it('falls back for missing, fractional, and out-of-range bounded integers', () => {
+    expect(readBoundedInteger(undefined, { fallback: 10, min: 1, max: 12 })).toBe(10);
+    expect(readBoundedInteger('1.5', { fallback: 10, min: 1, max: 12 })).toBe(10);
+    expect(readBoundedInteger('0', { fallback: 10, min: 1, max: 12 })).toBe(10);
+    expect(readBoundedInteger('13', { fallback: 10, min: 1, max: 12 })).toBe(10);
+    expect(readBoundedInteger('abc', { fallback: 10, min: 1, max: 12 })).toBe(10);
+  });
+
+  it('keeps the shared list limit contract at 1 through 100 with fallback 25', () => {
+    expect(readListLimit('1')).toBe(1);
+    expect(readListLimit('100')).toBe(100);
+    expect(readListLimit('0')).toBe(25);
+    expect(readListLimit('101')).toBe(25);
+  });
+});

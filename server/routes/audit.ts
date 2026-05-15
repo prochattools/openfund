@@ -1,14 +1,9 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prismaClient';
 import { getRequestActor } from '../auth/requestContext';
+import { readListLimit } from './queryParams';
 
-export const readAuditLogLimit = (value: unknown): number => {
-  const parsed = Number(value);
-  if (Number.isInteger(parsed) && parsed > 0 && parsed <= 100) {
-    return parsed;
-  }
-  return 25;
-};
+export const readAuditLogLimit = readListLimit;
 
 export const listAuditLogs = async (req: Request, res: Response) => {
   const { userId } = getRequestActor(req);
