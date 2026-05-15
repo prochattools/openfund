@@ -1,5 +1,13 @@
 import type { ExportEmailContext } from '@/helpers/export-utils';
 
+export const escapeHtml = (value: string): string =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
 export const buildSubject = (context?: ExportEmailContext, filename?: string): string => {
   if (context?.view === 'monthly') {
     return `Financieel maandoverzicht ${context.periodLabel}`;
@@ -40,13 +48,13 @@ const buildIntroHtml = (context?: ExportEmailContext): string => {
 
   switch (context.view) {
     case 'monthly':
-      return `<p>Beste lezer,</p><p>Hierbij ontvang je het financiële maandoverzicht voor ${context.accountLabel} over ${context.periodLabel}.</p>`;
+      return `<p>Beste lezer,</p><p>Hierbij ontvang je het financiële maandoverzicht voor ${escapeHtml(context.accountLabel)} over ${escapeHtml(context.periodLabel)}.</p>`;
     case 'transactions':
-      return `<p>Beste lezer,</p><p>Hierbij ontvang je het transactieoverzicht voor ${context.description}.</p>`;
+      return `<p>Beste lezer,</p><p>Hierbij ontvang je het transactieoverzicht voor ${escapeHtml(context.description)}.</p>`;
     case 'cashflow':
-      return `<p>Beste lezer,</p><p>Hierbij ontvang je het overzicht van de geldstroom over ${context.periodLabel}.</p>`;
+      return `<p>Beste lezer,</p><p>Hierbij ontvang je het overzicht van de geldstroom over ${escapeHtml(context.periodLabel)}.</p>`;
     case 'dashboard':
-      return `<p>Beste lezer,</p><p>Hierbij ontvang je de financiële samenvatting${context.periodLabel ? ` over ${context.periodLabel}` : ''}.</p>`;
+      return `<p>Beste lezer,</p><p>Hierbij ontvang je de financiële samenvatting${context.periodLabel ? ` over ${escapeHtml(context.periodLabel)}` : ''}.</p>`;
     default:
       return '<p>Beste lezer,</p><p>Hierbij ontvang je de financiële samenvatting van Yeshua Academy.</p>';
   }

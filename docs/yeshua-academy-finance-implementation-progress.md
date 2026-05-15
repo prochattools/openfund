@@ -4992,3 +4992,48 @@ Build result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+## 61. Notification e-mail context escaping pass
+
+Started from pushed main commit:
+
+- `7e052e0 Remove unused legacy UI primitives`
+
+### Notification e-mail HTML hardening
+
+Implemented:
+
+- `src/app/api/ledger/notify/emailHelpers.ts`
+- `tests/routes/notify.test.ts`
+
+Result:
+
+- Added a focused `escapeHtml` helper for dynamic notification e-mail context labels.
+- Escaped account labels, period labels, and transaction descriptions in generated e-mail intro HTML.
+- Preserved provided summary HTML body content so existing report-summary rendering still works as intended.
+- Added regression coverage proving dynamic labels are escaped while intended summary HTML remains intact.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Test result:
+
+- 48 test files passed.
+- 203 tests passed.
+
+Build result:
+
+- Prisma client generation passed during full build.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildEmailHtml, buildSubject } from '../../src/app/api/ledger/notify/emailHelpers';
+import { buildEmailHtml, buildSubject, escapeHtml } from '../../src/app/api/ledger/notify/emailHelpers';
 
 describe('notify route helpers', () => {
   it('builds Dutch subjects for known finance summary contexts', () => {
@@ -27,5 +27,19 @@ describe('notify route helpers', () => {
 
     expect(html).toContain('<strong>Inkomsten: € 100</strong>');
     expect(html).toContain('Hierbij ontvang je de financiële samenvatting van Yeshua Academy.');
+  });
+
+  it('escapes dynamic context labels while preserving provided summary HTML', () => {
+    expect(escapeHtml('Yeshua & <Finance> "Admin"')).toBe('Yeshua &amp; &lt;Finance&gt; &quot;Admin&quot;');
+
+    const html = buildEmailHtml('<strong>Veilige samenvatting</strong>', {
+      view: 'monthly',
+      periodLabel: 'mei <2026>',
+      accountLabel: 'Betaalrekening & kas',
+    });
+
+    expect(html).toContain('Betaalrekening &amp; kas over mei &lt;2026&gt;');
+    expect(html).toContain('<strong>Veilige samenvatting</strong>');
+    expect(html).not.toContain('mei <2026>');
   });
 });
