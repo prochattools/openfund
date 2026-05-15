@@ -19,6 +19,7 @@ import { ensureCategoryIndex, type CategoryTree } from '@/helpers/category-tree'
 import { deriveCategoryNames } from '@/helpers/transaction-category-names';
 import { mergeCategoriesWithServer } from '@/helpers/server-category-merge';
 import { categorizeTransactions } from '@/helpers/offline-categorization';
+import { buildLedgerSummary, filterReviewTransactions } from '@/helpers/ledger-summary';
 
 type UUID = string;
 
@@ -238,23 +239,13 @@ export const LedgerProvider = ({ children }: { children: ReactNode }) => {
     [state.categories],
   );
 
-  const summary = useMemo(() => {
-    const reviewCount = state.transactions.filter((tx) => tx.needsManualCategory).length;
-    const autoCategorized = state.transactions.filter(
-      (tx) => tx.classificationSource === 'history' || tx.classificationSource === 'rule',
-    ).length;
-    const totalAmount = state.transactions.reduce((acc, tx) => acc + tx.amount, 0);
-
-    return {
-      total: state.transactions.length,
-      reviewCount,
-      autoCategorized,
-      totalAmount,
-    };
-  }, [state.transactions]);
+  const summary = useMemo(
+    () => buildLedgerSummary(state.transactions),
+    [state.transactions],
+  );
 
   const reviewTransactions = useMemo(
-    () => state.transactions.filter((tx) => tx.needsManualCategory),
+    () => filterReviewTransactions(state.transactions),
     [state.transactions],
   );
 

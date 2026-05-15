@@ -4252,3 +4252,53 @@ Build/test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 89. Ledger summary helper extraction pass
+
+Started from pushed main commit:
+
+- `8a672a4 Extract client row transaction helper`
+
+### Ledger summary helper extraction
+
+Implemented:
+
+- `src/helpers/ledger-summary.ts`
+- `src/context/ledger-context.tsx`
+- `tests/helpers/ledgerSummary.test.ts`
+
+Result:
+
+- Extracted ledger summary and review filtering logic out of the ledger context.
+- Ledger context now imports `buildLedgerSummary` and `filterReviewTransactions` from a focused helper module.
+- Added regression tests for:
+  - total transaction count;
+  - review count;
+  - history/rule auto-categorized count;
+  - net total amount;
+  - manual-review transaction filtering;
+  - empty ledger zero-summary behavior.
+- This keeps dashboard/review summary behavior testable while reducing ledger context inline computation.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Build/test result:
+
+- Server TypeScript build passed.
+- Next production build passed.
+- 40 test files passed.
+- 160 tests passed.
+- Secret scan passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
