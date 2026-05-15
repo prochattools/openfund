@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { getRequestActor } from '../auth/requestContext';
 import { computeReconciliation } from '../services/reconciliationService';
+import { readOptionalNumber, readOptionalString } from './queryParams';
 
 export const getReconciliation = async (req: Request, res: Response) => {
   const { userId } = getRequestActor(req);
@@ -10,18 +11,17 @@ export const getReconciliation = async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Rekening is verplicht voor reconciliatie.' });
   }
 
-  const month = req.query.month ? Number(req.query.month) : undefined;
-  const year = req.query.year ? Number(req.query.year) : undefined;
-  const { start, end } = req.query;
+  const month = readOptionalNumber(req.query.month);
+  const year = readOptionalNumber(req.query.year);
 
   try {
     const result = await computeReconciliation({
       userId,
       accountId,
-      month: Number.isFinite(month) ? month : undefined,
-      year: Number.isFinite(year) ? year : undefined,
-      start: typeof start === 'string' ? start : undefined,
-      end: typeof end === 'string' ? end : undefined,
+      month,
+      year,
+      start: readOptionalString(req.query.start),
+      end: readOptionalString(req.query.end),
     });
 
     return res.json(result);

@@ -21,3 +21,15 @@ export const readBoundedInteger = (
 
 export const readListLimit = (value: unknown): number =>
   readBoundedInteger(value, { fallback: 25, min: 1, max: 100 });
+
+export const readOptionalNumber = (value: unknown): number | undefined => {
+  if (value == null || value === '') {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+export const readOptionalString = (value: unknown): string | undefined =>
+  typeof value === 'string' && value.trim() ? value : undefined;

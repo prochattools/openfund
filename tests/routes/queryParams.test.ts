@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { readBoundedInteger, readListLimit } from '../../server/routes/queryParams';
+import {
+  readBoundedInteger,
+  readListLimit,
+  readOptionalNumber,
+  readOptionalString,
+} from '../../server/routes/queryParams';
 
 describe('query param route helpers', () => {
   it('reads bounded integers within the configured range', () => {
@@ -21,5 +26,20 @@ describe('query param route helpers', () => {
     expect(readListLimit('100')).toBe(100);
     expect(readListLimit('0')).toBe(25);
     expect(readListLimit('101')).toBe(25);
+  });
+
+  it('reads optional finite numbers for routes like reconciliation', () => {
+    expect(readOptionalNumber('5')).toBe(5);
+    expect(readOptionalNumber(2026)).toBe(2026);
+    expect(readOptionalNumber(undefined)).toBeUndefined();
+    expect(readOptionalNumber('')).toBeUndefined();
+    expect(readOptionalNumber('abc')).toBeUndefined();
+  });
+
+  it('reads optional trimmed-present strings for routes like reconciliation', () => {
+    expect(readOptionalString('2026-05-01')).toBe('2026-05-01');
+    expect(readOptionalString('')).toBeUndefined();
+    expect(readOptionalString('   ')).toBeUndefined();
+    expect(readOptionalString(['2026-05-01'])).toBeUndefined();
   });
 });

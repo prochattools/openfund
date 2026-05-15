@@ -5324,3 +5324,50 @@ Full production build caveat:
 Known warning from earlier successful builds still applies:
 
 - Next reports missing SWC lockfile metadata. Build passes when the command completes successfully.
+
+## 68. Reconciliation optional query helper pass
+
+Started from pushed main commit:
+
+- `dd52b0e Extract shared route query helpers`
+
+### Optional reconciliation query parsing
+
+Implemented:
+
+- `server/routes/queryParams.ts`
+- `server/routes/reconciliation.ts`
+- `tests/routes/queryParams.test.ts`
+
+Result:
+
+- Added shared `readOptionalNumber` and `readOptionalString` helpers for optional route query parameters.
+- Replaced inline reconciliation route parsing for month, year, start, and end query values with the shared helpers.
+- Preserved the existing reconciliation route behavior: missing/invalid numeric values become `undefined`, and blank/non-string date values are ignored.
+- Added regression coverage for optional numeric and string query parsing.
+- The successful full production build in this pass also verifies the previous shared route query helper commit after its earlier BuildFlow 504 build caveat.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Test result:
+
+- 50 test files passed.
+- 213 tests passed.
+
+Build result:
+
+- Prisma client generation passed during full build.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
