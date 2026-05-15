@@ -5083,3 +5083,49 @@ Build result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+## 63. XLSX export filename helper pass
+
+Started from pushed main commit:
+
+- `2bd5d5d Normalize notification email recipients`
+
+### Ledger backup filename helper extraction
+
+Implemented:
+
+- `src/app/api/ledger/export-xlsx/exportHelpers.ts`
+- `src/app/api/ledger/export-xlsx/route.ts`
+- `tests/routes/exportXlsxHelpers.test.ts`
+
+Result:
+
+- Added deterministic UTC day formatting for export backup filenames.
+- Added focused helpers for ledger backup filenames and `Content-Disposition` headers.
+- Replaced inline filename construction in the XLSX export route with the tested helper.
+- Added regression coverage for numeric ING row dates, ISO backup dates, backup filenames, and content-disposition output.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Test result:
+
+- 48 test files passed.
+- 204 tests passed.
+
+Build result:
+
+- Prisma client generation passed during full build.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

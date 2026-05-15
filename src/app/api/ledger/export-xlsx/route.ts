@@ -4,6 +4,7 @@ import prisma from '@/libs/prisma';
 import {
   HEADERS,
   SHEET_NAME,
+  buildLedgerBackupContentDisposition,
   deriveDebitCredit,
   ensureRawRecord,
   formatDateAsNumeric,
@@ -88,12 +89,11 @@ export async function GET(request: Request) {
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, SHEET_NAME);
   const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-  const today = new Date().toISOString().split('T')[0];
 
   return new NextResponse(buffer, {
     headers: {
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'Content-Disposition': `attachment; filename="finance-admin-ledger-backup-${today}.xlsx"`,
+      'Content-Disposition': buildLedgerBackupContentDisposition(),
     },
   });
 }

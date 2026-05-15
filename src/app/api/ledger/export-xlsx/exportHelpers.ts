@@ -52,6 +52,19 @@ export const formatDateAsNumeric = (date: Date): string => {
   return `${year}${month}${day}`;
 };
 
+export const formatDateAsIsoDay = (date: Date): string => {
+  const year = date.getUTCFullYear();
+  const month = `${date.getUTCMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getUTCDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+export const buildLedgerBackupFilename = (date: Date = new Date()): string =>
+  `finance-admin-ledger-backup-${formatDateAsIsoDay(date)}.xlsx`;
+
+export const buildLedgerBackupContentDisposition = (date: Date = new Date()): string =>
+  `attachment; filename="${buildLedgerBackupFilename(date)}"`;
+
 export const parseAmount = (value: string | null): number | null => {
   if (!value) return null;
   const stripped = value.replace(/[^\d.,-]/g, '');

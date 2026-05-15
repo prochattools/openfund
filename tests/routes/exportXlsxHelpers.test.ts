@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildLedgerBackupContentDisposition,
+  buildLedgerBackupFilename,
   deriveDebitCredit,
   ensureRawRecord,
+  formatDateAsIsoDay,
   formatDateAsNumeric,
   parseAmount,
   readRawValue,
@@ -18,8 +21,13 @@ describe('export XLSX helpers', () => {
     expect(readRawValue({ columns: { Amount: Number.NaN } }, 'Amount')).toBeNull();
   });
 
-  it('formats UTC dates as numeric ING date strings', () => {
-    expect(formatDateAsNumeric(new Date('2026-05-15T22:30:00.000Z'))).toBe('20260515');
+  it('formats UTC dates for ING rows and deterministic backup filenames', () => {
+    const date = new Date('2026-05-15T22:30:00.000Z');
+
+    expect(formatDateAsNumeric(date)).toBe('20260515');
+    expect(formatDateAsIsoDay(date)).toBe('2026-05-15');
+    expect(buildLedgerBackupFilename(date)).toBe('finance-admin-ledger-backup-2026-05-15.xlsx');
+    expect(buildLedgerBackupContentDisposition(date)).toBe('attachment; filename="finance-admin-ledger-backup-2026-05-15.xlsx"');
   });
 
   it('parses exported amount text while rejecting invalid values', () => {
