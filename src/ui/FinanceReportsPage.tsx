@@ -4,100 +4,23 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { fetchReportSummary } from '@/libs/api';
 import { useLedger } from '@/context/ledger-context';
-import type { LedgerTransaction } from '@/helpers/api-transaction-mapper';
-
-const euroFormatter = new Intl.NumberFormat('nl-NL', {
-  style: 'currency',
-  currency: 'EUR',
-  maximumFractionDigits: 2,
-});
+import {
+  buildLocalReportSummary,
+  formatEuroMinor,
+  getPeriodTransactions,
+  getReportPeriodLabel,
+  getReportYears,
+  normalizeInitialReportPeriod,
+  type ReportBreakdownItem,
+  type ReportSummary,
+} from '@/helpers/report-summary';
 
 const monthFormatter = new Intl.DateTimeFormat('nl-NL', {
   month: 'long',
   year: 'numeric',
 });
 
-type ReportBreakdownItem = {
-  label: string;
-  amountMinor: number;
-  transactionCount: number;
-};
-
-type ReportSummary = {
-  period: { year: number; month: number | null };
-  openingBalanceMinor: number;
-  closingBalanceMinor: number;
-  incomeMinor: number;
-  expenseMinor: number;
-  netMinor: number;
-  transactionCount: number;
-  incomeByCategory: ReportBreakdownItem[];
-  expensesByCategory: ReportBreakdownItem[];
-};
-
-const formatEuro = (minor: number) => euroFormatter.format(minor / 100);
-
-const parseDate = (value: string) => {
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? new Date(0) : parsed;
-};
-
-const toMinor = (amount: number) => Math.round(Math.abs(amount) * 100);
-
-const getCategoryLabel = (transaction: LedgerTransaction) =>
-  transaction.mainCategoryName ?? transaction.categoryName ?? transaction.suggestedMainCategoryName ?? 'Niet gecategoriseerd';
-
-const getPeriodTransactions = (transactions: LedgerTransaction[], year: number, month: number | null) =>
-  transactions.filter((transaction) => {
-    const date = parseDate(transaction.date);
-    if (date.getUTCFullYear() !== year) return false;
-    if (month && date.getUTCMonth() + 1 !== month) return false;
-    return true;
-  });
-
-const buildLocalReportSummary = (
-  transactions: LedgerTransaction[],
-  year: number,
-  month: number | null,
-): ReportSummary => {
-  const incomeByCategory = new Map<string, ReportBreakdownItem>();
-  const expensesByCategory = new Map<string, ReportBreakdownItem>();
-  let incomeMinor = 0;
-  let expenseMinor = 0;
-
-  const matching = getPeriodTransactions(transactions, year, month);
-
-  matching.forEach((transaction) => {
-    const amountMinor = toMinor(transaction.amount);
-    const label = getCategoryLabel(transaction);
-    const target = transaction.amount < 0 ? expensesByCategory : incomeByCategory;
-    const existing = target.get(label) ?? { label, amountMinor: 0, transactionCount: 0 };
-    existing.amountMinor += amountMinor;
-    existing.transactionCount += 1;
-    target.set(label, existing);
-
-    if (transaction.amount < 0) {
-      expenseMinor += amountMinor;
-    } else {
-      incomeMinor += amountMinor;
-    }
-  });
-
-  const sortItems = (items: Map<string, ReportBreakdownItem>) =>
-    Array.from(items.values()).sort((a, b) => b.amountMinor - a.amountMinor || a.label.localeCompare(b.label, 'nl'));
-
-  return {
-    period: { year, month },
-    incomeMinor,
-    expenseMinor,
-    netMinor: incomeMinor - expenseMinor,
-    openingBalanceMinor: 0,
-    closingBalanceMinor: incomeMinor - expenseMinor,
-    transactionCount: matching.length,
-    incomeByCategory: sortItems(incomeByCategory),
-    expensesByCategory: sortItems(expensesByCategory),
-  };
-};
+const formatEuro = (minor: number) => formatEuroMinor(minor);
 
 function AppFrame({ children, reviewCount }: { children: ReactNode; reviewCount: number }) {
   const navItems = [
@@ -196,14 +119,13 @@ function ReportExplanation({ summary }: { summary: ReportSummary }) {
 
 export default function FinanceReportsPage({ initialYear, initialMonth }: { initialYear?: number; initialMonth?: number | null }) {
   const { transactions, summary: ledgerSummary } = useLedger();
-  const years = useMemo(() => {
-    const values = Array.from(new Set(transactions.map((transaction) => parseDate(transaction.date).getUTCFullYear()))).sort((a, b) => b - a);
-    return values.length ? values : [new Date().getUTCFullYear()];
-  }, [transactions]);
-  const selectedInitialYear = Number.isInteger(initialYear) && initialYear && initialYear > 2000 ? initialYear : years[0] ?? new Date().getUTCFullYear();
-  const selectedInitialMonth = Number.isInteger(initialMonth) && initialMonth && initialMonth >= 1 && initialMonth <= 12 ? initialMonth : null;
-  const [year, setYear] = useState(selectedInitialYear);
-  const [month, setMonth] = useState<number | null>(selectedInitialMonth);
+  const years = useMemo(() => getReportYears(transactions), [transactions]);
+  const initialPeriod = useMemo(
+    () => normalizeInitialReportPeriod(years, initialYear, initialMonth),
+    [initialMonth, initialYear, years],
+  );
+  const [year, setYear] = useState(initialPeriod.year);
+  const [month, setMonth] = useState<number | null>(initialPeriod.month);
   const [remoteSummary, setRemoteSummary] = useState<ReportSummary | null>(null);
   const [status, setStatus] = useState<'idle' | 'loading' | 'fallback'>('idle');
 
@@ -233,7 +155,7 @@ export default function FinanceReportsPage({ initialYear, initialMonth }: { init
   const periodTransactions = useMemo(() => getPeriodTransactions(transactions, year, month), [transactions, year, month]);
   const periodReviewCount = periodTransactions.filter((transaction) => transaction.needsManualCategory).length;
   const report = remoteSummary ?? localSummary;
-  const periodLabel = month ? monthFormatter.format(new Date(Date.UTC(year, month - 1, 1))) : String(year);
+  const periodLabel = getReportPeriodLabel(year, month, monthFormatter);
 
   return (
     <AppFrame reviewCount={ledgerSummary.reviewCount}>

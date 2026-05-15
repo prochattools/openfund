@@ -4453,3 +4453,57 @@ Build/test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 93. Report summary helper extraction pass
+
+Started from pushed main commit:
+
+- `792370b Extract dashboard summary helper`
+
+### Report summary helper extraction
+
+Implemented:
+
+- `src/helpers/report-summary.ts`
+- `src/ui/FinanceReportsPage.tsx`
+- `tests/helpers/reportSummary.test.ts`
+
+Result:
+
+- Extracted report money formatting, safe date parsing, period filtering, local fallback report summary, year selection, initial period normalization, and period label generation out of the reports UI component.
+- FinanceReportsPage now imports report summary helpers and types from a focused helper module.
+- Added regression tests for:
+  - Dutch euro formatting from minor units;
+  - invalid report date fallback;
+  - amount-to-minor-unit conversion;
+  - year and month period filtering;
+  - category label fallback order;
+  - sorted income and expense category breakdowns;
+  - local report summary totals;
+  - available year derivation;
+  - initial period normalization;
+  - Dutch month and year report labels.
+- This keeps report fallback calculations testable while reducing report UI component logic.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Build/test result:
+
+- Server TypeScript build passed.
+- Next production build passed.
+- 44 test files passed.
+- 177 tests passed.
+- Secret scan passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
