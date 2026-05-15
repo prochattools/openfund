@@ -1,7 +1,7 @@
 'use client';
 
-import Link from 'next/link';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { FinanceAppFrame } from '@/ui/FinanceAppFrame';
 import {
   deactivateEmailRecipient,
   fetchAuditLogs,
@@ -23,39 +23,6 @@ import {
   translateAuditAction,
   translateImportStatus,
 } from '@/helpers/settings-page';
-
-function AppFrame({ children, reviewCount }: { children: ReactNode; reviewCount: number }) {
-  const navItems = [
-    { label: 'Dashboard', href: '/' },
-    { label: 'Importeren', href: '/ledger#importeren' },
-    { label: 'Te beoordelen', href: '/review' },
-    { label: 'Transacties', href: '/ledger#transacties' },
-    { label: 'Rapporten', href: '/reports' },
-    { label: 'Instellingen', href: '/settings' },
-  ];
-
-  return (
-    <main className="min-h-screen bg-[#f5f1ea] text-[#251f1a]">
-      <div className="mx-auto flex min-h-screen max-w-[1480px] gap-6 px-4 py-4 sm:px-6 sm:py-6">
-        <aside className="hidden w-64 shrink-0 rounded-[2rem] border border-[#ded5c8] bg-[#fbf8f2] p-5 shadow-[0_24px_70px_rgba(87,67,45,0.08)] lg:block">
-          <div className="mb-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#8a7965]">Yeshua Academy</p>
-            <h1 className="mt-2 text-2xl font-semibold tracking-[-0.04em]">Finance</h1>
-          </div>
-          <nav className="space-y-2">
-            {navItems.map((item) => (
-              <Link key={item.label} href={item.href} className="flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-medium text-[#6f6253] transition hover:bg-[#efe7db] hover:text-[#251f1a]">
-                <span>{item.label}</span>
-                {item.label === 'Te beoordelen' && reviewCount > 0 ? <span className="rounded-full bg-[#e6b85c] px-2 py-0.5 text-xs text-[#35240a]">{reviewCount}</span> : null}
-              </Link>
-            ))}
-          </nav>
-        </aside>
-        <section className="min-w-0 flex-1">{children}</section>
-      </div>
-    </main>
-  );
-}
 
 function SettingCard({ title, body, status }: { title: string; body: string; status: string }) {
   return (
@@ -346,7 +313,7 @@ export default function FinanceSettingsPage() {
   const { summary } = useLedger();
 
   return (
-    <AppFrame reviewCount={summary.reviewCount}>
+    <FinanceAppFrame reviewCount={summary.reviewCount}>
       <header className="mb-6 rounded-[2rem] border border-[#ded5c8] bg-[#fbf8f2] p-5 shadow-[0_24px_70px_rgba(87,67,45,0.08)]">
         <p className="text-sm font-medium text-[#7d6d5a]">Instellingen</p>
         <h2 className="mt-1 text-3xl font-semibold tracking-[-0.05em] md:text-4xl">Beheer zonder rommel</h2>
@@ -366,6 +333,6 @@ export default function FinanceSettingsPage() {
         <AuditLogPreview />
         <GuardrailList />
       </div>
-    </AppFrame>
+    </FinanceAppFrame>
   );
 }

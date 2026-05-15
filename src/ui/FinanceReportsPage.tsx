@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { fetchReportSummary } from '@/libs/api';
 import { useLedger } from '@/context/ledger-context';
+import { FinanceAppFrame } from '@/ui/FinanceAppFrame';
 import {
   buildLocalReportSummary,
   formatEuroMinor,
@@ -23,39 +24,6 @@ const monthFormatter = new Intl.DateTimeFormat('nl-NL', {
 });
 
 const formatEuro = (minor: number) => formatEuroMinor(minor);
-
-function AppFrame({ children, reviewCount }: { children: ReactNode; reviewCount: number }) {
-  const navItems = [
-    { label: 'Dashboard', href: '/' },
-    { label: 'Importeren', href: '/ledger#importeren' },
-    { label: 'Te beoordelen', href: '/review' },
-    { label: 'Transacties', href: '/ledger#transacties' },
-    { label: 'Rapporten', href: '/reports' },
-    { label: 'Instellingen', href: '/settings' },
-  ];
-
-  return (
-    <main className="min-h-screen bg-[#f5f1ea] text-[#251f1a]">
-      <div className="mx-auto flex min-h-screen max-w-[1480px] gap-6 px-4 py-4 sm:px-6 sm:py-6">
-        <aside className="hidden w-64 shrink-0 rounded-[2rem] border border-[#ded5c8] bg-[#fbf8f2] p-5 shadow-[0_24px_70px_rgba(87,67,45,0.08)] lg:block">
-          <div className="mb-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#8a7965]">Yeshua Academy</p>
-            <h1 className="mt-2 text-2xl font-semibold tracking-[-0.04em]">Finance</h1>
-          </div>
-          <nav className="space-y-2">
-            {navItems.map((item) => (
-              <Link key={item.label} href={item.href} className="flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-medium text-[#6f6253] transition hover:bg-[#efe7db] hover:text-[#251f1a]">
-                <span>{item.label}</span>
-                {item.label === 'Te beoordelen' && reviewCount > 0 ? <span className="rounded-full bg-[#e6b85c] px-2 py-0.5 text-xs text-[#35240a]">{reviewCount}</span> : null}
-              </Link>
-            ))}
-          </nav>
-        </aside>
-        <section className="min-w-0 flex-1">{children}</section>
-      </div>
-    </main>
-  );
-}
 
 function SummaryCard({ label, value, helper }: { label: string; value: string; helper: string }) {
   return (
@@ -159,7 +127,7 @@ export default function FinanceReportsPage({ initialYear, initialMonth }: { init
   const periodLabel = getReportPeriodLabel(year, month, monthFormatter);
 
   return (
-    <AppFrame reviewCount={ledgerSummary.reviewCount}>
+    <FinanceAppFrame reviewCount={ledgerSummary.reviewCount}>
       <header className="mb-6 rounded-[2rem] border border-[#ded5c8] bg-[#fbf8f2] p-5 shadow-[0_24px_70px_rgba(87,67,45,0.08)]">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
@@ -208,6 +176,6 @@ export default function FinanceReportsPage({ initialYear, initialMonth }: { init
 
         <ReportExplanation summary={report} />
       </div>
-    </AppFrame>
+    </FinanceAppFrame>
   );
 }

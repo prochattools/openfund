@@ -4851,3 +4851,52 @@ Known warning still present:
 Note:
 
 - This successful full build also proves the codebase builds after the previous import-feedback helper extraction, whose own full-build attempt had been blocked by repeated BuildFlow 504 time-outs.
+
+## 58. Shared app frame extraction pass
+
+Started from pushed main commit:
+
+- `65a0d7a Extract review display helpers`
+
+### Shared finance app frame extraction
+
+Implemented:
+
+- `src/ui/FinanceAppFrame.tsx`
+- `src/ui/FinanceDashboard.tsx`
+- `src/ui/FinanceLedgerPage.tsx`
+- `src/ui/FinanceReportsPage.tsx`
+- `src/ui/FinanceReviewPage.tsx`
+- `src/ui/FinanceSettingsPage.tsx`
+
+Result:
+
+- Extracted the repeated finance shell/sidebar navigation into a shared `FinanceAppFrame` component.
+- Preserved the dashboard active navigation styling and optional rustige-workflow sidebar hint through explicit props.
+- Replaced the duplicated local `AppFrame` implementations in dashboard, ledger, reports, review, and settings pages.
+- Kept page content and Dutch private finance workflow unchanged while reducing repeated UI shell code.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Test result:
+
+- 48 test files passed.
+- 202 tests passed.
+
+Build result:
+
+- Prisma client generation passed during full build.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
