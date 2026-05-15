@@ -3657,3 +3657,47 @@ Build/test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 77. App config and sitemap regression-test pass
+
+Started from pushed main commit:
+
+- `0faaf94 Test auth utility modes`
+
+### App config and sitemap coverage
+
+Implemented:
+
+- `tests/app/config.test.ts`
+- `tests/app/sitemap.test.ts`
+
+Result:
+
+- Added regression tests for the Yeshua Academy Finance product identity in app config.
+- Verified the Dutch finance app description, finance domain, support e-mail defaults, monthly summary subject, and simplified light theme color.
+- Added sitemap tests for the default `finance.yeshua.academy` fallback.
+- Added sitemap tests for a configured `NEXT_PUBLIC_APP_URL` override.
+- This protects small public metadata surfaces from drifting back toward template/SaaS defaults.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Build/test result:
+
+- Server TypeScript build passed.
+- Next production build passed.
+- 28 test files passed.
+- 118 tests passed.
+- Secret scan passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
