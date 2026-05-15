@@ -3842,3 +3842,55 @@ Build/test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 81. Client import normalizer helper extraction pass
+
+Started from pushed main commit:
+
+- `2700bc2 Extract category label helpers`
+
+### Client import helper extraction
+
+Implemented:
+
+- `src/helpers/client-import-normalizers.ts`
+- `src/context/ledger-context.tsx`
+- `tests/helpers/clientImportNormalizers.test.ts`
+
+Result:
+
+- Extracted client-side import helper logic out of the large ledger context.
+- Ledger context now imports `normaliseDescription`, `parseDateString`, `parseAmount`, and `sanitizeNotification` from a focused helper module.
+- Added regression tests for:
+  - description normalization;
+  - ING-style `YYYYMMDD` dates;
+  - Dutch `DD/MM/YYYY` and `DD-MM-YYYY` dates;
+  - ISO date strings;
+  - invalid date handling;
+  - Dutch and US amount parsing;
+  - debit/credit, `af`, and invalid amount handling;
+  - notification cleanup and ING `Name:` prefix removal.
+- This reduces ledger context helper bulk while preserving offline/client import behavior.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Build/test result:
+
+- Server TypeScript build passed.
+- Next production build passed.
+- 32 test files passed.
+- 131 tests passed.
+- Secret scan passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
