@@ -1,4 +1,7 @@
-export const SHEET_NAME = 'transacties 2025';
+export const DEFAULT_SHEET_NAME = 'transacties';
+
+export const buildLedgerSheetName = (date: Date = new Date()): string =>
+  `${DEFAULT_SHEET_NAME} ${date.getUTCFullYear()}`;
 
 export const HEADERS = [
   'Date',

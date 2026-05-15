@@ -3,8 +3,8 @@ import * as XLSX from 'xlsx';
 import prisma from '@/libs/prisma';
 import {
   HEADERS,
-  SHEET_NAME,
   buildLedgerBackupContentDisposition,
+  buildLedgerSheetName,
   deriveDebitCredit,
   ensureRawRecord,
   formatDateAsNumeric,
@@ -87,7 +87,7 @@ export async function GET(request: Request) {
   const worksheetData = [HEADERS, ...rows];
   const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, SHEET_NAME);
+  XLSX.utils.book_append_sheet(workbook, worksheet, buildLedgerSheetName());
   const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
 
   return new NextResponse(buffer, {

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildLedgerBackupContentDisposition,
   buildLedgerBackupFilename,
+  buildLedgerSheetName,
   deriveDebitCredit,
   ensureRawRecord,
   formatDateAsIsoDay,
@@ -26,6 +27,7 @@ describe('export XLSX helpers', () => {
 
     expect(formatDateAsNumeric(date)).toBe('20260515');
     expect(formatDateAsIsoDay(date)).toBe('2026-05-15');
+    expect(buildLedgerSheetName(date)).toBe('transacties 2026');
     expect(buildLedgerBackupFilename(date)).toBe('finance-admin-ledger-backup-2026-05-15.xlsx');
     expect(buildLedgerBackupContentDisposition(date)).toBe('attachment; filename="finance-admin-ledger-backup-2026-05-15.xlsx"');
   });

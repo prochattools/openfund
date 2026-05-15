@@ -5129,3 +5129,49 @@ Build result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+## 64. XLSX worksheet name helper pass
+
+Started from pushed main commit:
+
+- `a795ec0 Extract XLSX export filename helpers`
+
+### Dynamic ledger worksheet naming
+
+Implemented:
+
+- `src/app/api/ledger/export-xlsx/exportHelpers.ts`
+- `src/app/api/ledger/export-xlsx/route.ts`
+- `tests/routes/exportXlsxHelpers.test.ts`
+
+Result:
+
+- Replaced the stale hardcoded worksheet tab name `transacties 2025` with a dynamic UTC-year helper.
+- The XLSX export route now uses `buildLedgerSheetName()` for the worksheet tab name.
+- Added regression coverage proving exports for 2026 use the worksheet name `transacties 2026`.
+- Kept the existing Dutch/ING export structure and backup filename behavior unchanged.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Test result:
+
+- 48 test files passed.
+- 204 tests passed.
+
+Build result:
+
+- Prisma client generation passed during full build.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
