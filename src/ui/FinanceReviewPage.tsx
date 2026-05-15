@@ -200,7 +200,7 @@ export default function FinanceReviewPage() {
   );
 
   return (
-    <FinanceAppFrame reviewCount={summary.reviewCount}>
+    <FinanceAppFrame reviewCount={summary.reviewCount} activeHref="/review">
       <Header count={reviewTransactions.length} />
       {reviewTransactions.length ? (
         <div className="space-y-6">

@@ -219,7 +219,7 @@ export default function FinanceLedgerPage() {
   const monthSummary = useMemo(() => summarizeLedgerTransactions(monthTransactions), [monthTransactions]);
 
   return (
-    <FinanceAppFrame reviewCount={summary.reviewCount}>
+    <FinanceAppFrame reviewCount={summary.reviewCount} activeHref="/ledger#transacties">
       <Header monthOptions={monthOptions} selectedMonth={activeMonth} onMonthChange={setSelectedMonth} />
       <div className="space-y-6">
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

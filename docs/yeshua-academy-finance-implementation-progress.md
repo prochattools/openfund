@@ -4900,3 +4900,50 @@ Build result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+## 59. Shared sidebar active-state pass
+
+Started from pushed main commit:
+
+- `75a58e9 Extract shared finance app frame`
+
+### Sidebar active navigation wiring
+
+Implemented:
+
+- `src/ui/FinanceLedgerPage.tsx`
+- `src/ui/FinanceReportsPage.tsx`
+- `src/ui/FinanceReviewPage.tsx`
+- `src/ui/FinanceSettingsPage.tsx`
+
+Result:
+
+- Wired the shared `FinanceAppFrame` active navigation prop into the non-dashboard pages.
+- Ledger now highlights the Transacties navigation item.
+- Reports, Review, and Settings now highlight their matching sidebar item.
+- Kept the dashboard active state and workflow hint from the previous shared-frame extraction.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Test result:
+
+- 48 test files passed.
+- 202 tests passed.
+
+Build result:
+
+- Prisma client generation passed during full build.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

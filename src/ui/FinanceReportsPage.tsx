@@ -127,7 +127,7 @@ export default function FinanceReportsPage({ initialYear, initialMonth }: { init
   const periodLabel = getReportPeriodLabel(year, month, monthFormatter);
 
   return (
-    <FinanceAppFrame reviewCount={ledgerSummary.reviewCount}>
+    <FinanceAppFrame reviewCount={ledgerSummary.reviewCount} activeHref="/reports">
       <header className="mb-6 rounded-[2rem] border border-[#ded5c8] bg-[#fbf8f2] p-5 shadow-[0_24px_70px_rgba(87,67,45,0.08)]">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>

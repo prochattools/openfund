@@ -313,7 +313,7 @@ export default function FinanceSettingsPage() {
   const { summary } = useLedger();
 
   return (
-    <FinanceAppFrame reviewCount={summary.reviewCount}>
+    <FinanceAppFrame reviewCount={summary.reviewCount} activeHref="/settings">
       <header className="mb-6 rounded-[2rem] border border-[#ded5c8] bg-[#fbf8f2] p-5 shadow-[0_24px_70px_rgba(87,67,45,0.08)]">
         <p className="text-sm font-medium text-[#7d6d5a]">Instellingen</p>
         <h2 className="mt-1 text-3xl font-semibold tracking-[-0.05em] md:text-4xl">Beheer zonder rommel</h2>
