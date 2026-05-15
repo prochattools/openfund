@@ -1,25 +1,15 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prismaClient';
 import { buildPeriodReportSummary, calculateOpeningBalanceMinor } from '../services/reportingService';
+import { readBoundedInteger, readNullableBoundedInteger } from './queryParams';
 
 const DEFAULT_USER_ID = process.env.DEFAULT_USER_ID ?? 'demo-user';
 
-export const readReportYear = (value: unknown): number => {
-  const parsed = Number(value);
-  if (Number.isInteger(parsed) && parsed >= 2000 && parsed <= 2100) {
-    return parsed;
-  }
-  return new Date().getUTCFullYear();
-};
+export const readReportYear = (value: unknown): number =>
+  readBoundedInteger(value, { fallback: new Date().getUTCFullYear(), min: 2000, max: 2100 });
 
-export const readReportMonth = (value: unknown): number | null => {
-  if (value == null) return null;
-  const parsed = Number(value);
-  if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 12) {
-    return parsed;
-  }
-  return null;
-};
+export const readReportMonth = (value: unknown): number | null =>
+  readNullableBoundedInteger(value, { min: 1, max: 12 });
 
 export const splitReportCategoryLabel = (value?: string | null): { main: string | null; sub: string | null } => {
   if (!value) return { main: null, sub: null };

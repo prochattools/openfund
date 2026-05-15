@@ -22,6 +22,24 @@ export const readBoundedInteger = (
 export const readListLimit = (value: unknown): number =>
   readBoundedInteger(value, { fallback: 25, min: 1, max: 100 });
 
+export const readNullableBoundedInteger = (
+  value: unknown,
+  {
+    min,
+    max,
+  }: {
+    min: number;
+    max: number;
+  },
+): number | null => {
+  if (value == null || value === '') {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= min && parsed <= max ? parsed : null;
+};
+
 export const readOptionalNumber = (value: unknown): number | undefined => {
   if (value == null || value === '') {
     return undefined;

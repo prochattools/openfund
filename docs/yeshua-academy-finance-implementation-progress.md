@@ -5371,3 +5371,49 @@ Build result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+## 69. Report bounded query helper pass
+
+Started from pushed main commit:
+
+- `f82af65 Extract optional route query helpers`
+
+### Report year/month query parsing reuse
+
+Implemented:
+
+- `server/routes/queryParams.ts`
+- `server/routes/reports.ts`
+- `tests/routes/queryParams.test.ts`
+
+Result:
+
+- Added a shared `readNullableBoundedInteger` helper for optional bounded integer route parameters.
+- Reused shared bounded parsing for report year and report month query values.
+- Preserved report behavior: invalid years fall back to the current UTC year, and invalid/missing months remain `null` for year reports.
+- Added regression coverage for nullable bounded integer parsing at the 1–12 month bounds.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Test result:
+
+- 50 test files passed.
+- 214 tests passed.
+
+Build result:
+
+- Prisma client generation passed during full build.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

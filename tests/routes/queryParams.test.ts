@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   readBoundedInteger,
   readListLimit,
+  readNullableBoundedInteger,
   readOptionalNumber,
   readOptionalString,
 } from '../../server/routes/queryParams';
@@ -26,6 +27,15 @@ describe('query param route helpers', () => {
     expect(readListLimit('100')).toBe(100);
     expect(readListLimit('0')).toBe(25);
     expect(readListLimit('101')).toBe(25);
+  });
+
+  it('reads nullable bounded integers for optional bounded values like report months', () => {
+    expect(readNullableBoundedInteger('1', { min: 1, max: 12 })).toBe(1);
+    expect(readNullableBoundedInteger('12', { min: 1, max: 12 })).toBe(12);
+    expect(readNullableBoundedInteger(undefined, { min: 1, max: 12 })).toBeNull();
+    expect(readNullableBoundedInteger('', { min: 1, max: 12 })).toBeNull();
+    expect(readNullableBoundedInteger('0', { min: 1, max: 12 })).toBeNull();
+    expect(readNullableBoundedInteger('13', { min: 1, max: 12 })).toBeNull();
   });
 
   it('reads optional finite numbers for routes like reconciliation', () => {
