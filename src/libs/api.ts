@@ -1,4 +1,4 @@
-import { buildLimitQuery, buildReconciliationQuery, buildReportSummaryQuery } from '@/helpers/api-client';
+import { buildLimitQuery, buildReconciliationQuery, buildReportSummaryQuery, encodeApiPathSegment } from '@/helpers/api-client';
 
 const rawEnvBase = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
 
@@ -83,7 +83,7 @@ export const uploadImportFile = async (formData: FormData) => {
 };
 
 export const updateCategory = async (id: string, payload: { categoryId?: string | null; categoryName?: string }) => {
-  const response = await fetch(getApiUrl(`/api/transactions/${id}/category`), withUserHeader({
+  const response = await fetch(getApiUrl(`/api/transactions/${encodeApiPathSegment(id)}/category`), withUserHeader({
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -114,7 +114,7 @@ export const saveOpeningBalance = async (accountId: string, payload: {
   currency?: string;
   note?: string;
 }) => {
-  const response = await fetch(getApiUrl(`/api/accounts/${accountId}/opening-balance`), withUserHeader({
+  const response = await fetch(getApiUrl(`/api/accounts/${encodeApiPathSegment(accountId)}/opening-balance`), withUserHeader({
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -131,7 +131,7 @@ export const saveOpeningBalance = async (accountId: string, payload: {
 };
 
 export const lockOpeningBalance = async (balanceId: string) => {
-  const response = await fetch(getApiUrl(`/api/opening-balances/${balanceId}/lock`), withUserHeader({
+  const response = await fetch(getApiUrl(`/api/opening-balances/${encodeApiPathSegment(balanceId)}/lock`), withUserHeader({
     method: 'POST',
   }));
 
@@ -161,7 +161,7 @@ export const fetchReconciliation = async (params: {
 };
 
 export const lockLedgerPeriod = async (ledgerId: string, payload?: { note?: string }) => {
-  const response = await fetch(getApiUrl(`/api/ledger/${ledgerId}/lock`), withUserHeader({
+  const response = await fetch(getApiUrl(`/api/ledger/${encodeApiPathSegment(ledgerId)}/lock`), withUserHeader({
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -178,7 +178,7 @@ export const lockLedgerPeriod = async (ledgerId: string, payload?: { note?: stri
 };
 
 export const unlockLedgerPeriod = async (ledgerId: string) => {
-  const response = await fetch(getApiUrl(`/api/ledger/${ledgerId}/unlock`), withUserHeader({
+  const response = await fetch(getApiUrl(`/api/ledger/${encodeApiPathSegment(ledgerId)}/unlock`), withUserHeader({
     method: 'POST',
   }));
 
@@ -229,7 +229,7 @@ export const createCategorizationRule = async (payload: RulePayload) => {
 };
 
 export const updateCategorizationRule = async (id: string, payload: Partial<RulePayload>) => {
-  const response = await fetch(getApiUrl(`/api/rules/${id}`), withUserHeader({
+  const response = await fetch(getApiUrl(`/api/rules/${encodeApiPathSegment(id)}`), withUserHeader({
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -246,7 +246,7 @@ export const updateCategorizationRule = async (id: string, payload: Partial<Rule
 };
 
 export const deleteCategorizationRule = async (id: string): Promise<void> => {
-  const response = await fetch(getApiUrl(`/api/rules/${id}`), withUserHeader({
+  const response = await fetch(getApiUrl(`/api/rules/${encodeApiPathSegment(id)}`), withUserHeader({
     method: 'DELETE',
   }));
 
@@ -259,7 +259,7 @@ export const deleteCategorizationRule = async (id: string): Promise<void> => {
 };
 
 export const previewRule = async (id: string, scope: 'review-queue' | { importBatchId: string }) => {
-  const url = getApiUrl(`/api/rules/${id}/preview`);
+  const url = getApiUrl(`/api/rules/${encodeApiPathSegment(id)}/preview`);
   const response = await fetch(url, withUserHeader({
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -276,7 +276,7 @@ export const previewRule = async (id: string, scope: 'review-queue' | { importBa
 };
 
 export const applyRule = async (id: string, transactionIds: string[]) => {
-  const url = getApiUrl(`/api/rules/${id}/apply`);
+  const url = getApiUrl(`/api/rules/${encodeApiPathSegment(id)}/apply`);
   const response = await fetch(url, withUserHeader({
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -364,7 +364,7 @@ export const saveEmailRecipient = async (payload: { email: string; name?: string
 };
 
 export const deactivateEmailRecipient = async (id: string): Promise<EmailRecipient> => {
-  const response = await fetch(getApiUrl(`/api/email-recipients/${id}`), withUserHeader({ method: 'DELETE' }));
+  const response = await fetch(getApiUrl(`/api/email-recipients/${encodeApiPathSegment(id)}`), withUserHeader({ method: 'DELETE' }));
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'E-mailontvanger kon niet worden gedeactiveerd.' }));
@@ -404,4 +404,4 @@ export const fetchImportBatches = async (limit = 25): Promise<ImportBatchSummary
 };
 
 export const getImportBatchDownloadUrl = (id: string): string =>
-  getApiUrl(`/api/import-batches/${id}/download`);
+  getApiUrl(`/api/import-batches/${encodeApiPathSegment(id)}/download`);

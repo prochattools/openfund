@@ -5225,3 +5225,53 @@ Note:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+## 66. API client path-segment encoding pass
+
+Started from pushed main commit:
+
+- `1c5f92b Extract API client query helpers`
+
+### Dynamic client path hardening
+
+Implemented:
+
+- `src/helpers/api-client.ts`
+- `src/libs/api.ts`
+- `tests/helpers/apiClient.test.ts`
+
+Result:
+
+- Added a focused `encodeApiPathSegment` helper for dynamic client API path segments.
+- Encoded dynamic IDs before placing them in transaction, account, opening-balance, ledger, rule, e-mail recipient, and import-batch download URLs.
+- Added regression coverage for plain IDs, IDs containing slashes, and IDs containing spaces.
+- Kept existing endpoint structure, Dutch error messages, headers, and query-string behavior unchanged.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Test result:
+
+- 49 test files passed.
+- 208 tests passed.
+
+Build result:
+
+- Prisma client generation passed during full build.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Note:
+
+- The first full-build command attempt hit a BuildFlow/Cloudflare 504 gateway timeout while starting. A retry completed successfully with exit 0.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

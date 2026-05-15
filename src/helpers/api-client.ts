@@ -1,3 +1,5 @@
+export const encodeApiPathSegment = (value: string): string => encodeURIComponent(value);
+
 export const buildLimitQuery = (limit: number): string => {
   const query = new URLSearchParams();
   query.set('limit', String(limit));

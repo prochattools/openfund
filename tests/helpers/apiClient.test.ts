@@ -3,9 +3,16 @@ import {
   buildLimitQuery,
   buildReconciliationQuery,
   buildReportSummaryQuery,
+  encodeApiPathSegment,
 } from '../../src/helpers/api-client';
 
 describe('API client query helpers', () => {
+  it('encodes dynamic API path segments safely', () => {
+    expect(encodeApiPathSegment('plain-id')).toBe('plain-id');
+    expect(encodeApiPathSegment('id/with/slashes')).toBe('id%2Fwith%2Fslashes');
+    expect(encodeApiPathSegment('regel met spatie')).toBe('regel%20met%20spatie');
+  });
+
   it('builds limit query strings for list endpoints', () => {
     expect(buildLimitQuery(25)).toBe('limit=25');
     expect(buildLimitQuery(100)).toBe('limit=100');
