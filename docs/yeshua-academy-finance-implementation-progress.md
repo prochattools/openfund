@@ -4041,3 +4041,52 @@ Build/test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 85. Server category merge helper extraction pass
+
+Started from pushed main commit:
+
+- `bc73d31 Extract transaction category names helper`
+
+### Server category merge helper extraction
+
+Implemented:
+
+- `src/helpers/server-category-merge.ts`
+- `src/context/ledger-context.tsx`
+- `tests/helpers/serverCategoryMerge.test.ts`
+
+Result:
+
+- Extracted server category merge logic out of the large ledger context.
+- Ledger context now imports `mergeCategoriesWithServer` from a focused helper module.
+- Added regression tests for:
+  - returning current categories unchanged when there are no server transactions;
+  - creating main and subcategories from server transaction labels;
+  - preserving existing colors while updating parent metadata;
+  - using suggested/raw labels when final category labels are missing;
+  - deterministic color assignment via an injectable palette.
+- This keeps API-derived category merging testable while further reducing ledger context helper bulk.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Build/test result:
+
+- Server TypeScript build passed.
+- Next production build passed.
+- 36 test files passed.
+- 145 tests passed.
+- Secret scan passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

@@ -13,11 +13,12 @@ import {
   updateCategory,
 } from '@/libs/api';
 import { resolveAccountMetadata } from '@/helpers/account-metadata';
-import { deriveMainCategoryId, firstNonEmpty } from '@/helpers/category-labels';
+import { deriveMainCategoryId } from '@/helpers/category-labels';
 import { normaliseDescription, parseAmount, parseDateString, sanitizeNotification } from '@/helpers/client-import-normalizers';
 import { normalizeRuleResponse, sortRules, type RuleCondition, type RuleInput, type RuleSummary } from '@/helpers/rule-summaries';
 import { ensureCategoryIndex, type CategoryTree } from '@/helpers/category-tree';
 import { deriveCategoryNames } from '@/helpers/transaction-category-names';
+import { mergeCategoriesWithServer } from '@/helpers/server-category-merge';
 
 type UUID = string;
 
@@ -173,8 +174,6 @@ interface LedgerContextValue {
 }
 
 const LedgerContext = createContext<LedgerContextValue | undefined>(undefined);
-
-const COLOR_PALETTE = ['#4C6EF5', '#15AABF', '#40C057', '#FCC419', '#FF6B6B', '#7950F2', '#F06595', '#20C997'];
 
 const PIPELINE_MODE = process.env.NEXT_PUBLIC_IMPORT_PIPELINE_MODE ?? 'server';
 const USE_SERVER_PIPELINE = PIPELINE_MODE !== 'client';
@@ -385,66 +384,6 @@ const buildTransactionFromRow = (row: ParsedRow): Omit<LedgerTransaction, 'categ
 const DEFAULT_STATE: LedgerState = {
   categories: [REVIEW_MAIN_CATEGORY, REVIEW_SUB_CATEGORY],
   transactions: [],
-};
-
-const mergeCategoriesWithServer = (current: Category[], apiTransactions: ApiLedgerTransaction[]): Category[] => {
-  if (!apiTransactions.length) return current;
-
-  const next = current.map((category) => ({ ...category }));
-  const byId = new Map(next.map((category) => [category.id, category] as const));
-
-  const ensureCategory = (id: string | null, name: string | null, parentId: string | null) => {
-    if (!id || !name) return;
-    const existing = byId.get(id);
-    if (existing) {
-      const updated: Category = {
-        ...existing,
-        name: existing.name || name,
-        parentId: parentId ?? existing.parentId ?? null,
-      };
-      const index = next.findIndex((category) => category.id === id);
-      if (index >= 0) {
-        next[index] = updated;
-      }
-      byId.set(id, updated);
-      return;
-    }
-
-    const color = COLOR_PALETTE[(next.length) % COLOR_PALETTE.length];
-    const created: Category = {
-      id,
-      name,
-      parentId,
-      color,
-    };
-    next.push(created);
-    byId.set(id, created);
-  };
-
-  apiTransactions.forEach((tx) => {
-    const {
-      mainName,
-      subName,
-      suggestedMainName,
-      suggestedSubName,
-      rawMainName,
-      rawSubName,
-    } = deriveCategoryNames(tx);
-
-    const mainLabel = firstNonEmpty([mainName, suggestedMainName, rawMainName]);
-    const subLabel = firstNonEmpty([subName, suggestedSubName, rawSubName]);
-    const mainId = deriveMainCategoryId(mainLabel);
-
-    if (mainId && mainLabel) {
-      ensureCategory(mainId, mainLabel, null);
-    }
-
-    if (tx.categoryId && subLabel) {
-      ensureCategory(tx.categoryId, subLabel, mainId ?? null);
-    }
-  });
-
-  return next;
 };
 
 const sanitizeKey = (value?: string | null): string | null => {
