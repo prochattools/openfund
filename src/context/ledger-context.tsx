@@ -20,17 +20,9 @@ import { deriveCategoryNames } from '@/helpers/transaction-category-names';
 import { mergeCategoriesWithServer } from '@/helpers/server-category-merge';
 import { categorizeTransactions } from '@/helpers/offline-categorization';
 import { buildLedgerSummary, filterReviewTransactions } from '@/helpers/ledger-summary';
+import { mapLedgerMeta, mapUploadSummary, type ImportSummary, type LedgerMeta } from '@/helpers/ledger-response-mappers';
 
 type UUID = string;
-
-type LedgerMeta = {
-  id: string;
-  month: number;
-  year: number;
-  lockedAt: string | null;
-  lockedBy: string | null;
-  lockNote: string | null;
-};
 
 type ApiLedgerSummary = {
   total: number;
@@ -57,19 +49,6 @@ export interface Category {
   name: string;
   parentId: UUID | null;
   color?: string | null;
-}
-
-interface ImportSummary {
-  importedCount: number;
-  autoCategorized: number;
-  reviewCount: number;
-  message?: string;
-  duplicateCount?: number;
-  errorCount?: number;
-  totalRows?: number;
-  format?: string;
-  batchId?: string;
-  errors?: Array<{ rowNumber: number; message: string }>;
 }
 
 interface LedgerState {
@@ -184,18 +163,7 @@ export const LedgerProvider = ({ children }: { children: ReactNode }) => {
         categories: mergeCategoriesWithServer(current.categories, payload.transactions),
         transactions: mapped,
       }));
-      if (Array.isArray(payload.ledgers)) {
-        setLedgerMeta(
-          payload.ledgers.map((ledger) => ({
-            id: ledger.id,
-            month: ledger.month,
-            year: ledger.year,
-            lockedAt: ledger.lockedAt,
-            lockedBy: ledger.lockedBy,
-            lockNote: ledger.lockNote,
-          })),
-        );
-      }
+      setLedgerMeta(mapLedgerMeta(payload.ledgers));
       await refreshRules();
     } catch (error) {
       console.error('Grootboek kon niet worden vernieuwd via de API', error);
@@ -257,18 +225,7 @@ export const LedgerProvider = ({ children }: { children: ReactNode }) => {
 
         const summary = await uploadImportFile(formData);
 
-        return {
-          importedCount: summary.importedCount,
-          autoCategorized: summary.autoCategorizedCount,
-          reviewCount: summary.pendingReviewCount,
-          message: summary.message,
-          duplicateCount: summary.duplicateCount,
-          errorCount: summary.errorCount,
-          totalRows: summary.totalRows,
-          format: summary.format,
-          batchId: summary.batchId,
-          errors: summary.errors,
-        };
+        return mapUploadSummary(summary);
       }
 
       const rows = await parseCsvFile(file);

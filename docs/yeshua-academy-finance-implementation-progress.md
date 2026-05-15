@@ -4302,3 +4302,53 @@ Build/test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 90. Ledger response mapper extraction pass
+
+Started from pushed main commit:
+
+- `066999e Extract ledger summary helper`
+
+### Ledger response mapper extraction
+
+Implemented:
+
+- `src/helpers/ledger-response-mappers.ts`
+- `src/context/ledger-context.tsx`
+- `tests/helpers/ledgerResponseMappers.test.ts`
+
+Result:
+
+- Extracted server ledger metadata mapping out of the ledger context.
+- Extracted upload summary mapping out of the server import flow.
+- Ledger context now imports `mapLedgerMeta`, `mapUploadSummary`, `ImportSummary`, and `LedgerMeta` from a focused helper module.
+- Added regression tests for:
+  - ledger metadata shape normalization;
+  - ignoring unknown ledger metadata fields;
+  - empty metadata fallback for missing/invalid input;
+  - upload summary field renaming from server response to client context shape;
+  - import row error passthrough.
+- This keeps server response mapping testable while reducing inline transformation logic in the context.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Build/test result:
+
+- Server TypeScript build passed.
+- Next production build passed.
+- 41 test files passed.
+- 163 tests passed.
+- Secret scan passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
