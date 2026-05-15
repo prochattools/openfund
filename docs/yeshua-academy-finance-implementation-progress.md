@@ -3992,3 +3992,52 @@ Build/test result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+
+## 84. Transaction category-name helper extraction pass
+
+Started from pushed main commit:
+
+- `022fa24 Extract category tree helper`
+
+### Transaction category-name helper extraction
+
+Implemented:
+
+- `src/helpers/transaction-category-names.ts`
+- `src/context/ledger-context.tsx`
+- `tests/helpers/transactionCategoryNames.test.ts`
+
+Result:
+
+- Extracted transaction category-name derivation out of the large ledger context.
+- Ledger context now imports `deriveCategoryNames` from a focused helper module.
+- Added regression tests for:
+  - explicit main category preference;
+  - distinct subcategory derivation;
+  - suggested/raw category fallback order;
+  - nested subcategory labels;
+  - empty category data returning null fields.
+- This keeps API/import category name fallback behavior testable while further reducing ledger context helper bulk.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Build/test result:
+
+- Server TypeScript build passed.
+- Next production build passed.
+- 35 test files passed.
+- 141 tests passed.
+- Secret scan passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

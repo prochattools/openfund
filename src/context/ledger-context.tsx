@@ -13,10 +13,11 @@ import {
   updateCategory,
 } from '@/libs/api';
 import { resolveAccountMetadata } from '@/helpers/account-metadata';
-import { deriveMainCategoryId, distinctFrom, firstNonEmpty, splitCategoryLabel } from '@/helpers/category-labels';
+import { deriveMainCategoryId, firstNonEmpty } from '@/helpers/category-labels';
 import { normaliseDescription, parseAmount, parseDateString, sanitizeNotification } from '@/helpers/client-import-normalizers';
 import { normalizeRuleResponse, sortRules, type RuleCondition, type RuleInput, type RuleSummary } from '@/helpers/rule-summaries';
 import { ensureCategoryIndex, type CategoryTree } from '@/helpers/category-tree';
+import { deriveCategoryNames } from '@/helpers/transaction-category-names';
 
 type UUID = string;
 
@@ -90,72 +91,6 @@ export interface Category {
   parentId: UUID | null;
   color?: string | null;
 }
-
-const deriveCategoryNames = (
-  tx: Pick<
-    ApiLedgerTransaction,
-    | 'mainCategoryName'
-    | 'categoryName'
-    | 'suggestedMainCategoryName'
-    | 'suggestedSubCategoryName'
-    | 'rawMainCategoryName'
-    | 'rawCategoryName'
-  >,
-) => {
-  const fromCategory = splitCategoryLabel(tx.categoryName ?? null);
-  const fromSuggestedSub = splitCategoryLabel(tx.suggestedSubCategoryName ?? null);
-  const fromSuggestedMain = splitCategoryLabel(tx.suggestedMainCategoryName ?? null);
-  const fromRawSub = splitCategoryLabel(tx.rawCategoryName ?? null);
-  const fromRawMain = splitCategoryLabel(tx.rawMainCategoryName ?? null);
-
-  const mainCandidates = [
-    tx.mainCategoryName,
-    fromSuggestedMain.main,
-    fromRawMain.main,
-    fromCategory.main,
-    fromSuggestedSub.main,
-    fromRawSub.main,
-  ];
-
-  const mainName = firstNonEmpty(mainCandidates);
-
-  const subCandidatesPrimary = [
-    distinctFrom(fromCategory.sub, mainName),
-    distinctFrom(fromSuggestedSub.sub, mainName),
-    distinctFrom(fromRawSub.sub, mainName),
-  ];
-
-  const subName =
-    firstNonEmpty(subCandidatesPrimary) ??
-    firstNonEmpty([fromCategory.sub, fromSuggestedSub.sub, fromRawSub.sub]) ??
-    mainName ??
-    null;
-
-  const suggestedMainName = firstNonEmpty([
-    fromSuggestedMain.main,
-    fromRawMain.main,
-    mainName,
-  ]);
-
-  const suggestedSubName =
-    firstNonEmpty([
-      distinctFrom(fromSuggestedSub.sub, mainName),
-      distinctFrom(fromRawSub.sub, mainName),
-      subName,
-    ]) ?? subName ?? null;
-
-  const rawMainName = fromRawMain.main;
-  const rawSubName = distinctFrom(fromRawSub.sub, rawMainName) ?? fromRawSub.sub ?? rawMainName;
-
-  return {
-    mainName: mainName ?? null,
-    subName: subName ?? null,
-    suggestedMainName: suggestedMainName ?? null,
-    suggestedSubName: suggestedSubName ?? null,
-    rawMainName: rawMainName ?? null,
-    rawSubName: rawSubName ?? null,
-  };
-};
 
 export interface LedgerTransaction {
   id: UUID;
