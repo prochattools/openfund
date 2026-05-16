@@ -5,6 +5,32 @@ import { readListLimit } from './queryParams';
 
 export const readAuditLogLimit = readListLimit;
 
+export type AuditLogResponseInput = {
+  id: string;
+  actorId: string | null;
+  actorEmail: string | null;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  before: unknown;
+  after: unknown;
+  metadata: unknown;
+  createdAt: Date;
+};
+
+export const serializeAuditLogEntry = (log: AuditLogResponseInput) => ({
+  id: log.id,
+  actorId: log.actorId,
+  actorEmail: log.actorEmail,
+  action: log.action,
+  entityType: log.entityType,
+  entityId: log.entityId,
+  before: log.before,
+  after: log.after,
+  metadata: log.metadata,
+  createdAt: log.createdAt.toISOString(),
+});
+
 export const listAuditLogs = async (req: Request, res: Response) => {
   const { userId } = getRequestActor(req);
   const limit = readAuditLogLimit(req.query.limit);
@@ -16,20 +42,7 @@ export const listAuditLogs = async (req: Request, res: Response) => {
       take: limit,
     });
 
-    return res.json(
-      logs.map((log) => ({
-        id: log.id,
-        actorId: log.actorId,
-        actorEmail: log.actorEmail,
-        action: log.action,
-        entityType: log.entityType,
-        entityId: log.entityId,
-        before: log.before,
-        after: log.after,
-        metadata: log.metadata,
-        createdAt: log.createdAt.toISOString(),
-      })),
-    );
+    return res.json(logs.map(serializeAuditLogEntry));
   } catch (error) {
     console.error('Auditlog kon niet worden geladen', error);
     return res.status(500).json({ error: 'De auditlog kon niet worden geladen.' });

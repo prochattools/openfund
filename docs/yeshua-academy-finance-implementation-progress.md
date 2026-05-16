@@ -5552,3 +5552,48 @@ Build result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+## 73. Audit log response serializer pass
+
+Started from pushed main commit:
+
+- `c24fdae Extract import batch serializer`
+
+### Audit log response serialization
+
+Implemented:
+
+- `server/routes/audit.ts`
+- `tests/routes/audit.test.ts`
+
+Result:
+
+- Added a focused `serializeAuditLogEntry` helper for audit log API responses.
+- Reused the serializer in the audit-log list response path.
+- Preserved the existing response shape while centralizing ISO timestamp serialization.
+- Added regression coverage for actor fields, entity fields, before/after payloads, metadata, and created-at serialization.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Test result:
+
+- 50 test files passed.
+- 218 tests passed.
+
+Build result:
+
+- Prisma client generation passed during full build.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
