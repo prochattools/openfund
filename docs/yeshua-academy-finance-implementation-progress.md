@@ -5687,3 +5687,48 @@ Build result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+## 76. Ledger summary helper pass
+
+Started from pushed main commit:
+
+- `c077a8e Extract ledger snapshot serializer`
+
+### Ledger summary and signed amount extraction
+
+Implemented:
+
+- `server/routes/ledger.ts`
+- `tests/routes/ledger.test.ts`
+
+Result:
+
+- Added a focused `getSignedLedgerAmount` helper for converting transaction minor units into signed euro amounts.
+- Added a focused `buildLedgerSummary` helper for ledger summary totals, review counts, auto-categorized counts, and total amount.
+- Reused both helpers in the ledger response path while preserving the existing response shape.
+- Added regression coverage for debit/credit signed amounts, review counting, auto-categorized counting, and total amount calculation.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Test result:
+
+- 51 test files passed.
+- 223 tests passed.
+
+Build result:
+
+- Prisma client generation passed during full build.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

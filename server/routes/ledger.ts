@@ -53,6 +53,32 @@ export const serializeLedgerSnapshot = (ledger: LedgerSnapshotResponseInput) => 
   lockNote: ledger.lockNote ?? null,
 });
 
+export type LedgerSummaryTransactionInput = {
+  amountMinor: bigint | number;
+  direction: string;
+  categoryId: string | null;
+  classificationSource: string | null;
+};
+
+export const getSignedLedgerAmount = (amountMinor: bigint | number, direction: string): number => {
+  const amount = Number(amountMinor) / 100;
+  return direction === 'debit' ? -Math.abs(amount) : Math.abs(amount);
+};
+
+export const buildLedgerSummary = (transactions: LedgerSummaryTransactionInput[]) => ({
+  total: transactions.length,
+  reviewCount: transactions.filter(
+    (tx) => !tx.categoryId || tx.classificationSource === 'none' || tx.classificationSource === 'import',
+  ).length,
+  autoCategorized: transactions.filter(
+    (tx) => tx.classificationSource === 'history' || tx.classificationSource === 'rule',
+  ).length,
+  totalAmount: transactions.reduce(
+    (acc, tx) => acc + getSignedLedgerAmount(tx.amountMinor, tx.direction),
+    0,
+  ),
+});
+
 export const getLedger = async (req: Request, res: Response) => {
   const userId = req.header('x-user-id') ?? DEFAULT_USER_ID;
 
@@ -190,8 +216,7 @@ export const getLedger = async (req: Request, res: Response) => {
       const notificationDetail = extractNotificationDetail(rawRecord) ?? tx.reference ?? null;
       const counterpartyAccount = tx.counterparty ?? extractCounterpartyAccount(rawRecord) ?? null;
 
-      const amount = Number(tx.amountMinor) / 100;
-      const signedAmount = tx.direction === 'debit' ? -Math.abs(amount) : Math.abs(amount);
+      const signedAmount = getSignedLedgerAmount(tx.amountMinor, tx.direction);
 
       return {
         id: tx.id,
@@ -230,26 +255,9 @@ export const getLedger = async (req: Request, res: Response) => {
       };
     });
 
-    const reviewCount = transactions.filter(
-      (tx) => !tx.categoryId || tx.classificationSource === 'none' || tx.classificationSource === 'import',
-    ).length;
-    const autoCategorized = transactions.filter(
-      (tx) => tx.classificationSource === 'history' || tx.classificationSource === 'rule',
-    ).length;
-    const totalAmount = transactions.reduce((acc, tx) => {
-      const base = Number(tx.amountMinor) / 100;
-      const signed = tx.direction === 'debit' ? -Math.abs(base) : Math.abs(base);
-      return acc + signed;
-    }, 0);
-
     return res.json({
       transactions: payload,
-      summary: {
-        total: transactions.length,
-        reviewCount,
-        autoCategorized,
-        totalAmount,
-      },
+      summary: buildLedgerSummary(transactions),
       ledgers: ledgerSnapshots.map(serializeLedgerSnapshot),
     });
   } catch (error) {
