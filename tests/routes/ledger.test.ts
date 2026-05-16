@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildLedgerSummary,
+  buildRunningBalanceMap,
   extractCounterpartyAccount,
   extractLedgerSuggestionMetadata,
   extractNotificationDetail,
@@ -74,6 +75,25 @@ describe('ledger route helpers', () => {
       autoCategorized: 2,
       totalAmount: 115,
     });
+  });
+
+  it('builds running balances per account using opening balances and transaction order', () => {
+    const balances = buildRunningBalanceMap([
+      { id: 'late', accountId: 'acc-1', date: '2026-05-02T00:00:00.000Z', createdAt: new Date('2026-05-02T09:00:00.000Z'), amountMinor: -2500n },
+      { id: 'early', accountId: 'acc-1', date: '2026-05-01T00:00:00.000Z', createdAt: new Date('2026-05-01T09:00:00.000Z'), amountMinor: 10000n },
+      { id: 'same-day-second', accountId: 'acc-1', date: '2026-05-01T00:00:00.000Z', createdAt: new Date('2026-05-01T10:00:00.000Z'), amountMinor: -1000n },
+      { id: 'other-account', accountId: 'acc-2', date: '2026-05-01T00:00:00.000Z', createdAt: new Date('2026-05-01T09:00:00.000Z'), amountMinor: 500n },
+      { id: 'no-account', accountId: null, date: '2026-05-01T00:00:00.000Z', createdAt: new Date('2026-05-01T09:00:00.000Z'), amountMinor: 700n },
+    ], [
+      { accountId: 'acc-1', effectiveDate: new Date('2026-05-01T00:00:00.000Z'), amountMinor: 50000n },
+      { accountId: 'acc-2', effectiveDate: new Date('2026-05-01T00:00:00.000Z'), amountMinor: 1000n },
+    ]);
+
+    expect(balances.get('early')).toBe(60000n);
+    expect(balances.get('same-day-second')).toBe(59000n);
+    expect(balances.get('late')).toBe(56500n);
+    expect(balances.get('other-account')).toBe(1500n);
+    expect(balances.get('no-account')).toBe(700n);
   });
 
   it('serializes locked ledger snapshots with ISO timestamps', () => {

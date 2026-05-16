@@ -5822,3 +5822,48 @@ Build result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+## 79. Ledger running balance helper pass
+
+Started from pushed main commit:
+
+- `1a360dc Extract ledger suggestion metadata helper`
+
+### Ledger running balance extraction
+
+Implemented:
+
+- `server/routes/ledger.ts`
+- `tests/routes/ledger.test.ts`
+
+Result:
+
+- Added focused helpers for grouping ledger transactions by account and grouping opening balances by account.
+- Added a focused `buildRunningBalanceMap` helper for per-account running balance calculations.
+- Reused the helper in the ledger response path while preserving the existing response shape and ordering rules.
+- Added regression coverage for opening balances, same-day transaction ordering by `createdAt`, separate account balances, and no-account transaction balances.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Test result:
+
+- 51 test files passed.
+- 227 tests passed.
+
+Build result:
+
+- Prisma client generation passed during full build.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

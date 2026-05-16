@@ -93,6 +93,82 @@ export const buildLedgerSummary = (transactions: LedgerSummaryTransactionInput[]
   ),
 });
 
+export type LedgerRunningBalanceTransactionInput = {
+  id: string;
+  accountId: string | null;
+  date: Date | string;
+  createdAt: Date;
+  amountMinor: bigint;
+};
+
+export type LedgerOpeningBalanceInput = {
+  accountId: string;
+  effectiveDate: Date;
+  amountMinor: bigint;
+};
+
+export const groupLedgerTransactionsByAccount = <T extends { accountId: string | null }>(transactions: T[]) => {
+  const transactionsByAccount = new Map<string | null, T[]>();
+  transactions.forEach((tx) => {
+    const key = tx.accountId ?? null;
+    const list = transactionsByAccount.get(key) ?? [];
+    list.push(tx);
+    transactionsByAccount.set(key, list);
+  });
+  return transactionsByAccount;
+};
+
+export const groupOpeningBalancesByAccount = <T extends { accountId: string }>(openingBalances: T[]) =>
+  openingBalances.reduce<Record<string, T[]>>((acc, item) => {
+    if (!acc[item.accountId]) {
+      acc[item.accountId] = [];
+    }
+    acc[item.accountId].push(item);
+    return acc;
+  }, {});
+
+export const buildRunningBalanceMap = (
+  transactions: LedgerRunningBalanceTransactionInput[],
+  openingBalances: LedgerOpeningBalanceInput[],
+): Map<string, bigint> => {
+  const openingsByAccount = groupOpeningBalancesByAccount(openingBalances);
+  const transactionsByAccount = groupLedgerTransactionsByAccount(transactions);
+  const runningBalanceById = new Map<string, bigint>();
+
+  transactionsByAccount.forEach((list, accountId) => {
+    const sorted = [...list].sort((a, b) => {
+      const aTime = new Date(a.date).getTime();
+      const bTime = new Date(b.date).getTime();
+      if (aTime !== bTime) return aTime - bTime;
+      return a.createdAt.getTime() - b.createdAt.getTime();
+    });
+
+    const openings = accountId ? openingsByAccount[accountId] ?? [] : [];
+    let openingIndex = 0;
+    let currentBalance: bigint | null = null;
+
+    sorted.forEach((tx) => {
+      const txDate = new Date(tx.date);
+      while (
+        openings[openingIndex] &&
+        openings[openingIndex]!.effectiveDate.getTime() <= txDate.getTime()
+      ) {
+        currentBalance = openings[openingIndex]!.amountMinor;
+        openingIndex += 1;
+      }
+
+      if (currentBalance === null) {
+        currentBalance = 0n;
+      }
+
+      currentBalance += tx.amountMinor;
+      runningBalanceById.set(tx.id, currentBalance);
+    });
+  });
+
+  return runningBalanceById;
+};
+
 export const getLedger = async (req: Request, res: Response) => {
   const userId = req.header('x-user-id') ?? DEFAULT_USER_ID;
 
@@ -132,54 +208,7 @@ export const getLedger = async (req: Request, res: Response) => {
         })
       : [];
 
-    const openingsByAccount = openingBalances.reduce<Record<string, typeof openingBalances>>((acc, item) => {
-      if (!acc[item.accountId]) {
-        acc[item.accountId] = [];
-      }
-      acc[item.accountId].push(item);
-      return acc;
-    }, {});
-
-    const transactionsByAccount = new Map<string | null, typeof transactions>();
-    transactions.forEach((tx) => {
-      const key = tx.accountId ?? null;
-      const list = transactionsByAccount.get(key) ?? [];
-      list.push(tx);
-      transactionsByAccount.set(key, list);
-    });
-
-    const runningBalanceById = new Map<string, bigint>();
-
-    transactionsByAccount.forEach((list, accountId) => {
-      const sorted = [...list].sort((a, b) => {
-        const aTime = new Date(a.date).getTime();
-        const bTime = new Date(b.date).getTime();
-        if (aTime !== bTime) return aTime - bTime;
-        return a.createdAt.getTime() - b.createdAt.getTime();
-      });
-
-      const openings = accountId ? openingsByAccount[accountId] ?? [] : [];
-      let openingIndex = 0;
-      let currentBalance: bigint | null = null;
-
-      sorted.forEach((tx) => {
-        const txDate = new Date(tx.date);
-        while (
-          openings[openingIndex] &&
-          openings[openingIndex]!.effectiveDate.getTime() <= txDate.getTime()
-        ) {
-          currentBalance = openings[openingIndex]!.amountMinor;
-          openingIndex += 1;
-        }
-
-        if (currentBalance === null) {
-          currentBalance = 0n;
-        }
-
-        currentBalance += tx.amountMinor;
-        runningBalanceById.set(tx.id, currentBalance);
-      });
-    });
+    const runningBalanceById = buildRunningBalanceMap(transactions, openingBalances);
 
     const ledgerSnapshots = await prisma.ledger.findMany({
       where: { userId },
