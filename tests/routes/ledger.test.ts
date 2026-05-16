@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildLedgerSummary,
   extractCounterpartyAccount,
+  extractLedgerSuggestionMetadata,
   extractNotificationDetail,
   getSignedLedgerAmount,
   isPlainObject,
@@ -26,6 +27,32 @@ describe('ledger route helpers', () => {
     expect(extractCounterpartyAccount({ Counterparty: ' NL12BANK0123456789 ' })).toBe('NL12BANK0123456789');
     expect(extractCounterpartyAccount({ columns: { counterparty: ' NL99BANK ' } })).toBe('NL99BANK');
     expect(extractCounterpartyAccount({ Counterparty: '   ' })).toBeNull();
+  });
+
+  it('extracts suggestion metadata and raw category fallbacks from raw rows', () => {
+    expect(extractLedgerSuggestionMetadata({
+      mainCategoryName: 'Inkomsten',
+      categoryName: 'Giften',
+      suggestion: {
+        confidence: 0.92,
+        mainCategoryName: 'Voorgesteld hoofd',
+        categoryName: 'Voorgestelde sub',
+      },
+    })).toEqual({
+      suggestionConfidence: '0.92',
+      suggestedMainCategoryName: 'Voorgesteld hoofd',
+      suggestedSubCategoryName: 'Voorgestelde sub',
+      rawMainCategoryName: 'Inkomsten',
+      rawSubCategoryName: 'Giften',
+    });
+    expect(extractLedgerSuggestionMetadata({ suggestion: 'geen object' })).toEqual({
+      suggestionConfidence: null,
+      suggestedMainCategoryName: null,
+      suggestedSubCategoryName: null,
+      rawMainCategoryName: null,
+      rawSubCategoryName: null,
+    });
+    expect(extractLedgerSuggestionMetadata(null).rawMainCategoryName).toBeNull();
   });
 
   it('calculates signed ledger amounts from debit and credit minor units', () => {

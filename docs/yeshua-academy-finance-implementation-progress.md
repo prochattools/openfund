@@ -5777,3 +5777,48 @@ Build result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+## 78. Ledger suggestion metadata helper pass
+
+Started from pushed main commit:
+
+- `e755d81 Cover ledger raw detail helpers`
+
+### Ledger suggestion metadata extraction
+
+Implemented:
+
+- `server/routes/ledger.ts`
+- `tests/routes/ledger.test.ts`
+
+Result:
+
+- Added a focused `extractLedgerSuggestionMetadata` helper for raw transaction suggestion metadata.
+- Reused the helper in the ledger transaction response mapping.
+- Preserved the existing fallback behavior for suggested category labels and raw imported category names.
+- Added regression coverage for suggestion confidence stringification, suggested main/sub category extraction, raw category fallback extraction, non-object suggestions, and null raw rows.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Test result:
+
+- 51 test files passed.
+- 226 tests passed.
+
+Build result:
+
+- Prisma client generation passed during full build.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

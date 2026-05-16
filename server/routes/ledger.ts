@@ -35,6 +35,20 @@ export const extractCounterpartyAccount = (raw: Record<string, unknown> | null):
   return value?.trim() ? value.trim() : null;
 };
 
+export const extractLedgerSuggestionMetadata = (raw: Record<string, unknown> | null) => {
+  const rawMainCategoryName = raw && typeof raw.mainCategoryName === 'string' ? raw.mainCategoryName : null;
+  const rawSubCategoryName = raw && typeof raw.categoryName === 'string' ? raw.categoryName : null;
+  const suggestion = raw && isPlainObject(raw.suggestion) ? raw.suggestion : null;
+
+  return {
+    suggestionConfidence: suggestion?.confidence != null ? String(suggestion.confidence) : null,
+    suggestedMainCategoryName: typeof suggestion?.mainCategoryName === 'string' ? suggestion.mainCategoryName : null,
+    suggestedSubCategoryName: typeof suggestion?.categoryName === 'string' ? suggestion.categoryName : null,
+    rawMainCategoryName,
+    rawSubCategoryName,
+  };
+};
+
 export type LedgerSnapshotResponseInput = {
   id: string;
   month: number;
@@ -180,38 +194,15 @@ export const getLedger = async (req: Request, res: Response) => {
     });
 
     const payload = transactions.map((tx) => {
-      let suggestionConfidence: string | null = null;
-      let suggestedMainCategoryName: string | null = null;
-      let suggestedSubCategoryName: string | null = null;
-      let rawMainCategoryName: string | null = null;
-      let rawSubCategoryName: string | null = null;
-
       const rawValue = tx.rawRow as unknown;
-      const rawRecord = rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue)
-        ? (rawValue as Record<string, unknown>)
-        : null;
-      if (rawRecord) {
-        if (typeof rawRecord.mainCategoryName === 'string') {
-          rawMainCategoryName = rawRecord.mainCategoryName;
-        }
-        if (typeof rawRecord.categoryName === 'string') {
-          rawSubCategoryName = rawRecord.categoryName;
-        }
-        if ('suggestion' in rawRecord) {
-          const suggestion = rawRecord.suggestion as Record<string, unknown> | undefined;
-          if (suggestion && typeof suggestion === 'object') {
-            if (suggestion.confidence != null) {
-              suggestionConfidence = String(suggestion.confidence);
-            }
-            if (typeof suggestion.mainCategoryName === 'string') {
-              suggestedMainCategoryName = suggestion.mainCategoryName;
-            }
-            if (typeof suggestion.categoryName === 'string') {
-              suggestedSubCategoryName = suggestion.categoryName;
-            }
-          }
-        }
-      }
+      const rawRecord = isPlainObject(rawValue) ? rawValue : null;
+      const {
+        suggestionConfidence,
+        suggestedMainCategoryName,
+        suggestedSubCategoryName,
+        rawMainCategoryName,
+        rawSubCategoryName,
+      } = extractLedgerSuggestionMetadata(rawRecord);
 
       const notificationDetail = extractNotificationDetail(rawRecord) ?? tx.reference ?? null;
       const counterpartyAccount = tx.counterparty ?? extractCounterpartyAccount(rawRecord) ?? null;
