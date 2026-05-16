@@ -7,6 +7,41 @@ import { readListLimit } from './queryParams';
 
 export const readImportBatchLimit = readListLimit;
 
+export type ImportBatchResponseInput = {
+  id: string;
+  filename: string;
+  fileType: string | null;
+  status: string;
+  totalRows: number;
+  importedRows: number;
+  duplicateRows: number;
+  errorRows: number;
+  fileSizeBytes: number | null;
+  fileSha256: string | null;
+  originalFile: unknown;
+  autoCategorizedRows: number;
+  startedAt: Date;
+  completedAt: Date | null;
+};
+
+export const serializeImportBatchSummary = (batch: ImportBatchResponseInput) => ({
+  id: batch.id,
+  filename: batch.filename,
+  fileType: batch.fileType,
+  status: batch.status,
+  totalRows: batch.totalRows,
+  importedRows: batch.importedRows,
+  duplicateRows: batch.duplicateRows,
+  errorRows: batch.errorRows,
+  fileSizeBytes: batch.fileSizeBytes,
+  fileSha256: batch.fileSha256,
+  hasOriginalFile: Boolean(batch.originalFile),
+  autoCategorizedRows: batch.autoCategorizedRows,
+  reviewRows: Math.max(0, batch.importedRows - batch.autoCategorizedRows),
+  startedAt: batch.startedAt.toISOString(),
+  completedAt: batch.completedAt ? batch.completedAt.toISOString() : null,
+});
+
 export const listImportBatches = async (req: Request, res: Response) => {
   const { userId } = getRequestActor(req);
   const limit = readImportBatchLimit(req.query.limit);
@@ -18,25 +53,7 @@ export const listImportBatches = async (req: Request, res: Response) => {
       take: limit,
     });
 
-    return res.json(
-      batches.map((batch) => ({
-        id: batch.id,
-        filename: batch.filename,
-        fileType: batch.fileType,
-        status: batch.status,
-        totalRows: batch.totalRows,
-        importedRows: batch.importedRows,
-        duplicateRows: batch.duplicateRows,
-        errorRows: batch.errorRows,
-        fileSizeBytes: batch.fileSizeBytes,
-        fileSha256: batch.fileSha256,
-        hasOriginalFile: Boolean(batch.originalFile),
-        autoCategorizedRows: batch.autoCategorizedRows,
-        reviewRows: Math.max(0, batch.importedRows - batch.autoCategorizedRows),
-        startedAt: batch.startedAt.toISOString(),
-        completedAt: batch.completedAt ? batch.completedAt.toISOString() : null,
-      })),
-    );
+    return res.json(batches.map(serializeImportBatchSummary));
   } catch (error) {
     console.error('Import batch fetch failed', error);
     return res.status(500).json({ error: 'Importgeschiedenis kon niet worden geladen.' });

@@ -5507,3 +5507,48 @@ Build result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+## 72. Import batch response serializer pass
+
+Started from pushed main commit:
+
+- `9a1c8d6 Extract email recipient serializer`
+
+### Import batch history response serialization
+
+Implemented:
+
+- `server/routes/importBatches.ts`
+- `tests/routes/importBatches.test.ts`
+
+Result:
+
+- Added a focused `serializeImportBatchSummary` helper for import batch history API responses.
+- Reused the serializer in the import-batch list response path.
+- Preserved the existing response shape while centralizing timestamp serialization, `hasOriginalFile`, and review-row calculations.
+- Added regression coverage for ISO timestamp serialization, stored-file detection, review-row calculations, and clamping review rows at zero.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Test result:
+
+- 50 test files passed.
+- 217 tests passed.
+
+Build result:
+
+- Prisma client generation passed during full build.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
