@@ -5642,3 +5642,48 @@ Build result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+## 75. Ledger snapshot response serializer pass
+
+Started from pushed main commit:
+
+- `a627c58 Extract import upload response helper`
+
+### Ledger snapshot response serialization
+
+Implemented:
+
+- `server/routes/ledger.ts`
+- `tests/routes/ledger.test.ts`
+
+Result:
+
+- Added a focused `serializeLedgerSnapshot` helper for ledger lock metadata responses.
+- Reused the serializer in the ledger response path for monthly ledger snapshots.
+- Preserved the existing response shape while centralizing locked-at ISO timestamp serialization and null lock fields.
+- Added regression coverage for locked and unlocked ledger snapshot serialization.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Test result:
+
+- 51 test files passed.
+- 221 tests passed.
+
+Build result:
+
+- Prisma client generation passed during full build.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

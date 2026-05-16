@@ -35,6 +35,24 @@ const extractCounterpartyAccount = (raw: Record<string, unknown> | null): string
   return value?.trim() ? value.trim() : null;
 };
 
+export type LedgerSnapshotResponseInput = {
+  id: string;
+  month: number;
+  year: number;
+  lockedAt: Date | null;
+  lockedBy: string | null;
+  lockNote: string | null;
+};
+
+export const serializeLedgerSnapshot = (ledger: LedgerSnapshotResponseInput) => ({
+  id: ledger.id,
+  month: ledger.month,
+  year: ledger.year,
+  lockedAt: ledger.lockedAt ? ledger.lockedAt.toISOString() : null,
+  lockedBy: ledger.lockedBy,
+  lockNote: ledger.lockNote ?? null,
+});
+
 export const getLedger = async (req: Request, res: Response) => {
   const userId = req.header('x-user-id') ?? DEFAULT_USER_ID;
 
@@ -232,14 +250,7 @@ export const getLedger = async (req: Request, res: Response) => {
         autoCategorized,
         totalAmount,
       },
-      ledgers: ledgerSnapshots.map((ledger) => ({
-        id: ledger.id,
-        month: ledger.month,
-        year: ledger.year,
-        lockedAt: ledger.lockedAt ? ledger.lockedAt.toISOString() : null,
-        lockedBy: ledger.lockedBy,
-        lockNote: ledger.lockNote ?? null,
-      })),
+      ledgers: ledgerSnapshots.map(serializeLedgerSnapshot),
     });
   } catch (error) {
     console.error('Ledger fetch failed', error);
