@@ -3,10 +3,10 @@ import { prisma } from '../prismaClient';
 
 const DEFAULT_USER_ID = process.env.DEFAULT_USER_ID ?? 'demo-user';
 
-const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+export const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
-const readRawValue = (raw: Record<string, unknown>, key: string): string | null => {
+export const readLedgerRawValue = (raw: Record<string, unknown>, key: string): string | null => {
   const direct = raw[key];
   if (typeof direct === 'string') {
     return direct;
@@ -18,20 +18,20 @@ const readRawValue = (raw: Record<string, unknown>, key: string): string | null 
   return null;
 };
 
-const extractNotificationDetail = (raw: Record<string, unknown> | null): string | null => {
+export const extractNotificationDetail = (raw: Record<string, unknown> | null): string | null => {
   if (!raw) return null;
   const value =
-    readRawValue(raw, 'Notifications') ??
-    readRawValue(raw, 'Notification') ??
-    readRawValue(raw, 'notifications');
+    readLedgerRawValue(raw, 'Notifications') ??
+    readLedgerRawValue(raw, 'Notification') ??
+    readLedgerRawValue(raw, 'notifications');
   if (!value) return null;
   const cleaned = value.trim().replace(/^Name:\s*/i, '');
   return cleaned.length ? cleaned : null;
 };
 
-const extractCounterpartyAccount = (raw: Record<string, unknown> | null): string | null => {
+export const extractCounterpartyAccount = (raw: Record<string, unknown> | null): string | null => {
   if (!raw) return null;
-  const value = readRawValue(raw, 'Counterparty') ?? readRawValue(raw, 'counterparty');
+  const value = readLedgerRawValue(raw, 'Counterparty') ?? readLedgerRawValue(raw, 'counterparty');
   return value?.trim() ? value.trim() : null;
 };
 

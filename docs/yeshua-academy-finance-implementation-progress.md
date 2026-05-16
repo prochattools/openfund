@@ -5732,3 +5732,48 @@ Build result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+## 77. Ledger raw detail helper coverage pass
+
+Started from pushed main commit:
+
+- `3e234e9 Extract ledger summary helpers`
+
+### Ledger raw ING detail extraction coverage
+
+Implemented:
+
+- `server/routes/ledger.ts`
+- `tests/routes/ledger.test.ts`
+
+Result:
+
+- Exported the focused ledger raw-row helpers for plain object detection, direct/column raw value reading, notification detail extraction, and counterparty account extraction.
+- Preserved existing ledger response behavior for notification details and counterparty account fallbacks.
+- Added regression coverage for direct raw values, nested `columns` values, cleaned `Name:` notification prefixes, blank values, and trimmed counterparty accounts.
+- Kept the ledger route implementation behavior unchanged while making the ING raw detail extraction rules test-protected.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Test result:
+
+- 51 test files passed.
+- 225 tests passed.
+
+Build result:
+
+- Prisma client generation passed during full build.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

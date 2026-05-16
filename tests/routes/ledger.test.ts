@@ -1,7 +1,33 @@
 import { describe, expect, it } from 'vitest';
-import { buildLedgerSummary, getSignedLedgerAmount, serializeLedgerSnapshot } from '../../server/routes/ledger';
+import {
+  buildLedgerSummary,
+  extractCounterpartyAccount,
+  extractNotificationDetail,
+  getSignedLedgerAmount,
+  isPlainObject,
+  readLedgerRawValue,
+  serializeLedgerSnapshot,
+} from '../../server/routes/ledger';
 
 describe('ledger route helpers', () => {
+  it('detects plain objects and reads raw ING values from direct and column fields', () => {
+    expect(isPlainObject({})).toBe(true);
+    expect(isPlainObject(null)).toBe(false);
+    expect(isPlainObject([])).toBe(false);
+    expect(readLedgerRawValue({ Notifications: 'Direct detail' }, 'Notifications')).toBe('Direct detail');
+    expect(readLedgerRawValue({ columns: { Notifications: 'Column detail' } }, 'Notifications')).toBe('Column detail');
+    expect(readLedgerRawValue({ columns: { Notifications: 123 } }, 'Notifications')).toBeNull();
+  });
+
+  it('extracts cleaned notification details and counterparty accounts from raw rows', () => {
+    expect(extractNotificationDetail({ Notifications: 'Name: Yeshua Academy gift' })).toBe('Yeshua Academy gift');
+    expect(extractNotificationDetail({ Notification: '  ' })).toBeNull();
+    expect(extractNotificationDetail({ columns: { notifications: 'Column notification' } })).toBe('Column notification');
+    expect(extractCounterpartyAccount({ Counterparty: ' NL12BANK0123456789 ' })).toBe('NL12BANK0123456789');
+    expect(extractCounterpartyAccount({ columns: { counterparty: ' NL99BANK ' } })).toBe('NL99BANK');
+    expect(extractCounterpartyAccount({ Counterparty: '   ' })).toBeNull();
+  });
+
   it('calculates signed ledger amounts from debit and credit minor units', () => {
     expect(getSignedLedgerAmount(12345n, 'credit')).toBe(123.45);
     expect(getSignedLedgerAmount(12345n, 'debit')).toBe(-123.45);
