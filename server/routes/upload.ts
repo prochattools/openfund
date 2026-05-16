@@ -41,6 +41,19 @@ const getDutchErrorMessage = (error: unknown): string => {
   return 'De import is niet gelukt. Controleer het bestand en probeer het opnieuw.';
 };
 
+export type ImportUploadResponseSummary = {
+  importedCount: number;
+  duplicateCount: number;
+  errorCount: number;
+  autoCategorizedCount: number;
+  pendingReviewCount: number;
+};
+
+export const buildImportUploadResponse = <T extends ImportUploadResponseSummary>(summary: T): T & { message: string } => ({
+  ...summary,
+  message: buildImportMessage(summary),
+});
+
 export const handleImportUpload = async (req: Request, res: Response) => {
   const actor = requireAdmin(req, res);
   if (!actor) {
@@ -74,10 +87,7 @@ export const handleImportUpload = async (req: Request, res: Response) => {
       userId,
     });
 
-    return res.json({
-      ...summary,
-      message: buildImportMessage(summary),
-    });
+    return res.json(buildImportUploadResponse(summary));
   } catch (error) {
     console.error('Import upload kon niet worden verwerkt', error);
     const message = getDutchErrorMessage(error);

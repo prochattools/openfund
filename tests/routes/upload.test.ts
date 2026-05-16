@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildImportMessage, isAllowedUpload } from '../../server/routes/upload';
+import { buildImportMessage, buildImportUploadResponse, isAllowedUpload } from '../../server/routes/upload';
 
 describe('upload route import message', () => {
   it('builds a complete Dutch success message with all counters', () => {
@@ -40,6 +40,27 @@ describe('upload route import message', () => {
     });
 
     expect(message).toBe('Import voltooid. 0 transacties toegevoegd.');
+  });
+
+  it('builds upload success responses with the Dutch summary message', () => {
+    expect(buildImportUploadResponse({
+      filename: 'mei.csv',
+      importedCount: 2,
+      autoCategorizedCount: 1,
+      pendingReviewCount: 1,
+      duplicateCount: 0,
+      errorCount: 0,
+      batchId: 'batch-1',
+    })).toEqual({
+      filename: 'mei.csv',
+      importedCount: 2,
+      autoCategorizedCount: 1,
+      pendingReviewCount: 1,
+      duplicateCount: 0,
+      errorCount: 0,
+      batchId: 'batch-1',
+      message: 'Import voltooid. 2 transacties toegevoegd. 1 transactie automatisch gecategoriseerd. 1 transactie staat klaar om te beoordelen.',
+    });
   });
 
   it('allows ING CSV and Excel uploads by extension or MIME type', () => {

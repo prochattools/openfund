@@ -5597,3 +5597,48 @@ Build result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+## 74. Import upload response helper pass
+
+Started from pushed main commit:
+
+- `2eaf84c Extract audit log serializer`
+
+### Import upload success response serialization
+
+Implemented:
+
+- `server/routes/upload.ts`
+- `tests/routes/upload.test.ts`
+
+Result:
+
+- Added a focused `buildImportUploadResponse` helper for import upload success responses.
+- Reused the helper in the upload route so the response shape and Dutch summary message are assembled in one tested place.
+- Preserved all existing summary fields while appending the existing Dutch import message.
+- Added regression coverage proving extra summary fields such as `filename` and `batchId` are preserved alongside the generated message.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Test result:
+
+- 50 test files passed.
+- 219 tests passed.
+
+Build result:
+
+- Prisma client generation passed during full build.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.
