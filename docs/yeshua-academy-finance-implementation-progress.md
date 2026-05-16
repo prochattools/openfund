@@ -5867,3 +5867,48 @@ Build result:
 Known warning still present:
 
 - Next reports missing SWC lockfile metadata. Build passes.
+
+## 80. Ledger account and running balance formatting helper pass
+
+Started from pushed main commit:
+
+- `c4e5240 Extract ledger running balance helpers`
+
+### Ledger account lookup and running balance response formatting
+
+Implemented:
+
+- `server/routes/ledger.ts`
+- `tests/routes/ledger.test.ts`
+
+Result:
+
+- Added a focused `getLedgerAccountIds` helper for extracting unique non-null account IDs before opening-balance lookup.
+- Added focused `formatRunningBalanceMinor` and `formatRunningBalanceAmount` helpers for ledger transaction response fields.
+- Reused the helpers in the ledger response path while preserving existing response shape and null behavior.
+- Added regression coverage for duplicate/missing account IDs and running-balance minor/euro formatting.
+
+### Validation
+
+Successful:
+
+```bash
+npm test
+npm run build:server
+npm run build
+```
+
+Test result:
+
+- 51 test files passed.
+- 229 tests passed.
+
+Build result:
+
+- Prisma client generation passed during full build.
+- Server TypeScript build passed.
+- Next production build passed.
+
+Known warning still present:
+
+- Next reports missing SWC lockfile metadata. Build passes.

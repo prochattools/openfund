@@ -5,6 +5,9 @@ import {
   extractCounterpartyAccount,
   extractLedgerSuggestionMetadata,
   extractNotificationDetail,
+  formatRunningBalanceAmount,
+  formatRunningBalanceMinor,
+  getLedgerAccountIds,
   getSignedLedgerAmount,
   isPlainObject,
   readLedgerRawValue,
@@ -61,6 +64,22 @@ describe('ledger route helpers', () => {
     expect(getSignedLedgerAmount(12345n, 'debit')).toBe(-123.45);
     expect(getSignedLedgerAmount(-12345n, 'debit')).toBe(-123.45);
     expect(getSignedLedgerAmount(-12345n, 'credit')).toBe(123.45);
+  });
+
+  it('extracts unique ledger account IDs and ignores missing account IDs', () => {
+    expect(getLedgerAccountIds([
+      { accountId: 'acc-1' },
+      { accountId: null },
+      { accountId: 'acc-2' },
+      { accountId: 'acc-1' },
+    ])).toEqual(['acc-1', 'acc-2']);
+  });
+
+  it('formats running balance response values from minor units', () => {
+    expect(formatRunningBalanceMinor(12345n)).toBe('12345');
+    expect(formatRunningBalanceMinor(undefined)).toBeNull();
+    expect(formatRunningBalanceAmount(12345n)).toBe(123.45);
+    expect(formatRunningBalanceAmount(undefined)).toBeNull();
   });
 
   it('builds ledger summary counts and total amount', () => {

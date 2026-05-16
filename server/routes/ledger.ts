@@ -93,9 +93,12 @@ export const buildLedgerSummary = (transactions: LedgerSummaryTransactionInput[]
   ),
 });
 
-export type LedgerRunningBalanceTransactionInput = {
-  id: string;
+export type LedgerAccountTransactionInput = {
   accountId: string | null;
+};
+
+export type LedgerRunningBalanceTransactionInput = LedgerAccountTransactionInput & {
+  id: string;
   date: Date | string;
   createdAt: Date;
   amountMinor: bigint;
@@ -106,6 +109,15 @@ export type LedgerOpeningBalanceInput = {
   effectiveDate: Date;
   amountMinor: bigint;
 };
+
+export const getLedgerAccountIds = (transactions: LedgerAccountTransactionInput[]): string[] =>
+  Array.from(new Set(transactions.map((tx) => tx.accountId).filter((value): value is string => Boolean(value))));
+
+export const formatRunningBalanceMinor = (value: bigint | undefined): string | null =>
+  value?.toString() ?? null;
+
+export const formatRunningBalanceAmount = (value: bigint | undefined): number | null =>
+  value == null ? null : Number(value) / 100;
 
 export const groupLedgerTransactionsByAccount = <T extends { accountId: string | null }>(transactions: T[]) => {
   const transactionsByAccount = new Map<string | null, T[]>();
@@ -191,9 +203,7 @@ export const getLedger = async (req: Request, res: Response) => {
       },
     });
 
-    const accountIds = Array.from(
-      new Set(transactions.map((tx) => tx.accountId).filter((value): value is string => Boolean(value))),
-    );
+    const accountIds = getLedgerAccountIds(transactions);
 
     const openingBalances = accountIds.length
       ? await prisma.openingBalance.findMany({
@@ -257,10 +267,8 @@ export const getLedger = async (req: Request, res: Response) => {
         ledgerMonth: tx.ledger?.month ?? null,
         ledgerYear: tx.ledger?.year ?? null,
         createdAt: tx.createdAt,
-        runningBalanceMinor: runningBalanceById.get(tx.id)?.toString() ?? null,
-        runningBalance: runningBalanceById.has(tx.id)
-          ? Number(runningBalanceById.get(tx.id)) / 100
-          : null,
+        runningBalanceMinor: formatRunningBalanceMinor(runningBalanceById.get(tx.id)),
+        runningBalance: formatRunningBalanceAmount(runningBalanceById.get(tx.id)),
         classificationSource: tx.classificationSource,
         classificationRuleId: tx.classificationRuleId,
         classificationRuleLabel: tx.classificationRule?.label ?? null,
