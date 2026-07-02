@@ -4,7 +4,7 @@ Date: 2026-07-02
 Run: `agent-f961650b-de17-4282-ab18-7a716cc72958`  
 Source: `yeshuaacademy-finance`  
 Branch: `main`  
-Status: governance aligned; Phase 1 validated; awaiting explicit owner commit approval
+Status: Phase 1 committed as `925a609`; MODEL-001 approved; four documentation files authorized for commit
 
 ## Authoritative document hierarchy
 
@@ -385,7 +385,7 @@ No phase is complete if a cent differs, a source row is lost, an ambiguous item 
 
 ## Phase 1 implementation checkpoint
 
-Status: validated, not committed.
+Status: validated and committed.
 
 Completed behavior:
 
@@ -410,8 +410,45 @@ Final validation evidence:
 7. The combined scan reported six expected documentation-only matches for the word `upload`; these describe the legitimate ING import workflow and are not executable upload/network behavior.
 8. Diff review confirmed no financial source files, secrets, `.env` files, Prisma migration, dependency, Docker, or production-configuration changes.
 
-No financial data was imported. `docker-compose.yml` and production configuration remain untouched. No commit was created.
+Commit evidence:
+
+- Commit: `925a609`
+- Message: `fix: make finance categorization review-safe`
+- Scope: 21 explicit governance and Phase 1 paths
+- Excluded: `.graphifyignore`, `graphify-out/`, financial source files, Docker, dependencies, Prisma migrations, and production configuration
+
+No financial data was imported. `docker-compose.yml` and production configuration remain untouched.
+
+## MODEL-001 domain proposal checkpoint
+
+Status: approved after owner review; documentation only; not committed; authorized for focused commit.
+
+Initial evidence:
+
+- Created `docs/DOMAIN_MODEL.md`.
+- Inspected the current Prisma schema, review API, import-file retention, reconciliation, reporting, email, and audit contracts.
+- Defined exact entities, fields, relationships, aggregate boundaries, constraints, and migration ordering for `Klant`, `Type`, `Category`, source files, bank statements, immutable transactions, final bookings, suggestions, review decisions, deterministic rules, reconciliation, versioned closes, report snapshots, HTML/XLSX/PDF artifacts, approvals, dispatches, recipients, and roles.
+- Preserved exact historical labels and the three required reporting dimensions.
+- Kept suggestions separate from final bookings and removed broad review-queue acceptance from the target design.
+
+Owner review findings resolved:
+
+1. Chose one amount convention: `amountMinor` is always non-negative absolute euro cents and `direction` alone determines cash-flow sign.
+2. Added `FinanceWorkspace` and `WorkspaceMembership` so financial ownership is stable and separate from human actor identity and roles; dimensions, files, accounts, statements, transactions, ledgers, rules, reports, recipients, and audit scope belong to the workspace.
+3. Added exact `HISTORICAL` booking provenance through `historicalSourceTransactionId`, `historicalMatchKey`, immutable evidence, and `evidenceHash`.
+4. Added monthly `StatementPeriod` boundaries and period-scoped reconciliation so multi-month sources cannot authorize the wrong close; July 2026 remains partial and uncloseable.
+5. Added `ReportLineKind` field rules and an application-level requirement for exactly one HTML, XLSX, and PDF artifact before approval.
+6. Updated future migration ordering so workspace separation, exact provenance, and period backfills precede removal of legacy fields.
+
+No Prisma schema, migration, financial import, Docker, dependency, or production change was made.
+
+Final revised validation:
+
+- Secret-material scan over the four MODEL-001 documents: no findings.
+- Runtime-execution scan over the four MODEL-001 documents: no findings.
+- Final diff review confirmed the intended scope is `docs/DOMAIN_MODEL.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/ROADMAP.md`, and this handoff only.
+- `.graphifyignore` and `graphify-out/` remain unrelated, unmodified, and excluded.
 
 ## Current next task
 
-Owner review is required before `SAFE-009`. If the owner explicitly approves a commit, stage only the intended governance and Phase 1 paths, commit them with a focused message, and record the commit hash. After that gate, begin `MODEL-001` by documenting the exact proposed financial domain entities and invariants without changing the Prisma schema.
+Commit only the four approved MODEL-001 documentation files: `docs/DOMAIN_MODEL.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/ROADMAP.md`, and `docs/finance-rebuild-run.md`. Exclude `.graphifyignore` and `graphify-out/`. Record the commit hash before preparing MODEL-002. Do not modify `prisma/schema.prisma` or create a migration during the documentation commit.

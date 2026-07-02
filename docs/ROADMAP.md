@@ -17,7 +17,7 @@ Execution detail: `docs/IMPLEMENTATION_PLAN.md`
 ```text
 Phase 0 — Governance and verified controls       COMPLETE
 Phase 1 — Safe categorization foundation         COMPLETE
-Phase 2 — Financial domain and historical model  PLANNED
+Phase 2 — Financial domain and historical model  IN PROGRESS
 Phase 3 — Historical loading and truth fixtures  PLANNED
 Phase 4 — Monthly import and review workflow     PLANNED
 Phase 5 — Reconciliation, close, and snapshots   PLANNED
@@ -57,7 +57,7 @@ Status: **complete**
 
 ## Phase 1 — Safe categorization foundation
 
-Status: **complete; validated, awaiting owner approval before commit**
+Status: **complete; validated and committed as `925a609`**
 
 ### Outcomes
 
@@ -71,7 +71,7 @@ Status: **complete; validated, awaiting owner approval before commit**
 
 ### Current state
 
-Implemented and validated in the worktree. All 229 tests pass, the server and production builds pass, and executable/test paths pass the full high-risk security scan. Documentation scans contain no secret-material or runtime-execution findings. No commit has been created.
+Implemented, validated, and committed as `925a609` (`fix: make finance categorization review-safe`). All 229 tests passed, the server and production builds passed, and executable/test paths passed the full high-risk security scan. Documentation scans contained no secret-material or runtime-execution findings.
 
 ### Exit criteria
 
@@ -84,7 +84,7 @@ Implemented and validated in the worktree. All 229 tests pass, the server and pr
 
 ## Phase 2 — Financial domain and historical model
 
-Status: **planned**
+Status: **in progress; MODEL-001 approved, awaiting its documentation commit before MODEL-002**
 
 ### Outcomes
 
@@ -98,6 +98,17 @@ Status: **planned**
 ### Important design constraint
 
 Schema changes must be derived from verified workflow needs. Do not create a generic accounting schema or speculative abstraction layer.
+
+### Current checkpoint
+
+- `docs/DOMAIN_MODEL.md` is approved and defines the accepted entities, fields, relationships, invariants, and migration order.
+- MODEL-001 is complete as documentation only.
+- The approved proposal fixes the amount convention, separates workspace ownership from actors, records exact historical replay provenance, scopes reconciliation and close to exact statement periods, and adds an explicit report-line discriminator.
+- July 2026 remains partial and cannot authorize a monthly close.
+- `prisma/schema.prisma` is unchanged.
+- No migration, financial import, Docker, dependency, or production configuration change has been made.
+- The four approved MODEL-001 documentation files may be committed; `.graphifyignore` and `graphify-out/` remain excluded.
+- MODEL-002 may begin only after that documentation commit checkpoint is recorded.
 
 ### Exit criteria
 

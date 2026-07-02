@@ -42,7 +42,9 @@ Governance documentation: complete
 Phase 1 implementation: complete
 Phase 1 validation: 229 tests passed; server and production builds passed
 Security review: executable/test paths clean; documentation scans clean
-Current gate: SAFE-009 requires explicit owner commit approval
+Phase 1 commit: 925a609 fix: make finance categorization review-safe
+MODEL-001 domain proposal: approved after review; schema unchanged
+Current gate: commit the four approved MODEL-001 documentation files before MODEL-002
 ```
 
 ## Phase 0 — Governance and discovery
@@ -335,26 +337,41 @@ Acceptance:
 
 ### SAFE-009 — Owner review and optional commit
 
-Status: `BLOCKED`
+Status: `DONE`
 
-Blocker: owner must explicitly approve a commit after reviewing validation evidence.
+Commit:
 
-Actions after approval:
-
-1. Stage only the explicitly listed changed paths.
-2. Commit with a focused message.
-3. Record commit hash and message in the handoff and implementation plan.
+- Hash: `925a609`
+- Message: `fix: make finance categorization review-safe`
+- Scope: 21 explicit governance and Phase 1 paths
+- Excluded: `.graphifyignore`, `graphify-out/`, financial source files, Docker, dependencies, Prisma migrations, and production configuration
 
 ## Phase 2 — Financial domain model
 
 ### MODEL-001 — Specify exact domain entities and invariants
 
-Status: `TODO`
+Status: `DONE`
 
-Dependencies: SAFE-009, or an explicit owner instruction to proceed without committing Phase 1
+Dependencies: SAFE-009
+
+Approval:
+
+- Final owner approval granted after full review of revised `docs/DOMAIN_MODEL.md`.
+- The four MODEL-001 documentation files are authorized for a focused commit.
+- `.graphifyignore` and `graphify-out/` remain excluded.
+- MODEL-002 may begin only after the documentation commit checkpoint is recorded.
+
+Review revisions resolved:
+
+- non-negative `amountMinor` with sign determined only by explicit direction;
+- shared `FinanceWorkspace` ownership separated from human users, memberships, roles, and actor evidence;
+- exact historical replay provenance on every `HISTORICAL` automatic booking;
+- account- and period-scoped statement reconciliation with partial July 2026 unable to close;
+- explicit report-line discriminator and application-level HTML/XLSX/PDF completeness.
 
 Files:
 
+- `docs/DOMAIN_MODEL.md`
 - `docs/IMPLEMENTATION_PLAN.md`
 - `docs/finance-rebuild-run.md`
 - `prisma/schema.prisma` for inspection only
@@ -371,7 +388,11 @@ Acceptance:
 
 Validation:
 
-- Documentation review only; no schema write in this task.
+- Reviewed `docs/DOMAIN_MODEL.md` against the current Prisma schema and the review, import-file, reconciliation, reporting, email, and audit contracts.
+- Final secret-material scan after the owner-review revisions: no findings.
+- Final runtime-execution scan after the owner-review revisions: no findings.
+- Final documentation diff reviewed; only `docs/DOMAIN_MODEL.md`, this plan, the roadmap, and the rebuild handoff changed.
+- `prisma/schema.prisma` remains unchanged; no migration or implementation write occurred.
 
 ### MODEL-002 — Implement explicit `Klant`, `Type`, and `Category` model
 
@@ -771,8 +792,8 @@ Acceptance:
 
 ## Exact next execution sequence
 
-1. Owner reviews the governance documents, Phase 1 diff, and validation evidence.
-2. If the owner explicitly approves a commit, execute SAFE-009 using only the intended paths.
-3. Record the commit hash in this plan and `docs/finance-rebuild-run.md`.
-4. Begin MODEL-001 as a documentation-only schema proposal; do not change Prisma until the owner approves that proposal.
-5. If the owner requests revisions instead, update the named task and rerun its required validation before committing.
+1. Stage only `docs/DOMAIN_MODEL.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/ROADMAP.md`, and `docs/finance-rebuild-run.md`.
+2. Exclude `.graphifyignore`, `graphify-out/`, and every code, schema, migration, financial-source, Docker, dependency, and production-configuration path.
+3. Commit the four approved MODEL-001 documentation files with a focused message.
+4. Record the commit hash in this plan and `docs/finance-rebuild-run.md`.
+5. After the documentation checkpoint is recorded, prepare MODEL-002 as a bounded schema implementation task; do not modify Prisma during the documentation commit.
