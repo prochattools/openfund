@@ -181,6 +181,7 @@ export type BuildNormalizedOptions = {
   date: unknown;
   description: unknown;
   counterparty?: unknown;
+  paymentPurpose?: unknown;
   amount: unknown;
   debitCredit?: unknown;
   reference?: unknown;
@@ -196,6 +197,7 @@ export const buildNormalizedTransaction = ({
   date,
   description,
   counterparty,
+  paymentPurpose,
   amount,
   debitCredit,
   reference,
@@ -228,6 +230,11 @@ export const buildNormalizedTransaction = ({
     return { error: 'Description could not be normalized', rowNumber };
   }
 
+  const paymentPurposeText = ensureString(paymentPurpose);
+  const normalizedPaymentPurpose = paymentPurposeText
+    ? normalizeDescription(paymentPurposeText)
+    : '';
+
   return {
     rowNumber,
     result: {
@@ -237,6 +244,8 @@ export const buildNormalizedTransaction = ({
       date: parsedDate,
       description: normalizeWhitespace(descriptionText),
       counterparty: normalizeCounterparty(ensureString(counterparty)),
+      paymentPurpose: paymentPurposeText ? normalizeWhitespace(paymentPurposeText) : null,
+      normalizedPaymentPurpose,
       amountMinor,
       reference: normalizeCounterparty(ensureString(reference)),
       normalizedDescription,

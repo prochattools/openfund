@@ -7,6 +7,8 @@ export interface NormalizedTransaction {
   date: Date;
   description: string;
   counterparty: string | null;
+  paymentPurpose: string | null;
+  normalizedPaymentPurpose: string;
   amountMinor: bigint;
   reference: string | null;
   normalizedDescription: string;

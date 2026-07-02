@@ -20,10 +20,15 @@ type StoredTransaction = {
   hash: string;
   importFingerprint: string | null;
   amountMinor: bigint;
+  direction: 'credit' | 'debit';
   source: string;
   sourceFile?: string | null;
+  description: string;
+  counterparty?: string | null;
+  reference?: string | null;
   normalizedKey: string;
   date: Date;
+  createdAt: Date;
   categoryId: string | null;
   accountId?: string | null;
   rawRow?: Record<string, unknown> | null;
@@ -191,10 +196,15 @@ class FakePrismaClient {
               hash: entry.hash,
               importFingerprint: entry.importFingerprint ?? null,
               amountMinor: BigInt(entry.amountMinor),
+              direction: entry.direction,
               source: entry.source,
               sourceFile: entry.sourceFile ?? null,
+              description: entry.description,
+              counterparty: entry.counterparty ?? null,
+              reference: entry.reference ?? null,
               normalizedKey: entry.normalizedKey,
               date: entry.date instanceof Date ? entry.date : new Date(entry.date),
+              createdAt: entry.createdAt instanceof Date ? entry.createdAt : new Date(entry.createdAt),
               categoryId: entry.categoryId ?? null,
               accountId: entry.accountId ?? null,
               rawRow: entry.rawRow ?? null,
@@ -451,19 +461,20 @@ describe('import pipeline integration', () => {
     template!.classificationSource = 'manual';
     template!.categoryId = 'cat-history';
 
-    const columns = (template!.rawRow as Record<string, any>).columns ?? {};
+    const raw = template!.rawRow as Record<string, any>;
+    const columns = raw.columns ?? {};
     const accountRecord = prisma.accounts.find((acct) => acct.id === template!.accountId);
-    const accountIdentifier = columns.Account ?? accountRecord?.identifier ?? '';
+    const accountIdentifier = raw.Account ?? columns.Account ?? accountRecord?.identifier ?? '';
     const templateDirection = (template!.direction ?? 'credit').toLowerCase();
     const isDebit = templateDirection === 'debit';
     const absoluteMinor = template!.amountMinor < 0n ? template!.amountMinor * -1n : template!.amountMinor;
-    const description = columns['Name / Description'] ?? template!.description ?? '';
-    const counterparty = columns.Counterparty ?? '';
-    const code = columns.Code ?? '';
-    const debitCredit = columns['Debit/credit'] ?? (isDebit ? 'Debit' : 'Credit');
-    const amount = columns['Amount (EUR)'] ?? String(Number(absoluteMinor) / 100);
-    const transactionType = columns['Transaction type'] ?? 'Online Banking';
-    const notifications = columns.Notifications ?? '';
+    const description = raw['Name / Description'] ?? columns['Name / Description'] ?? template!.description ?? '';
+    const counterparty = raw.Counterparty ?? columns.Counterparty ?? '';
+    const code = raw.Code ?? columns.Code ?? '';
+    const debitCredit = raw['Debit/credit'] ?? columns['Debit/credit'] ?? (isDebit ? 'Debit' : 'Credit');
+    const amount = raw['Amount (EUR)'] ?? columns['Amount (EUR)'] ?? String(Number(absoluteMinor) / 100);
+    const transactionType = raw['Transaction type'] ?? columns['Transaction type'] ?? 'Online Banking';
+    const notifications = raw.Notifications ?? raw.Notification ?? columns.Notifications ?? '';
 
     const amountMinorNormalized = BigInt(Math.round(Number(String(amount).replace(',', '.')) * 100));
 
@@ -520,7 +531,57 @@ describe('import pipeline integration', () => {
     expect(suggestion?.confidence).not.toBe('review');
   });
 
-  it('suggests history-based categories when only account and counterparty match', async () => {
+  it('keeps normalized exact fallback matches in review when raw payment purpose differs', async () => {
+    prisma.categories.push({ id: 'cat-history', name: 'Inkomsten — Tienden' });
+    await runImport('seed.csv');
+    const template =
+      prisma.transactions.find(
+        (tx) => typeof tx.rawRow === 'object' && tx.rawRow !== null && (tx.rawRow as Record<string, any>).columns?.Counterparty,
+      ) ?? prisma.transactions[0];
+    expect(template).toBeTruthy();
+    template!.classificationSource = 'manual';
+    template!.categoryId = 'cat-history';
+
+    const raw = template!.rawRow as Record<string, any>;
+    const columns = raw.columns ?? {};
+    const accountRecord = prisma.accounts.find((acct) => acct.id === template!.accountId);
+    const accountIdentifier = raw.Account ?? columns.Account ?? accountRecord?.identifier ?? '';
+    const templateDirection = (template!.direction ?? 'credit').toLowerCase();
+    const isDebit = templateDirection === 'debit';
+    const absoluteMinor = template!.amountMinor < 0n ? template!.amountMinor * -1n : template!.amountMinor;
+    const description = raw['Name / Description'] ?? columns['Name / Description'] ?? template!.description ?? '';
+    const counterparty = raw.Counterparty ?? columns.Counterparty ?? '';
+    const code = raw.Code ?? columns.Code ?? '';
+    const debitCredit = raw['Debit/credit'] ?? columns['Debit/credit'] ?? (isDebit ? 'Debit' : 'Credit');
+    const amount = raw['Amount (EUR)'] ?? columns['Amount (EUR)'] ?? String(Number(absoluteMinor) / 100);
+    const transactionType = raw['Transaction type'] ?? columns['Transaction type'] ?? 'Online Banking';
+    const originalNotifications = raw.Notifications ?? raw.Notification ?? columns.Notifications ?? '';
+    const changedNotifications = `${originalNotifications} andere bestemming`.trim();
+
+    const csvContent = [
+      'Account;Name / Description;Counterparty;Code;Date;Debit/credit;Amount (EUR);Transaction type;Notifications',
+      `${accountIdentifier};${description};${counterparty};${code};02-11-2025;${debitCredit};${amount};${transactionType};"${changedNotifications}"`,
+    ].join('\n');
+
+    const summary = await processImportBufferWithClient(prisma as any, {
+      buffer: Buffer.from(csvContent, 'utf-8'),
+      filename: 'normalized-exact-review.csv',
+      userId: 'demo-user',
+    });
+
+    expect(summary.importedCount).toBe(1);
+    expect(summary.autoCategorizedCount).toBe(0);
+    expect(summary.pendingReviewCount).toBe(1);
+    const inserted = prisma.transactions.find((tx) => tx.sourceFile === 'normalized-exact-review.csv');
+    expect(inserted).toBeTruthy();
+    expect(inserted?.categoryId).not.toBe('cat-history');
+    expect(inserted?.classificationSource).toBe('import');
+    const suggestion = (inserted?.rawRow as Record<string, any>)?.suggestion;
+    expect(suggestion?.confidence).toBe('exact');
+    expect(suggestion?.categoryId).toBe('cat-history');
+  });
+
+  it('keeps fuzzy history-based categories in review when only account and counterparty match', async () => {
     prisma.categories.push({ id: 'cat-history', name: 'Inkomsten — Tienden' });
     await runImport('seed.csv');
     const template =
@@ -555,11 +616,15 @@ describe('import pipeline integration', () => {
     });
 
     expect(summary.importedCount).toBe(1);
+    expect(summary.autoCategorizedCount).toBe(0);
+    expect(summary.pendingReviewCount).toBe(1);
     const inserted = prisma.transactions.find((tx) => tx.sourceFile === 'history-guess.csv');
     expect(inserted).toBeTruthy();
-    expect(inserted?.categoryId).toBe('cat-history');
+    expect(inserted?.categoryId).not.toBe('cat-history');
+    expect(inserted?.classificationSource).toBe('import');
     const suggestion = (inserted?.rawRow as Record<string, any>)?.suggestion;
-    expect(suggestion?.confidence).toBe('fuzzy');
+    expect(suggestion?.confidence).toBe('overall');
+    expect(suggestion?.categoryId).toBe('cat-history');
     expect(suggestion?.categoryName).toBe('Tienden');
   });
 

@@ -55,6 +55,7 @@ describe('review page helpers', () => {
 
   it('detects review placeholder categories', () => {
     expect(isReviewPlaceholderCategory({ id: 'cat-review', name: 'Iets', parentId: null })).toBe(true);
+    expect(isReviewPlaceholderCategory({ id: 'x', name: 'Beoordeling nodig', parentId: null })).toBe(true);
     expect(isReviewPlaceholderCategory({ id: 'x', name: 'Needs manual categorization', parentId: null })).toBe(true);
     expect(isReviewPlaceholderCategory({ id: 'cat-gifts', name: 'Giften', parentId: null })).toBe(false);
   });

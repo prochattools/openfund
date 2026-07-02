@@ -6,6 +6,7 @@ const baseContext = {
   description: 'Hr MPH Likkel, Mw DD Likkel-Koning',
   normalizedDescription: 'hr mph likkel, mw dd likkel-koning',
   counterparty: 'NL00INGB0123456789',
+  paymentPurpose: 'Maandelijkse vergoeding voor kerkelijke werkzaamheden',
   reference: 'Payment reference',
   source: 'ING',
   amountMinor: 200000n,
@@ -38,6 +39,21 @@ describe('rule engine', () => {
     });
 
     expect(matchesRule(rule, baseContext)).toBe(true);
+  });
+
+  it('matches combined counterparty and payment-purpose conditions', () => {
+    const rule = makeRule({
+      conditions: [
+        { field: 'counterparty', matchType: 'equals', value: 'NL00INGB0123456789' },
+        { field: 'paymentPurpose', matchType: 'contains', value: 'kerkelijke werkzaamheden' },
+      ],
+    });
+
+    expect(matchesRule(rule, baseContext)).toBe(true);
+    expect(matchesRule(rule, {
+      ...baseContext,
+      paymentPurpose: 'Tienden',
+    })).toBe(false);
   });
 
   it('matches combined description and amount conditions', () => {

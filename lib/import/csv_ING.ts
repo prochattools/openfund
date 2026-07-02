@@ -44,7 +44,8 @@ export const parseIngCsv = (buffer: Buffer): Promise<ParseResult> =>
           return;
         }
 
-        const reference = extractReference(row['Notifications'] ?? row['Notification']);
+        const paymentPurpose = row['Notifications'] ?? row['Notification'] ?? null;
+        const reference = extractReference(paymentPurpose);
         const result = buildNormalizedTransaction({
           rowNumber,
           accountIdentifier: row['Account'],
@@ -53,6 +54,7 @@ export const parseIngCsv = (buffer: Buffer): Promise<ParseResult> =>
           date: row['Date'],
           description: row['Name / Description'],
           counterparty: row['Counterparty'],
+          paymentPurpose,
           amount: row['Amount (EUR)'],
           debitCredit: row['Debit/credit'],
           reference,

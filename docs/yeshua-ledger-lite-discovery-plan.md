@@ -1,6 +1,8 @@
 # Yeshua Ledger Lite — Discovery, Cleanup, and Redesign Plan
 
-Status: discovery plan, not yet an implementation plan  
+> Historical document. This discovery plan has been superseded by `PHILOSOPHY.md`, `STRATEGY.md`, `ROADMAP.md`, and `IMPLEMENTATION_PLAN.md`. Retain it only as background evidence; do not use it to govern current implementation.
+
+Status: superseded historical discovery plan  
 Repo: `yeshuaacademy-finance`  
 Decision: refactor and simplify the existing Finance repo into Yeshua Ledger Lite instead of starting from scratch or adopting a third-party finance app.
 

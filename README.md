@@ -10,6 +10,17 @@ This repository is not a SaaS product and is not intended for resale. It exists 
 - period locking
 - finance exports and internal reporting
 
+## Authoritative product documents
+
+Read these documents in order before changing product behavior:
+
+1. [`docs/PHILOSOPHY.md`](docs/PHILOSOPHY.md) — what the application is and how financial truth is handled.
+2. [`docs/STRATEGY.md`](docs/STRATEGY.md) — high-level goals, delivery strategy, constraints, and success measures.
+3. [`docs/ROADMAP.md`](docs/ROADMAP.md) — ordered product phases and future scope.
+4. [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) — exact AI-executable tasks, statuses, acceptance criteria, and validation.
+
+The active rebuild evidence and resume point are recorded in [`docs/finance-rebuild-run.md`](docs/finance-rebuild-run.md). Older discovery and handoff documents are historical unless one of the four authoritative documents explicitly references them.
+
 ## Runtime model
 
 The app runs against a standalone PostgreSQL database named `finance`.

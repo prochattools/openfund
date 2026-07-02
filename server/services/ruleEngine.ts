@@ -8,7 +8,7 @@ import type {
 } from '@prisma/client';
 import { confirmTransactions } from './categorizationService';
 
-type RuleConditionField = 'payee' | 'counterparty' | 'description' | 'amount' | 'source' | 'reference';
+type RuleConditionField = 'payee' | 'counterparty' | 'description' | 'paymentPurpose' | 'amount' | 'source' | 'reference';
 type RuleConditionMatchType = 'contains' | 'startsWith' | 'endsWith' | 'equals' | 'regex';
 
 export type RuleCondition = {
@@ -21,6 +21,7 @@ export type RuleEvaluationContext = {
   description: string;
   normalizedDescription: string;
   counterparty?: string | null;
+  paymentPurpose?: string | null;
   reference?: string | null;
   source?: string | null;
   amountMinor?: bigint | number | null;
@@ -112,6 +113,8 @@ const getFieldValueForCondition = (field: RuleConditionField, context: RuleEvalu
       return context.description ?? '';
     case 'counterparty':
       return context.counterparty ?? '';
+    case 'paymentPurpose':
+      return context.paymentPurpose ?? '';
     case 'reference':
       return context.reference ?? '';
     case 'source':

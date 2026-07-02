@@ -43,7 +43,8 @@ export const parseInitialWorkbook = (
       return;
     }
 
-    const reference = extractReference(String(row['Notifications'] ?? '') || null);
+    const paymentPurpose = row['Notifications'] ?? row['Notification'] ?? null;
+    const reference = extractReference(paymentPurpose == null ? null : String(paymentPurpose));
 
     const accountValue = row['Account'];
 
@@ -55,6 +56,7 @@ export const parseInitialWorkbook = (
       date: row['Date'],
       description: row['Name / Description'],
       counterparty: row['Counterparty'],
+      paymentPurpose,
       amount: row['Amount (EUR)'],
       debitCredit: row['Debit/credit'],
       reference,

@@ -364,7 +364,7 @@ const chunk = <T>(items: T[], size: number): T[][] => {
   return result;
 };
 
-const REVIEW_CATEGORY_NAME = 'Needs Review';
+const REVIEW_CATEGORY_NAME = 'Beoordeling nodig';
 
 type SuggestionConfidence =
   | 'exact'
@@ -467,6 +467,7 @@ type ClassificationContext = {
 
 type ClassificationResult = {
   categoryId: string;
+  suggestedCategoryId: string | null;
   classificationSource: TransactionClassificationSource;
   classificationRuleId: string | null;
   suggestionConfidence: SuggestionConfidence;
@@ -502,13 +503,14 @@ const classifyImportRow = async ({
   defaultCategoryIds,
 }: ClassificationContext): Promise<ClassificationResult> => {
   let categoryId: string | null = null;
+  let suggestedCategoryId: string | null = null;
   let classificationSource: TransactionClassificationSource = 'import';
   let classificationRuleId: string | null = null;
   let suggestionConfidence: SuggestionConfidence = 'review';
   let pendingSuggestedMain: string | null = null;
   let pendingSuggestedSub: string | null = null;
 
-  const adoptCategory = (
+  const adoptFinalCategory = (
     nextCategoryId: string | null,
     source: TransactionClassificationSource,
     confidence: SuggestionConfidence,
@@ -517,23 +519,37 @@ const classifyImportRow = async ({
       return false;
     }
     categoryId = nextCategoryId;
+    suggestedCategoryId = nextCategoryId;
     classificationSource = source;
     suggestionConfidence = confidence;
     return true;
   };
 
+  const recordSuggestion = (
+    nextCategoryId: string | null,
+    confidence: SuggestionConfidence,
+  ): boolean => {
+    if (!nextCategoryId || nextCategoryId === reviewCategoryId || categoryId || suggestedCategoryId) {
+      return false;
+    }
+    suggestedCategoryId = nextCategoryId;
+    classificationSource = 'import';
+    suggestionConfidence = confidence;
+    return true;
+  };
+
   if (historyMatchKey && historyMatchIndex.has(historyMatchKey)) {
-    adoptCategory(historyMatchIndex.get(historyMatchKey)!, 'history', 'exact');
+    adoptFinalCategory(historyMatchIndex.get(historyMatchKey)!, 'history', 'exact');
   }
 
   if (!categoryId && normalizedLedgerMatchInput) {
     const exactLedgerMatch = findExactLedgerMatch(normalizedLedgerMatchInput, ledgerExactMatchIndex);
-    if (exactLedgerMatch && adoptCategory(exactLedgerMatch.categoryId, 'history', 'exact')) {
-      // matched via ledger exact lookup
+    if (exactLedgerMatch && recordSuggestion(exactLedgerMatch.categoryId, 'exact')) {
+      // Normalized exact matching may omit source fields, so it remains suggestion-only.
     } else {
       const fuzzyLedgerMatch = findFuzzyLedgerMatch(normalizedLedgerMatchInput, ledgerFuzzyMatchIndex);
-      if (fuzzyLedgerMatch && adoptCategory(fuzzyLedgerMatch.categoryId, 'history', 'fuzzy')) {
-        // matched via ledger fuzzy lookup
+      if (fuzzyLedgerMatch && recordSuggestion(fuzzyLedgerMatch.categoryId, 'fuzzy')) {
+        // Fuzzy history evidence is suggestion-only and must be approved.
       } else {
         const bestGuess = findBestHistoryGuess(
           normalizedLedgerMatchInput,
@@ -541,7 +557,7 @@ const classifyImportRow = async ({
           reviewCategoryId,
         );
         if (bestGuess) {
-          adoptCategory(bestGuess.categoryId, 'history', 'fuzzy');
+          recordSuggestion(bestGuess.categoryId, 'overall');
         }
       }
     }
@@ -555,6 +571,7 @@ const classifyImportRow = async ({
         source: row.source,
         normalizedDescription: row.normalizedDescription,
         description: row.description,
+        paymentPurpose: row.paymentPurpose,
         amountMinor: row.amountMinor,
         accountIdentifier: row.accountIdentifier,
         counterparty: row.counterparty,
@@ -570,7 +587,7 @@ const classifyImportRow = async ({
 
     if (resolvedCategoryId && categorization.classificationSource === 'rule') {
       classificationRuleId = categorization.ruleId ?? null;
-      adoptCategory(resolvedCategoryId, 'rule', 'rule');
+      adoptFinalCategory(resolvedCategoryId, 'rule', 'rule');
     }
   }
 
@@ -583,44 +600,40 @@ const classifyImportRow = async ({
     );
 
     if (suggestion && suggestion.categoryId && suggestion.categoryId !== reviewCategoryId) {
-      adoptCategory(
+      recordSuggestion(
         suggestion.categoryId,
-        'import',
         suggestion.confidence === 'exact' ? 'description' : suggestion.confidence,
       );
     }
   }
 
-  if (!categoryId) {
+  if (!categoryId && !suggestedCategoryId) {
     const defaults = getDefaultCategory(direction, categoryNameLookup, defaultCategoryIds);
     pendingSuggestedMain = defaults.mainCategoryName;
     pendingSuggestedSub = defaults.subCategoryName;
-    if (!adoptCategory(defaults.categoryId, 'import', 'fuzzy')) {
-      classificationSource = 'import';
-      categoryId = reviewCategoryId;
-      suggestionConfidence = 'fuzzy';
-    }
+    recordSuggestion(defaults.categoryId, 'fuzzy');
   }
 
   if (!categoryId) {
+    classificationSource = 'import';
     categoryId = reviewCategoryId;
   }
 
   let suggestedMainName: string | null = pendingSuggestedMain;
   let suggestedSubName: string | null = pendingSuggestedSub;
+  const categoryForSuggestion = suggestedCategoryId
+    ?? (categoryId !== reviewCategoryId ? categoryId : null);
 
-  if (categoryId === reviewCategoryId) {
-    const reviewLabel = categoryNameLookup.get(reviewCategoryId) ?? 'Needs manual categorization';
-    const split = splitCategoryLabel(reviewLabel);
-    suggestedMainName = suggestedMainName ?? split.main ?? 'Review';
-    suggestedSubName = suggestedSubName ?? split.sub ?? reviewLabel;
-  } else if (categoryId) {
-    const categoryLabel = categoryNameLookup.get(categoryId) ?? null;
+  if (categoryForSuggestion) {
+    const categoryLabel = categoryNameLookup.get(categoryForSuggestion) ?? null;
     if (categoryLabel) {
       const split = splitCategoryLabel(categoryLabel);
       suggestedMainName = suggestedMainName ?? split.main ?? categoryLabel;
       suggestedSubName = suggestedSubName ?? split.sub ?? categoryLabel;
     }
+  } else if (categoryId === reviewCategoryId) {
+    suggestedMainName = suggestedMainName ?? 'Beoordelen';
+    suggestedSubName = suggestedSubName ?? 'Geen suggestie';
   }
 
   const rawPayload = buildRawPayload(
@@ -629,12 +642,14 @@ const classifyImportRow = async ({
     suggestionConfidence,
     suggestedMainName,
     suggestedSubName,
+    suggestedCategoryId,
     categoryId,
     classificationSource,
   );
 
   return {
     categoryId,
+    suggestedCategoryId,
     classificationSource,
     classificationRuleId,
     suggestionConfidence,
@@ -650,6 +665,7 @@ const buildRawPayload = (
   suggestionConfidence: SuggestionConfidence,
   suggestedMainName: string | null,
   suggestedSubName: string | null,
+  suggestedCategoryId: string | null,
   categoryId: string,
   classificationSource: TransactionClassificationSource,
 ): Prisma.InputJsonValue => {
@@ -662,7 +678,8 @@ const buildRawPayload = (
     'Debit/credit': baseRaw['Debit/credit'] ?? (direction === 'credit' ? 'Credit' : 'Debit'),
     'Amount (EUR)': Number(row.amountMinor) / 100,
     'Transaction type': baseRaw['Transaction type'] ?? row.source,
-    Notifications: baseRaw['Notifications'] ?? baseRaw['Notification'] ?? null,
+    Notifications: baseRaw['Notifications'] ?? baseRaw['Notification'] ?? row.paymentPurpose,
+    'Payment purpose': row.paymentPurpose,
   };
 
   const existingColumns =
@@ -684,10 +701,14 @@ const buildRawPayload = (
 
   return {
     ...flattenedRaw,
+    paymentPurpose: row.paymentPurpose,
+    normalizedPaymentPurpose: row.normalizedPaymentPurpose,
     columns: rawColumns,
     suggestion: {
       confidence: suggestionConfidence,
-      matchedCategoryId: categoryId,
+      categoryId: suggestedCategoryId,
+      matchedCategoryId: suggestedCategoryId,
+      finalCategoryId: categoryId,
       matchedBy: classificationSource,
       mainCategoryName: suggestedMainName,
       categoryName: suggestedSubName,
@@ -1199,9 +1220,7 @@ export const processImportBufferWithClient = async (
           amountMinor: row.amountMinor < 0n ? row.amountMinor * -1n : row.amountMinor,
           transactionType: (row.raw && (row.raw as Record<string, unknown>)['Transaction type']) as string | null,
           code: (row.raw && (row.raw as Record<string, unknown>)['Code']) as string | null,
-          notifications: (row.raw &&
-            ((row.raw as Record<string, unknown>)['Notifications'] ??
-              (row.raw as Record<string, unknown>)['Notification'])) as string | null,
+          notifications: row.paymentPurpose,
         });
 
         const normalizedLedgerMatchInput = normalizeMatchableTransaction({
@@ -1210,6 +1229,7 @@ export const processImportBufferWithClient = async (
           direction,
           accountIdentifier: row.accountIdentifier,
           counterparty: row.counterparty ?? null,
+          notifications: row.paymentPurpose,
           raw: row.raw,
         });
 
@@ -1314,9 +1334,7 @@ export const processImportBufferWithClient = async (
             | string
             | null,
           code: (row.raw && (row.raw as Record<string, unknown>)['Code']) as string | null,
-          notifications: (row.raw &&
-            ((row.raw as Record<string, unknown>)['Notifications'] ??
-              (row.raw as Record<string, unknown>)['Notification'])) as string | null,
+          notifications: row.paymentPurpose,
         });
 
         const normalizedLedgerMatchInput = normalizeMatchableTransaction({
@@ -1325,6 +1343,7 @@ export const processImportBufferWithClient = async (
           direction,
           accountIdentifier: row.accountIdentifier,
           counterparty: row.counterparty ?? null,
+          notifications: row.paymentPurpose,
           raw: row.raw,
         });
 

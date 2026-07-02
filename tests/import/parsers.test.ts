@@ -56,6 +56,8 @@ describe('statement parsers', () => {
       accountIdentifier: 'NL89INGB0006369960',
       description: 'Gift voor zending',
       amountMinor: 2500n,
+      paymentPurpose: 'Reference: GIFT-1',
+      normalizedPaymentPurpose: 'reference gift1',
       reference: 'GIFT-1',
       source: 'ing_csv',
     });

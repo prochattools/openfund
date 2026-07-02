@@ -51,6 +51,8 @@ export const isReviewPlaceholderCategory = (category: ReviewCategory): boolean =
   const normalized = normalizeLabel(category.name);
   return category.id === 'cat-review'
     || category.id === 'sub-review-needs-category'
+    || normalized === 'beoordeling nodig'
+    || normalized === 'handmatige categorisatie nodig'
     || normalized === 'review'
     || normalized === 'needs review'
     || normalized === 'needs manual categorization';
