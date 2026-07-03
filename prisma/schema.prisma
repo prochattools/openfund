@@ -24,17 +24,20 @@ model User {
 }
 
 model FinanceWorkspace {
-  id               String                @id @default(uuid())
-  name             String
-  slug             String                @unique
-  defaultCurrency  String                @default("EUR")
-  isActive         Boolean               @default(true)
-  createdAt        DateTime              @default(now())
-  updatedAt        DateTime              @default(now()) @updatedAt
-  memberships      WorkspaceMembership[]
-  projects         Project[]
-  transactionTypes TransactionType[]
-  categories       Category[]
+  id                        String                     @id @default(uuid())
+  name                      String
+  slug                      String                     @unique
+  defaultCurrency           String                     @default("EUR")
+  isActive                  Boolean                    @default(true)
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @default(now()) @updatedAt
+  memberships               WorkspaceMembership[]
+  projects                  Project[]
+  transactionTypes          TransactionType[]
+  categories                Category[]
+  transactionBookings       TransactionBooking[]
+  categorizationSuggestions CategorizationSuggestion[]
+  reviewDecisions           ReviewDecision[]
 }
 
 model WorkspaceMembership {
@@ -54,51 +57,63 @@ model WorkspaceMembership {
 }
 
 model Project {
-  id           String           @id @default(uuid())
-  workspaceId  String
-  code         String
-  name         String
-  isActive     Boolean          @default(true)
-  isHistorical Boolean          @default(false)
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @default(now()) @updatedAt
-  workspace    FinanceWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
-  transactions Transaction[]
+  id                        String                     @id @default(uuid())
+  workspaceId               String
+  code                      String
+  name                      String
+  isActive                  Boolean                    @default(true)
+  isHistorical              Boolean                    @default(false)
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @default(now()) @updatedAt
+  workspace                 FinanceWorkspace           @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  transactions              Transaction[]
+  transactionBookings       TransactionBooking[]
+  categorizationSuggestions CategorizationSuggestion[]
+  beforeReviewDecisions     ReviewDecision[]           @relation("ReviewDecisionBeforeProject")
+  afterReviewDecisions      ReviewDecision[]           @relation("ReviewDecisionAfterProject")
 
   @@unique([workspaceId, code])
   @@index([workspaceId, isActive])
 }
 
 model TransactionType {
-  id           String           @id @default(uuid())
-  workspaceId  String
-  literalName  String
-  isActive     Boolean          @default(true)
-  isHistorical Boolean          @default(false)
-  sortOrder    Int?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @default(now()) @updatedAt
-  workspace    FinanceWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
-  transactions Transaction[]
+  id                        String                     @id @default(uuid())
+  workspaceId               String
+  literalName               String
+  isActive                  Boolean                    @default(true)
+  isHistorical              Boolean                    @default(false)
+  sortOrder                 Int?
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @default(now()) @updatedAt
+  workspace                 FinanceWorkspace           @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  transactions              Transaction[]
+  transactionBookings       TransactionBooking[]
+  categorizationSuggestions CategorizationSuggestion[]
+  beforeReviewDecisions     ReviewDecision[]           @relation("ReviewDecisionBeforeType")
+  afterReviewDecisions      ReviewDecision[]           @relation("ReviewDecisionAfterType")
 
   @@unique([workspaceId, literalName])
   @@index([workspaceId, isActive, sortOrder])
 }
 
 model Category {
-  id                  String               @id @default(uuid())
-  workspaceId         String               @default("00000000-0000-4000-8000-000000000001")
+  id                        String                     @id @default(uuid())
+  workspaceId               String                     @default("00000000-0000-4000-8000-000000000001")
   /// Exact literal category label retained under the legacy field name during additive migration.
-  name                String               @unique
-  color               String?
-  isActive            Boolean              @default(true)
-  isHistorical        Boolean              @default(false)
-  sortOrder           Int?
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @default(now()) @updatedAt
-  workspace           FinanceWorkspace     @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
-  categorizationRules CategorizationRule[]
-  transactions        Transaction[]
+  name                      String                     @unique
+  color                     String?
+  isActive                  Boolean                    @default(true)
+  isHistorical              Boolean                    @default(false)
+  sortOrder                 Int?
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @default(now()) @updatedAt
+  workspace                 FinanceWorkspace           @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  categorizationRules       CategorizationRule[]
+  transactions              Transaction[]
+  transactionBookings       TransactionBooking[]
+  categorizationSuggestions CategorizationSuggestion[]
+  beforeReviewDecisions     ReviewDecision[]           @relation("ReviewDecisionBeforeCategory")
+  afterReviewDecisions      ReviewDecision[]           @relation("ReviewDecisionAfterCategory")
 
   @@unique([workspaceId, name])
   @@index([workspaceId, isActive, sortOrder])
@@ -191,39 +206,43 @@ model ImportBatch {
 }
 
 model Transaction {
-  id                   String                          @id @default(uuid())
-  userId               String
-  ledgerId             String?
-  date                 DateTime
-  description          String
-  normalizedKey        String                          @default("")
-  source               String
-  categoryId           String?
-  projectId            String?
-  transactionTypeId    String?
-  createdAt            DateTime                        @default(now())
-  accountId            String?
-  importBatchId        String?
-  amountMinor          BigInt
-  currency             String                          @default("EUR")
-  direction            TransactionDirection            @default(credit)
-  counterparty         String?
-  reference            String?
-  hash                 String                          @unique
-  sourceFile           String?
-  rawRow               Json?
-  updatedAt            DateTime                        @default(now())
-  classificationSource TransactionClassificationSource @default(none)
-  classificationRuleId String?
-  importFingerprint    String?
-  account              Account?                        @relation(fields: [accountId], references: [id])
-  category             Category?                       @relation(fields: [categoryId], references: [id])
-  project              Project?                        @relation(fields: [projectId], references: [id])
-  transactionType      TransactionType?                @relation(fields: [transactionTypeId], references: [id])
-  classificationRule   CategorizationRule?             @relation(fields: [classificationRuleId], references: [id])
-  importBatch          ImportBatch?                    @relation(fields: [importBatchId], references: [id])
-  ledger               Ledger?                         @relation(fields: [ledgerId], references: [id])
-  user                 User                            @relation(fields: [userId], references: [id])
+  id                        String                          @id @default(uuid())
+  userId                    String
+  ledgerId                  String?
+  date                      DateTime
+  description               String
+  normalizedKey             String                          @default("")
+  source                    String
+  categoryId                String?
+  projectId                 String?
+  transactionTypeId         String?
+  createdAt                 DateTime                        @default(now())
+  accountId                 String?
+  importBatchId             String?
+  amountMinor               BigInt
+  currency                  String                          @default("EUR")
+  direction                 TransactionDirection            @default(credit)
+  counterparty              String?
+  reference                 String?
+  hash                      String                          @unique
+  sourceFile                String?
+  rawRow                    Json?
+  updatedAt                 DateTime                        @default(now())
+  classificationSource      TransactionClassificationSource @default(none)
+  classificationRuleId      String?
+  importFingerprint         String?
+  account                   Account?                        @relation(fields: [accountId], references: [id])
+  category                  Category?                       @relation(fields: [categoryId], references: [id])
+  project                   Project?                        @relation(fields: [projectId], references: [id])
+  transactionType           TransactionType?                @relation(fields: [transactionTypeId], references: [id])
+  classificationRule        CategorizationRule?             @relation(fields: [classificationRuleId], references: [id])
+  importBatch               ImportBatch?                    @relation(fields: [importBatchId], references: [id])
+  ledger                    Ledger?                         @relation(fields: [ledgerId], references: [id])
+  user                      User                            @relation(fields: [userId], references: [id])
+  transactionBooking        TransactionBooking?             @relation("TransactionCurrentBooking")
+  historicalSourceBookings  TransactionBooking[]            @relation("HistoricalSourceTransaction")
+  categorizationSuggestions CategorizationSuggestion[]
+  reviewDecisions           ReviewDecision[]
 
   @@unique([userId, importFingerprint])
   @@index([userId, date])
@@ -232,6 +251,117 @@ model Transaction {
   @@index([classificationRuleId])
   @@index([projectId])
   @@index([transactionTypeId])
+}
+
+model TransactionBooking {
+  id                            String              @id @default(uuid())
+  workspaceId                   String
+  transactionId                 String              @unique
+  projectId                     String
+  transactionTypeId             String
+  categoryId                    String
+  source                        BookingSource
+  ruleId                        String?
+  historicalSourceTransactionId String?
+  historicalMatchKey            String?
+  evidence                      Json
+  evidenceHash                  String
+  confirmedBy                   String?
+  confirmedAt                   DateTime            @default(now())
+  literalProjectLabel           String
+  literalTypeLabel              String
+  literalCategoryLabel          String
+  createdAt                     DateTime            @default(now())
+  updatedAt                     DateTime            @default(now()) @updatedAt
+  workspace                     FinanceWorkspace    @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  transaction                   Transaction         @relation("TransactionCurrentBooking", fields: [transactionId], references: [id], onDelete: Restrict)
+  project                       Project             @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  transactionType               TransactionType     @relation(fields: [transactionTypeId], references: [id], onDelete: Restrict)
+  category                      Category            @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  rule                          CategorizationRule? @relation(fields: [ruleId], references: [id], onDelete: Restrict)
+  historicalSourceTransaction   Transaction?        @relation("HistoricalSourceTransaction", fields: [historicalSourceTransactionId], references: [id], onDelete: Restrict)
+  beforeReviewDecisions         ReviewDecision[]    @relation("ReviewDecisionBeforeBooking")
+  afterReviewDecisions          ReviewDecision[]    @relation("ReviewDecisionAfterBooking")
+
+  @@index([workspaceId, source, confirmedAt])
+  @@index([projectId])
+  @@index([transactionTypeId])
+  @@index([categoryId])
+  @@index([ruleId])
+  @@index([historicalSourceTransactionId])
+  @@index([transactionId, evidenceHash])
+}
+
+model CategorizationSuggestion {
+  id                String               @id @default(uuid())
+  workspaceId       String
+  transactionId     String
+  projectId         String?
+  transactionTypeId String?
+  categoryId        String?
+  confidence        SuggestionConfidence
+  matcher           SuggestionMatcher
+  rank              Int
+  scoreBasisPoints  Int?
+  evidence          Json
+  evidenceHash      String
+  status            SuggestionStatus     @default(PENDING)
+  createdAt         DateTime             @default(now())
+  resolvedAt        DateTime?
+  workspace         FinanceWorkspace     @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  transaction       Transaction          @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+  project           Project?             @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  transactionType   TransactionType?     @relation(fields: [transactionTypeId], references: [id], onDelete: Restrict)
+  category          Category?            @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  reviewDecisions   ReviewDecision[]
+
+  @@index([workspaceId, transactionId, status, rank])
+  @@index([workspaceId, status, createdAt])
+  @@index([transactionId, status])
+  @@index([categoryId])
+  @@index([projectId])
+  @@index([transactionTypeId])
+  @@index([transactionId, matcher, evidenceHash])
+}
+
+model ReviewDecision {
+  id               String                    @id @default(uuid())
+  workspaceId      String
+  transactionId    String
+  suggestionId     String?
+  action           ReviewDecisionAction
+  beforeBookingId  String?
+  beforeProjectId  String?
+  beforeTypeId     String?
+  beforeCategoryId String?
+  afterBookingId   String?
+  afterProjectId   String?
+  afterTypeId      String?
+  afterCategoryId  String?
+  actorId          String
+  actorEmail       String?
+  reason           String?
+  evidence         Json
+  evidenceHash     String
+  decidedAt        DateTime                  @default(now())
+  workspace        FinanceWorkspace          @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  transaction      Transaction               @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+  suggestion       CategorizationSuggestion? @relation(fields: [suggestionId], references: [id], onDelete: Restrict)
+  beforeBooking    TransactionBooking?       @relation("ReviewDecisionBeforeBooking", fields: [beforeBookingId], references: [id], onDelete: Restrict)
+  afterBooking     TransactionBooking?       @relation("ReviewDecisionAfterBooking", fields: [afterBookingId], references: [id], onDelete: Restrict)
+  beforeProject    Project?                  @relation("ReviewDecisionBeforeProject", fields: [beforeProjectId], references: [id], onDelete: Restrict)
+  afterProject     Project?                  @relation("ReviewDecisionAfterProject", fields: [afterProjectId], references: [id], onDelete: Restrict)
+  beforeType       TransactionType?          @relation("ReviewDecisionBeforeType", fields: [beforeTypeId], references: [id], onDelete: Restrict)
+  afterType        TransactionType?          @relation("ReviewDecisionAfterType", fields: [afterTypeId], references: [id], onDelete: Restrict)
+  beforeCategory   Category?                 @relation("ReviewDecisionBeforeCategory", fields: [beforeCategoryId], references: [id], onDelete: Restrict)
+  afterCategory    Category?                 @relation("ReviewDecisionAfterCategory", fields: [afterCategoryId], references: [id], onDelete: Restrict)
+
+  @@index([workspaceId, transactionId, decidedAt])
+  @@index([workspaceId, actorId, decidedAt])
+  @@index([workspaceId, action, decidedAt])
+  @@index([suggestionId])
+  @@index([beforeBookingId])
+  @@index([afterBookingId])
 }
 
 model EmailRecipient {
@@ -267,27 +397,28 @@ model AuditLog {
 }
 
 model CategorizationRule {
-  id            String          @id @default(uuid())
-  userId        String
-  importBatchId String?
-  ledgerId      String?
-  categoryId    String
-  label         String
-  pattern       String?
-  matchType     RuleMatchType?  @default(regex)
-  matchField    RuleMatchField? @default(description)
-  conditions    Json?           @default("[]")
-  priority      Int             @default(100)
-  isActive      Boolean         @default(true)
-  createdBy     String?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  lastMatchedAt DateTime?
-  category      Category        @relation(fields: [categoryId], references: [id])
-  importBatch   ImportBatch?    @relation(fields: [importBatchId], references: [id])
-  ledger        Ledger?         @relation(fields: [ledgerId], references: [id])
-  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactions  Transaction[]
+  id                  String               @id @default(uuid())
+  userId              String
+  importBatchId       String?
+  ledgerId            String?
+  categoryId          String
+  label               String
+  pattern             String?
+  matchType           RuleMatchType?       @default(regex)
+  matchField          RuleMatchField?      @default(description)
+  conditions          Json?                @default("[]")
+  priority            Int                  @default(100)
+  isActive            Boolean              @default(true)
+  createdBy           String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  lastMatchedAt       DateTime?
+  category            Category             @relation(fields: [categoryId], references: [id])
+  importBatch         ImportBatch?         @relation(fields: [importBatchId], references: [id])
+  ledger              Ledger?              @relation(fields: [ledgerId], references: [id])
+  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions        Transaction[]
+  transactionBookings TransactionBooking[]
 
   @@index([userId, isActive, priority])
   @@index([ledgerId])
@@ -329,4 +460,39 @@ enum TransactionClassificationSource {
   history
   import
   manual
+}
+
+enum BookingSource {
+  HISTORICAL
+  RULE
+  MANUAL
+}
+
+enum SuggestionConfidence {
+  EXACT_FALLBACK
+  FUZZY
+  OVERALL
+  DEFAULT
+}
+
+enum SuggestionMatcher {
+  NORMALIZED_HISTORY
+  FUZZY_HISTORY
+  BEST_HISTORY
+  DIRECTION_DEFAULT
+  RULE_CANDIDATE
+}
+
+enum SuggestionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum ReviewDecisionAction {
+  ACCEPT_SUGGESTION
+  ASSIGN_MANUALLY
+  CHANGE_BOOKING
+  REMOVE_BOOKING
 }

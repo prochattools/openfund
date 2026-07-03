@@ -101,10 +101,11 @@ describe('MODEL-002 additive domain schema', () => {
     expect(migration).toContain("'ADMIN'::\"WorkspaceRole\"");
   });
 
-  it('keeps only the normalized baseline and MODEL-002 migration active', () => {
+  it('keeps the normalized baseline plus approved additive model migrations active', () => {
     expect(migrationDirectories()).toEqual([
       '0_finance_baseline',
       '20260703001200_add_workspace_dimensions',
+      '20260703193000_add_classification_records',
     ]);
     expect(sha256File(migrationPath)).toBe(model002ExpectedHash);
   });

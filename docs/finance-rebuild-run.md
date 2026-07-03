@@ -4,7 +4,7 @@ Date: 2026-07-02
 Run: `agent-f961650b-de17-4282-ab18-7a716cc72958`  
 Source: `yeshuaacademy-finance`  
 Branch: `main`  
-Status: Phase 1 committed as `925a609`; MODEL-001 committed as `73daabd`; MODEL-002 database-validated; MIGRATE-001 done; explicit-path commit approved in this change set
+Status: Phase 1 committed as `925a609`; MODEL-001 committed as `73daabd`; MODEL-002 and MIGRATE-001 committed as `d2afb18`; MODEL-003 Packet A implemented and validated
 
 ## Authoritative document hierarchy
 
@@ -544,6 +544,64 @@ Cleanup and final regression evidence:
 
 MIGRATE-001 status: `DONE`.
 
+## MODEL-003 design gate
+
+Created `docs/MODEL_003_CLASSIFICATION_RECORDS_PROPOSAL.md` as a documentation-only contract for immutable classification records. It defines:
+
+- `TransactionBooking` as the current final three-dimension classification;
+- `CategorizationSuggestion` as append-only ranked evidence that never becomes final without an explicit decision;
+- `ReviewDecision` as immutable administrator decision history and the financial source of truth;
+- compatibility phases that keep existing `Transaction` classification fields during additive migration;
+- conservative existing-data mapping for `none`, `import`, `manual`, `rule`, and `history` classification states;
+- provenance and canonical `evidenceHash` requirements;
+- append-only suggestion and decision behavior;
+- a single atomic review write boundary;
+- ADMIN-only mutation and workspace validation rules;
+- removal, disabling, or rejection of unsafe `clearReviewQueue` / `confirmTransactions` bulk confirmation;
+- constraints, indexes, rollback, and two later implementation packets.
+
+MODEL-003 implementation packets after owner approval:
+
+- Packet A — additive persistence: Prisma models, enums, additive migration, structural tests, disposable PostgreSQL validation, full tests/builds/scans.
+- Packet B — behavioral transition: atomic review-decision service, booking writes, suggestion resolution, unsafe bulk-confirm removal/rejection, route/API updates, targeted service/API/UI helper tests, full tests/builds/scans.
+
+No schema, migration, service, route, test, financial-data import, Docker, dependency, environment, production configuration, `.graphifyignore`, or `graphify-out/` change was made for this design gate.
+
+## MODEL-003 Packet A
+
+Owner approved `docs/MODEL_003_CLASSIFICATION_RECORDS_PROPOSAL.md` and authorized Packet A only.
+
+Implemented Packet A files:
+
+- `prisma/schema.prisma`
+- `prisma/migrations/20260703193000_add_classification_records/migration.sql`
+- `tests/services/model003ClassificationRecords.test.ts`
+- `tests/services/model002DomainSchema.test.ts`
+- documentation handoff updates
+
+Packet A implementation summary:
+
+- Added additive persistence for `TransactionBooking`, `CategorizationSuggestion`, and `ReviewDecision`.
+- Added `BookingSource`, `SuggestionConfidence`, `SuggestionMatcher`, `SuggestionStatus`, and `ReviewDecisionAction` enums.
+- Preserved all legacy `Transaction` classification fields during compatibility.
+- Added no service, route, API, UI, import, Docker, dependency, environment, production configuration, `.graphifyignore`, or `graphify-out/` changes.
+- Did not begin Packet B.
+
+Packet A validation evidence:
+
+- Prisma schema formatting passed.
+- Prisma schema validation passed with a localhost-only dummy URL.
+- Disposable local PostgreSQL database `model003_packet_a_f961650b_20260703` was created through the `/tmp` socket.
+- `prisma migrate deploy` applied `0_finance_baseline`, `20260703001200_add_workspace_dimensions`, and `20260703193000_add_classification_records` successfully.
+- Database-to-schema diff reported no difference after repairing the expected Prisma-truncated suggestion index name.
+- Focused MODEL-003 tests passed: 6 tests passed.
+- Full suite passed: 53 files passed; 241 tests passed; 1 optional test skipped.
+- Server TypeScript build passed.
+- Prisma Client generation passed.
+- Next.js production build passed with 18 routes; the SWC lockfile warning remained pre-existing and no generated files changed.
+- Packet A executable high-risk scan reported no findings.
+- Dropped disposable database `model003_packet_a_f961650b_20260703` after validation.
+
 ## Current next task
 
-Create the approved explicit-path commit, verify its hash and clean staged state, then stop. Do not begin MODEL-003, use a real or production database, import historical data, touch Graphify artifacts, or push.
+Review Packet A diff and decide whether to commit. Do not begin MODEL-003 Packet B, use a real or production database, import financial data, touch Graphify artifacts, modify production configuration, push, or commit without separate approval.

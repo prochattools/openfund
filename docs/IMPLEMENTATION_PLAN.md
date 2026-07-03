@@ -45,9 +45,10 @@ Security review: executable/test paths clean; documentation scans clean
 Phase 1 commit: 925a609 fix: make finance categorization review-safe
 MODEL-001 domain proposal: approved after review; schema unchanged
 MODEL-001 documentation commit: 73daabd docs: approve financial domain model
-MODEL-002 additive schema slice: implemented and database-validated; owner approval and commit remain pending
-MIGRATE-001 repository normalization: done; baseline, archive, hashes, adoption, cleanup, tests, and builds passed
-Current gate: explicit-path commit approved; no production database, MODEL-003, or push
+MODEL-002 additive schema slice: implemented, database-validated, and committed as d2afb18
+MIGRATE-001 repository normalization: done and committed as d2afb18
+MODEL-003 classification records: proposal approved; Packet A additive persistence implemented and validated; Packet B not started
+Current gate: review Packet A diff and decide whether to commit; no Packet B, import, production config, push, or Graphify changes
 ```
 
 ## Phase 0 — Governance and discovery
@@ -519,24 +520,49 @@ Cleanup and final regression validation:
 
 Current gate:
 
-- The owner approved this explicit-path commit. Do not begin MODEL-003 or push.
+- Committed as `d2afb18735dce113a69d9ad40c3c8e4b3ce562df`. Do not push without explicit approval.
 
 ### MODEL-003 — Implement immutable suggestion and review-decision records
 
-Status: `TODO`
+Status: `PACKET_A_IMPLEMENTED_VALIDATED`
 
-Dependencies: MODEL-002
+Dependencies: MODEL-002 and MIGRATE-001 committed as `d2afb18735dce113a69d9ad40c3c8e4b3ce562df`; design gate owner-approved
 
-Acceptance:
+Design gate file:
 
-- Suggestion stores category, confidence, evidence, alternatives, and matcher/rule provenance.
-- Review decision stores administrator, timestamp, previous/final values, and reason where required.
-- Final transaction state cannot be inferred solely from raw JSON metadata.
+- `docs/MODEL_003_CLASSIFICATION_RECORDS_PROPOSAL.md`
 
-Validation:
+Design decisions prepared for owner review:
 
-- Targeted service/API tests.
-- Full tests and builds.
+- `TransactionBooking` is the current final three-dimension classification and unresolved transactions have no booking.
+- `CategorizationSuggestion` is append-only ranked evidence and never becomes final without an explicit `ReviewDecision`.
+- `ReviewDecision` is immutable administrator decision history and is the financial source of truth; generic `AuditLog` is supplementary.
+- Existing `Transaction` classification fields remain during additive compatibility and are not dropped in the first implementation slice.
+- Backfill is conservative: no missing dimension, actor, suggestion, decision, rule provenance, or historical replay evidence may be fabricated.
+- The existing category-only rule model cannot authorize a final three-dimension `RULE` booking until a later approved rule-model transition exists.
+- Review writes must validate workspace, ADMIN membership, unlocked-period state, dimensions, suggestion state, provenance, booking update, decision append, compatibility mirroring, and supplemental audit in one database transaction.
+- Unsafe `clearReviewQueue` / `confirmTransactions` bulk conversion must be removed, disabled, or rejected; it must not become manual truth without per-transaction decisions.
+
+Packet A implementation evidence:
+
+- Added additive Prisma models/enums for `TransactionBooking`, `CategorizationSuggestion`, and `ReviewDecision`.
+- Added `prisma/migrations/20260703193000_add_classification_records/migration.sql`.
+- Added `tests/services/model003ClassificationRecords.test.ts` and updated migration-history coverage.
+- Preserved all legacy `Transaction` classification fields and did not import or backfill financial data.
+- Disposable PostgreSQL deploy applied all three active migrations and database-to-schema diff reported no difference.
+- Focused MODEL-003 tests passed: 6 tests passed.
+- Full suite passed: 53 files passed; 241 tests passed; 1 optional test skipped.
+- Server TypeScript build passed.
+- Prisma Client generation and Next.js production build passed with 18 routes.
+- Packet A executable high-risk scan reported no findings.
+
+Remaining implementation packet after separate approval:
+
+- Packet B — behavioral transition: atomic review-decision service, booking writes, suggestion resolution, unsafe bulk-confirm removal/rejection, route/API updates, targeted service/API/UI helper tests, full tests/builds/scans.
+
+Current gate:
+
+- Review Packet A diff and decide whether to commit. Do not begin Packet B, import financial data, modify production configuration, touch `.graphifyignore` or `graphify-out/`, push, or commit without separate approval.
 
 ### MODEL-004 — Implement statement controls and source-file retention model
 

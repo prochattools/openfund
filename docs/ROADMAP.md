@@ -84,7 +84,7 @@ Implemented, validated, and committed as `925a609` (`fix: make finance categoriz
 
 ## Phase 2 — Financial domain and historical model
 
-Status: **in progress; MODEL-001 approved, awaiting its documentation commit before MODEL-002**
+Status: **in progress; MODEL-001, MODEL-002, and MIGRATE-001 committed; MODEL-003 Packet A implemented and validated**
 
 ### Outcomes
 
@@ -102,13 +102,13 @@ Schema changes must be derived from verified workflow needs. Do not create a gen
 ### Current checkpoint
 
 - `docs/DOMAIN_MODEL.md` is approved and defines the accepted entities, fields, relationships, invariants, and migration order.
-- MODEL-001 is complete as documentation only.
-- The approved proposal fixes the amount convention, separates workspace ownership from actors, records exact historical replay provenance, scopes reconciliation and close to exact statement periods, and adds an explicit report-line discriminator.
+- MODEL-001 is complete as documentation only and committed as `73daabd`.
+- MODEL-002 added workspace ownership plus explicit `Klant`, `Type`, and category dimensions, validated them on isolated PostgreSQL, and committed them with MIGRATE-001 as `d2afb18735dce113a69d9ad40c3c8e4b3ce562df`.
+- MIGRATE-001 normalized the active migration history to a generated baseline plus the unchanged MODEL-002 migration, with the 17 legacy migrations archived byte-identically.
+- `docs/MODEL_003_CLASSIFICATION_RECORDS_PROPOSAL.md` was owner-approved and Packet A added additive persistence for immutable bookings, suggestions, and review decisions.
+- MODEL-003 Packet A deployed cleanly to disposable PostgreSQL, had no database-to-schema drift, and passed focused tests, full tests, server build, production build, and executable high-risk scan.
 - July 2026 remains partial and cannot authorize a monthly close.
-- `prisma/schema.prisma` is unchanged.
-- No migration, financial import, Docker, dependency, or production configuration change has been made.
-- The four approved MODEL-001 documentation files may be committed; `.graphifyignore` and `graphify-out/` remain excluded.
-- MODEL-002 may begin only after that documentation commit checkpoint is recorded.
+- No financial import, Docker, dependency, environment, production configuration, `.graphifyignore`, or `graphify-out/` change has been made for MODEL-003.
 
 ### Exit criteria
 
