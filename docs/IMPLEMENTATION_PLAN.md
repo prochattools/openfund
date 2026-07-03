@@ -44,7 +44,8 @@ Phase 1 validation: 229 tests passed; server and production builds passed
 Security review: executable/test paths clean; documentation scans clean
 Phase 1 commit: 925a609 fix: make finance categorization review-safe
 MODEL-001 domain proposal: approved after review; schema unchanged
-Current gate: commit the four approved MODEL-001 documentation files before MODEL-002
+MODEL-001 documentation commit: 73daabd docs: approve financial domain model
+Current gate: prepare MODEL-002 as a separate bounded schema task
 ```
 
 ## Phase 0 — Governance and discovery
@@ -357,9 +358,15 @@ Dependencies: SAFE-009
 Approval:
 
 - Final owner approval granted after full review of revised `docs/DOMAIN_MODEL.md`.
-- The four MODEL-001 documentation files are authorized for a focused commit.
-- `.graphifyignore` and `graphify-out/` remain excluded.
-- MODEL-002 may begin only after the documentation commit checkpoint is recorded.
+- The four MODEL-001 documentation files were authorized for a focused commit.
+- `.graphifyignore` and `graphify-out/` remained excluded.
+
+Commit:
+
+- Hash: `73daabd`
+- Message: `docs: approve financial domain model`
+- Scope: `docs/DOMAIN_MODEL.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/ROADMAP.md`, and `docs/finance-rebuild-run.md`
+- Excluded: `.graphifyignore`, `graphify-out/`, Prisma, migrations, financial source files, Docker, dependencies, and production configuration
 
 Review revisions resolved:
 

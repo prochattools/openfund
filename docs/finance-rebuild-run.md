@@ -4,7 +4,7 @@ Date: 2026-07-02
 Run: `agent-f961650b-de17-4282-ab18-7a716cc72958`  
 Source: `yeshuaacademy-finance`  
 Branch: `main`  
-Status: Phase 1 committed as `925a609`; MODEL-001 approved; four documentation files authorized for commit
+Status: Phase 1 committed as `925a609`; MODEL-001 committed as `73daabd`; ready to prepare MODEL-002
 
 ## Authoritative document hierarchy
 
@@ -421,7 +421,7 @@ No financial data was imported. `docker-compose.yml` and production configuratio
 
 ## MODEL-001 domain proposal checkpoint
 
-Status: approved after owner review; documentation only; not committed; authorized for focused commit.
+Status: approved after owner review; documentation committed as `73daabd`.
 
 Initial evidence:
 
@@ -440,6 +440,13 @@ Owner review findings resolved:
 5. Added `ReportLineKind` field rules and an application-level requirement for exactly one HTML, XLSX, and PDF artifact before approval.
 6. Updated future migration ordering so workspace separation, exact provenance, and period backfills precede removal of legacy fields.
 
+Commit evidence:
+
+- Hash: `73daabd`
+- Message: `docs: approve financial domain model`
+- Scope: `docs/DOMAIN_MODEL.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/ROADMAP.md`, and `docs/finance-rebuild-run.md`
+- Excluded: `.graphifyignore`, `graphify-out/`, Prisma, migrations, financial source files, Docker, dependencies, and production configuration
+
 No Prisma schema, migration, financial import, Docker, dependency, or production change was made.
 
 Final revised validation:
@@ -451,4 +458,4 @@ Final revised validation:
 
 ## Current next task
 
-Commit only the four approved MODEL-001 documentation files: `docs/DOMAIN_MODEL.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/ROADMAP.md`, and `docs/finance-rebuild-run.md`. Exclude `.graphifyignore` and `graphify-out/`. Record the commit hash before preparing MODEL-002. Do not modify `prisma/schema.prisma` or create a migration during the documentation commit.
+Prepare MODEL-002 as a separate bounded schema implementation task using the approved domain model and commit `73daabd` as the documentation baseline. Do not import financial data, modify Docker, or touch production configuration. Prisma changes require a new exact implementation packet and validation plan.
