@@ -4,7 +4,7 @@ Date: 2026-07-02
 Run: `agent-f961650b-de17-4282-ab18-7a716cc72958`  
 Source: `yeshuaacademy-finance`  
 Branch: `main`  
-Status: Phase 1 committed as `925a609`; MODEL-001 committed as `73daabd`; ready to prepare MODEL-002
+Status: Phase 1 committed as `925a609`; MODEL-001 committed as `73daabd`; MODEL-002 database-validated; MIGRATE-001 done; explicit-path commit approved in this change set
 
 ## Authoritative document hierarchy
 
@@ -456,6 +456,94 @@ Final revised validation:
 - Final diff review confirmed the intended scope is `docs/DOMAIN_MODEL.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/ROADMAP.md`, and this handoff only.
 - `.graphifyignore` and `graphify-out/` remain unrelated, unmodified, and excluded.
 
+## MODEL-002 additive schema checkpoint
+
+Status: implemented; uncommitted; review complete; approval withheld because the legacy migration history cannot replay on an empty database.
+
+Changed paths:
+
+- `prisma/schema.prisma`
+- `prisma/migrations/20260703001200_add_workspace_dimensions/migration.sql`
+- `tests/services/model002DomainSchema.test.ts`
+- `docs/IMPLEMENTATION_PLAN.md`
+- `docs/finance-rebuild-run.md`
+
+Implemented behavior:
+
+- Added `FinanceWorkspace`, `WorkspaceMembership`, and `WorkspaceRole`.
+- Added workspace-scoped `Project` (`Klant`) and `TransactionType` (`Type`) models.
+- Added workspace scope and historical metadata to the existing `Category` model while preserving exact labels under the legacy `name` field.
+- Added optional `projectId` and `transactionTypeId` relations to `Transaction`; existing `categoryId` remains unchanged.
+- Seeded one Yeshua Academy workspace and one administrator membership per existing user without changing actor identity.
+- Preserved every existing schema field and financial row; the migration contains no category rename, category delete, transaction insert, historical-data import, or destructive `DROP` statement.
+- Inspected `server/services/importService.ts`, `server/services/categorizationService.ts`, and `server/routes/review.ts`; no service write was required because legacy category queries remain valid in this additive slice.
+
+Execution evidence:
+
+- Packet preflight accepted exactly the schema, migration, and focused test paths at HEAD `8a5ab3f`.
+- Guarded packet execution could not acquire a backend lease token; the same preflighted paths were applied directly through verified Workbench file operations.
+- `.graphifyignore` and `graphify-out/` remained untouched.
+
+Validation evidence:
+
+- Focused MODEL-002 tests: 3 static tests passed; 1 guarded local disposable-database test skipped because no local admin URL is configured.
+- Full test suite after adding the guarded integration test: 52 files, 232 tests passed, and 1 database test skipped.
+- High-risk security scan over schema, migration, and validation test: no findings.
+- `prisma format`: passed.
+- Prisma Client generation: passed during the rerun production `prebuild`.
+- Server TypeScript build: passed after the review update.
+- Next.js production build: passed after the review update with 18 routes.
+- Direct standalone `prisma validate` remains blocked because no standalone `DATABASE_URL` is available; no environment file was edited.
+- MODEL-002 migration SQL remains additive and passed focused structural review.
+
+Migration-history inventory finding:
+
+- The repository contains 18 migration directories.
+- Three migrations execute before their required finance tables exist: the two 2024 `CategorizationRule.conditions` migrations and `20250226140000_import_fingerprint` against `Transaction`.
+- `20251003194500_ledger_init` is the first actual finance-schema initializer.
+- Migrations before that initializer mix invalid finance changes with obsolete SaaS/template models and automation `Project` changes.
+- The later finance lineage adds import controls, reconciliation, locking, rule-engine records, SaaS cleanup, audit logs, email recipients, and original-file retention.
+- No single legacy migration represents the complete pre-MODEL-002 schema.
+- Modifying an already-applied migration in place could create checksum drift and is not approved.
+
+MIGRATE-001 implementation:
+
+- The owner approved `docs/MIGRATION_HISTORY_NORMALIZATION_PROPOSAL.md` as the implementation specification.
+- All 17 pre-MODEL-002 migration directories are archived byte-identically under `prisma/migrations-legacy-pre-baseline/`.
+- `SHA256SUMS` records the original digest of every archived `migration.sql`; focused tests recompute and verify all 17 hashes.
+- `MANIFEST.md` records original order, classification, baseline commit, and the unchanged MODEL-002 migration hash.
+- `PRE_MODEL002_SCHEMA.prisma` stores the formatted audited pre-MODEL-002 schema snapshot.
+- `prisma/migrations/0_finance_baseline/migration.sql` was generated from empty to that snapshot with Prisma 6.19 `migrate diff`.
+- The active history contains only `0_finance_baseline` and the byte-identical `20260703001200_add_workspace_dimensions` migration.
+- `tests/services/model002DomainSchema.test.ts` verifies active order, archive hashes, MODEL-002 hash stability, baseline contents, and localhost-only database safety.
+- `scripts/validate-migrate-001.mjs` provides guarded localhost-only disposable database preparation, invariant verification, and cleanup.
+
+MIGRATE-001 isolated PostgreSQL validation:
+
+- Used peer-authenticated PostgreSQL through the local `/tmp` socket only.
+- Fresh database: deployed baseline and MODEL-002 in order; migration status up to date; database-to-schema diff empty; database-backed `prisma validate` passed; Prisma Client 6.19.3 generation passed; both finished migration rows and the default workspace verified.
+- Adoption database: applied the pre-MODEL-002 schema; seeded one user, two exact historical category labels, one account, and two transactions; captured counts, IDs, names, totals, and dates before migration.
+- Recorded `0_finance_baseline` with `prisma migrate resolve --applied` without replaying baseline SQL, then deployed only MODEL-002.
+- Adoption migration status was up to date and database-to-schema diff was empty.
+- Category IDs and literal names, user identity, table counts, two transactions, total minor amount `19134`, credit `12345`, debit `6789`, and date range `2026-01-05 10:00:00` through `2026-02-06 11:30:00` remained unchanged.
+- The default workspace, ADMIN membership, nullable new transaction dimensions, seven MODEL-002 foreign keys, and five expected unique indexes were verified.
+
+Cleanup and final regression evidence:
+
+- Dropped both uniquely named disposable databases and removed the `.migrate001-validation-*` workspace.
+- Reran idempotent cleanup with no repository changes.
+- Focused normalized-history tests: 6 passed; only the optional environment-driven database test skipped.
+- Full suite: 52 files, 235 tests passed, 1 optional test skipped.
+- Baseline audit snapshot Prisma formatting passed.
+- Server TypeScript build passed.
+- Prisma Client generation and Next.js production build passed with 18 routes.
+- High-risk scan over schema, migrations, audit snapshot, test, and validation runner: no findings.
+- Documentation secret-material and runtime-execution scans: no findings.
+- No real or production database, financial-data import, Docker, dependency, environment, production configuration, `.graphifyignore`, or `graphify-out/` change occurred.
+- The owner approved this explicit-path commit; no push is authorized.
+
+MIGRATE-001 status: `DONE`.
+
 ## Current next task
 
-Prepare MODEL-002 as a separate bounded schema implementation task using the approved domain model and commit `73daabd` as the documentation baseline. Do not import financial data, modify Docker, or touch production configuration. Prisma changes require a new exact implementation packet and validation plan.
+Create the approved explicit-path commit, verify its hash and clean staged state, then stop. Do not begin MODEL-003, use a real or production database, import historical data, touch Graphify artifacts, or push.

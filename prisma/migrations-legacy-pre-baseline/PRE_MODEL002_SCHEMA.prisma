@@ -8,12 +8,9 @@ datasource db {
 }
 
 model User {
-  id                  String                @id @default(uuid())
-  email               String                @unique
-  isActive            Boolean               @default(true)
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @default(now()) @updatedAt
-  memberships         WorkspaceMembership[]
+  id                  String               @id @default(uuid())
+  email               String               @unique
+  createdAt           DateTime             @default(now())
   accounts            Account[]
   auditLogs           AuditLog[]
   categorizationRules CategorizationRule[]
@@ -23,85 +20,13 @@ model User {
   transactions        Transaction[]
 }
 
-model FinanceWorkspace {
-  id               String                @id @default(uuid())
-  name             String
-  slug             String                @unique
-  defaultCurrency  String                @default("EUR")
-  isActive         Boolean               @default(true)
-  createdAt        DateTime              @default(now())
-  updatedAt        DateTime              @default(now()) @updatedAt
-  memberships      WorkspaceMembership[]
-  projects         Project[]
-  transactionTypes TransactionType[]
-  categories       Category[]
-}
-
-model WorkspaceMembership {
-  id          String           @id @default(uuid())
-  workspaceId String
-  userId      String
-  role        WorkspaceRole    @default(ADMIN)
-  isActive    Boolean          @default(true)
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @default(now()) @updatedAt
-  workspace   FinanceWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([workspaceId, userId])
-  @@index([userId, isActive])
-  @@index([workspaceId, role, isActive])
-}
-
-model Project {
-  id           String           @id @default(uuid())
-  workspaceId  String
-  code         String
-  name         String
-  isActive     Boolean          @default(true)
-  isHistorical Boolean          @default(false)
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @default(now()) @updatedAt
-  workspace    FinanceWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
-  transactions Transaction[]
-
-  @@unique([workspaceId, code])
-  @@index([workspaceId, isActive])
-}
-
-model TransactionType {
-  id           String           @id @default(uuid())
-  workspaceId  String
-  literalName  String
-  isActive     Boolean          @default(true)
-  isHistorical Boolean          @default(false)
-  sortOrder    Int?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @default(now()) @updatedAt
-  workspace    FinanceWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
-  transactions Transaction[]
-
-  @@unique([workspaceId, literalName])
-  @@index([workspaceId, isActive, sortOrder])
-}
-
 model Category {
   id                  String               @id @default(uuid())
-  workspaceId         String               @default("00000000-0000-4000-8000-000000000001")
-  /// Exact literal category label retained under the legacy field name during additive migration.
   name                String               @unique
   color               String?
-  isActive            Boolean              @default(true)
-  isHistorical        Boolean              @default(false)
-  sortOrder           Int?
   createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @default(now()) @updatedAt
-  workspace           FinanceWorkspace     @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
   categorizationRules CategorizationRule[]
   transactions        Transaction[]
-
-  @@unique([workspaceId, name])
-  @@index([workspaceId, isActive, sortOrder])
 }
 
 model Ledger {
@@ -199,8 +124,6 @@ model Transaction {
   normalizedKey        String                          @default("")
   source               String
   categoryId           String?
-  projectId            String?
-  transactionTypeId    String?
   createdAt            DateTime                        @default(now())
   accountId            String?
   importBatchId        String?
@@ -218,8 +141,6 @@ model Transaction {
   importFingerprint    String?
   account              Account?                        @relation(fields: [accountId], references: [id])
   category             Category?                       @relation(fields: [categoryId], references: [id])
-  project              Project?                        @relation(fields: [projectId], references: [id])
-  transactionType      TransactionType?                @relation(fields: [transactionTypeId], references: [id])
   classificationRule   CategorizationRule?             @relation(fields: [classificationRuleId], references: [id])
   importBatch          ImportBatch?                    @relation(fields: [importBatchId], references: [id])
   ledger               Ledger?                         @relation(fields: [ledgerId], references: [id])
@@ -230,8 +151,6 @@ model Transaction {
   @@index([userId, normalizedKey, amountMinor])
   @@index([userId, accountId, date])
   @@index([classificationRuleId])
-  @@index([projectId])
-  @@index([transactionTypeId])
 }
 
 model EmailRecipient {
@@ -291,11 +210,6 @@ model CategorizationRule {
 
   @@index([userId, isActive, priority])
   @@index([ledgerId])
-}
-
-enum WorkspaceRole {
-  ADMIN
-  VIEWER
 }
 
 enum TransactionDirection {
