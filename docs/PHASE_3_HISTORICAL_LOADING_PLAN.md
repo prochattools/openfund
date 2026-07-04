@@ -133,3 +133,13 @@ Use this packet to implement Phase 3 historical loading with no data import from
 - The planner produces source-file, statement, statement-period, transaction, and clarification-evidence planning records without database writes.
 - The planner refuses period-close planning for the partial 2026 statement.
 - The next gate remains the disposable local rehearsal design, using sanitized fixtures only.
+
+## Packet D status
+
+- A sanitized local rehearsal writer maps fixture-derived import plans into the existing MODEL-004/005 schema.
+- The rehearsal writes only synthetic source bytes and sanitized fixture rows; it does not read owner source files.
+- The DB-backed test uses a localhost-only guard, creates a uniquely named disposable database, applies the active migration chain, and drops the database afterward.
+- Complete sanitized workbook data is close-eligible; the partial 2026 statement remains not close-eligible.
+- Disposable local PostgreSQL validation used the existing Brain/OrbStack stack on `localhost:5452` and disposable database `yaf_packetd_rehearsal_20260704195805_69949`; `prisma migrate deploy`, `prisma migrate status`, `prisma validate`, `prisma generate`, and database-to-schema `prisma migrate diff` all passed with no schema drift.
+- Full validation passed: focused rehearsal, planner, and MODEL-002 tests; full suite; server build; production build; diff check; high-risk and secret scans.
+- The next gate is owner-approved real local rehearsal design, still not production import.

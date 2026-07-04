@@ -4,7 +4,7 @@ Date: 2026-07-02
 Run: `agent-f961650b-de17-4282-ab18-7a716cc72958`  
 Source: `yeshuaacademy-finance`  
 Branch: `main`  
-Status: Phase 1 committed as `925a609`; MODEL-001 committed as `73daabd`; MODEL-002 and MIGRATE-001 committed as `d2afb18`; MODEL-003 Packet A committed as `0196910`; MODEL-003 Packet B committed as `b3b8afd`; MODEL-004/005 committed as `49386ad`; Phase 3 Packet C fingerprint hardening in progress
+Status: Phase 1 committed as `925a609`; MODEL-001 committed as `73daabd`; MODEL-002 and MIGRATE-001 committed as `d2afb18`; MODEL-003 Packet A committed as `0196910`; MODEL-003 Packet B committed as `b3b8afd`; MODEL-004/005 committed as `49386ad`; Phase 3 Packet D sanitized local DB rehearsal validated locally
 
 ## Authoritative document hierarchy
 
@@ -768,6 +768,43 @@ Commit evidence:
 - Committed paths were limited to the approved MODEL-004/005 documentation, Prisma schema/migration, service, and test files.
 
 No production, Dokploy, MCP bridge, `10.0.2.4`, financial import, historical data backfill, production configuration, `.env`, `.graphifyignore`, or `graphify-out/` change occurred in this batch.
+
+## Phase 3 Packet D sanitized rehearsal evidence
+
+Implementation summary:
+
+- Added a sanitized historical import rehearsal service that accepts an already-built fixture-derived import plan and writes through the provided Prisma transaction client.
+- The rehearsal creates synthetic user/workspace/account context plus MODEL-004/005 source-file, statement, statement-period, transaction, dimension, and historical booking records.
+- Source-file retention uses synthetic bytes only; owner Excel, CSV, and PDF files are not read or copied.
+- Duplicate plan fingerprints are skipped during writes so duplicate sanitized fixture rows do not double-import.
+- Complete sanitized workbook data remains close-eligible; the partial 2026 statement remains not close-eligible.
+
+Local database validation:
+
+- Used existing Brain/OrbStack PostgreSQL on `localhost:5452`.
+- Created disposable database `yaf_packetd_rehearsal_20260704195805_69949`.
+- `prisma migrate deploy` applied all four active migrations successfully: `0_finance_baseline`, `20260703001200_add_workspace_dimensions`, `20260703193000_add_classification_records`, and `20260704143000_add_statement_close_report_models`.
+- `prisma migrate status` reported the database schema is up to date.
+- `prisma validate` passed.
+- `prisma generate` passed.
+- `prisma migrate diff` from the disposable database to `prisma/schema.prisma` reported no difference.
+- The disposable migration database was dropped after validation.
+- The DB-backed rehearsal test also created and dropped its own unique disposable local database.
+
+Validation evidence:
+
+- Focused historical import rehearsal tests passed: 2 tests.
+- Focused historical import planner tests passed: 3 tests.
+- Focused MODEL-002 additive domain schema tests passed: 7 tests.
+- Full suite passed: 63 files, 273 tests.
+- Server TypeScript build passed.
+- Production build passed with 18 routes; the pre-existing Next/SWC lockfile warning remained.
+- `git diff --check` passed.
+- Changed executable/test high-risk scan found only expected local-only database guard, fixture reads, and disposable database create/drop operations.
+- Secret-material scan found only placeholder/local database URL examples.
+- Documentation runtime-execution scan found only existing historical notes and expected no-production guardrails.
+
+No production, Dokploy, MCP bridge, `10.0.2.4`, real historical import, owner source-file copy, production configuration, `.env`, `.graphifyignore`, `graphify-out/`, push, or non-disposable database mutation occurred.
 
 ## Current next task
 

@@ -49,7 +49,8 @@ MODEL-002 additive schema slice: implemented, database-validated, and committed 
 MIGRATE-001 repository normalization: done and committed as d2afb18; local PostgreSQL database validation completed against the current active chain
 MODEL-003 classification records: Packet A committed as 0196910; Packet B committed as b3b8afd
 MODEL-004/005 statement, close, snapshot, and dispatch models: committed as 49386ad after disposable local PostgreSQL migration validation
-Current gate: Phase 3 Packet C fingerprint hardening for the pure import planning layer; no real historical import, production config, push, or Graphify changes
+Phase 3 Packet D sanitized local DB rehearsal writer: implemented and locally validated; no real historical import, production config, push, or Graphify changes
+Current gate: owner-approved real local rehearsal design; still no production import
 ```
 
 ## Phase 0 — Governance and discovery
@@ -663,6 +664,35 @@ Implementation evidence:
 - Committed as `49386ad feat: add statement controls and close reporting models`.
 
 ## Phase 3 — Historical data foundation
+
+### HIST-000 — Rehearse sanitized fixture import locally
+
+Status: `DONE`
+
+Dependencies: MODEL-004 through MODEL-005 and Phase 3 Packet C planner
+
+Acceptance:
+
+- Uses only fixture-derived import plans.
+- Writes only synthetic retained source bytes.
+- Creates statement, period, transaction, dimension, and booking records in a disposable local database.
+- Keeps the partial 2026 statement not close-eligible.
+- Does not read owner source files or import real historical data.
+
+Validation:
+
+- Disposable local PostgreSQL validation used existing Brain/OrbStack Postgres on `localhost:5452`.
+- Disposable migration database `yaf_packetd_rehearsal_20260704195805_69949` applied all four active migrations with `prisma migrate deploy`, reported up to date with `prisma migrate status`, passed `prisma validate`, passed `prisma generate`, and reported no difference with `prisma migrate diff`.
+- The disposable migration database was dropped after validation.
+- DB-backed rehearsal test created and dropped its own unique disposable local database.
+- Focused historical import rehearsal tests passed: 2 tests.
+- Focused historical import planner tests passed: 3 tests.
+- Focused MODEL-002 additive domain schema tests passed: 7 tests.
+- Full suite passed: 63 files, 273 tests.
+- Server TypeScript build passed.
+- Production build passed with 18 routes and retained the pre-existing Next/SWC lockfile warning.
+- Changed executable/test scan found only expected local-only database guard, fixture reads, and disposable database create/drop operations.
+- Secret-material scan found only placeholder/local database URL examples.
 
 ### HIST-001 — Build exact concluded-workbook parser
 
