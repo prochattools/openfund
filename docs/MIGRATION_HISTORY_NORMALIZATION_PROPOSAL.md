@@ -1,6 +1,6 @@
 # Migration-history normalization proposal
 
-Status: owner-approved, implemented, and fully validated on isolated local PostgreSQL  
+Status: owner-approved, implemented, and fully validated on isolated local PostgreSQL; current active chain revalidated on disposable OrbStack PostgreSQL
 Run: `agent-f961650b-de17-4282-ab18-7a716cc72958`  
 Source: `yeshuaacademy-finance`  
 Baseline commit: `8a5ab3f6e45bb3032f00cc3bf56780c355a0859f`  
@@ -276,3 +276,80 @@ Cleanup and final regression evidence:
 - documentation secret-material and runtime-execution scans: no findings.
 
 `MIGRATE-001` is `DONE`. No real or production database was used. `_prisma_migrations` was modified only inside disposable databases through Prisma commands. No Prisma schema beyond MODEL-002, application service, financial source file, Docker file, dependency, environment file, production configuration, `.graphifyignore`, or `graphify-out/` change was made. The owner approved this explicit-path commit; no push is authorized. MODEL-003 remains blocked.
+
+## 2026-07-04 current-chain local PostgreSQL validation
+
+MIGRATE-001 database validation was rerun safely after MODEL-003 Packet A became part of the active migration chain. This was local-only and disposable.
+
+Brain documentation read first:
+
+- `/Users/Office/Repos/stevewesthoek/brain/AGENTS.md`
+- `/Users/Office/Repos/stevewesthoek/brain/00-start-here.md`
+- `/Users/Office/Repos/stevewesthoek/brain/00-current-context.md`
+- `/Users/Office/Repos/stevewesthoek/brain/00-memory-map.md`
+- `/Users/Office/Repos/stevewesthoek/brain/CLAUDE.md`
+- `/Users/Office/Repos/stevewesthoek/brain/ai/skills/custom/orbstack/SKILL.md`
+- `/Users/Office/Repos/stevewesthoek/brain/operations/database/standalone/README.md`
+- `/Users/Office/Repos/stevewesthoek/brain/operations/infrastructure/local-apps.md`
+- `/Users/Office/Repos/stevewesthoek/brain/operations/LOCAL_INFRASTRUCTURE.md`
+- `/Users/Office/Repos/stevewesthoek/brain/operations/infrastructure/FAMILY_FINANCE_LOCAL_ONLY_DIRECTIVE.md`
+
+Local database convention applied:
+
+- OrbStack is the local container runtime.
+- Plain `postgres:16` is used for local databases.
+- Local database ports are reserved in the `5400-5499` range.
+- Persistent local database definitions belong under `brain/operations/database/standalone/<app>/docker-compose.yml`.
+- No persistent Yeshua Finance local database stack was documented, so validation used a temporary localhost-only disposable container.
+
+Local connection facts:
+
+- `SYSTEM_DATABASE_URL` targeted host `localhost`, port `5458`, admin database `postgres`.
+- Username and password were present.
+- The localhost guard passed.
+- No production, Dokploy, MCP bridge, remote, or `10.0.2.4` database was used.
+
+Active migration chain:
+
+1. `prisma/migrations/0_finance_baseline`
+2. `prisma/migrations/20260703001200_add_workspace_dimensions`
+3. `prisma/migrations/20260703193000_add_classification_records`
+
+Guarded marker test evidence:
+
+- `tests/services/model002DomainSchema.test.ts`
+- Database replay executed.
+- Result: `7 passed`, no skip.
+
+Fresh current-chain deployment evidence:
+
+- Database: `yaf_migrate001_fresh_20260704122427_8458`
+- `prisma migrate deploy` applied all three active migrations successfully.
+- `prisma migrate status` reported the database schema is up to date.
+- `prisma validate` passed.
+- `prisma generate` passed.
+- `prisma migrate diff` reported no difference.
+
+Adoption rehearsal evidence:
+
+- Database: `yaf_migrate001_adopt_20260704122514_32649`
+- Applied `0_finance_baseline` manually.
+- Seeded a synthetic fixture only: one user, two categories, one account, and two transactions.
+- `prisma migrate resolve --applied 0_finance_baseline` passed.
+- `prisma migrate deploy` applied MODEL-002 and MODEL-003 Packet A migrations successfully.
+- `prisma migrate status` reported the database schema is up to date.
+- `prisma validate` passed.
+- `prisma migrate diff` reported no difference.
+- Original counts, IDs, category labels, transaction amount totals, credit/debit totals, and date range remained stable.
+- Transaction total remained `19134`; credit remained `12345`; debit remained `6789`.
+- Date range remained `2026-01-05 10:00:00` through `2026-02-06 11:30:00`.
+- MODEL-002 workspace and membership structures exist.
+- MODEL-003 tables, enums, and foreign-key relations exist.
+- No external historical finance data was inserted. Historical import remains a later task.
+
+Cleanup:
+
+- Dropped both disposable databases.
+- Stopped and removed container `yeshua-finance-local-postgres-migrate001-20260704122344`.
+- No `.env`, production configuration, Prisma schema, migration, test, server, source, `.graphifyignore`, or `graphify-out/` file was changed by validation.
+- No commit or push was made.

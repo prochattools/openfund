@@ -46,9 +46,9 @@ Phase 1 commit: 925a609 fix: make finance categorization review-safe
 MODEL-001 domain proposal: approved after review; schema unchanged
 MODEL-001 documentation commit: 73daabd docs: approve financial domain model
 MODEL-002 additive schema slice: implemented, database-validated, and committed as d2afb18
-MIGRATE-001 repository normalization: done and committed as d2afb18
-MODEL-003 classification records: proposal approved; Packet A additive persistence implemented and validated; Packet B not started
-Current gate: review Packet A diff and decide whether to commit; no Packet B, import, production config, push, or Graphify changes
+MIGRATE-001 repository normalization: done and committed as d2afb18; local PostgreSQL database validation completed against the current active chain
+MODEL-003 classification records: Packet A committed as 0196910; Packet B implemented and validated; commit not approved
+Current gate: review Packet B diff and decide whether to commit; no import, production config, migration, push, or Graphify changes
 ```
 
 ## Phase 0 — Governance and discovery
@@ -518,15 +518,28 @@ Cleanup and final regression validation:
 - Documentation secret-material and runtime-execution scans: no findings.
 - No real or production database, financial-data import, Docker, dependency, environment, production configuration, `.graphifyignore`, or `graphify-out/` change occurred.
 
+Current-chain local PostgreSQL validation, 2026-07-04:
+
+- Brain documentation was read first. The applicable convention is OrbStack as the local container runtime, plain `postgres:16` for local databases, one local database port in the `5400-5499` range, and persistent standalone definitions under `brain/operations/database/standalone/<app>/docker-compose.yml` when a project needs a permanent local database.
+- No documented persistent Yeshua Finance local database stack existed, so validation used a temporary localhost-only disposable OrbStack Postgres container on `localhost:5458`; the container was stopped and removed afterward.
+- `SYSTEM_DATABASE_URL` targeted only the local `postgres` maintenance database at `localhost:5458`; username and password were present and the localhost guard passed. No production, Dokploy, MCP bridge, remote, or `10.0.2.4` database was used.
+- The active migration directories were exactly `prisma/migrations/0_finance_baseline`, `prisma/migrations/20260703001200_add_workspace_dimensions`, and `prisma/migrations/20260703193000_add_classification_records`.
+- Guarded marker test `tests/services/model002DomainSchema.test.ts` executed the database replay and passed with `7 passed` and no skip.
+- Fresh current-chain database `yaf_migrate001_fresh_20260704122427_8458`: `prisma migrate deploy` applied all three migrations; `prisma migrate status` reported the database schema up to date; `prisma validate` was valid; `prisma generate` passed; `prisma migrate diff` reported no difference.
+- Adoption rehearsal database `yaf_migrate001_adopt_20260704122514_32649`: applied `0_finance_baseline` manually; seeded only a synthetic fixture with one user, two categories, one account, and two transactions; `prisma migrate resolve --applied 0_finance_baseline` passed; `prisma migrate deploy` applied MODEL-002 and MODEL-003 Packet A migrations successfully.
+- Adoption validation confirmed original counts, IDs, labels, transaction total `19134`, credit total `12345`, debit total `6789`, and date range `2026-01-05 10:00:00` through `2026-02-06 11:30:00` remained stable.
+- MODEL-002 workspace and membership structures existed; MODEL-003 tables, enums, and foreign-key relations existed; no external historical finance data was inserted. Historical import remains a later task.
+- Both disposable databases were dropped. No `.env`, production config, Prisma schema, migration, test, server, source, `.graphifyignore`, or `graphify-out/` file was changed by this validation task. No commit or push was made.
+
 Current gate:
 
 - Committed as `d2afb18735dce113a69d9ad40c3c8e4b3ce562df`. Do not push without explicit approval.
 
 ### MODEL-003 — Implement immutable suggestion and review-decision records
 
-Status: `PACKET_A_IMPLEMENTED_VALIDATED`
+Status: `PACKET_B_IMPLEMENTED_VALIDATED`
 
-Dependencies: MODEL-002 and MIGRATE-001 committed as `d2afb18735dce113a69d9ad40c3c8e4b3ce562df`; design gate owner-approved
+Dependencies: MODEL-002 and MIGRATE-001 committed as `d2afb18735dce113a69d9ad40c3c8e4b3ce562df`; MIGRATE-001 local PostgreSQL validation completed against the current active chain; Packet A committed as `019691091bb1b4b75d1c822d05f3d4e08cadface`; Packet B implemented and validated but commit not approved
 
 Design gate file:
 
@@ -556,13 +569,37 @@ Packet A implementation evidence:
 - Prisma Client generation and Next.js production build passed with 18 routes.
 - Packet A executable high-risk scan reported no findings.
 
-Remaining implementation packet after separate approval:
+Packet B proposal:
 
-- Packet B — behavioral transition: atomic review-decision service, booking writes, suggestion resolution, unsafe bulk-confirm removal/rejection, route/API updates, targeted service/API/UI helper tests, full tests/builds/scans.
+- `docs/MODEL_003_PACKET_B_PROPOSAL.md`
+
+Prepared Packet B boundary:
+
+- Add one atomic review-decision service over Packet A tables.
+- Route review mutations through that service.
+- Disable or reject unsafe `clearReviewQueue` / `confirmTransactions` bulk conversion.
+- Keep legacy `Transaction` fields as compatibility mirrors.
+- Add targeted service, route, helper, and API tests as needed.
+- Stop before schema/migration, import, production configuration, Graphify, or broad UI changes.
+
+Packet B implementation evidence:
+
+- Added `server/services/reviewDecisionService.ts` as the atomic review-decision service.
+- Updated review mutation route, review queue helper, categorization bulk-confirm helper, rule application, client API wrapper, and targeted tests.
+- Manual review assignment now requires `projectId`, `transactionTypeId`, and `categoryId`.
+- Unsafe bulk confirmation and category-only rule application now reject with a Dutch explanation instead of creating manual truth.
+- Legacy `Transaction` fields remain compatibility mirrors.
+- No schema, migration, financial-data import, production configuration, Docker, dependency, environment, `.graphifyignore`, or `graphify-out/` change was made.
+- Focused Packet B tests passed: 16 tests.
+- Rule-engine focused tests passed: 9 tests.
+- Server TypeScript build passed.
+- Full suite passed: 55 files passed; 251 tests passed; 1 optional test skipped.
+- Production build passed with 18 routes and the pre-existing SWC lockfile warning.
+- Server/test executable high-risk scan reported no findings; `src/libs/api.ts` scan findings were pre-existing client fetch/upload patterns and the diff only expands the existing category endpoint payload/error handling.
 
 Current gate:
 
-- Review Packet A diff and decide whether to commit. Do not begin Packet B, import financial data, modify production configuration, touch `.graphifyignore` or `graphify-out/`, push, or commit without separate approval.
+- Review Packet B diff and decide whether to commit. Do not push, import financial data, create migrations, modify production configuration, or touch `.graphifyignore` / `graphify-out/` without separate approval.
 
 ### MODEL-004 — Implement statement controls and source-file retention model
 

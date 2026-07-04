@@ -4,7 +4,7 @@ Date: 2026-07-02
 Run: `agent-f961650b-de17-4282-ab18-7a716cc72958`  
 Source: `yeshuaacademy-finance`  
 Branch: `main`  
-Status: Phase 1 committed as `925a609`; MODEL-001 committed as `73daabd`; MODEL-002 and MIGRATE-001 committed as `d2afb18`; MODEL-003 Packet A implemented and validated
+Status: Phase 1 committed as `925a609`; MODEL-001 committed as `73daabd`; MODEL-002 and MIGRATE-001 committed as `d2afb18`; MODEL-003 Packet A committed as `0196910`; Packet B implemented and validated
 
 ## Authoritative document hierarchy
 
@@ -544,6 +544,84 @@ Cleanup and final regression evidence:
 
 MIGRATE-001 status: `DONE`.
 
+## 2026-07-04 MIGRATE-001 local PostgreSQL validation evidence
+
+This follow-up recorded the completed local database validation evidence only. It did not change code, Prisma schema, migrations, tests, generated output, production configuration, Graphify files, or environment files.
+
+Brain documentation read before validation:
+
+- `/Users/Office/Repos/stevewesthoek/brain/AGENTS.md`
+- `/Users/Office/Repos/stevewesthoek/brain/00-start-here.md`
+- `/Users/Office/Repos/stevewesthoek/brain/00-current-context.md`
+- `/Users/Office/Repos/stevewesthoek/brain/00-memory-map.md`
+- `/Users/Office/Repos/stevewesthoek/brain/CLAUDE.md`
+- `/Users/Office/Repos/stevewesthoek/brain/ai/skills/custom/orbstack/SKILL.md`
+- `/Users/Office/Repos/stevewesthoek/brain/operations/database/standalone/README.md`
+- `/Users/Office/Repos/stevewesthoek/brain/operations/infrastructure/local-apps.md`
+- `/Users/Office/Repos/stevewesthoek/brain/operations/LOCAL_INFRASTRUCTURE.md`
+- `/Users/Office/Repos/stevewesthoek/brain/operations/infrastructure/FAMILY_FINANCE_LOCAL_ONLY_DIRECTIVE.md`
+
+Brain local database convention found:
+
+- OrbStack is the local container runtime.
+- Plain `postgres:16` is used for local development databases.
+- Local database ports are reserved in the `5400-5499` range.
+- Persistent local app database definitions live under `brain/operations/database/standalone/<app>/docker-compose.yml`.
+- No documented Yeshua Finance persistent local database stack existed, so validation used a temporary localhost-only disposable container and removed it afterward.
+
+Local connection guard:
+
+- `SYSTEM_DATABASE_URL` targeted `localhost`, port `5458`, admin database `postgres`.
+- Username and password were present; the localhost guard passed.
+- No production, Dokploy, MCP bridge, remote, or `10.0.2.4` database was used.
+- The validation container was `yeshua-finance-local-postgres-migrate001-20260704122344`; it was stopped and removed during cleanup.
+
+Active migration directories:
+
+1. `prisma/migrations/0_finance_baseline`
+2. `prisma/migrations/20260703001200_add_workspace_dimensions`
+3. `prisma/migrations/20260703193000_add_classification_records`
+
+Guarded marker test:
+
+- `tests/services/model002DomainSchema.test.ts`
+- Database replay executed.
+- Result: `7 passed`, no skip.
+
+Fresh current-chain database:
+
+- Database: `yaf_migrate001_fresh_20260704122427_8458`
+- `prisma migrate deploy` applied all three active migrations successfully.
+- `prisma migrate status`: database schema is up to date.
+- `prisma validate`: valid.
+- `prisma generate`: passed.
+- `prisma migrate diff`: no difference detected.
+
+Adoption rehearsal database:
+
+- Database: `yaf_migrate001_adopt_20260704122514_32649`
+- Applied `0_finance_baseline` manually.
+- Seeded only a synthetic fixture: one user, two categories, one account, and two transactions.
+- `prisma migrate resolve --applied 0_finance_baseline`: passed.
+- `prisma migrate deploy` applied MODEL-002 and MODEL-003 Packet A migrations successfully.
+- `prisma migrate status`: database schema is up to date.
+- `prisma validate`: valid.
+- `prisma migrate diff`: no difference detected.
+- Original counts, IDs, labels, transaction totals, credit/debit totals, and date range remained stable.
+- Transaction total remained `19134`; credit remained `12345`; debit remained `6789`.
+- Date range remained `2026-01-05 10:00:00` to `2026-02-06 11:30:00`.
+- MODEL-002 workspace and membership structures exist.
+- MODEL-003 tables, enums, and foreign-key relations exist.
+- No external historical finance data was inserted; historical import remains a later task.
+
+Cleanup and safety:
+
+- Dropped both disposable databases.
+- Stopped and removed container `yeshua-finance-local-postgres-migrate001-20260704122344`.
+- No production, Dokploy, MCP bridge, or `10.0.2.4` database was used.
+- No secrets were committed or printed in documentation.
+- No `.env` edit, production config edit, Graphify file edit, database import, MODEL-003 feature work, commit, or push happened in this validation follow-up.
+
 ## MODEL-003 design gate
 
 Created `docs/MODEL_003_CLASSIFICATION_RECORDS_PROPOSAL.md` as a documentation-only contract for immutable classification records. It defines:
@@ -602,6 +680,39 @@ Packet A validation evidence:
 - Packet A executable high-risk scan reported no findings.
 - Dropped disposable database `model003_packet_a_f961650b_20260703` after validation.
 
+## MODEL-003 Packet B proposal
+
+Created `docs/MODEL_003_PACKET_B_PROPOSAL.md` as a documentation-only proposal for the review-decision behavior transition.
+
+Packet B proposal summary:
+
+- Reviewed committed Packet A baseline `019691091bb1b4b75d1c822d05f3d4e08cadface`.
+- Reviewed current review behavior in `server/routes/review.ts`, `server/services/reviewQueueService.ts`, `server/services/categorizationService.ts`, relevant tests, and client API wrappers.
+- Identified that current behavior still mutates legacy transaction fields directly and bulk-converts review items to `manual`.
+- Proposed a bounded Packet B implementation around one atomic review-decision service, route transition, unsafe bulk-confirm rejection, legacy compatibility mirrors, targeted tests, and documentation handoff.
+- Explicitly excluded schema/migration work, financial-data import, historical replay, rule-model transition, production configuration, Docker, dependencies, Graphify artifacts, commit, and push.
+
+Packet B implementation evidence:
+
+- Added `server/services/reviewDecisionService.ts` as the atomic review-decision service.
+- Updated `server/routes/review.ts`, `server/services/reviewQueueService.ts`, `server/services/categorizationService.ts`, `server/services/ruleEngine.ts`, and `src/libs/api.ts`.
+- Added targeted Packet B tests for review decisions, review routes, review queue rejection, categorization rejection, and rule application rejection.
+- Manual assignment requires `projectId`, `transactionTypeId`, and `categoryId`.
+- Unsafe bulk approval and category-only rule application reject with a Dutch explanation instead of creating manual truth.
+- Legacy `Transaction` fields remain compatibility mirrors.
+- No Prisma schema or migration change was made.
+- No financial-data import, Docker, dependency, environment, production configuration, `.graphifyignore`, or `graphify-out/` change was made.
+
+Packet B validation evidence:
+
+- Focused Packet B tests passed: 16 tests.
+- Rule-engine focused tests passed: 9 tests.
+- Server TypeScript build passed.
+- Full suite passed: 55 files passed; 251 tests passed; 1 optional test skipped.
+- Production build passed with 18 routes; the SWC lockfile warning remained pre-existing and no generated files changed.
+- Server/test executable high-risk scan reported no findings.
+- `src/libs/api.ts` high-risk scan reported pre-existing fetch/upload patterns; the Packet B diff only expands the existing `updateCategory` payload and error handling.
+
 ## Current next task
 
-Review Packet A diff and decide whether to commit. Do not begin MODEL-003 Packet B, use a real or production database, import financial data, touch Graphify artifacts, modify production configuration, push, or commit without separate approval.
+Review Packet B diff and decide whether to commit. Do not import financial data, modify production configuration, create migrations, touch Graphify artifacts, push, or commit without separate approval.
