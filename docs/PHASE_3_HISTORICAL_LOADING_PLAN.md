@@ -115,3 +115,10 @@ Stop and re-check before any of the following:
 ## Next prompt
 
 Use this packet to implement Phase 3 historical loading with no data import from the owner source files until the loader and fixtures are explicitly approved.
+
+## Packet B status
+
+- Sanitized historical parser fixtures are now present under `tests/fixtures/historical-loading/`.
+- Parser modules were added under `lib/import/` for workbook rows, ING CSV rows, clarification evidence, and control checks.
+- The implementation is synthetic and local only: no owner source rows were copied into Git and no historical import was performed.
+- The next gate is a disposable local parser/import rehearsal design after parser tests pass.

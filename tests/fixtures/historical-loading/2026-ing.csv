@@ -1,0 +1,4 @@
+Date;Name / Description;Account;Counterparty;Code;Debit/credit;Amount (EUR);Transaction type;Notifications;Resulting balance;Tag
+2026-01-01;Fixture Opening Credit;NL89INGB0006369960;NL55BANK0000000005;OV;Credit;50.00;Transfer;Reference: FIX-2026-A;1050.00;
+2026-07-01;Fixture Open Period Debit;NL89INGB0006369960;NL66BANK0000000006;GT;Debit;20.00;Online Banking;Reference: FIX-2026-B;1030.00;
+

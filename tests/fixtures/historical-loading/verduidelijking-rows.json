@@ -1,0 +1,13 @@
+[
+  {
+    "Label": "Fixture Project",
+    "Reference": "Reference: FIX-2025-A",
+    "Note": "Interpretation evidence only"
+  },
+  {
+    "Label": "Fixture Expense",
+    "Reference": "Reference: FIX-2025-B",
+    "Note": "Do not rewrite the booking history"
+  }
+]
+

@@ -1,0 +1,47 @@
+[
+  {
+    "Date": "20250701",
+    "Jaartal": "2024",
+    "Maand": "2",
+    "Dag": "01",
+    "Datum": "45754",
+    "Name / Description": "Fixture Project",
+    "Account": "NL89INGB0006369960",
+    "Counterparty": "NL33BANK0000000003",
+    "Code": "OV",
+    "Debit/credit": "Credit",
+    "Amount (EUR)": "200.00",
+    "Bedrag": "200.00",
+    "Transaction type": "Transfer",
+    "Notifications": "Reference: FIX-2025-A",
+    "Resulting balance": "1300.00",
+    "Tag": "",
+    "Klant": "FR",
+    "Category": "Fixture Income",
+    "Comment": "Fixture raw date wins",
+    "Type": "Schenking"
+  },
+  {
+    "Date": "20250107",
+    "Jaartal": "2024",
+    "Maand": "2",
+    "Dag": "07",
+    "Datum": "45664",
+    "Name / Description": "Fixture Expense",
+    "Account": "NL89INGB0006369960",
+    "Counterparty": "NL44BANK0000000004",
+    "Code": "GT",
+    "Debit/credit": "Debit",
+    "Amount (EUR)": "75.25",
+    "Bedrag": "75.25",
+    "Transaction type": "Online Banking",
+    "Notifications": "Reference: FIX-2025-B",
+    "Resulting balance": "1224.75",
+    "Tag": "",
+    "Klant": "FTK",
+    "Category": "Fixture Expense",
+    "Comment": "",
+    "Type": "Algemeen"
+  }
+]
+
