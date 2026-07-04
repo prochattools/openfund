@@ -4,7 +4,7 @@ Date: 2026-07-02
 Run: `agent-f961650b-de17-4282-ab18-7a716cc72958`  
 Source: `yeshuaacademy-finance`  
 Branch: `main`  
-Status: Phase 1 committed as `925a609`; MODEL-001 committed as `73daabd`; MODEL-002 and MIGRATE-001 committed as `d2afb18`; MODEL-003 Packet A committed as `0196910`; MODEL-003 Packet B committed as `b3b8afd`; MODEL-004/005 implemented with local migration validation pending
+Status: Phase 1 committed as `925a609`; MODEL-001 committed as `73daabd`; MODEL-002 and MIGRATE-001 committed as `d2afb18`; MODEL-003 Packet A committed as `0196910`; MODEL-003 Packet B committed as `b3b8afd`; MODEL-004/005 committed as `49386ad`; Phase 3 planning next
 
 ## Authoritative document hierarchy
 
@@ -741,7 +741,7 @@ MODEL-005 summary:
 - Added additive `PeriodClose`, `ReportSnapshot`, `ReportSnapshotPeriodClose`, `ReportSnapshotLine`, `ReportArtifact`, `ReportApproval`, `ReportDispatch`, and `ReportDispatchRecipient` models.
 - `periodCloseService` enforces balanced reconciliations before close, rejects partial/incomplete periods, creates immutable versioned close records with classification/source hashes, records audited reopen metadata, creates frozen report snapshots, approves snapshots, and creates dispatch attempts with recipient hashes.
 
-Validation evidence so far:
+Validation evidence:
 
 - Prisma Client generation passed.
 - Focused MODEL-004 tests passed: 4 tests.
@@ -750,16 +750,74 @@ Validation evidence so far:
 - Server TypeScript build passed after one bounded Bytes typing repair.
 - Full suite passed: 57 files passed; 261 tests passed; 1 optional database replay skipped.
 - Production build passed with 18 routes; SWC lockfile warnings remained pre-existing and no generated files changed.
-- Changed executable/test high-risk scan reported no findings.
+- Disposable local PostgreSQL validation used the existing Brain/OrbStack `familyfinance-postgres-1` local stack on `localhost:5452`.
+- Disposable database: `yaf_model004005_validate_20260704170627_16917`.
+- `prisma migrate deploy` applied all four active migrations successfully: `0_finance_baseline`, `20260703001200_add_workspace_dimensions`, `20260703193000_add_classification_records`, and `20260704143000_add_statement_close_report_models`.
+- `prisma migrate status` reported the database schema is up to date.
+- `prisma validate` passed.
+- `prisma generate` passed.
+- `prisma migrate diff` from the disposable database to `prisma/schema.prisma` reported no difference.
+- The disposable database was dropped after validation.
+- Changed executable/test high-risk scan found only expected local-only database guard and Prisma datasource references.
+- Documentation secret-material scan reported no findings.
+- Documentation risky runtime-execution scan reported no findings.
 
-Remaining gate:
+Commit evidence:
 
-- Disposable local PostgreSQL migration deploy/diff is still required before commit because this batch added a Prisma migration.
-- Workbench does not currently have a visible local `DATABASE_URL` or active disposable local PostgreSQL instance for this validation step.
-- Do not commit MODEL-004/005 until that local migration validation passes.
+- MODEL-004/005 was committed as `49386ad feat: add statement controls and close reporting models`.
+- Committed paths were limited to the approved MODEL-004/005 documentation, Prisma schema/migration, service, and test files.
 
 No production, Dokploy, MCP bridge, `10.0.2.4`, financial import, historical data backfill, production configuration, `.env`, `.graphifyignore`, or `graphify-out/` change occurred in this batch.
 
 ## Current next task
 
-Run disposable local PostgreSQL validation for MODEL-004/005 migration `20260704143000_add_statement_close_report_models`, then commit only the approved MODEL-004/005 paths if deploy/diff and scans remain clean. Do not import financial data, modify production configuration, touch Graphify artifacts, push, or commit before local migration validation passes.
+Prepare Phase 3 historical loading/truth fixtures. Do not import real historical data into production, modify production configuration, touch Graphify artifacts, or push.
+
+## Next Phase 3 prompt
+
+Use this prompt for the next implementation session:
+
+```text
+Continue in source yeshuaacademy-finance only.
+
+Current committed state:
+- MODEL-004/005 is committed as 49386ad.
+- Local disposable PostgreSQL validation passed on localhost:5452 using disposable database yaf_model004005_validate_20260704170627_16917, which was dropped afterward.
+- No production, Dokploy, MCP bridge, 10.0.2.4, .env, Graphify, or historical import work has been touched.
+
+Task:
+Plan Phase 3 historical loading and truth fixtures, but do not import production or real historical data yet.
+
+Required context:
+1. Read the approved product/domain docs before coding:
+   - docs/PHILOSOPHY.md
+   - docs/STRATEGY.md
+   - docs/ROADMAP.md
+   - docs/IMPLEMENTATION_PLAN.md
+   - docs/finance-rebuild-run.md
+   - docs/DOMAIN_MODEL.md, if present
+2. Locate the owner-supplied source files without copying them into Git:
+   - two Excel sheets
+   - two CSV/PDF source files
+3. Identify exact sheet names, final transaction columns, and resolved Verduidelijking sheets.
+
+Phase 3 constraints:
+- Preserve literal Klant, Type, and Category exactly as supplied.
+- Use raw ING Date only for transaction dates.
+- Use Verduidelijking as interpretation evidence, not as rewritten historical truth.
+- Write tests and fixtures before any real data import.
+- Build sanitized deterministic fixture coverage first.
+- Create a disposable local import rehearsal only after parser and control tests pass.
+- Use only localhost/127.0.0.1/::1 for disposable databases.
+- Do not use production, Dokploy, MCP bridge, 10.0.2.4, or exposed production credentials.
+- Do not edit .env.
+- Do not touch .graphifyignore or graphify-out.
+- Do not push.
+- Stop before production deployment or any production data mutation.
+
+Expected output:
+- A bounded Phase 3 implementation plan.
+- Parser/import fixture test list.
+- Source-file inventory with sanitized paths and hashes only where safe to record.
+- A stop point before real data import into any non-disposable database.
+```

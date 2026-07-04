@@ -84,7 +84,7 @@ Implemented, validated, and committed as `925a609` (`fix: make finance categoriz
 
 ## Phase 2 — Financial domain and historical model
 
-Status: **in progress; MODEL-001, MODEL-002, MIGRATE-001, MODEL-003 Packet A, and MODEL-003 Packet B committed; MODEL-004/005 implemented with migration validation pending**
+Status: **complete through MODEL-005; MODEL-001, MODEL-002, MIGRATE-001, MODEL-003 Packet A, MODEL-003 Packet B, and MODEL-004/005 committed**
 
 ### Outcomes
 
@@ -108,7 +108,7 @@ Schema changes must be derived from verified workflow needs. Do not create a gen
 - `docs/MODEL_003_CLASSIFICATION_RECORDS_PROPOSAL.md` was owner-approved and Packet A added additive persistence for immutable bookings, suggestions, and review decisions.
 - MODEL-003 Packet A deployed cleanly to disposable PostgreSQL, had no database-to-schema drift, passed focused tests, full tests, server build, production build, and executable high-risk scan, and was committed as `019691091bb1b4b75d1c822d05f3d4e08cadface`.
 - `docs/MODEL_003_PACKET_B_PROPOSAL.md` defined the bounded behavior-transition proposal; Packet B routes manual review changes through an atomic review-decision service, rejects unsafe bulk/manual-truth shortcuts, and was committed as `b3b8afd`.
-- MODEL-004/005 added additive statement-control, source-file retention, period-close, report-snapshot, approval, and dispatch models plus focused service boundaries and tests; disposable local PostgreSQL migration deploy/diff remains pending before commit.
+- MODEL-004/005 added additive statement-control, source-file retention, period-close, report-snapshot, approval, and dispatch models plus focused service boundaries and tests; disposable local PostgreSQL validation applied all four active migrations, reported no schema drift, and was committed as `49386ad`.
 - July 2026 remains partial and cannot authorize a monthly close.
 - No financial import, Docker, dependency, environment, production configuration, `.graphifyignore`, or `graphify-out/` change has been made for MODEL-004/005.
 

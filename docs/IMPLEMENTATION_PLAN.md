@@ -48,8 +48,8 @@ MODEL-001 documentation commit: 73daabd docs: approve financial domain model
 MODEL-002 additive schema slice: implemented, database-validated, and committed as d2afb18
 MIGRATE-001 repository normalization: done and committed as d2afb18; local PostgreSQL database validation completed against the current active chain
 MODEL-003 classification records: Packet A committed as 0196910; Packet B committed as b3b8afd
-MODEL-004/005 statement, close, snapshot, and dispatch models: implemented with additive migration and focused services/tests; local disposable PostgreSQL migration validation pending
-Current gate: run disposable local PostgreSQL migration deploy/diff for MODEL-004/005, then commit if clean; no import, production config, push, or Graphify changes
+MODEL-004/005 statement, close, snapshot, and dispatch models: committed as 49386ad after disposable local PostgreSQL migration validation
+Current gate: Phase 3 historical loading/truth fixtures planning; no import, production config, push, or Graphify changes
 ```
 
 ## Phase 0 — Governance and discovery
@@ -604,7 +604,7 @@ Current gate:
 
 ### MODEL-004 — Implement statement controls and source-file retention model
 
-Status: `IMPLEMENTED`; local disposable PostgreSQL migration validation pending
+Status: `DONE`
 
 Dependencies: MODEL-002
 
@@ -624,12 +624,18 @@ Implementation evidence:
 - Added additive Prisma models and migration `20260704143000_add_statement_close_report_models` for `SourceFile`, `BankStatement`, and `StatementPeriod`.
 - Added `server/services/statementControlService.ts` for SHA-256 retained-file hashing, byte-identical download, exact statement total checks, duplicate source-file rejection, and period creation.
 - Added `tests/services/statementControlService.test.ts`; focused tests passed: 4 tests.
-- Prisma Client generation, server TypeScript build, full suite, production build, and changed executable/test path high-risk scan passed.
-- Remaining gate before commit: run disposable local PostgreSQL migration deploy/diff for the new migration.
+- Disposable local PostgreSQL validation used existing OrbStack Postgres on `localhost:5452` and disposable database `yaf_model004005_validate_20260704170627_16917`; no production, Dokploy, MCP bridge, or `10.0.2.4` database was used, and the disposable database was dropped afterward.
+- `prisma migrate deploy` applied all four active migrations including `20260704143000_add_statement_close_report_models`; `prisma migrate status` reported the schema up to date; `prisma validate` and `prisma generate` passed; `prisma migrate diff` reported no difference.
+- Focused MODEL-004 tests passed: 4 tests.
+- Migration-chain marker passed: 6 passed, 1 skipped.
+- Full suite passed: 57 files, 261 tests passed, 1 skipped.
+- Server TypeScript build and production build passed; production build generated 18 routes and retained the pre-existing SWC lockfile warning.
+- Changed executable/test path scan found only expected local-only database guard and Prisma datasource references; documentation secret-material and risky runtime-execution scans reported no findings.
+- Committed as `49386ad feat: add statement controls and close reporting models`.
 
 ### MODEL-005 — Implement period-close, report-snapshot, and dispatch model
 
-Status: `IMPLEMENTED`; local disposable PostgreSQL migration validation pending
+Status: `DONE`
 
 Dependencies: MODEL-002
 
@@ -647,8 +653,14 @@ Implementation evidence:
 - Added additive Prisma models and migration coverage for `PeriodClose`, `ReportSnapshot`, `ReportSnapshotPeriodClose`, `ReportSnapshotLine`, `ReportArtifact`, `ReportApproval`, `ReportDispatch`, and `ReportDispatchRecipient`.
 - Added `server/services/periodCloseService.ts` for balanced-close enforcement, immutable close hashing, audited reopen metadata, frozen snapshot creation, report approval, and dispatch recipient hashing.
 - Added `tests/services/periodCloseService.test.ts`; focused tests passed: 6 tests.
-- Prisma Client generation, server TypeScript build, full suite, production build, and changed executable/test path high-risk scan passed.
-- Remaining gate before commit: run disposable local PostgreSQL migration deploy/diff for the new migration.
+- Disposable local PostgreSQL validation used existing OrbStack Postgres on `localhost:5452` and disposable database `yaf_model004005_validate_20260704170627_16917`; no production, Dokploy, MCP bridge, or `10.0.2.4` database was used, and the disposable database was dropped afterward.
+- `prisma migrate deploy` applied all four active migrations including `20260704143000_add_statement_close_report_models`; `prisma migrate status` reported the schema up to date; `prisma validate` and `prisma generate` passed; `prisma migrate diff` reported no difference.
+- Focused MODEL-005 tests passed: 6 tests.
+- Migration-chain marker passed: 6 passed, 1 skipped.
+- Full suite passed: 57 files, 261 tests passed, 1 skipped.
+- Server TypeScript build and production build passed; production build generated 18 routes and retained the pre-existing SWC lockfile warning.
+- Changed executable/test path scan found only expected local-only database guard and Prisma datasource references; documentation secret-material and risky runtime-execution scans reported no findings.
+- Committed as `49386ad feat: add statement controls and close reporting models`.
 
 ## Phase 3 — Historical data foundation
 
