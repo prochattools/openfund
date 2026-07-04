@@ -51,7 +51,8 @@ MODEL-003 classification records: Packet A committed as 0196910; Packet B commit
 MODEL-004/005 statement, close, snapshot, and dispatch models: committed as 49386ad after disposable local PostgreSQL migration validation
 Phase 3 Packet D sanitized local DB rehearsal writer: implemented and locally validated; no real historical import, production config, push, or Graphify changes
 Phase 3 Packet E retained source hash hardening: implemented; no real owner-file import, production config, push, or Graphify changes
-Current gate: owner approval before any real local rehearsal using owner files
+Phase 3 Packet F owner-approved local rehearsal: implemented and locally validated with owner files outside Git; no production import, production config, push, or Graphify changes
+Current gate: review Packet F evidence before approving a production-safe import command or UI path
 ```
 
 ## Phase 0 — Governance and discovery
@@ -702,6 +703,16 @@ Packet E hardening:
 - The DB-backed rehearsal test asserts `SourceFile.sha256` equals the hash of `SourceFile.content`, retained content is synthetic, fixture row labels are absent, and repeated rehearsal remains idempotent.
 - Added a pure owner-local rehearsal adapter design for the future approved gate; it validates absolute owner paths outside Git and local-only database targets, but does not read files or execute an import.
 - No Prisma schema or migration change was required.
+
+Packet F owner-approved local rehearsal:
+
+- Added an owner-local rehearsal adapter that reads only the four approved absolute owner source paths outside Git, verifies their expected SHA-256 hashes, parses 2024/2025 workbooks plus the 2026 ING CSV/PDF pair, and builds deterministic import plans.
+- Added retained-byte support to the rehearsal writer so the disposable local database stores exact source bytes and verifies `SourceFile.sha256` against `SourceFile.content`.
+- The real 2026 ING CSV is normalized into chronological order before control computation; the source rows themselves remain retained unchanged.
+- Sanitized controls matched the verified baselines: 2024 has 268 rows and closes at EUR 12,184.15; 2025 has 413 rows and closes at EUR 10,350.86; the 2026 partial statement has 221 rows and closes at EUR 7,837.25.
+- Owner-local rehearsal created only disposable local PostgreSQL databases on `localhost:5452`, dropped them after validation, and left no disposable rehearsal or migration databases behind.
+- Focused owner-local rehearsal, sanitized rehearsal, planner, and owner-file adapter tests passed; the full suite passed with 65 files and 277 tests.
+- No production, Dokploy, MCP bridge, `10.0.2.4`, `.env`, `.graphifyignore`, `graphify-out/`, owner-file copy, raw row dump, generated output commit, or push occurred.
 
 ### HIST-001 — Build exact concluded-workbook parser
 

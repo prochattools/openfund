@@ -152,3 +152,25 @@ Use this packet to implement Phase 3 historical loading with no data import from
 - A pure owner-local rehearsal adapter design records the future typed flow for approved absolute owner paths, retained-byte hashing, parsing, plan building, disposable local database writes, control verification, and cleanup.
 - The adapter design does not read owner file contents, run a real-owner import, or touch production.
 - The next gate remains explicit owner approval before any real local rehearsal using owner files.
+
+## Packet F status
+
+- Owner-approved local rehearsal now reads the four approved owner files from their absolute paths outside Git and validates their expected SHA-256 hashes before parsing.
+- No owner workbook, CSV, PDF, raw transaction row dump, generated output, production config, or `.env` file is copied into the repository.
+- Retained `SourceFile.content` bytes in the disposable rehearsal database are the exact local source bytes, and each persisted `SourceFile.sha256` is asserted to equal the SHA-256 of those retained bytes.
+- The owner-local adapter sorts the 2026 ING CSV into chronological order before computing controls because the real export is newest-to-oldest.
+- Sanitized owner rehearsal controls:
+  - 2024 workbook: 268 rows; opening EUR 1,721.86; income EUR 32,267.19; expenses EUR 21,804.90; closing EUR 12,184.15; close-eligible.
+  - 2025 workbook: 413 rows; opening EUR 12,184.15; income EUR 91,642.44; expenses EUR 93,475.73; closing EUR 10,350.86; close-eligible.
+  - 2026 open statement: 221 rows; opening EUR 10,350.86; income EUR 58,784.08; expenses EUR 61,297.69; closing EUR 7,837.25; partial and not close-eligible.
+- Disposable local PostgreSQL validation used the existing Brain/OrbStack stack on `localhost:5452` and disposable database `phase3_packet_f_migrate_20260704231905_27519`; `prisma migrate deploy`, `prisma migrate status`, `prisma validate`, `prisma generate`, and database-to-schema `prisma migrate diff` all passed with no schema drift.
+- DB-backed owner rehearsal created and dropped disposable database `owner_historical_rehearsal_1783203654807_22c36dbd` during the focused owner-file test; the full suite later created and dropped `owner_historical_rehearsal_1783203678131_09051765`.
+- Focused owner-local rehearsal tests passed: 2 tests.
+- Focused sanitized rehearsal tests passed: 2 tests.
+- Focused historical import planner tests passed: 3 tests.
+- Focused owner-file adapter design tests passed: 2 tests.
+- Full suite passed: 65 files, 277 tests.
+- Server TypeScript build passed.
+- Production build passed with 18 routes and retained the pre-existing Next/SWC lockfile warning.
+- No disposable rehearsal or migration databases remained after cleanup.
+- The next gate is review of the local owner rehearsal evidence and an explicitly approved production-safe import command or UI path; no production import has occurred.

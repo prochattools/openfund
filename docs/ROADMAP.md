@@ -18,7 +18,7 @@ Execution detail: `docs/IMPLEMENTATION_PLAN.md`
 Phase 0 — Governance and verified controls       COMPLETE
 Phase 1 — Safe categorization foundation         COMPLETE
 Phase 2 — Financial domain and historical model  IN PROGRESS
-Phase 3 — Historical loading and truth fixtures  PLANNED
+Phase 3 — Historical loading and truth fixtures  IN PROGRESS
 Phase 4 — Monthly import and review workflow     PLANNED
 Phase 5 — Reconciliation, close, and snapshots   PLANNED
 Phase 6 — Visual reports and distribution        PLANNED
@@ -121,7 +121,7 @@ Schema changes must be derived from verified workflow needs. Do not create a gen
 
 ## Phase 3 — Historical loading and truth fixtures
 
-Status: **planned; sanitized fixture rehearsal and retained-source hash hardening completed through Packet E**
+Status: **in progress; owner-approved local rehearsal completed through Packet F**
 
 ### Outcomes
 
@@ -137,7 +137,9 @@ Status: **planned; sanitized fixture rehearsal and retained-source hash hardenin
 
 - Sanitized fixture-derived import planning and local DB rehearsal are implemented.
 - Sanitized rehearsal stores `SourceFile.sha256` as the hash of retained synthetic bytes, while source inventory hashes remain metadata.
-- A pure owner-local rehearsal adapter design exists for the future approved gate; no owner files have been read, copied, or imported.
+- Owner-approved local rehearsal reads only the approved owner files from absolute paths outside Git, verifies expected hashes, persists exact retained bytes to disposable local PostgreSQL, and validates the 2024, 2025, and 2026 controls.
+- The 2026 source remains partial/open and not close-eligible; no production import has occurred.
+- No owner source files, raw row dumps, generated output, production configuration, `.env`, `.graphifyignore`, or `graphify-out/` artifacts are committed.
 
 ### Exit criteria
 

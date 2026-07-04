@@ -20,6 +20,7 @@ type TxClient = Prisma.TransactionClient;
 export type HistoricalImportRehearsalInput = {
   plan: HistoricalImportPlan;
   actorEmail?: string;
+  retainedSourceContentBySha256?: Record<string, Uint8Array | Buffer>;
 };
 
 export type HistoricalImportRehearsalSummary = {
@@ -72,6 +73,16 @@ const syntheticSourceContent = (sourceFile: HistoricalSourceFilePlan): Uint8Arra
   );
   const content: Uint8Array<ArrayBuffer> = new Uint8Array(encoded.byteLength);
   content.set(encoded);
+  return content;
+};
+
+const retainedSourceContent = (
+  sourceFile: HistoricalSourceFilePlan,
+  retainedSourceContentBySha256?: Record<string, Uint8Array | Buffer>,
+): Uint8Array<ArrayBuffer> => {
+  const sourceContent = retainedSourceContentBySha256?.[sourceFile.sha256] ?? syntheticSourceContent(sourceFile);
+  const content: Uint8Array<ArrayBuffer> = new Uint8Array(sourceContent.byteLength);
+  content.set(sourceContent);
   return content;
 };
 
@@ -148,8 +159,9 @@ const upsertSourceFile = async (
   workspaceId: string,
   sourceFile: HistoricalSourceFilePlan,
   uploadedBy: string,
+  retainedSourceContentBySha256?: Record<string, Uint8Array | Buffer>,
 ) => {
-  const content = syntheticSourceContent(sourceFile);
+  const content = retainedSourceContent(sourceFile, retainedSourceContentBySha256);
   const retainedContentSha256 = hashSourceContent(content);
   const existing = await db.sourceFile.findUnique({
     where: {
@@ -420,11 +432,23 @@ export const rehearseHistoricalImportPlan = async (
     statement: HistoricalStatementPlan,
     period: HistoricalStatementPeriodPlan,
   ) => {
-    const sourceFile = await upsertSourceFile(db, workspace.id, sourceFilePlan, actor.id);
+    const sourceFile = await upsertSourceFile(
+      db,
+      workspace.id,
+      sourceFilePlan,
+      actor.id,
+      input.retainedSourceContentBySha256,
+    );
     if (sourceFile.created) sourceFilesWritten += 1;
     let supportingPdfFileId: string | null = null;
     if (supportingPdfFilePlan) {
-      const supportingPdfFile = await upsertSourceFile(db, workspace.id, supportingPdfFilePlan, actor.id);
+      const supportingPdfFile = await upsertSourceFile(
+        db,
+        workspace.id,
+        supportingPdfFilePlan,
+        actor.id,
+        input.retainedSourceContentBySha256,
+      );
       if (supportingPdfFile.created) sourceFilesWritten += 1;
       supportingPdfFileId = supportingPdfFile.record.id;
     }

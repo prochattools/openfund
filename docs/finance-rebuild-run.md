@@ -819,9 +819,61 @@ Implementation summary:
 
 No Prisma schema or migration was required. No real owner file was read, copied, or imported. No production, Dokploy, MCP bridge, `10.0.2.4`, production configuration, `.env`, `.graphifyignore`, `graphify-out/`, or push was touched.
 
+## Phase 3 Packet F owner-approved local rehearsal evidence
+
+Implementation summary:
+
+- Added `lib/import/historicalOwnerLocalRehearsal.ts` to read only the owner-approved absolute source paths outside Git, verify expected file hashes, parse the concluded 2024 and 2025 workbooks, parse the 2026 ING CSV/PDF source pair, and build owner-local rehearsal plans.
+- Added retained-byte input support to `server/services/historicalImportRehearsalService.ts` so the local rehearsal can persist exact source bytes in `SourceFile.content` and hash those retained bytes in `SourceFile.sha256`.
+- Added `tests/services/historicalOwnerLocalRehearsal.test.ts` to guard localhost-only database URLs, reject non-local hosts, create a unique disposable database, apply the active migration SQL chain, write the owner rehearsal plan, verify source-byte hashes and control totals, and drop the disposable database.
+- The real 2026 ING CSV is newest-to-oldest, so the owner-local adapter sorts it chronologically before control computation. Retained source bytes remain unchanged.
+
+Owner-source scope:
+
+- Read locally from the approved owner admin folder outside the repository:
+  - `YA financieel jaar 2024.xlsx`
+  - `YA financieel jaar 2025 v2.xlsx`
+  - `NL89INGB0006369960_2026-01-01_2026-07-01.csv`
+  - `NL89INGB0006369960_2026-01-01_2026-07-01.pdf`
+- No owner file, raw transaction row dump, generated output, production config, or `.env` file was copied into Git.
+
+Sanitized control evidence:
+
+- 2024 workbook: 268 rows; opening EUR 1,721.86; income EUR 32,267.19; expenses EUR 21,804.90; closing EUR 12,184.15; close-eligible.
+- 2025 workbook: 413 rows; opening EUR 12,184.15; income EUR 91,642.44; expenses EUR 93,475.73; closing EUR 10,350.86; close-eligible.
+- 2026 open statement: 221 rows; opening EUR 10,350.86; income EUR 58,784.08; expenses EUR 61,297.69; closing EUR 7,837.25; partial and not close-eligible.
+- All workbook transactions written in the rehearsal have explicit `Klant`, `Type`, and `Category` dimension links.
+- Persisted source-file hashes match the retained source bytes in the disposable database.
+
+Local database validation:
+
+- Used existing Brain/OrbStack PostgreSQL on `localhost:5452`.
+- Created disposable migration database `phase3_packet_f_migrate_20260704231905_27519`.
+- `prisma migrate deploy` applied all four active migrations successfully: `0_finance_baseline`, `20260703001200_add_workspace_dimensions`, `20260703193000_add_classification_records`, and `20260704143000_add_statement_close_report_models`.
+- `prisma migrate status` reported the database schema is up to date.
+- `prisma validate` passed.
+- `prisma generate` passed.
+- `prisma migrate diff` from the disposable database to `prisma/schema.prisma` reported no difference.
+- The disposable migration database was dropped after validation.
+- Focused owner-local DB-backed rehearsal created and dropped `owner_historical_rehearsal_1783203654807_22c36dbd`.
+- Full-suite owner-local DB-backed rehearsal created and dropped `owner_historical_rehearsal_1783203678131_09051765`.
+- Final disposable database check reported zero remaining `phase3_packet_f_migrate_%`, `historical_rehearsal_%`, or `owner_historical_rehearsal_%` databases.
+
+Validation evidence:
+
+- Focused owner-local rehearsal tests passed: 2 tests.
+- Focused historical import rehearsal service tests passed: 2 tests.
+- Focused historical import planner tests passed: 3 tests.
+- Focused historical owner-file adapter design tests passed: 2 tests.
+- Full suite passed: 65 files, 277 tests.
+- Server TypeScript build passed.
+- Production build passed with 18 routes; the pre-existing Next/SWC lockfile warning remained.
+
+No production, Dokploy, MCP bridge, `10.0.2.4`, persistent owner-data import, production configuration, `.env`, `.graphifyignore`, `graphify-out/`, owner-source copy, raw row dump, generated output commit, or push occurred.
+
 ## Current next task
 
-Prepare Phase 3 historical loading/truth fixtures. Do not import real historical data into production, modify production configuration, touch Graphify artifacts, or push.
+Review the Packet F owner-local rehearsal evidence and design the explicitly approved production-safe import command or UI path. Do not import real historical data into production, modify production configuration, touch Graphify artifacts, or push.
 
 ## Next Phase 3 prompt
 
