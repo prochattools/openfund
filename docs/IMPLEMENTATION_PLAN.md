@@ -49,7 +49,7 @@ MODEL-002 additive schema slice: implemented, database-validated, and committed 
 MIGRATE-001 repository normalization: done and committed as d2afb18; local PostgreSQL database validation completed against the current active chain
 MODEL-003 classification records: Packet A committed as 0196910; Packet B committed as b3b8afd
 MODEL-004/005 statement, close, snapshot, and dispatch models: committed as 49386ad after disposable local PostgreSQL migration validation
-Current gate: Phase 3 Packet B hardened parser fixtures and parser modules; no real historical import, production config, push, or Graphify changes
+Current gate: Phase 3 Packet C pure import planning layer; no real historical import, production config, push, or Graphify changes
 ```
 
 ## Phase 0 — Governance and discovery

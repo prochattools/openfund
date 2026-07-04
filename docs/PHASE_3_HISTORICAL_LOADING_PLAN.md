@@ -124,3 +124,11 @@ Use this packet to implement Phase 3 historical loading with no data import from
 - Control semantics are direction-safe: debit and credit totals are derived from row direction, not from any single sign convention.
 - 2026 ING partial/open status is statement-level metadata, not a per-row truth.
 - The next gate is a disposable local parser/import rehearsal design after parser tests pass.
+
+## Packet C status
+
+- A pure historical import planner now maps parsed rows into deterministic planning records.
+- The planner preserves literal `Klant`, `Type`, and `Category` labels and keeps raw row evidence attached.
+- The planner produces source-file, statement, statement-period, transaction, and clarification-evidence planning records without database writes.
+- The planner refuses period-close planning for the partial 2026 statement.
+- The next gate remains the disposable local rehearsal design, using sanitized fixtures only.
