@@ -84,7 +84,7 @@ Implemented, validated, and committed as `925a609` (`fix: make finance categoriz
 
 ## Phase 2 — Financial domain and historical model
 
-Status: **in progress; MODEL-001, MODEL-002, and MIGRATE-001 committed; MODEL-003 Packet A implemented and validated**
+Status: **in progress; MODEL-001, MODEL-002, MIGRATE-001, and MODEL-003 Packet A committed; Packet B implemented and validated**
 
 ### Outcomes
 
@@ -106,7 +106,9 @@ Schema changes must be derived from verified workflow needs. Do not create a gen
 - MODEL-002 added workspace ownership plus explicit `Klant`, `Type`, and category dimensions, validated them on isolated PostgreSQL, and committed them with MIGRATE-001 as `d2afb18735dce113a69d9ad40c3c8e4b3ce562df`.
 - MIGRATE-001 normalized the active migration history to a generated baseline plus the unchanged MODEL-002 migration, with the 17 legacy migrations archived byte-identically.
 - `docs/MODEL_003_CLASSIFICATION_RECORDS_PROPOSAL.md` was owner-approved and Packet A added additive persistence for immutable bookings, suggestions, and review decisions.
-- MODEL-003 Packet A deployed cleanly to disposable PostgreSQL, had no database-to-schema drift, and passed focused tests, full tests, server build, production build, and executable high-risk scan.
+- MODEL-003 Packet A deployed cleanly to disposable PostgreSQL, had no database-to-schema drift, passed focused tests, full tests, server build, production build, and executable high-risk scan, and was committed as `019691091bb1b4b75d1c822d05f3d4e08cadface`.
+- `docs/MODEL_003_PACKET_B_PROPOSAL.md` defined the bounded behavior-transition proposal; Packet B is implemented and validated but not committed.
+- Packet B routes manual review changes through an atomic review-decision service and rejects unsafe bulk/manual-truth shortcuts.
 - July 2026 remains partial and cannot authorize a monthly close.
 - No financial import, Docker, dependency, environment, production configuration, `.graphifyignore`, or `graphify-out/` change has been made for MODEL-003.
 

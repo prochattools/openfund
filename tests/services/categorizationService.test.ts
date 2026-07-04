@@ -5,6 +5,7 @@ import {
   confirmTransactions,
   type CategorizationCandidate,
 } from '../../server/services/categorizationService';
+import { BULK_CONFIRMATION_DISABLED_MESSAGE } from '../../server/services/reviewDecisionService';
 
 const candidate: CategorizationCandidate = {
   userId: 'user-1',
@@ -56,13 +57,13 @@ describe('categorization service', () => {
     })).resolves.toBe(0);
   });
 
-  it('marks selected non-manual transactions as manually confirmed', async () => {
+  it('rejects selected bulk confirmations without marking transactions manual', async () => {
     const calls: any[] = [];
     const fakeTx = {
       transaction: {
         updateMany: async (args: any) => {
           calls.push(args);
-          return { count: 2 };
+          throw new Error('updateMany should not be called');
         },
       },
     } as any;
@@ -70,18 +71,12 @@ describe('categorization service', () => {
     await expect(confirmTransactions(fakeTx, {
       userId: 'user-1',
       transactionIds: ['tx-1', 'tx-2'],
-    })).resolves.toBe(2);
+    })).rejects.toMatchObject({
+      message: BULK_CONFIRMATION_DISABLED_MESSAGE,
+      statusCode: 409,
+    });
 
-    expect(calls).toEqual([
-      {
-        where: {
-          userId: 'user-1',
-          id: { in: ['tx-1', 'tx-2'] },
-          classificationSource: { not: 'manual' },
-        },
-        data: { classificationSource: 'manual' },
-      },
-    ]);
+    expect(calls).toHaveLength(0);
   });
 
   it('does not inspect transaction history or choose a popular category without an approved rule', async () => {

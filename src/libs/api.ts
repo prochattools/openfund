@@ -82,7 +82,13 @@ export const uploadImportFile = async (formData: FormData) => {
   return response.json();
 };
 
-export const updateCategory = async (id: string, payload: { categoryId?: string | null; categoryName?: string }) => {
+export const updateCategory = async (id: string, payload: {
+  categoryId?: string | null;
+  categoryName?: string;
+  projectId?: string | null;
+  transactionTypeId?: string | null;
+  reason?: string | null;
+}) => {
   const response = await fetch(getApiUrl(`/api/transactions/${encodeApiPathSegment(id)}/category`), withUserHeader({
     method: 'PATCH',
     headers: {
@@ -92,7 +98,8 @@ export const updateCategory = async (id: string, payload: { categoryId?: string 
   }));
 
   if (!response.ok) {
-    throw new Error('De categorie kon niet worden bijgewerkt.');
+    const error = await response.json().catch(() => ({ error: 'De boeking kon niet worden bijgewerkt.' }));
+    throw new Error(error.error ?? 'De boeking kon niet worden bijgewerkt.');
   }
 
   return response.json();

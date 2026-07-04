@@ -139,7 +139,7 @@ describe('rule engine', () => {
     })).resolves.toBe(0);
   });
 
-  it('applies a rule to selected transactions and confirms them', async () => {
+  it('rejects applying category-only rules without creating manual truth', async () => {
     const calls: any[] = [];
     const fakeTx = {
       categorizationRule: {
@@ -160,31 +160,17 @@ describe('rule engine', () => {
       },
     } as any;
 
-    const count = await applyRuleToTransactions(fakeTx, {
+    await expect(applyRuleToTransactions(fakeTx, {
       userId: 'user-1',
       ruleId: 'rule-1',
       transactionIds: ['tx-1', 'tx-2'],
+    })).rejects.toMatchObject({
+      message: 'Bulk goedkeuren is uitgeschakeld. Beoordeel elke transactie afzonderlijk met Klant, Type en Categorie.',
+      statusCode: 409,
     });
 
-    expect(count).toBe(2);
     expect(calls).toEqual([
       ['findRule', { where: { id: 'rule-1', userId: 'user-1' } }],
-      ['updateTransactions', {
-        where: { id: { in: ['tx-1', 'tx-2'] }, userId: 'user-1' },
-        data: { categoryId: 'cat-rent', classificationRuleId: 'rule-1' },
-      }],
-      ['updateTransactions', {
-        where: {
-          userId: 'user-1',
-          id: { in: ['tx-1', 'tx-2'] },
-          classificationSource: { not: 'manual' },
-        },
-        data: { classificationSource: 'manual' },
-      }],
-      ['touchRule', {
-        where: { id: 'rule-1' },
-        data: { lastMatchedAt: expect.any(Date) },
-      }],
     ]);
   });
 });

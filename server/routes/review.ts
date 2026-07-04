@@ -1,19 +1,33 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prismaClient';
 import { clearReviewQueue as clearReviewQueueForUser } from '../services/reviewQueueService';
-import { createAuditLog } from '../services/auditLogService';
+import {
+  assignManualBooking,
+  INCOMPLETE_DIMENSIONS_MESSAGE,
+  isCompleteReviewAssignmentPayload,
+  ReviewDecisionError,
+} from '../services/reviewDecisionService';
 import { getRequestActor, requireAdmin } from '../auth/requestContext';
 import { readRouteParam } from './routeParams';
+
+const sendReviewDecisionError = (res: Response, error: unknown, fallback: string) => {
+  if (error instanceof ReviewDecisionError) {
+    return res.status(error.statusCode).json({ error: error.message });
+  }
+
+  return res.status(500).json({ error: fallback });
+};
 
 export const getReviewTransactions = async (req: Request, res: Response) => {
   const { userId } = getRequestActor(req);
 
   try {
-    const [transactions, categories] = await Promise.all([
+    const [transactions, categories, projects, transactionTypes] = await Promise.all([
       prisma.transaction.findMany({
         where: {
           userId,
           OR: [
+            { transactionBooking: null },
             { categoryId: null },
             { classificationSource: 'none' },
             { classificationSource: 'import' },
@@ -21,6 +35,15 @@ export const getReviewTransactions = async (req: Request, res: Response) => {
         },
         include: {
           account: true,
+          transactionBooking: true,
+          categorizationSuggestions: {
+            where: {
+              status: 'PENDING',
+            },
+            orderBy: {
+              rank: 'asc',
+            },
+          },
         },
         orderBy: {
           date: 'desc',
@@ -30,6 +53,14 @@ export const getReviewTransactions = async (req: Request, res: Response) => {
         orderBy: {
           name: 'asc',
         },
+      }),
+      prisma.project.findMany({
+        where: { isActive: true },
+        orderBy: { name: 'asc' },
+      }),
+      prisma.transactionType.findMany({
+        where: { isActive: true },
+        orderBy: [{ sortOrder: 'asc' }, { literalName: 'asc' }],
       }),
     ]);
 
@@ -46,8 +77,12 @@ export const getReviewTransactions = async (req: Request, res: Response) => {
         accountIdentifier: tx.account?.identifier ?? null,
         accountName: tx.account?.name ?? null,
         createdAt: tx.createdAt,
+        booking: tx.transactionBooking,
+        suggestions: tx.categorizationSuggestions,
       })),
       categories,
+      projects,
+      transactionTypes,
     });
   } catch (error) {
     console.error('Beoordelingsrij kon niet worden geladen', error);
@@ -61,96 +96,49 @@ export const updateTransactionCategory = async (req: Request, res: Response) => 
     return;
   }
 
-  const { userId, actorId, actorEmail } = actor;
   const transactionId = readRouteParam(req, 'id');
 
   if (!transactionId) {
     return res.status(400).json({ error: 'Transactie id ontbreekt.' });
   }
-  const { categoryId, categoryName } = req.body as {
+
+  const payload = req.body as {
     categoryId?: string | null;
-    categoryName?: string;
+    projectId?: string | null;
+    transactionTypeId?: string | null;
+    reason?: string | null;
   };
 
+  const reason = payload.reason ?? null;
+
+  if (!isCompleteReviewAssignmentPayload(payload)) {
+    return res.status(400).json({ error: INCOMPLETE_DIMENSIONS_MESSAGE });
+  }
+
   try {
-    const tx = await prisma.transaction.findFirst({
-      where: {
-        id: transactionId,
-        userId,
-      },
-      include: {
-        ledger: {
-          select: {
-            lockedAt: true,
-          },
-        },
-      },
-    });
-
-    if (!tx) {
-      return res.status(404).json({ error: 'Transactie niet gevonden.' });
-    }
-
-    if (process.env.RECONCILIATION_LOCKS_ENABLED !== 'false' && tx.ledger?.lockedAt) {
-      return res.status(423).json({ error: 'Deze maand is vergrendeld. Ontgrendel de maand voordat je deze transactie wijzigt.' });
-    }
-
-    const updated = await prisma.$transaction(async (db) => {
-      let finalCategoryId = categoryId ?? null;
-
-      if (!finalCategoryId && categoryName) {
-        const category = await db.category.upsert({
-          where: { name: categoryName },
-          update: {},
-          create: { name: categoryName },
-        });
-
-        finalCategoryId = category.id;
-      }
-
-      const result = await db.transaction.update({
-        where: { id: transactionId },
-        data: {
-          categoryId: finalCategoryId,
-          classificationSource: 'manual',
-          classificationRuleId: null,
-        },
-        include: {
-          category: true,
-        },
-      });
-
-      await createAuditLog(db, {
-        userId,
-        actorId,
-        actorEmail,
-        action: 'transaction.category.updated',
-        entityType: 'transaction',
-        entityId: transactionId,
-        before: {
-          categoryId: tx.categoryId,
-          classificationSource: tx.classificationSource,
-          classificationRuleId: tx.classificationRuleId,
-        },
-        after: {
-          categoryId: result.categoryId,
-          categoryName: result.category?.name ?? null,
-          classificationSource: result.classificationSource,
-          classificationRuleId: result.classificationRuleId,
-        },
-      });
-
-      return result;
-    });
+    const result = await prisma.$transaction((db) => assignManualBooking(db, {
+      actor,
+      transactionId,
+      projectId: payload.projectId,
+      transactionTypeId: payload.transactionTypeId,
+      categoryId: payload.categoryId,
+      reason,
+    }));
 
     return res.json({
-      id: updated.id,
-      categoryId: updated.categoryId,
-      categoryName: updated.category?.name ?? null,
+      id: result.transaction.id,
+      categoryId: result.transaction.categoryId,
+      categoryName: result.transaction.category?.name ?? null,
+      projectId: result.transaction.projectId,
+      projectName: result.transaction.project?.name ?? null,
+      transactionTypeId: result.transaction.transactionTypeId,
+      transactionTypeName: result.transaction.transactionType?.literalName ?? null,
+      bookingId: result.booking.id,
+      reviewDecisionId: result.decision.id,
     });
   } catch (error) {
-    console.error('Categorie kon niet worden bijgewerkt', error);
-    return res.status(500).json({ error: 'De categorie kon niet worden bijgewerkt.' });
+    console.error('Boeking kon niet worden bijgewerkt', error);
+    return sendReviewDecisionError(res, error, 'De boeking kon niet worden bijgewerkt.');
   }
 };
 
@@ -161,10 +149,10 @@ export const clearReviewQueue = async (req: Request, res: Response) => {
   }
 
   try {
-    const cleared = await prisma.$transaction((tx) => clearReviewQueueForUser(tx, actor.userId));
-    return res.json({ cleared });
+    await prisma.$transaction((tx) => clearReviewQueueForUser(tx, actor.userId));
+    return res.json({ cleared: 0 });
   } catch (error) {
     console.error('Beoordelingsrij kon niet worden afgerond', error);
-    return res.status(500).json({ error: 'De beoordelingsrij kon niet worden afgerond.' });
+    return sendReviewDecisionError(res, error, 'De beoordelingsrij kon niet worden afgerond.');
   }
 };

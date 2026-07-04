@@ -1,30 +1,15 @@
 import type { Prisma } from '@prisma/client';
+import { rejectUnsafeBulkConfirmation } from './reviewDecisionService';
 
 type TxClient = Prisma.TransactionClient;
 
 /**
- * Clear the review queue without deleting imported bank transactions.
+ * Bulk clearing the review queue is no longer a financial mutation.
  *
- * Older code removed every non-manual transaction, which is unsafe for a ledger
- * where the ING import is the source of truth. Clearing the queue should only
- * accept transactions that already have a category suggestion assigned.
+ * MODEL-003 requires every transaction to be reviewed through an explicit
+ * ReviewDecision and TransactionBooking write. Keeping this helper preserves
+ * the existing route boundary while preventing silent manual truth creation.
  */
-export const clearReviewQueue = async (tx: TxClient, userId: string): Promise<number> => {
-  const result = await tx.transaction.updateMany({
-    where: {
-      userId,
-      categoryId: {
-        not: null,
-      },
-      classificationSource: {
-        not: 'manual',
-      },
-    },
-    data: {
-      classificationSource: 'manual',
-      classificationRuleId: null,
-    },
-  });
-
-  return result.count;
+export const clearReviewQueue = async (_tx: TxClient, _userId: string): Promise<number> => {
+  return rejectUnsafeBulkConfirmation();
 };

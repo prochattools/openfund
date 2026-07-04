@@ -251,20 +251,7 @@ export const applyRuleToTransactions = async (
   });
   if (!rule) return 0;
 
-  await tx.transaction.updateMany({
-    where: {
-      id: { in: transactionIds },
-      userId,
-    },
-    data: {
-      categoryId: rule.categoryId,
-      classificationRuleId: rule.id,
-    },
-  });
-
-  const confirmed = await confirmTransactions(tx, { userId, transactionIds });
-  await touchRuleMatch(tx, rule.id);
-  return confirmed;
+  return confirmTransactions(tx, { userId, transactionIds });
 };
 
 export const touchRuleMatch = async (

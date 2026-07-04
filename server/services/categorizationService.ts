@@ -1,30 +1,18 @@
 import type { CategorizationRule, Prisma, TransactionClassificationSource } from '@prisma/client';
 import { findMatchingRule, touchRuleMatch } from './ruleEngine';
+import { rejectUnsafeBulkConfirmation } from './reviewDecisionService';
 
 /**
  * Each transaction must be either in the review queue or in the ledger, never in neither.
  * All transitions out of review should go through this helper to keep the invariant.
  */
 export const confirmTransactions = async (
-  tx: Prisma.TransactionClient,
+  _tx: Prisma.TransactionClient,
   params: { userId: string; transactionIds: string[] },
 ): Promise<number> => {
   if (!params.transactionIds.length) return 0;
 
-  const result = await tx.transaction.updateMany({
-    where: {
-      userId: params.userId,
-      id: { in: params.transactionIds },
-      classificationSource: {
-        not: 'manual',
-      },
-    },
-    data: {
-      classificationSource: 'manual',
-    },
-  });
-
-  return result.count;
+  return rejectUnsafeBulkConfirmation();
 };
 
 export interface CategorizationCandidate {

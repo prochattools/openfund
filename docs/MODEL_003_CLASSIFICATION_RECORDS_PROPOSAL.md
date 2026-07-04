@@ -1,6 +1,6 @@
 # MODEL-003 classification records proposal
 
-Status: owner-approved; Packet A additive persistence implemented and validated; Packet B not started  
+Status: owner-approved; Packet A committed; Packet B implemented and validated; commit not approved  
 Run: `agent-f961650b-de17-4282-ab18-7a716cc72958`  
 Source: `yeshuaacademy-finance`  
 Baseline commit: `d2afb18735dce113a69d9ad40c3c8e4b3ce562df`  
@@ -524,4 +524,14 @@ Validation evidence:
 - Next.js production build passed with 18 routes; the SWC lockfile warning remained pre-existing and no generated files changed.
 - High-risk scan over Packet A executable paths reported no findings.
 
-Packet B remains not started. No import workflow, review route, review service, UI helper, financial data, production configuration, Docker, dependency, `.graphifyignore`, or `graphify-out/` change was made as part of Packet A.
+Packet B was intentionally deferred from Packet A. No import workflow, review route, review service, UI helper, financial data, production configuration, Docker, dependency, `.graphifyignore`, or `graphify-out/` change was made as part of Packet A.
+
+## Packet B proposal and implementation evidence
+
+Prepared proposal:
+
+- `docs/MODEL_003_PACKET_B_PROPOSAL.md`
+
+The Packet B proposal reviews the committed Packet A state and the current legacy review behavior. It proposes a bounded behavior transition around one atomic review-decision service, review-route mutation changes, unsafe bulk-confirm rejection, compatibility mirrors, and targeted validation. It explicitly excludes schema or migration changes, financial-data import, historical replay, rule-model transition, production configuration, Docker, dependencies, Graphify artifacts, commit, and push without separate approval.
+
+Packet B is now implemented and validated in the worktree. The implementation evidence and current commit gate are recorded in `docs/MODEL_003_PACKET_B_PROPOSAL.md`.
