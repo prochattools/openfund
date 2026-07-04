@@ -107,14 +107,13 @@ const fingerprint = (parts: Array<string | bigint | null | undefined>): string =
     .update(parts.map((part) => (part == null ? '' : String(part))).join('|'))
     .digest('hex');
 
-const normalizeLabel = (value: string | null | undefined): string | null => {
-  if (!value) return null;
-  const text = normalizeWhitespace(value);
-  return text.length ? text : null;
-};
-
-const buildTransactionPlan = (row: ParsedHistoricalWorkbookRow | ParsedIngCsvRow): HistoricalTransactionPlan => ({
-  fingerprint: fingerprint([
+export const buildHistoricalTransactionFingerprint = (
+  row: Pick<
+    ParsedHistoricalWorkbookRow | ParsedIngCsvRow,
+    'accountIdentifier' | 'date' | 'amountMinor' | 'direction' | 'counterparty' | 'reference' | 'paymentPurpose'
+  >,
+): string =>
+  fingerprint([
     row.accountIdentifier,
     row.date.toISOString(),
     row.amountMinor,
@@ -122,7 +121,17 @@ const buildTransactionPlan = (row: ParsedHistoricalWorkbookRow | ParsedIngCsvRow
     row.counterparty,
     row.reference,
     row.paymentPurpose,
-  ]),
+  ]);
+
+const normalizeLabel = (value: string | null | undefined): string | null => {
+  if (!value) return null;
+  const text = normalizeWhitespace(value);
+  return text.length ? text : null;
+};
+
+const buildTransactionPlan = (row: ParsedHistoricalWorkbookRow | ParsedIngCsvRow): HistoricalTransactionPlan => ({
+  // Historical booking labels are preserved as evidence, but they do not define source transaction identity.
+  fingerprint: buildHistoricalTransactionFingerprint(row),
   rowNumber: row.rowNumber,
   date: row.date.toISOString(),
   direction: row.direction,
@@ -201,20 +210,7 @@ const buildPeriodPlan = (statement: HistoricalStatementPlan): HistoricalStatemen
 export const planHistoricalImport = (input: HistoricalPlannerInput): HistoricalPlannerResult => {
   const findings: string[] = [];
   const workbookRows = input.concludedWorkbook.rows;
-  const workbookFingerprints = workbookRows.map((row) =>
-    fingerprint([
-      row.accountIdentifier,
-      row.date.toISOString(),
-      row.amountMinor,
-      row.direction,
-      row.counterparty,
-      row.reference,
-      row.paymentPurpose,
-      row.customerLabel,
-      row.typeLabel,
-      row.categoryLabel,
-    ]),
-  );
+  const workbookTransactions = workbookRows.map(buildTransactionPlan);
   const workbookStatement = buildStatementPlan(
     buildSourceFile({
       kind: 'HISTORICAL_WORKBOOK_XLSX',
@@ -229,10 +225,9 @@ export const planHistoricalImport = (input: HistoricalPlannerInput): HistoricalP
     workbookRows[workbookRows.length - 1]?.date ?? null,
   );
   const workbookPeriod = buildPeriodPlan(workbookStatement);
-  const workbookTransactions = workbookRows.map(buildTransactionPlan);
 
   const statementRows = input.openStatement.statement.rows;
-  const statementFingerprints = statementRows.map((row) => buildTransactionPlan(row).fingerprint);
+  const openStatementTransactions = statementRows.map(buildTransactionPlan);
   const openStatement = buildStatementPlan(
     buildSourceFile({
       kind: 'BANK_EXPORT_CSV',
@@ -254,15 +249,14 @@ export const planHistoricalImport = (input: HistoricalPlannerInput): HistoricalP
     input.openStatement.statement.periodEnd,
   );
   const statementPeriod = buildPeriodPlan(openStatement);
-  const openStatementTransactions = statementRows.map(buildTransactionPlan);
 
   const clarificationEvidence = parseVerduidelijkingRows(input.clarificationRows);
-  const duplicateFingerprints = [
-    ...detectDuplicates(workbookFingerprints),
-    ...detectDuplicates(statementFingerprints),
-  ];
+  const duplicateFingerprints = detectDuplicates([
+    ...workbookTransactions.map((tx) => tx.fingerprint),
+    ...openStatementTransactions.map((tx) => tx.fingerprint),
+  ]);
 
-  if (openStatement.coverageStatus === 'PARTIAL' && openStatementPeriodCloseForbidden(statementPeriod)) {
+  if (!statementPeriod.closePermitted) {
     findings.push('Open/partial 2026 statement is not eligible for period close planning.');
   }
 
@@ -289,6 +283,3 @@ export const planHistoricalImport = (input: HistoricalPlannerInput): HistoricalP
     findings,
   };
 };
-
-const openStatementPeriodCloseForbidden = (period: HistoricalStatementPeriodPlan): boolean => !period.closePermitted;
-

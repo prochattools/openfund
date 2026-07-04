@@ -129,6 +129,7 @@ Use this packet to implement Phase 3 historical loading with no data import from
 
 - A pure historical import planner now maps parsed rows into deterministic planning records.
 - The planner preserves literal `Klant`, `Type`, and `Category` labels and keeps raw row evidence attached.
+- Transaction fingerprints are canonical and exclude mutable interpretation labels.
 - The planner produces source-file, statement, statement-period, transaction, and clarification-evidence planning records without database writes.
 - The planner refuses period-close planning for the partial 2026 statement.
 - The next gate remains the disposable local rehearsal design, using sanitized fixtures only.

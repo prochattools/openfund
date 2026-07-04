@@ -3,7 +3,10 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parseHistoricalWorkbookRows } from '../../lib/import/historicalWorkbookParser';
 import { parseHistoricalIngCsvStatement } from '../../lib/import/ingCsvParser';
-import { planHistoricalImport } from '../../lib/import/historicalImportPlanner';
+import {
+  buildHistoricalTransactionFingerprint,
+  planHistoricalImport,
+} from '../../lib/import/historicalImportPlanner';
 
 const workbookFixture = JSON.parse(
   fs.readFileSync(path.resolve(__dirname, '../fixtures/historical-loading/2024-workbook-rows.json'), 'utf-8'),
@@ -131,5 +134,57 @@ describe('historical import planner', () => {
       },
     ]);
   });
-});
 
+  it('treats source identity as stable even when preserved labels differ', async () => {
+    const duplicatedWorkbookRows = parseHistoricalWorkbookRows([
+      workbookFixture[0],
+      {
+        ...workbookFixture[0],
+        Klant: 'FR',
+        Type: 'Schenking',
+        Category: 'Different Fixture Label',
+        Comment: 'Label variation only',
+      },
+      workbookFixture[1],
+    ]);
+    const statement = await parseHistoricalIngCsvStatement(csvFixture, {
+      periodStart: new Date('2026-01-01T00:00:00.000Z'),
+      periodEnd: new Date('2026-07-01T00:00:00.000Z'),
+    });
+
+    const plan = planHistoricalImport({
+      concludedWorkbook: {
+        filename: 'YA financieel jaar 2024.xlsx',
+        mediaType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        sha256: 'fixture-sha-2024',
+        rows: duplicatedWorkbookRows,
+      },
+      openStatement: {
+        filename: 'NL89INGB0006369960_2026-01-01_2026-07-01.csv',
+        mediaType: 'text/csv',
+        sha256: 'fixture-sha-2026-csv',
+        pdfFilename: 'NL89INGB0006369960_2026-01-01_2026-07-01.pdf',
+        pdfMediaType: 'application/pdf',
+        pdfSha256: 'fixture-sha-2026-pdf',
+        statement,
+      },
+      clarificationRows: clarificationFixture,
+    });
+
+    const firstFingerprint = plan.plan.workbook.transactions[0]?.fingerprint;
+    const duplicateFingerprint = plan.plan.workbook.transactions[1]?.fingerprint;
+
+    expect(firstFingerprint).toBe(buildHistoricalTransactionFingerprint(duplicatedWorkbookRows[0]!));
+    expect(duplicateFingerprint).toBe(firstFingerprint);
+    expect(plan.plan.duplicateFingerprints).toEqual([
+      firstFingerprint!,
+    ]);
+    expect(plan.plan.workbook.transactions[1]).toMatchObject({
+      klant: 'FR',
+      type: 'Schenking',
+      category: 'Different Fixture Label',
+      fingerprint: firstFingerprint,
+    });
+    expect(plan.plan.workbook.transactions[0]?.rawRow).toMatchObject({ Klant: 'FTK' });
+  });
+});
