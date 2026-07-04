@@ -14,9 +14,23 @@ export type ParsedIngCsvRow = {
   paymentPurpose: string | null;
   normalizedPaymentPurpose: string;
   rawRow: Record<string, unknown>;
-  coverageStatus: 'COMPLETE' | 'PARTIAL';
-  sourceIsOpenPartial: boolean;
   reference: string | null;
+};
+
+export type HistoricalStatementCoverageStatus = 'COMPLETE' | 'PARTIAL';
+
+export type ParsedHistoricalIngCsvStatement = {
+  rows: ParsedIngCsvRow[];
+  coverageStatus: HistoricalStatementCoverageStatus;
+  sourceIsOpenPartial: boolean;
+  periodStart: Date | null;
+  periodEnd: Date | null;
+  rowCount: number;
+};
+
+export type ParseHistoricalIngCsvOptions = {
+  periodStart?: Date | null;
+  periodEnd?: Date | null;
 };
 
 const REQUIRED_HEADERS = ['Date', 'Name / Description', 'Account', 'Debit/credit', 'Amount (EUR)'];
@@ -28,9 +42,17 @@ const toText = (value: unknown): string | null => {
 };
 
 export const parseHistoricalIngCsv = (buffer: Buffer) =>
-  new Promise<ParsedIngCsvRow[]>((resolve, reject) => {
+  parseHistoricalIngCsvStatement(buffer, {});
+
+export const parseHistoricalIngCsvStatement = (
+  buffer: Buffer,
+  { periodStart = null, periodEnd = null }: ParseHistoricalIngCsvOptions = {},
+) =>
+  new Promise<ParsedHistoricalIngCsvStatement>((resolve, reject) => {
     const rows: ParsedIngCsvRow[] = [];
     let headersChecked = false;
+    let discoveredPeriodStart: Date | null = null;
+    let discoveredPeriodEnd: Date | null = null;
 
     const parser = parseString(buffer.toString('utf-8'), { headers: true, delimiter: ';', trim: true })
       .on('headers', (headers: string[]) => {
@@ -46,10 +68,15 @@ export const parseHistoricalIngCsv = (buffer: Buffer) =>
         if (!row || Object.values(row).every((value) => value == null || value === '')) return;
         const date = parseDate(row.Date);
         if (!date) throw new Error(`Invalid or missing transaction date at row ${rowNumber}`);
+        if (!discoveredPeriodStart || date < discoveredPeriodStart) {
+          discoveredPeriodStart = date;
+        }
+        if (!discoveredPeriodEnd || date > discoveredPeriodEnd) {
+          discoveredPeriodEnd = date;
+        }
         const amount = applyDebitCredit(toMinorUnits(row['Amount (EUR)']), row['Debit/credit']);
         if (amount == null) throw new Error(`Invalid or missing amount at row ${rowNumber}`);
         const paymentPurpose = toText(row['Notifications'] ?? row['Notification']);
-        const coverageStatus = date <= new Date(Date.UTC(2026, 6, 1)) ? 'PARTIAL' : 'COMPLETE';
         rows.push({
           rowNumber,
           date,
@@ -62,8 +89,6 @@ export const parseHistoricalIngCsv = (buffer: Buffer) =>
           paymentPurpose,
           normalizedPaymentPurpose: paymentPurpose ? paymentPurpose.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim() : '',
           rawRow: row,
-          coverageStatus,
-          sourceIsOpenPartial: coverageStatus === 'PARTIAL',
           reference: extractReference(paymentPurpose ?? undefined),
         });
       })
@@ -72,8 +97,20 @@ export const parseHistoricalIngCsv = (buffer: Buffer) =>
           reject(new Error('Missing ING columns: Date, Name / Description, Account, Debit/credit, Amount (EUR)'));
           return;
         }
-        resolve(rows);
+        const authoritativeEnd = periodEnd ?? discoveredPeriodEnd;
+        const authoritativeStart = periodStart ?? discoveredPeriodStart;
+        const coverageStatus: HistoricalStatementCoverageStatus =
+          authoritativeEnd && authoritativeEnd.getUTCFullYear() === 2026 && authoritativeEnd.getUTCMonth() === 6 && authoritativeEnd.getUTCDate() === 1
+            ? 'PARTIAL'
+            : 'COMPLETE';
+        resolve({
+          rows,
+          coverageStatus,
+          sourceIsOpenPartial: coverageStatus === 'PARTIAL',
+          periodStart: authoritativeStart,
+          periodEnd: authoritativeEnd,
+          rowCount: rows.length,
+        });
       })
       .on('error', reject);
   });
-

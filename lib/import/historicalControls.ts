@@ -27,9 +27,16 @@ export type HistoricalControlCheck = {
 
 const toBigInt = (value: bigint | number | null | undefined): bigint => BigInt(value ?? 0);
 
+export const cashDeltaMinor = (row: HistoricalTransactionLike): bigint => {
+  const absoluteAmount = toBigInt(row.amountMinor);
+  return row.direction === 'debit'
+    ? (absoluteAmount < 0n ? absoluteAmount : -absoluteAmount)
+    : (absoluteAmount < 0n ? -absoluteAmount : absoluteAmount);
+};
+
 export const computeHistoricalTotals = (rows: HistoricalTransactionLike[]): HistoricalControlTotals => {
   const openingBalanceMinor = rows.length && rows[0]?.resultingBalanceMinor != null
-    ? toBigInt(rows[0].resultingBalanceMinor) - toBigInt(rows[0].amountMinor)
+    ? toBigInt(rows[0].resultingBalanceMinor) - cashDeltaMinor(rows[0])
     : 0n;
 
   let incomeMinor = 0n;
@@ -39,14 +46,14 @@ export const computeHistoricalTotals = (rows: HistoricalTransactionLike[]): Hist
   let debitCount = 0;
 
   for (const row of rows) {
-    const amount = toBigInt(row.amountMinor);
-    closingBalanceMinor += amount;
+    const delta = cashDeltaMinor(row);
+    closingBalanceMinor += delta;
     if (row.direction === 'credit') {
       creditCount += 1;
-      incomeMinor += amount >= 0n ? amount : -amount;
+      incomeMinor += delta >= 0n ? delta : -delta;
     } else {
       debitCount += 1;
-      expenseMinor += amount >= 0n ? amount : -amount;
+      expenseMinor += delta >= 0n ? delta : -delta;
     }
   }
 
@@ -62,13 +69,15 @@ export const computeHistoricalTotals = (rows: HistoricalTransactionLike[]): Hist
 };
 
 export const checkRunningBalanceContinuity = (
-  rows: Array<{ rowNumber: number; amountMinor: bigint; resultingBalanceMinor?: bigint | null }>,
+  rows: Array<{ rowNumber: number; amountMinor: bigint; direction?: HistoricalDirection; resultingBalanceMinor?: bigint | null }>,
 ): HistoricalControlCheck[] => {
   const checks: HistoricalControlCheck[] = [];
   let previousBalance: bigint | null = null;
 
   rows.forEach((row, index) => {
     const actual = row.resultingBalanceMinor == null ? null : toBigInt(row.resultingBalanceMinor);
+    const direction: HistoricalDirection = row.direction ?? (row.amountMinor < 0n ? 'debit' : 'credit');
+    const delta = cashDeltaMinor({ amountMinor: row.amountMinor, direction });
     if (index === 0) {
       previousBalance = actual;
       checks.push({
@@ -81,7 +90,7 @@ export const checkRunningBalanceContinuity = (
       return;
     }
 
-    const expected = (previousBalance ?? 0n) + toBigInt(row.amountMinor);
+    const expected = (previousBalance ?? 0n) + delta;
     const valid = actual != null && actual === expected;
     checks.push({
       valid,

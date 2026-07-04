@@ -18,6 +18,7 @@ describe('historical workbook parser', () => {
       typeLabel: 'Schenking',
       categoryLabel: 'Fixture Income',
       amountMinor: 20000n,
+      amountMinorIsSigned: true,
       direction: 'credit',
       resultingBalanceMinor: 130000n,
     });
@@ -29,4 +30,3 @@ describe('historical workbook parser', () => {
     expect(rows[0].date.toISOString()).toBe('2025-07-01T00:00:00.000Z');
   });
 });
-

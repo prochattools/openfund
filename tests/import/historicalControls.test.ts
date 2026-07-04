@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   assertHelperDateColumnsRejected,
+  cashDeltaMinor,
   checkRunningBalanceContinuity,
   computeHistoricalTotals,
 } from '../../lib/import/historicalControls';
@@ -8,22 +9,28 @@ import {
 describe('historical controls', () => {
   it('computes totals and continuity for valid sequences', () => {
     const rows = [
-      { rowNumber: 2, amountMinor: 5000n, resultingBalanceMinor: 105000n },
-      { rowNumber: 3, amountMinor: -2000n, resultingBalanceMinor: 103000n },
+      { rowNumber: 2, amountMinor: 5000n, direction: 'credit' as const, resultingBalanceMinor: 105000n },
+      { rowNumber: 3, amountMinor: 2000n, direction: 'debit' as const, resultingBalanceMinor: 103000n },
+      { rowNumber: 4, amountMinor: -1000n, direction: 'debit' as const, resultingBalanceMinor: 102000n },
     ];
 
     expect(computeHistoricalTotals([
       { amountMinor: 5000n, direction: 'credit', resultingBalanceMinor: 105000n },
-      { amountMinor: -2000n, direction: 'debit', resultingBalanceMinor: 103000n },
+      { amountMinor: 2000n, direction: 'debit', resultingBalanceMinor: 103000n },
+      { amountMinor: -1000n, direction: 'debit', resultingBalanceMinor: 102000n },
     ])).toMatchObject({
       openingBalanceMinor: 100000n,
       incomeMinor: 5000n,
-      expenseMinor: 2000n,
-      closingBalanceMinor: 103000n,
-      transactionCount: 2,
+      expenseMinor: 3000n,
+      closingBalanceMinor: 102000n,
+      transactionCount: 3,
       creditCount: 1,
-      debitCount: 1,
+      debitCount: 2,
     });
+
+    expect(cashDeltaMinor({ amountMinor: 5000n, direction: 'credit' })).toBe(5000n);
+    expect(cashDeltaMinor({ amountMinor: 2000n, direction: 'debit' })).toBe(-2000n);
+    expect(cashDeltaMinor({ amountMinor: -2000n, direction: 'debit' })).toBe(-2000n);
 
     expect(checkRunningBalanceContinuity(rows)).toEqual([
       expect.objectContaining({
@@ -38,13 +45,19 @@ describe('historical controls', () => {
         expectedBalanceMinor: 103000n,
         actualBalanceMinor: 103000n,
       }),
+      expect.objectContaining({
+        valid: true,
+        rowNumber: 4,
+        expectedBalanceMinor: 102000n,
+        actualBalanceMinor: 102000n,
+      }),
     ]);
   });
 
   it('detects invalid continuity and helper date columns', () => {
     const checks = checkRunningBalanceContinuity([
-      { rowNumber: 2, amountMinor: 5000n, resultingBalanceMinor: 105000n },
-      { rowNumber: 3, amountMinor: -2000n, resultingBalanceMinor: 104000n },
+      { rowNumber: 2, amountMinor: 5000n, direction: 'credit', resultingBalanceMinor: 105000n },
+      { rowNumber: 3, amountMinor: 2000n, direction: 'debit', resultingBalanceMinor: 104000n },
     ]);
 
     expect(checks[1]?.valid).toBe(false);

@@ -121,4 +121,6 @@ Use this packet to implement Phase 3 historical loading with no data import from
 - Sanitized historical parser fixtures are now present under `tests/fixtures/historical-loading/`.
 - Parser modules were added under `lib/import/` for workbook rows, ING CSV rows, clarification evidence, and control checks.
 - The implementation is synthetic and local only: no owner source rows were copied into Git and no historical import was performed.
+- Control semantics are direction-safe: debit and credit totals are derived from row direction, not from any single sign convention.
+- 2026 ING partial/open status is statement-level metadata, not a per-row truth.
 - The next gate is a disposable local parser/import rehearsal design after parser tests pass.

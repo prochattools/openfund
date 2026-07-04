@@ -11,6 +11,7 @@ export type ParsedHistoricalWorkbookRow = {
   code: string | null;
   direction: HistoricalDirection;
   amountMinor: bigint;
+  amountMinorIsSigned: true;
   resultingBalanceMinor: bigint | null;
   customerLabel: string | null;
   typeLabel: string | null;
@@ -53,6 +54,7 @@ export const parseHistoricalWorkbookRows = (rows: HistoricalWorkbookRow[]): Pars
       code: toText(row.Code),
       direction: (toText(row['Debit/credit'])?.toLowerCase() === 'debit' ? 'debit' : 'credit'),
       amountMinor,
+      amountMinorIsSigned: true,
       resultingBalanceMinor: row['Resulting balance'] == null ? null : toMinorUnits(row['Resulting balance']),
       customerLabel: toText(row.Klant),
       typeLabel: toText(row.Type),
@@ -63,4 +65,3 @@ export const parseHistoricalWorkbookRows = (rows: HistoricalWorkbookRow[]): Pars
       reference: extractReference(paymentPurpose ?? undefined),
     };
   });
-
