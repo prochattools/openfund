@@ -106,6 +106,7 @@ describe('MODEL-002 additive domain schema', () => {
       '0_finance_baseline',
       '20260703001200_add_workspace_dimensions',
       '20260703193000_add_classification_records',
+      '20260704143000_add_statement_close_report_models',
     ]);
     expect(sha256File(migrationPath)).toBe(model002ExpectedHash);
   });

@@ -38,7 +38,13 @@ model FinanceWorkspace {
   transactionBookings       TransactionBooking[]
   categorizationSuggestions CategorizationSuggestion[]
   reviewDecisions           ReviewDecision[]
+  sourceFiles               SourceFile[]
+  bankStatements            BankStatement[]
+  statementPeriods          StatementPeriod[]
+  periodCloses              PeriodClose[]
+  reportSnapshots           ReportSnapshot[]
 }
+
 
 model WorkspaceMembership {
   id          String           @id @default(uuid())
@@ -71,6 +77,7 @@ model Project {
   categorizationSuggestions CategorizationSuggestion[]
   beforeReviewDecisions     ReviewDecision[]           @relation("ReviewDecisionBeforeProject")
   afterReviewDecisions      ReviewDecision[]           @relation("ReviewDecisionAfterProject")
+  reportSnapshotLines       ReportSnapshotLine[]
 
   @@unique([workspaceId, code])
   @@index([workspaceId, isActive])
@@ -91,6 +98,7 @@ model TransactionType {
   categorizationSuggestions CategorizationSuggestion[]
   beforeReviewDecisions     ReviewDecision[]           @relation("ReviewDecisionBeforeType")
   afterReviewDecisions      ReviewDecision[]           @relation("ReviewDecisionAfterType")
+  reportSnapshotLines       ReportSnapshotLine[]
 
   @@unique([workspaceId, literalName])
   @@index([workspaceId, isActive, sortOrder])
@@ -114,6 +122,7 @@ model Category {
   categorizationSuggestions CategorizationSuggestion[]
   beforeReviewDecisions     ReviewDecision[]           @relation("ReviewDecisionBeforeCategory")
   afterReviewDecisions      ReviewDecision[]           @relation("ReviewDecisionAfterCategory")
+  reportSnapshotLines       ReportSnapshotLine[]
 
   @@unique([workspaceId, name])
   @@index([workspaceId, isActive, sortOrder])
@@ -132,6 +141,7 @@ model Ledger {
   user         User                 @relation(fields: [userId], references: [id])
   lock         LedgerLock?
   transactions Transaction[]
+  periodCloses PeriodClose[]
 
   @@unique([userId, month, year])
 }
@@ -147,6 +157,8 @@ model Account {
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   openingBalances OpeningBalance[]
   transactions    Transaction[]
+  bankStatements  BankStatement[]
+  statementPeriods StatementPeriod[]
 
   @@unique([userId, identifier])
   @@index([userId])
@@ -201,6 +213,7 @@ model ImportBatch {
   rules               CategorizationRule[]
   user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions        Transaction[]
+  bankStatements      BankStatement[]
 
   @@index([userId, startedAt])
 }
@@ -364,6 +377,248 @@ model ReviewDecision {
   @@index([afterBookingId])
 }
 
+model SourceFile {
+  id                   String          @id @default(uuid())
+  workspaceId          String
+  filename             String
+  mediaType            String
+  sizeBytes            Int
+  sha256               String
+  content              Bytes
+  uploadedBy           String?
+  createdAt            DateTime        @default(now())
+  workspace            FinanceWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  sourceStatements     BankStatement[] @relation("BankStatementSourceFile")
+  supportingStatements BankStatement[] @relation("BankStatementSupportingPdf")
+
+  @@unique([workspaceId, sha256])
+  @@index([workspaceId, createdAt])
+}
+
+model BankStatement {
+  id                    String                  @id @default(uuid())
+  workspaceId           String
+  accountId             String
+  sourceFileId          String                  @unique
+  supportingPdfFileId   String?
+  importBatchId         String?
+  periodStart           DateTime
+  periodEnd             DateTime
+  coverageStatus        StatementCoverageStatus
+  currency              String                  @default("EUR")
+  openingBalanceMinor   BigInt
+  incomeMinor           BigInt
+  expenseMinor          BigInt
+  netMinor              BigInt
+  closingBalanceMinor   BigInt
+  transactionCount      Int
+  bankAccountIdentifier String
+  acceptedBy            String?
+  acceptedAt            DateTime?
+  createdAt             DateTime                @default(now())
+  workspace             FinanceWorkspace        @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  account               Account                 @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  sourceFile            SourceFile              @relation("BankStatementSourceFile", fields: [sourceFileId], references: [id], onDelete: Restrict)
+  supportingPdfFile     SourceFile?             @relation("BankStatementSupportingPdf", fields: [supportingPdfFileId], references: [id], onDelete: Restrict)
+  importBatch           ImportBatch?            @relation(fields: [importBatchId], references: [id], onDelete: Restrict)
+  periods               StatementPeriod[]
+  periodCloses          PeriodClose[]
+
+  @@unique([workspaceId, accountId, periodStart, periodEnd])
+  @@index([workspaceId, accountId, periodStart, periodEnd])
+  @@index([importBatchId])
+  @@index([supportingPdfFileId])
+}
+
+model StatementPeriod {
+  id                   String                  @id @default(uuid())
+  workspaceId          String
+  statementId          String
+  accountId            String
+  periodStart          DateTime
+  periodEnd            DateTime
+  coverageStatus       StatementCoverageStatus
+  openingBalanceMinor  BigInt
+  incomeMinor          BigInt
+  expenseMinor         BigInt
+  netMinor             BigInt
+  closingBalanceMinor  BigInt
+  transactionCount     Int
+  createdAt            DateTime                @default(now())
+  workspace            FinanceWorkspace        @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  statement            BankStatement           @relation(fields: [statementId], references: [id], onDelete: Restrict)
+  account              Account                 @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  periodCloses         PeriodClose[]
+
+  @@unique([statementId, accountId, periodStart, periodEnd])
+  @@index([workspaceId, accountId, periodStart, periodEnd])
+}
+
+model PeriodClose {
+  id                   String            @id @default(uuid())
+  workspaceId          String
+  ledgerId             String
+  statementId          String
+  statementPeriodId    String
+  version              Int
+  status               PeriodCloseStatus @default(CLOSED)
+  periodStart          DateTime
+  periodEnd            DateTime
+  openingBalanceMinor  BigInt
+  incomeMinor          BigInt
+  expenseMinor         BigInt
+  netMinor             BigInt
+  closingBalanceMinor  BigInt
+  transactionCount     Int
+  classificationHash   String
+  sourceDataHash       String
+  closedBy             String
+  closedAt             DateTime          @default(now())
+  reopenedBy           String?
+  reopenedAt           DateTime?
+  reopenReason         String?
+  reconciliationEvidence Json
+  workspace            FinanceWorkspace  @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  ledger               Ledger            @relation(fields: [ledgerId], references: [id], onDelete: Restrict)
+  statement            BankStatement     @relation(fields: [statementId], references: [id], onDelete: Restrict)
+  statementPeriod      StatementPeriod   @relation(fields: [statementPeriodId], references: [id], onDelete: Restrict)
+  reportSnapshotLinks  ReportSnapshotPeriodClose[]
+
+  @@unique([ledgerId, version])
+  @@index([workspaceId, periodStart, periodEnd, status])
+  @@index([statementPeriodId])
+}
+
+model ReportSnapshot {
+  id                  String       @id @default(uuid())
+  workspaceId         String
+  kind                ReportKind
+  year                Int
+  month               Int?
+  version             Int
+  openingBalanceMinor BigInt
+  incomeMinor         BigInt
+  expenseMinor        BigInt
+  netMinor            BigInt
+  closingBalanceMinor BigInt
+  transactionCount    Int
+  snapshotHash        String
+  generatedBy         String
+  generatedAt         DateTime     @default(now())
+  workspace           FinanceWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  periodCloseLinks    ReportSnapshotPeriodClose[]
+  lines               ReportSnapshotLine[]
+  artifacts           ReportArtifact[]
+  approvals           ReportApproval[]
+  dispatches          ReportDispatch[]
+
+  @@unique([workspaceId, kind, year, month, version])
+  @@index([workspaceId, kind, year, month])
+  @@index([snapshotHash])
+}
+
+model ReportSnapshotPeriodClose {
+  reportSnapshotId String
+  periodCloseId    String
+  sortOrder        Int
+  reportSnapshot   ReportSnapshot @relation(fields: [reportSnapshotId], references: [id], onDelete: Cascade)
+  periodClose      PeriodClose    @relation(fields: [periodCloseId], references: [id], onDelete: Restrict)
+
+  @@id([reportSnapshotId, periodCloseId])
+  @@index([periodCloseId])
+}
+
+model ReportSnapshotLine {
+  id                   String               @id @default(uuid())
+  reportSnapshotId     String
+  lineKind             ReportLineKind
+  projectId            String?
+  transactionTypeId    String?
+  categoryId           String?
+  literalProjectLabel  String?
+  literalTypeLabel     String?
+  literalCategoryLabel String?
+  direction            TransactionDirection?
+  reportingClass       String?
+  amountMinor          BigInt
+  transactionCount     Int
+  sortOrder            Int
+  reportSnapshot       ReportSnapshot       @relation(fields: [reportSnapshotId], references: [id], onDelete: Cascade)
+  project              Project?             @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  transactionType      TransactionType?     @relation(fields: [transactionTypeId], references: [id], onDelete: Restrict)
+  category             Category?            @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@index([reportSnapshotId, lineKind, sortOrder])
+  @@index([projectId])
+  @@index([transactionTypeId])
+  @@index([categoryId])
+}
+
+model ReportArtifact {
+  id               String               @id @default(uuid())
+  reportSnapshotId String
+  format           ReportArtifactFormat
+  filename         String
+  mediaType        String
+  sizeBytes        Int
+  sha256           String
+  content          Bytes
+  generatedAt      DateTime             @default(now())
+  reportSnapshot   ReportSnapshot       @relation(fields: [reportSnapshotId], references: [id], onDelete: Cascade)
+
+  @@unique([reportSnapshotId, format])
+  @@index([sha256])
+}
+
+model ReportApproval {
+  id               String           @id @default(uuid())
+  reportSnapshotId String
+  approvedBy       String
+  approvedAt       DateTime         @default(now())
+  snapshotHash     String
+  revokedBy        String?
+  revokedAt        DateTime?
+  revokeReason     String?
+  reportSnapshot   ReportSnapshot   @relation(fields: [reportSnapshotId], references: [id], onDelete: Restrict)
+  dispatches       ReportDispatch[]
+
+  @@unique([reportSnapshotId, snapshotHash])
+  @@index([reportSnapshotId, approvedAt])
+}
+
+model ReportDispatch {
+  id                 String                    @id @default(uuid())
+  reportSnapshotId   String
+  reportApprovalId   String
+  status             DispatchStatus            @default(PENDING)
+  fromAddress        String
+  subject            String
+  recipientHash      String
+  contentHash        String
+  providerMessageId  String?
+  sentBy             String
+  sentAt             DateTime?
+  errorMessage       String?
+  createdAt          DateTime                  @default(now())
+  reportSnapshot     ReportSnapshot            @relation(fields: [reportSnapshotId], references: [id], onDelete: Restrict)
+  reportApproval     ReportApproval            @relation(fields: [reportApprovalId], references: [id], onDelete: Restrict)
+  recipients         ReportDispatchRecipient[]
+
+  @@index([reportSnapshotId, createdAt])
+  @@index([reportApprovalId])
+  @@index([status, createdAt])
+}
+
+model ReportDispatchRecipient {
+  id               String         @id @default(uuid())
+  reportDispatchId String
+  email            String
+  name             String?
+  reportDispatch   ReportDispatch @relation(fields: [reportDispatchId], references: [id], onDelete: Cascade)
+
+  @@index([reportDispatchId])
+}
+
 model EmailRecipient {
   id        String   @id @default(uuid())
   userId    String
@@ -495,4 +750,40 @@ enum ReviewDecisionAction {
   ASSIGN_MANUALLY
   CHANGE_BOOKING
   REMOVE_BOOKING
+}
+
+enum StatementCoverageStatus {
+  COMPLETE
+  PARTIAL
+}
+
+enum PeriodCloseStatus {
+  CLOSED
+  REOPENED
+  SUPERSEDED
+}
+
+enum ReportKind {
+  MONTHLY
+  YEARLY
+}
+
+enum ReportLineKind {
+  PROJECT
+  TRANSACTION_TYPE
+  CATEGORY
+  REPORTING_CLASS
+  TOTAL
+}
+
+enum ReportArtifactFormat {
+  HTML
+  XLSX
+  PDF
+}
+
+enum DispatchStatus {
+  PENDING
+  SENT
+  FAILED
 }

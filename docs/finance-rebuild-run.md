@@ -4,7 +4,7 @@ Date: 2026-07-02
 Run: `agent-f961650b-de17-4282-ab18-7a716cc72958`  
 Source: `yeshuaacademy-finance`  
 Branch: `main`  
-Status: Phase 1 committed as `925a609`; MODEL-001 committed as `73daabd`; MODEL-002 and MIGRATE-001 committed as `d2afb18`; MODEL-003 Packet A committed as `0196910`; Packet B implemented and validated
+Status: Phase 1 committed as `925a609`; MODEL-001 committed as `73daabd`; MODEL-002 and MIGRATE-001 committed as `d2afb18`; MODEL-003 Packet A committed as `0196910`; MODEL-003 Packet B committed as `b3b8afd`; MODEL-004/005 implemented with local migration validation pending
 
 ## Authoritative document hierarchy
 
@@ -713,6 +713,53 @@ Packet B validation evidence:
 - Server/test executable high-risk scan reported no findings.
 - `src/libs/api.ts` high-risk scan reported pre-existing fetch/upload patterns; the Packet B diff only expands the existing `updateCategory` payload and error handling.
 
+## MODEL-004 and MODEL-005 implementation evidence
+
+Implemented MODEL-004 statement controls and source-file retention plus MODEL-005 period-close, report-snapshot, approval, and dispatch persistence as one bounded Phase 2 continuation.
+
+Implemented files:
+
+- `prisma/schema.prisma`
+- `prisma/migrations/20260704143000_add_statement_close_report_models/migration.sql`
+- `server/services/statementControlService.ts`
+- `server/services/periodCloseService.ts`
+- `tests/services/statementControlService.test.ts`
+- `tests/services/periodCloseService.test.ts`
+- `tests/services/model002DomainSchema.test.ts`
+- documentation handoff updates
+
+MODEL-004 summary:
+
+- Added additive `SourceFile`, `BankStatement`, and `StatementPeriod` models.
+- `SourceFile` retains original bytes, filename, media type, size, SHA-256 hash, uploader, workspace, and created time.
+- `BankStatement` stores account, period, coverage status, row count, opening, income, expenses, net, closing, accepted metadata, and source-file uniqueness.
+- `StatementPeriod` stores account-specific reconciliation periods with exact balances and row counts.
+- `statementControlService` hashes retained bytes, stores/reuses duplicate source files by workspace/hash, downloads bytes byte-identically, validates exact statement totals, rejects duplicate accepted source files, and creates statement periods.
+
+MODEL-005 summary:
+
+- Added additive `PeriodClose`, `ReportSnapshot`, `ReportSnapshotPeriodClose`, `ReportSnapshotLine`, `ReportArtifact`, `ReportApproval`, `ReportDispatch`, and `ReportDispatchRecipient` models.
+- `periodCloseService` enforces balanced reconciliations before close, rejects partial/incomplete periods, creates immutable versioned close records with classification/source hashes, records audited reopen metadata, creates frozen report snapshots, approves snapshots, and creates dispatch attempts with recipient hashes.
+
+Validation evidence so far:
+
+- Prisma Client generation passed.
+- Focused MODEL-004 tests passed: 4 tests.
+- Focused MODEL-005 tests passed: 6 tests.
+- Structural migration-chain marker passed after adding `20260704143000_add_statement_close_report_models` to the expected active chain: 6 passed, 1 skipped.
+- Server TypeScript build passed after one bounded Bytes typing repair.
+- Full suite passed: 57 files passed; 261 tests passed; 1 optional database replay skipped.
+- Production build passed with 18 routes; SWC lockfile warnings remained pre-existing and no generated files changed.
+- Changed executable/test high-risk scan reported no findings.
+
+Remaining gate:
+
+- Disposable local PostgreSQL migration deploy/diff is still required before commit because this batch added a Prisma migration.
+- Workbench does not currently have a visible local `DATABASE_URL` or active disposable local PostgreSQL instance for this validation step.
+- Do not commit MODEL-004/005 until that local migration validation passes.
+
+No production, Dokploy, MCP bridge, `10.0.2.4`, financial import, historical data backfill, production configuration, `.env`, `.graphifyignore`, or `graphify-out/` change occurred in this batch.
+
 ## Current next task
 
-Review Packet B diff and decide whether to commit. Do not import financial data, modify production configuration, create migrations, touch Graphify artifacts, push, or commit without separate approval.
+Run disposable local PostgreSQL validation for MODEL-004/005 migration `20260704143000_add_statement_close_report_models`, then commit only the approved MODEL-004/005 paths if deploy/diff and scans remain clean. Do not import financial data, modify production configuration, touch Graphify artifacts, push, or commit before local migration validation passes.

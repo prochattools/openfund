@@ -47,8 +47,9 @@ MODEL-001 domain proposal: approved after review; schema unchanged
 MODEL-001 documentation commit: 73daabd docs: approve financial domain model
 MODEL-002 additive schema slice: implemented, database-validated, and committed as d2afb18
 MIGRATE-001 repository normalization: done and committed as d2afb18; local PostgreSQL database validation completed against the current active chain
-MODEL-003 classification records: Packet A committed as 0196910; Packet B implemented and validated; commit not approved
-Current gate: review Packet B diff and decide whether to commit; no import, production config, migration, push, or Graphify changes
+MODEL-003 classification records: Packet A committed as 0196910; Packet B committed as b3b8afd
+MODEL-004/005 statement, close, snapshot, and dispatch models: implemented with additive migration and focused services/tests; local disposable PostgreSQL migration validation pending
+Current gate: run disposable local PostgreSQL migration deploy/diff for MODEL-004/005, then commit if clean; no import, production config, push, or Graphify changes
 ```
 
 ## Phase 0 — Governance and discovery
@@ -603,7 +604,7 @@ Current gate:
 
 ### MODEL-004 — Implement statement controls and source-file retention model
 
-Status: `TODO`
+Status: `IMPLEMENTED`; local disposable PostgreSQL migration validation pending
 
 Dependencies: MODEL-002
 
@@ -618,9 +619,17 @@ Validation:
 - Upload/download byte comparison tests.
 - Statement-control tests.
 
+Implementation evidence:
+
+- Added additive Prisma models and migration `20260704143000_add_statement_close_report_models` for `SourceFile`, `BankStatement`, and `StatementPeriod`.
+- Added `server/services/statementControlService.ts` for SHA-256 retained-file hashing, byte-identical download, exact statement total checks, duplicate source-file rejection, and period creation.
+- Added `tests/services/statementControlService.test.ts`; focused tests passed: 4 tests.
+- Prisma Client generation, server TypeScript build, full suite, production build, and changed executable/test path high-risk scan passed.
+- Remaining gate before commit: run disposable local PostgreSQL migration deploy/diff for the new migration.
+
 ### MODEL-005 — Implement period-close, report-snapshot, and dispatch model
 
-Status: `TODO`
+Status: `IMPLEMENTED`; local disposable PostgreSQL migration validation pending
 
 Dependencies: MODEL-002
 
@@ -632,6 +641,14 @@ Acceptance:
 Validation:
 
 - Model/service tests and disposable migration.
+
+Implementation evidence:
+
+- Added additive Prisma models and migration coverage for `PeriodClose`, `ReportSnapshot`, `ReportSnapshotPeriodClose`, `ReportSnapshotLine`, `ReportArtifact`, `ReportApproval`, `ReportDispatch`, and `ReportDispatchRecipient`.
+- Added `server/services/periodCloseService.ts` for balanced-close enforcement, immutable close hashing, audited reopen metadata, frozen snapshot creation, report approval, and dispatch recipient hashing.
+- Added `tests/services/periodCloseService.test.ts`; focused tests passed: 6 tests.
+- Prisma Client generation, server TypeScript build, full suite, production build, and changed executable/test path high-risk scan passed.
+- Remaining gate before commit: run disposable local PostgreSQL migration deploy/diff for the new migration.
 
 ## Phase 3 — Historical data foundation
 
