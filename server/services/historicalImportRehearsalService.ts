@@ -13,6 +13,7 @@ import type {
   HistoricalStatementPlan,
   HistoricalTransactionPlan,
 } from '../../lib/import/historicalImportPlanner';
+import { hashSourceContent } from './statementControlService';
 
 type TxClient = Prisma.TransactionClient;
 
@@ -65,7 +66,7 @@ const syntheticSourceContent = (sourceFile: HistoricalSourceFilePlan): Uint8Arra
     [
       'synthetic historical rehearsal source',
       `filename=${sourceFile.originalFilename}`,
-      `sha256=${sourceFile.sha256}`,
+      `sourceInventorySha256=${sourceFile.sha256}`,
       `kind=${sourceFile.kind}`,
     ].join('\n'),
   );
@@ -148,11 +149,13 @@ const upsertSourceFile = async (
   sourceFile: HistoricalSourceFilePlan,
   uploadedBy: string,
 ) => {
+  const content = syntheticSourceContent(sourceFile);
+  const retainedContentSha256 = hashSourceContent(content);
   const existing = await db.sourceFile.findUnique({
     where: {
       workspaceId_sha256: {
         workspaceId,
-        sha256: sourceFile.sha256,
+        sha256: retainedContentSha256,
       },
     },
   });
@@ -160,14 +163,13 @@ const upsertSourceFile = async (
     return { record: existing, created: false };
   }
 
-  const content = syntheticSourceContent(sourceFile);
   const record = await db.sourceFile.create({
     data: {
       workspaceId,
       filename: sourceFile.originalFilename,
       mediaType: sourceFile.mediaType,
       sizeBytes: content.byteLength,
-      sha256: sourceFile.sha256,
+      sha256: retainedContentSha256,
       content,
       uploadedBy,
     },

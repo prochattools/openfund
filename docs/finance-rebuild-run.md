@@ -4,7 +4,7 @@ Date: 2026-07-02
 Run: `agent-f961650b-de17-4282-ab18-7a716cc72958`  
 Source: `yeshuaacademy-finance`  
 Branch: `main`  
-Status: Phase 1 committed as `925a609`; MODEL-001 committed as `73daabd`; MODEL-002 and MIGRATE-001 committed as `d2afb18`; MODEL-003 Packet A committed as `0196910`; MODEL-003 Packet B committed as `b3b8afd`; MODEL-004/005 committed as `49386ad`; Phase 3 Packet D sanitized local DB rehearsal validated locally
+Status: Phase 1 committed as `925a609`; MODEL-001 committed as `73daabd`; MODEL-002 and MIGRATE-001 committed as `d2afb18`; MODEL-003 Packet A committed as `0196910`; MODEL-003 Packet B committed as `b3b8afd`; MODEL-004/005 committed as `49386ad`; Phase 3 Packet E retained source hash hardening implemented
 
 ## Authoritative document hierarchy
 
@@ -805,6 +805,19 @@ Validation evidence:
 - Documentation runtime-execution scan found only existing historical notes and expected no-production guardrails.
 
 No production, Dokploy, MCP bridge, `10.0.2.4`, real historical import, owner source-file copy, production configuration, `.env`, `.graphifyignore`, `graphify-out/`, push, or non-disposable database mutation occurred.
+
+## Phase 3 Packet E retained source hash hardening
+
+Implementation summary:
+
+- Repaired sanitized rehearsal source-file retention so `SourceFile.sha256` is the SHA-256 of the retained synthetic bytes stored in `SourceFile.content`.
+- Kept planner/source inventory hashes as sanitized metadata inside synthetic content, not as retained-byte identity.
+- Source-file upsert idempotency now uses the retained-content hash.
+- Strengthened the DB-backed rehearsal test to assert stored hash equals stored bytes, retained content is synthetic, fixture row labels are absent, and repeat rehearsal remains idempotent.
+- Added `lib/import/historicalOwnerFileAdapter.ts` as a pure typed design for the future owner-approved local rehearsal flow.
+- The adapter design validates local-only database targets and absolute owner paths outside Git, and records future steps for retained-byte hashing, parsing, plan building, disposable local DB writes, verification, and cleanup.
+
+No Prisma schema or migration was required. No real owner file was read, copied, or imported. No production, Dokploy, MCP bridge, `10.0.2.4`, production configuration, `.env`, `.graphifyignore`, `graphify-out/`, or push was touched.
 
 ## Current next task
 

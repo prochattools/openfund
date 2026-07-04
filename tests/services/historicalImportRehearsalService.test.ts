@@ -65,6 +65,9 @@ const createDisposableDatabaseUrl = (adminUrl: string, databaseName: string): st
   return disposableUrl.toString();
 };
 
+const hashPersistedContent = (content: Uint8Array): string =>
+  crypto.createHash('sha256').update(Buffer.from(content)).digest('hex');
+
 const workbookFixture = JSON.parse(
   fs.readFileSync(path.resolve(__dirname, '../fixtures/historical-loading/2024-workbook-rows.json'), 'utf-8'),
 );
@@ -135,6 +138,10 @@ describe('historical import rehearsal service', () => {
       try {
         await admin.query(`CREATE DATABASE ${databaseIdentifier}`);
         const disposableUrl = createDisposableDatabaseUrl(localAdminUrl!, databaseName);
+        const adminUrl = new URL(localAdminUrl!);
+        console.info(
+          `historical rehearsal disposable database host=${adminUrl.hostname} port=${adminUrl.port || '5432'} database=${databaseName} migrations=sql-chain`,
+        );
         disposable = new Client({ connectionString: disposableUrl });
         await disposable.connect();
         for (const directory of migrationDirectories()) {
@@ -182,8 +189,16 @@ describe('historical import rehearsal service', () => {
         ]);
 
         expect(sourceFiles).toHaveLength(3);
-        expect(sourceFiles.every((sourceFile) => Buffer.from(sourceFile.content).toString('utf8').includes('synthetic historical rehearsal source'))).toBe(true);
-        expect(sourceFiles.every((sourceFile) => !Buffer.from(sourceFile.content).toString('utf8').includes('Fixture Donor A'))).toBe(true);
+        expect(sourceFiles.every((sourceFile) => sourceFile.sha256 === hashPersistedContent(sourceFile.content))).toBe(true);
+        expect(sourceFiles.map((sourceFile) => sourceFile.sha256)).not.toContain('fixture-sha-2024');
+        expect(sourceFiles.map((sourceFile) => sourceFile.sha256)).not.toContain('fixture-sha-2026-csv');
+        expect(sourceFiles.map((sourceFile) => sourceFile.sha256)).not.toContain('fixture-sha-2026-pdf');
+        const retainedSourceText = sourceFiles.map((sourceFile) => Buffer.from(sourceFile.content).toString('utf8'));
+        expect(retainedSourceText.every((content) => content.includes('synthetic historical rehearsal source'))).toBe(true);
+        expect(retainedSourceText.every((content) => content.includes('sourceInventorySha256=fixture-sha-'))).toBe(true);
+        expect(retainedSourceText.every((content) => !content.includes('Fixture Donor A'))).toBe(true);
+        expect(retainedSourceText.every((content) => !content.includes('Fixture Gift'))).toBe(true);
+        expect(retainedSourceText.every((content) => !content.includes('Different Fixture Label'))).toBe(true);
         expect(statements.map((statement) => statement.transactionCount).sort()).toEqual([2, 3]);
         expect(periods.map((period) => period.coverageStatus).sort()).toEqual(['COMPLETE', 'PARTIAL']);
         expect(transactions).toHaveLength(4);
@@ -215,6 +230,10 @@ describe('historical import rehearsal service', () => {
           await disposable.end();
         }
         await admin.query(`DROP DATABASE IF EXISTS ${databaseIdentifier} WITH (FORCE)`);
+        const adminUrl = new URL(localAdminUrl!);
+        console.info(
+          `historical rehearsal disposable database cleanup=drop-database host=${adminUrl.hostname} port=${adminUrl.port || '5432'} database=${databaseName}`,
+        );
         await admin.end();
       }
     },

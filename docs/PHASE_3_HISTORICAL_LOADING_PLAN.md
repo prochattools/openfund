@@ -143,3 +143,12 @@ Use this packet to implement Phase 3 historical loading with no data import from
 - Disposable local PostgreSQL validation used the existing Brain/OrbStack stack on `localhost:5452` and disposable database `yaf_packetd_rehearsal_20260704195805_69949`; `prisma migrate deploy`, `prisma migrate status`, `prisma validate`, `prisma generate`, and database-to-schema `prisma migrate diff` all passed with no schema drift.
 - Full validation passed: focused rehearsal, planner, and MODEL-002 tests; full suite; server build; production build; diff check; high-risk and secret scans.
 - The next gate is owner-approved real local rehearsal design, still not production import.
+
+## Packet E status
+
+- Sanitized rehearsal source-file retention now hashes the exact retained synthetic bytes stored in `SourceFile.content`.
+- Planner/source inventory hashes remain metadata only and are not stored as retained-byte hashes for synthetic source files.
+- The DB-backed rehearsal test asserts each persisted `SourceFile.sha256` equals the SHA-256 of persisted content, synthetic content contains no fixture row labels, and repeated rehearsal remains idempotent.
+- A pure owner-local rehearsal adapter design records the future typed flow for approved absolute owner paths, retained-byte hashing, parsing, plan building, disposable local database writes, control verification, and cleanup.
+- The adapter design does not read owner file contents, run a real-owner import, or touch production.
+- The next gate remains explicit owner approval before any real local rehearsal using owner files.

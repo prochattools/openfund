@@ -50,7 +50,8 @@ MIGRATE-001 repository normalization: done and committed as d2afb18; local Postg
 MODEL-003 classification records: Packet A committed as 0196910; Packet B committed as b3b8afd
 MODEL-004/005 statement, close, snapshot, and dispatch models: committed as 49386ad after disposable local PostgreSQL migration validation
 Phase 3 Packet D sanitized local DB rehearsal writer: implemented and locally validated; no real historical import, production config, push, or Graphify changes
-Current gate: owner-approved real local rehearsal design; still no production import
+Phase 3 Packet E retained source hash hardening: implemented; no real owner-file import, production config, push, or Graphify changes
+Current gate: owner approval before any real local rehearsal using owner files
 ```
 
 ## Phase 0 — Governance and discovery
@@ -693,6 +694,14 @@ Validation:
 - Production build passed with 18 routes and retained the pre-existing Next/SWC lockfile warning.
 - Changed executable/test scan found only expected local-only database guard, fixture reads, and disposable database create/drop operations.
 - Secret-material scan found only placeholder/local database URL examples.
+
+Packet E hardening:
+
+- Sanitized rehearsal now stores the SHA-256 of the retained synthetic bytes in `SourceFile.sha256`.
+- Planner/source inventory hashes are preserved only as sanitized metadata and are not faked as retained-byte hashes.
+- The DB-backed rehearsal test asserts `SourceFile.sha256` equals the hash of `SourceFile.content`, retained content is synthetic, fixture row labels are absent, and repeated rehearsal remains idempotent.
+- Added a pure owner-local rehearsal adapter design for the future approved gate; it validates absolute owner paths outside Git and local-only database targets, but does not read files or execute an import.
+- No Prisma schema or migration change was required.
 
 ### HIST-001 — Build exact concluded-workbook parser
 

@@ -121,7 +121,7 @@ Schema changes must be derived from verified workflow needs. Do not create a gen
 
 ## Phase 3 — Historical loading and truth fixtures
 
-Status: **planned**
+Status: **planned; sanitized fixture rehearsal and retained-source hash hardening completed through Packet E**
 
 ### Outcomes
 
@@ -132,6 +132,12 @@ Status: **planned**
 - Preserve `FR` history and use the first literal 2025 `FTK` transaction as the practical transition point.
 - Import the supplied 2026 statement as open, with July remaining incomplete.
 - Store source files unchanged and downloadable.
+
+### Current checkpoint
+
+- Sanitized fixture-derived import planning and local DB rehearsal are implemented.
+- Sanitized rehearsal stores `SourceFile.sha256` as the hash of retained synthetic bytes, while source inventory hashes remain metadata.
+- A pure owner-local rehearsal adapter design exists for the future approved gate; no owner files have been read, copied, or imported.
 
 ### Exit criteria
 
