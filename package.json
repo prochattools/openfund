@@ -18,7 +18,8 @@
 		"start:api": "node dist/server/index.js",
 		"migrate": "prisma migrate deploy",
 		"postinstall": "prisma generate",
-		"validate:finance-readiness": "npm test && npm run build:server && npm run build && npx prisma validate && npx prisma generate"
+		"validate:finance-readiness": "npm test && npm run build:server && npm run build && npx prisma validate && npx prisma generate",
+		"validate:release-candidate": "npm test && npm run build:server && npm run build && node scripts/backup-restore-rehearsal.mjs --dry-run"
 	},
 	"dependencies": {
 		"@clerk/nextjs": "^5.7.1",
