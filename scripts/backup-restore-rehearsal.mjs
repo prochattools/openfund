@@ -116,7 +116,7 @@ export function buildRestoreCommand({ host, port, username, targetDatabase, inpu
 
 const isDryRun = process.argv.includes('--dry-run');
 
-const BASE_URL = 'postgresql://finance_user:local_dev_placeholder@127.0.0.1:5432/finance';
+const BASE_URL = 'postgresql://finance_user:local_dev_placeholder@127.0.0.1:5432/postgres';
 const timestamp = Date.now().toString().slice(-10);
 const SOURCE_DB = `${REHEARSAL_DB_PREFIX}src_${timestamp}`;
 const TARGET_DB = `${REHEARSAL_DB_PREFIX}tgt_${timestamp}`;
@@ -132,7 +132,10 @@ function log(msg) {
 
 function run(cmd, env = {}) {
   if (isDryRun) {
-    log(`DRY-RUN: ${cmd.replace(/:[^@]*@/, ':***@')}`);
+    const redacted = cmd
+      .replace(/:[^@]*@/g, ':***@')
+      .replace(/PGPASSWORD=[^\s]*/g, 'PGPASSWORD=***');
+    log(`DRY-RUN: ${redacted}`);
     return;
   }
   execSync(cmd, {

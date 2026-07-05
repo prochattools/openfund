@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 
 // Import the guard functions from the rehearsal script.
 // Using a dynamic import with the file:// protocol to load the ESM module.
+import { execSync } from 'child_process';
 import {
   parseDbUrl,
   assertLocalDbUrl,
@@ -170,5 +171,91 @@ describe('backup restore rehearsal — buildRestoreCommand', () => {
 
     expect(cmd).not.toContain('local_dev_placeholder');
     expect(cmd).not.toContain('password');
+  });
+});
+
+// ─── Dry-run mode ─────────────────────────────────────────────────────────────
+
+describe('backup restore rehearsal — dry-run mode', () => {
+  it('dry-run command exits 0 without a running PostgreSQL server', () => {
+    const result = execSync(
+      'node scripts/backup-restore-rehearsal.mjs --dry-run',
+      { encoding: 'utf-8', cwd: process.cwd() },
+    );
+    expect(result).toContain('[rehearsal]');
+    expect(result).toContain('dry-run');
+  });
+
+  it('dry-run output redacts PGPASSWORD secrets', () => {
+    const result = execSync(
+      'node scripts/backup-restore-rehearsal.mjs --dry-run',
+      { encoding: 'utf-8', cwd: process.cwd() },
+    );
+    expect(result).not.toContain('local_dev_placeholder');
+    expect(result).not.toMatch(/PGPASSWORD=[^*]/);
+  });
+
+  it('dry-run uses yaf_rehearsal_* database names for source and target', () => {
+    const result = execSync(
+      'node scripts/backup-restore-rehearsal.mjs --dry-run',
+      { encoding: 'utf-8', cwd: process.cwd() },
+    );
+    expect(result).toMatch(/yaf_rehearsal_src_\d+/);
+    expect(result).toMatch(/yaf_rehearsal_tgt_\d+/);
+  });
+
+  it('dry-run uses postgres maintenance database for psql admin commands', () => {
+    const result = execSync(
+      'node scripts/backup-restore-rehearsal.mjs --dry-run',
+      { encoding: 'utf-8', cwd: process.cwd() },
+    );
+    expect(result).toContain('/postgres');
+    expect(result).not.toContain('/finance -c');
+  });
+
+  it('production-like database names remain rejected by the guard', () => {
+    expect(() =>
+      assertLocalDbUrl('postgresql://u:p@localhost:5432/finance')
+    ).toThrow('GUARD');
+
+    expect(() =>
+      assertLocalDbUrl('postgresql://u:p@localhost:5432/finance_production')
+    ).toThrow('GUARD');
+  });
+
+  it('non-local hosts remain rejected', () => {
+    expect(() =>
+      assertLocalDbUrl('postgresql://u:p@10.0.2.4:5432/yaf_rehearsal_test')
+    ).toThrow('GUARD');
+
+    expect(() =>
+      assertLocalDbUrl('postgresql://u:p@db.dokploy.internal:5432/yaf_rehearsal_test')
+    ).toThrow('GUARD');
+  });
+
+  it('dump and restore command construction is deterministic', () => {
+    const dumpA = buildDumpCommand({
+      host: '127.0.0.1', port: '5432', username: 'finance_user',
+      database: 'yaf_rehearsal_src_0000000000',
+      outputFile: 'yaf_rehearsal_dump_0000000000.dump',
+    });
+    const dumpB = buildDumpCommand({
+      host: '127.0.0.1', port: '5432', username: 'finance_user',
+      database: 'yaf_rehearsal_src_0000000000',
+      outputFile: 'yaf_rehearsal_dump_0000000000.dump',
+    });
+    expect(dumpA).toBe(dumpB);
+
+    const restoreA = buildRestoreCommand({
+      host: '127.0.0.1', port: '5432', username: 'finance_user',
+      targetDatabase: 'yaf_rehearsal_tgt_0000000000',
+      inputFile: 'yaf_rehearsal_dump_0000000000.dump',
+    });
+    const restoreB = buildRestoreCommand({
+      host: '127.0.0.1', port: '5432', username: 'finance_user',
+      targetDatabase: 'yaf_rehearsal_tgt_0000000000',
+      inputFile: 'yaf_rehearsal_dump_0000000000.dump',
+    });
+    expect(restoreA).toBe(restoreB);
   });
 });
