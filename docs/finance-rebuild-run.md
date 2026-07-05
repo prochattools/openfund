@@ -4,7 +4,7 @@ Date: 2026-07-02
 Run: `agent-f961650b-de17-4282-ab18-7a716cc72958`  
 Source: `yeshuaacademy-finance`  
 Branch: `main`  
-Status: Phase 1 committed as `925a609`; MODEL-001 committed as `73daabd`; MODEL-002 and MIGRATE-001 committed as `d2afb18`; MODEL-003 Packet A committed as `0196910`; MODEL-003 Packet B committed as `b3b8afd`; MODEL-004/005 committed as `49386ad`; Phase 3 Packet E retained source hash hardening implemented
+Status: Phase 1 committed as `925a609`; MODEL-001 committed as `73daabd`; MODEL-002 and MIGRATE-001 committed as `d2afb18`; MODEL-003 Packet A committed as `0196910`; MODEL-003 Packet B committed as `b3b8afd`; MODEL-004/005 committed as `49386ad`; Phase 3 Packet E retained source hash hardening implemented; CLOSE-002 category control totals implemented
 
 ## Authoritative document hierarchy
 
@@ -1084,6 +1084,38 @@ Validation evidence:
 
 No production, Dokploy, MCP bridge, `10.0.2.4`, persistent owner-data import, production configuration, `.env`, `.graphifyignore`, `graphify-out/`, owner-source copy, raw row dump, generated output commit, period close, report snapshot, transaction booking, historical production import, or push occurred.
 
+## Phase 5 CLOSE-002 validation evidence
+
+CLOSE-002 category control totals implemented:
+
+- CLOSE-001 route account filter hardened: `server/routes/statementReconciliationPreview.ts` now filters transactions by `accountId: statementPeriod.accountId` in addition to `userId` and date range.
+- New service: `server/services/categoryControlTotalsService.ts` computes category income/expense totals from booked transactions and proves they reconcile exactly to statement totals.
+- Category control lines are grouped by exact dimension triple (projectId, transactionTypeId, categoryId, direction) and preserve literal `Klant`, `Type`, and `Category` labels from `TransactionBooking`.
+- Combined close control preview: `buildCloseControlPreview` merges CLOSE-001 statement reconciliation with CLOSE-002 category controls; `toCombinedReconciliationEvidence` produces evidence accepted by `assertCanClose` only when both are balanced/complete with zero differences.
+- Route now returns combined preview with `statementReconciliation`, `categoryControls`, `combinedStatus`, `combinedCloseEligible`, and `combinedReasons`.
+- Status logic: `INCOMPLETE` if any missing booking/dimension or unresolved transaction; `UNBALANCED` if category income/expense differs from statement; `BALANCED` only when all match exactly.
+- No PeriodClose, ReportSnapshot, approval, dispatch, booking, or audit mutation occurs.
+
+Validation:
+
+- Focused category control totals tests: 24 passed.
+- Route tests: 8 passed (account filter, combined response, literal labels, read-only, admin-only).
+- Existing CLOSE-001 reconciliation service tests: 20 passed.
+- Statement control service tests: 4 passed.
+- Period close service tests: 6 passed.
+- Reconciliation service tests: 5 passed.
+- Review decision tests: 8 passed.
+- Review queue tests: 3 passed.
+- Monthly import preview tests: 10 passed.
+- Full suite: 369 tests passed.
+- Server TypeScript build passed.
+- Production build passed with 18 routes and the pre-existing Next/SWC lockfile warning.
+- `git diff --check` passed.
+- Prisma validate remains environment-blocked (no standalone `DATABASE_URL`); documented and expected.
+- No Prisma schema or migration was required.
+
+No production, Dokploy, MCP bridge, `10.0.2.4`, persistent owner-data import, production configuration, `.env`, `.graphifyignore`, `graphify-out/`, owner-source copy, raw row dump, generated output commit, period close, report snapshot, transaction booking, historical production import, or push occurred.
+
 ## Current next task
 
-Current gate is CLOSE-002 category control totals. Historical production import remains operator-gated and blocked. Do not execute a production historical import, modify production configuration, touch Graphify artifacts, or push.
+Current gate is CLOSE-003 strict close gate and lock. Historical production import remains operator-gated and blocked. Do not execute a production historical import, modify production configuration, touch Graphify artifacts, or push.

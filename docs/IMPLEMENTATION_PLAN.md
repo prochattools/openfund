@@ -58,7 +58,8 @@ Phase 4 FLOW-002 deterministic categorization decisions: implemented; complete d
 Phase 4 FLOW-003 evidence-rich Dutch review queue: implemented; admin-only read evidence, no bookings, period close, production import, production config, push, or Graphify changes
 Phase 4 FLOW-004 explicit rule creation from approved decisions: implemented; committed as c5d6312
 Phase 5 CLOSE-001 statement reconciliation controls: implemented; read-only preview, no period close, no report snapshot, no bookings, no production import, production config, push, or Graphify changes
-Current gate: CLOSE-002 category control totals; historical production import remains operator-gated
+Phase 5 CLOSE-002 category control totals: implemented; category income/expense totals reconcile exactly to statement totals, CLOSE-001 account-filter hardened, combined close evidence includes real category differences, no period close, no report snapshot, no bookings, no production import, production config, push, or Graphify changes
+Current gate: CLOSE-003 strict close gate and lock; historical production import remains operator-gated
 ```
 
 ## Phase 0 — Governance and discovery
@@ -924,15 +925,39 @@ Validation:
 
 ### CLOSE-002 — Implement category control totals
 
-Status: `TODO`
+Status: `IMPLEMENTED`
 
 Dependencies: CLOSE-001
+
+Files:
+
+- `server/services/categoryControlTotalsService.ts`
+- `server/routes/statementReconciliationPreview.ts` (extended + account filter hardened)
+- `tests/services/categoryControlTotalsService.test.ts`
+- `tests/routes/statementReconciliationPreview.test.ts` (extended)
 
 Acceptance:
 
 - Sum of category income equals total income.
 - Sum of category expenses equals total expenses.
 - All three dimensions are present for every final transaction.
+- CLOSE-001 route account filter hardened to filter by `accountId`.
+- Category income/expense differences are real computed values from booked transactions.
+- Combined close control evidence is accepted by `assertCanClose` only when both statement and category controls are balanced/complete.
+- Literal `Klant`, `Type`, and `Category` labels are preserved from `TransactionBooking`.
+- Lines are sorted deterministically.
+- No PeriodClose, ReportSnapshot, approval, dispatch, booking, or audit mutation occurs.
+
+Validation:
+
+- Focused category control totals tests: 24 passed.
+- Route tests: 8 passed.
+- Existing CLOSE-001 reconciliation service tests: 20 passed.
+- Full suite: 369 tests passed.
+- Server TypeScript build passed.
+- Production build passed with 18 routes and the pre-existing Next/SWC lockfile warning.
+- `git diff --check` passed.
+- No Prisma schema or migration was required.
 
 ### CLOSE-003 — Implement strict close gate and lock
 

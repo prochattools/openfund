@@ -6,6 +6,11 @@ import {
   StatementReconciliationControlError,
   type BookedTransactionSummary,
 } from '../services/statementReconciliationControlService';
+import {
+  buildCategoryControlTotals,
+  buildCloseControlPreview,
+  type CategoryControlTransactionInput,
+} from '../services/categoryControlTotalsService';
 
 export const getStatementReconciliationPreview = async (req: Request, res: Response) => {
   const actor = requireAdmin(req, res);
@@ -31,6 +36,7 @@ export const getStatementReconciliationPreview = async (req: Request, res: Respo
     const transactions = await prisma.transaction.findMany({
       where: {
         userId: actor.userId,
+        accountId: statementPeriod.accountId,
         date: {
           gte: statementPeriod.periodStart,
           lte: statementPeriod.periodEnd,
@@ -45,6 +51,9 @@ export const getStatementReconciliationPreview = async (req: Request, res: Respo
             projectId: true,
             transactionTypeId: true,
             categoryId: true,
+            literalProjectLabel: true,
+            literalTypeLabel: true,
+            literalCategoryLabel: true,
           },
         },
         categorizationSuggestions: {
@@ -71,6 +80,29 @@ export const getStatementReconciliationPreview = async (req: Request, res: Respo
       };
     });
 
+    const categoryTransactions: CategoryControlTransactionInput[] = transactions.map((tx) => {
+      const booking = tx.transactionBooking;
+      const hasCompleteBooking = Boolean(
+        booking && booking.projectId && booking.transactionTypeId && booking.categoryId,
+      );
+      const hasPendingSuggestions = tx.categorizationSuggestions.length > 0;
+      const isUnresolved = !hasCompleteBooking && hasPendingSuggestions;
+
+      return {
+        transactionId: tx.id,
+        amountMinor: tx.amountMinor,
+        direction: tx.direction as 'credit' | 'debit',
+        hasCompleteBooking,
+        isUnresolved,
+        projectId: booking?.projectId ?? null,
+        transactionTypeId: booking?.transactionTypeId ?? null,
+        categoryId: booking?.categoryId ?? null,
+        literalProjectLabel: booking?.literalProjectLabel ?? null,
+        literalTypeLabel: booking?.literalTypeLabel ?? null,
+        literalCategoryLabel: booking?.literalCategoryLabel ?? null,
+      };
+    });
+
     const preview = buildStatementReconciliationPreview({
       workspaceId: statementPeriod.statement.workspaceId,
       accountId: statementPeriod.accountId,
@@ -89,7 +121,21 @@ export const getStatementReconciliationPreview = async (req: Request, res: Respo
       bookedTransactions,
     });
 
-    return res.json(preview);
+    const categoryControls = buildCategoryControlTotals({
+      workspaceId: statementPeriod.statement.workspaceId,
+      accountId: statementPeriod.accountId,
+      accountIdentifier: statementPeriod.statement.bankAccountIdentifier,
+      periodStart: statementPeriod.periodStart,
+      periodEnd: statementPeriod.periodEnd,
+      statementIncomeMinor: statementPeriod.incomeMinor,
+      statementExpenseMinor: statementPeriod.expenseMinor,
+      statementTransactionCount: statementPeriod.transactionCount,
+      transactions: categoryTransactions,
+    });
+
+    const combined = buildCloseControlPreview(preview, categoryControls);
+
+    return res.json(combined);
   } catch (error) {
     if (error instanceof StatementReconciliationControlError) {
       return res.status(error.statusCode).json({ error: error.message });

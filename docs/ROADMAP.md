@@ -183,7 +183,7 @@ Status: **in progress; FLOW-004 explicit rule creation from approved decisions i
 
 ## Phase 5 — Reconciliation, close, and immutable snapshots
 
-Status: **in progress** (CLOSE-001 done; CLOSE-002 through CLOSE-004 planned)
+Status: **in progress** (CLOSE-001 and CLOSE-002 done; CLOSE-003 and CLOSE-004 planned)
 
 ### Outcomes
 
