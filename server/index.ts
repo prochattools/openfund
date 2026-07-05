@@ -22,6 +22,14 @@ import { getRules, postRule, patchRule, removeRule, previewRule, applyRule } fro
 import { getStatementReconciliationPreview } from './routes/statementReconciliationPreview';
 import { postStrictPeriodClose } from './routes/strictPeriodClose';
 import { postAuditedPeriodReopen } from './routes/auditedPeriodReopen';
+import {
+  getMonthlyReportPreview,
+  postMonthlyReportSnapshot,
+  postYearlyReportSnapshot,
+  postReportArtifacts,
+  postApproveReportSnapshot,
+  postPrepareReportDispatch,
+} from './routes/reportSnapshots';
 import { ensureCategorizationRuleConditionsColumn } from './db/ensureCategorizationRuleConditions';
 
 const app = express();
@@ -64,6 +72,14 @@ app.post('/api/rules/:id/apply', applyRule);
 app.get('/api/reconciliation/statement-periods/:id/preview', getStatementReconciliationPreview);
 app.post('/api/reconciliation/statement-periods/:id/close', postStrictPeriodClose);
 app.post('/api/reconciliation/period-closes/:id/reopen', postAuditedPeriodReopen);
+
+// Phase 6 — Reports and distribution (REPORT-001 through REPORT-005)
+app.get('/api/reports/monthly/:year/:month/preview', getMonthlyReportPreview);
+app.post('/api/reports/monthly/:year/:month/snapshot', postMonthlyReportSnapshot);
+app.post('/api/reports/yearly/:year/snapshot', postYearlyReportSnapshot);
+app.post('/api/reports/:snapshotId/artifacts', postReportArtifacts);
+app.post('/api/reports/:snapshotId/approve', postApproveReportSnapshot);
+app.post('/api/reports/:snapshotId/dispatch/prepare', postPrepareReportDispatch);
 
 async function start() {
   try {
