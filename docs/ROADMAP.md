@@ -21,7 +21,7 @@ Phase 2 — Financial domain and historical model  IN PROGRESS
 Phase 3 — Historical loading and truth fixtures  IN PROGRESS
 Phase 4 — Monthly import and review workflow     DONE
 Phase 5 — Reconciliation, close, and snapshots   IN PROGRESS
-Phase 6 — Visual reports and distribution        PLANNED
+Phase 6 — Visual reports and distribution        IN PROGRESS
 Phase 7 — Dutch UX and authorization hardening   PLANNED
 Phase 8 — Infrastructure and deployment          PLANNED
 Phase 9 — Operational hardening and handoff      PLANNED
@@ -205,7 +205,7 @@ Status: **complete** (CLOSE-001, CLOSE-002, CLOSE-003, and CLOSE-004 all done)
 
 ## Phase 6 — Visual reports and controlled distribution
 
-Status: **planned**
+Status: **in progress** — REPORT-001 through REPORT-005 complete; Phase 7 (UX/auth) follows.
 
 ### Outcomes
 

@@ -1230,6 +1230,71 @@ Now only `buildCloseControlHashFromParts(statementPeriodId, ledgerId, combined)`
 
 No production, Dokploy, MCP bridge, `10.0.2.4`, persistent owner-data import, production configuration, `.env`, `.graphifyignore`, `graphify-out/`, owner-source copy, raw row dump, generated output commit, report snapshot, transaction booking, historical production import, or push occurred.
 
-## Current next task
+## Phase 6 REPORT-001 through REPORT-005 — complete
 
-Phase 5 is complete: CLOSE-001, CLOSE-002, CLOSE-003, and CLOSE-004 all implemented and verified. Period reconciliation, close, reopen, and audit events are done. Next gate is Phase 6 REPORT-001 snapshot-based monthly report. Historical production import remains operator-gated and blocked. Do not execute a production historical import, modify production configuration, touch Graphify artifacts, or push.
+Phase 5 is complete: CLOSE-001, CLOSE-002, CLOSE-003, and CLOSE-004 all implemented and verified.
+Phase 6 implementation is complete: REPORT-001 through REPORT-005 all implemented and validated.
+
+### REPORT-001 — Monthly report snapshot
+
+- `server/services/reportSnapshotService.ts` — `generateMonthlyReportSnapshot`.
+- Only CLOSED `PeriodClose` records used; REOPENED rejects with Dutch error.
+- `npm test -- --test-name-pattern "monthly report"`: 9 tests pass.
+
+### REPORT-002 — Yearly report snapshot
+
+- `server/services/reportSnapshotService.ts` — `generateYearlyReportSnapshot`.
+- Opening from first closed period; income/expense aggregated; closing reconciles.
+- `npm test -- --test-name-pattern "yearly report"`: 8 tests pass.
+
+### REPORT-003 — Operating vs transfer presentation
+
+- `server/services/reportSnapshotService.ts` — `classifyReportLinePresentation`, `classifyReportLines`, `computePresentationTotals`.
+- Keyword classification: OPERATING / TRANSFER / DEPOSIT / REFUND / RESTRICTED.
+- Grand total always equals sum of all lines; operating subtotal excludes transfer/deposit/refund.
+- Classification tests included in snapshot service test suite (25 total, 8 presentation).
+
+### REPORT-004 — HTML, XLSX, PDF artifacts
+
+- `server/services/reportArtifactService.ts` — `generateHtmlArtifact`, `generateXlsxArtifact`, `generatePdfPlaceholder`, `generateAndStoreReportArtifacts`.
+- All formats derive from one immutable snapshot; sha256 stored per artifact.
+- PDF blocked: no PDF library in package.json; `PDF_BLOCKER` constant documents the requirement.
+- `npm test -- --test-name-pattern "report artifact"`: 16 tests pass.
+- No new dependencies introduced; uses existing `xlsx` v0.18.5.
+
+### REPORT-005 — Approval and dispatch metadata
+
+- `server/services/reportApprovalDispatchService.ts` — `approveSnapshot`, `prepareDispatch`.
+- Admin-only; stale hash rejected; REOPENED period blocks approval; dispatch requires active approval.
+- `sendsEmail: false`, `callsExternalProvider: false` explicitly on all side-effect records.
+- `npm test -- --test-name-pattern "report approval"`: 7 tests pass.
+- `npm test -- --test-name-pattern "report dispatch"`: 7 tests pass.
+
+### Routes
+
+- `server/routes/reportSnapshots.ts` — 6 handlers (preview, monthly snapshot, yearly snapshot, artifacts, approve, dispatch).
+- `server/index.ts` — 6 routes registered under `/api/reports/`.
+
+### Validation
+
+- `npm test` (full suite): 80 test files pass; 478 tests pass; 3 skipped.
+- `npm run build:server`: clean TypeScript compile.
+- `npm run build`: compiled successfully; 18 static pages generated (lockfile warning pre-existing).
+- `npx prisma generate`: Prisma Client generated cleanly; no new migration required.
+- `git diff --check`: no whitespace errors.
+
+No production, Dokploy, MCP bridge, `10.0.2.4`, persistent owner-data import, production configuration, `.env`, `.graphifyignore`, `graphify-out/`, owner-source copy, raw row dump, email dispatch, or push occurred.
+
+## Current gate: Phase 7 Dutch UX and authorization
+
+Phase 6 complete. Next gate is Phase 7 (UX-001 Dutch UX, AUTH-001 authorization hardening).
+
+Historical production import remains operator-gated and blocked. The following remain prohibited without separate explicit approval:
+
+- No production historical import.
+- No real email sending.
+- No push to remote.
+- No Graphify artifact changes.
+- No .env edit.
+- No production configuration change.
+- No new dependency installation without documented justification.

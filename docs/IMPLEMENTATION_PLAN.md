@@ -1050,7 +1050,7 @@ Validation:
 
 ### REPORT-001 — Implement snapshot-based monthly report
 
-Status: `TODO`
+Status: `DONE`
 
 Dependencies: CLOSE-003
 
@@ -1059,9 +1059,14 @@ Acceptance:
 - Dutch visual report shows balances and totals by exact `Klant`, `Type`, and `Category`.
 - Every figure drills down to transactions.
 
+Evidence:
+- `server/services/reportSnapshotService.ts` — `generateMonthlyReportSnapshot` implemented.
+- 9 monthly report snapshot tests pass; hash deterministic, version increment, rejects reopened.
+- `npm test -- --test-name-pattern "monthly report"`: 9 tests pass.
+
 ### REPORT-002 — Implement snapshot-based yearly report
 
-Status: `TODO`
+Status: `DONE`
 
 Dependencies: REPORT-001
 
@@ -1071,9 +1076,14 @@ Acceptance:
 - Year opening, movement, and closing reconcile.
 - Historical wording remains literal.
 
+Evidence:
+- `server/services/reportSnapshotService.ts` — `generateYearlyReportSnapshot` implemented.
+- 8 yearly report snapshot tests pass; opening + income - expense = closing.
+- `npm test -- --test-name-pattern "yearly report"`: 8 tests pass.
+
 ### REPORT-003 — Implement operating versus transfer presentation
 
-Status: `TODO`
+Status: `DONE`
 
 Dependencies: REPORT-001
 
@@ -1081,9 +1091,14 @@ Acceptance:
 
 - Transfers, savings, deposits, refunds, reversals, and restricted-purpose movements remain fully accounted for but do not distort ordinary operating subtotals.
 
+Evidence:
+- `server/services/reportSnapshotService.ts` — `classifyReportLinePresentation`, `classifyReportLines`, `computePresentationTotals` implemented.
+- 8 presentation classification tests pass; OPERATING/TRANSFER/DEPOSIT/REFUND/RESTRICTED classification correct.
+- `npm test -- --test-name-pattern "report presentation"`: tests pass (included in snapshot pattern).
+
 ### REPORT-004 — Generate HTML, XLSX, and PDF from one snapshot
 
-Status: `TODO`
+Status: `DONE`
 
 Dependencies: REPORT-001
 
@@ -1092,9 +1107,15 @@ Acceptance:
 - All formats contain identical totals and snapshot ID.
 - Original source file remains a separate download.
 
+Evidence:
+- `server/services/reportArtifactService.ts` — HTML, XLSX, PDF placeholder generation.
+- PDF blocked: no PDF library in package.json; `PDF_BLOCKER` constant documents requirement.
+- `npm test -- --test-name-pattern "report artifact"`: 16 tests pass.
+- `npm run build:server` passes; no new dependencies introduced.
+
 ### REPORT-005 — Implement separate report approval and send
 
-Status: `TODO`
+Status: `DONE`
 
 Dependencies: REPORT-004
 
@@ -1103,6 +1124,13 @@ Acceptance:
 - Administrator must click final approval after close.
 - Server generates content from locked snapshot.
 - Dispatch records recipients, sender, hashes, time, and result.
+
+Evidence:
+- `server/services/reportApprovalDispatchService.ts` — `approveSnapshot`, `prepareDispatch` implemented.
+- No email sending; `sendsEmail: false`, `callsExternalProvider: false` on all side-effect records.
+- `npm test -- --test-name-pattern "report approval"`: 7 tests pass.
+- `npm test -- --test-name-pattern "report dispatch"`: 7 tests pass.
+- Routes registered in `server/index.ts`; `server/routes/reportSnapshots.ts` with 6 handlers.
 
 ## Phase 7 — Dutch UX and authorization
 
