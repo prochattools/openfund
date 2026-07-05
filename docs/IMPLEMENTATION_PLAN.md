@@ -76,7 +76,10 @@ Phase 9 RC2-003 release manifest generator: scripts/generate-release-manifest.mj
 Phase 9 RC2-004 production blocker guard audit: tests/ops/productionBlockerGuards.test.ts (24 tests); committed as 73d8072
 Phase 9 RC2-005 owner handoff bundle: docs/OWNER_HANDOFF_NL.md; committed as 0a8c04d
 Phase 9 RC3 evidence: final readiness counts corrected (`4f9cedf`), live local backup/restore evidence recorded (`3ac4bfc`), API route smoke coverage added (`9b209c7`)
-Current gate: Release Candidate 3 owner handoff; owner decisions required before production cutover, historical production import, PDF dependency, email provider, push, and production secret rotation
+Phase 9 RC4 evidence: release evidence corrected (`7ce6e6d`), manifest refreshed (`43bfb90`), owner go/no-go preflight added (`42a6f49`), push readiness checklist added (`43137b5`), release evidence consistency checks added (`33d08c4`)
+Phase 3 local/sanitized historical loading: complete; production historical import remains owner-gated
+Phase 4 monthly import/review workflow: complete for local/app behavior; future real owner monthly files remain operator-controlled
+Current gate: Release Candidate 4 owner review / roadmap closeout; owner decisions required before production cutover, historical production import, PDF dependency, email provider, push, and production secret rotation
 ```
 
 ## Phase 0 — Governance and discovery
@@ -754,7 +757,7 @@ Packet G guarded dry-run service:
 
 ### HIST-001 — Build exact concluded-workbook parser
 
-Status: `TODO`
+Status: `DONE_LOCAL_ONLY`
 
 Dependencies: MODEL-002 through MODEL-004
 
@@ -771,7 +774,7 @@ Validation:
 
 ### HIST-002 — Load and reconcile 2024 in disposable database
 
-Status: `TODO`
+Status: `DONE_LOCAL_ONLY`
 
 Dependencies: HIST-001
 
@@ -786,7 +789,7 @@ Acceptance:
 
 ### HIST-003 — Load and reconcile 2025 in disposable database
 
-Status: `TODO`
+Status: `DONE_LOCAL_ONLY`
 
 Dependencies: HIST-002
 
@@ -802,7 +805,7 @@ Acceptance:
 
 ### HIST-004 — Import supplied 2026 statement as open
 
-Status: `TODO`
+Status: `DONE_LOCAL_ONLY`
 
 Dependencies: HIST-003
 
@@ -818,6 +821,10 @@ Acceptance:
 - Categorization runs in safe suggestion mode.
 
 ## Phase 4 — Monthly import and review
+
+Status: `DONE_LOCAL_APP_WORKFLOW`
+
+Phase 4 FLOW-001 through FLOW-004 are complete for local/app behavior. Monthly import preview is preview-only; deterministic categorization returns safe candidates and suggestions without writes; the review queue is evidence-rich and Dutch; manual booking requires explicit admin decisions with all three dimensions; rule creation has a separate preview and explicit activation path. Future real owner monthly files remain operator-controlled through the guarded upload workflow.
 
 ### FLOW-001 — Implement controlled ING import preview
 
@@ -1310,7 +1317,7 @@ Acceptance:
 
 ## Exact next execution sequence
 
-Phases 0–9 are complete as local-only Release Candidate 1. The following owner decisions are required before any production work:
+Phases 0–9 are complete as local-only Release Candidate 4, with Phase 3 production import explicitly owner-gated and Phase 4 complete for local/app workflow. The following owner decisions are required before any production work:
 
 1. Approve or defer real PDF renderer dependency (`PDF_BLOCKER` is active).
 2. Approve or defer production cutover (see `docs/PRODUCTION_CUTOVER_PLAN_NL.md`).

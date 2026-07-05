@@ -70,10 +70,28 @@ export function extractManifestCommit(manifestContent) {
   return { full, short };
 }
 
+export function extractReleaseEvidenceCommit(manifestContent) {
+  const full = manifestContent.match(/\| Release evidence validated through \| ([0-9a-f]{40}) \|/i)?.[1] ?? null;
+  const short = manifestContent.match(/\| Release evidence validated through short \| ([0-9a-f]{7,12}) \|/i)?.[1] ?? null;
+  return { full, short };
+}
+
+function isCommitAncestorOfHead(commit, head) {
+  if (!commit) return false;
+  try {
+    execSync(`git cat-file -e ${commit}^{commit}`, { stdio: ['ignore', 'ignore', 'ignore'] });
+    execSync(`git merge-base --is-ancestor ${commit} ${head}`, { stdio: ['ignore', 'ignore', 'ignore'] });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function buildOwnerGoNoGoPreflight(input) {
   const dirty = classifyDirtyPaths(input.gitStatus);
   const missingDocs = REQUIRED_DOCS.filter((doc) => !input.existingDocs.includes(doc));
   const manifestCommit = extractManifestCommit(input.releaseManifest);
+  const releaseEvidenceCommit = extractReleaseEvidenceCommit(input.releaseManifest);
 
   const checks = [
     {
@@ -85,8 +103,14 @@ export function buildOwnerGoNoGoPreflight(input) {
     {
       id: 'manifest_rc4',
       label: 'Release manifest is RC4',
-      ok: input.releaseManifest.includes('Release Candidate 4'),
-      detail: manifestCommit.short ?? '(geen commit gevonden)',
+      ok: input.releaseManifest.includes('Release Candidate 4') && input.releaseManifest.includes('Release evidence validated through'),
+      detail: releaseEvidenceCommit.short ?? manifestCommit.short ?? '(geen commit gevonden)',
+    },
+    {
+      id: 'release_evidence_current',
+      label: 'Release-evidence is niet misleidend verouderd',
+      ok: isCommitAncestorOfHead(releaseEvidenceCommit.full ?? manifestCommit.full, input.head),
+      detail: `validated-through ${releaseEvidenceCommit.short ?? manifestCommit.short ?? '(onbekend)'}`,
     },
     {
       id: 'required_docs',
@@ -109,6 +133,8 @@ export function buildOwnerGoNoGoPreflight(input) {
         'RESEND_API_KEY',
         'PDF_BLOCKER',
         'PostgreSQL-productieversie',
+        'Push',
+        'Geheimen',
       ].every((text) => input.releaseManifest.includes(text)),
       detail: 'manifest blockers',
     },
@@ -127,6 +153,7 @@ export function buildOwnerGoNoGoPreflight(input) {
     branch: input.branch,
     head: input.head,
     manifestCommit,
+    releaseEvidenceCommit,
     checks,
   };
 }
@@ -143,6 +170,7 @@ export function renderPreflightMarkdown(result) {
     `Branch: ${result.branch}`,
     `HEAD: ${result.head}`,
     `Manifest commit: ${result.manifestCommit.short ?? '(onbekend)'}`,
+    `Release evidence validated through: ${result.releaseEvidenceCommit?.short ?? result.manifestCommit.short ?? '(onbekend)'}`,
     '',
     '| Controle | Status | Detail |',
     '|----------|--------|--------|',

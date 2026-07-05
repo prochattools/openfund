@@ -4,7 +4,7 @@ Date: 2026-07-02
 Run: `agent-f961650b-de17-4282-ab18-7a716cc72958`  
 Source: `yeshuaacademy-finance`  
 Branch: `main`  
-Status: Release Candidate 3 — local backup/restore rehearsal completed and recorded; API route smoke coverage added; release manifest and owner handoff bundle ready; validate:release-candidate script strengthened with prisma validate, prisma generate, and git diff --check; 89 test files, 643 tests pass; awaiting owner decisions for production cutover, historical import, PDF dependency, email provider, push, and production secret rotation
+Status: Release Candidate 4 — roadmap closeout in progress; local backup/restore rehearsal completed and recorded; API route smoke coverage and release evidence consistency checks added; release manifest, owner handoff, owner preflight, and push readiness checklist ready; validate:release-candidate script strengthened with prisma validate, prisma generate, and git diff --check; awaiting owner decisions for production cutover, historical import, PDF dependency, email provider, push, and production secret rotation
 
 ## RC2 Hardening Evidence
 
@@ -18,6 +18,11 @@ Status: Release Candidate 3 — local backup/restore rehearsal completed and rec
 | RC2 final readiness count correction | `4f9cedf` | (docs) |
 | RC3 live local backup/restore evidence | `3ac4bfc` | (docs) |
 | API route smoke coverage | `9b209c7` | smoke tests pass |
+| RC4 release evidence correction | `7ce6e6d` | (docs) |
+| RC4 manifest refresh | `43bfb90` | manifest tests |
+| Owner go/no-go preflight | `42a6f49` | preflight tests |
+| Push readiness checklist | `43137b5` | (docs) |
+| Release evidence consistency checks | `33d08c4` | consistency tests |
 
 ### Live backup rehearsal status
 

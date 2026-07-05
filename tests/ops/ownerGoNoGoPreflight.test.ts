@@ -33,11 +33,15 @@ Status: Release Candidate 4 — final owner handoff polish
 | Commit (volledig) | 0123456789abcdef0123456789abcdef01234567 |
 | Commit (kort) | 0123456 |
 
+| Release evidence validated through | 0123456789abcdef0123456789abcdef01234567 |
+
 | 1 | Echte PDF-renderer afhankelijkheid | PDF_BLOCKER actief |
 | 2 | Productiemigratie en cutover | Vereist eigenaargoedkeuring |
 | 3 | Historische productie-import (2024/2025/2026) | Operator-gated |
 | 4 | Echte e-mailverzending | RESEND_API_KEY niet geconfigureerd |
 | 5 | PostgreSQL-productieversie bevestigen | Vereist verificatie |
+| 6 | Push naar remote | Vereist expliciete eigenaargoedkeuring |
+| 7 | Geheimen roteren | Vereist productievoorbereiding buiten Git |
 `;
 
 const ownerHandoff = `
@@ -45,6 +49,19 @@ const ownerHandoff = `
 | git push | Expliciete eigenaargoedkeuring vereist |
 | Productiemigratie uitvoeren | Vereist eigenaargoedkeuring |
 `;
+
+const currentHead = execSync('git rev-parse HEAD', {
+  encoding: 'utf-8',
+  cwd: process.cwd(),
+}).trim();
+const currentHeadShort = execSync('git rev-parse --short HEAD', {
+  encoding: 'utf-8',
+  cwd: process.cwd(),
+}).trim();
+
+const currentManifest = manifest
+  .replaceAll('0123456789abcdef0123456789abcdef01234567', currentHead)
+  .replaceAll('0123456', currentHeadShort);
 
 describe('owner go/no-go preflight — dirty path classification', () => {
   it('allows only Graphify artifacts', () => {
@@ -73,10 +90,10 @@ describe('owner go/no-go preflight — decision', () => {
   it('returns GO_FOR_OWNER_REVIEW when all local checks pass', () => {
     const result = buildOwnerGoNoGoPreflight({
       branch: 'main',
-      head: 'abcdef0',
+      head: currentHead,
       gitStatus: '## main...origin/main\n?? .graphifyignore\n?? graphify-out/\n',
       existingDocs: requiredDocs,
-      releaseManifest: manifest,
+      releaseManifest: currentManifest,
       ownerHandoff,
     });
 
@@ -87,10 +104,10 @@ describe('owner go/no-go preflight — decision', () => {
   it('returns NO_GO when a required document is missing', () => {
     const result = buildOwnerGoNoGoPreflight({
       branch: 'main',
-      head: 'abcdef0',
+      head: currentHead,
       gitStatus: '## main...origin/main\n',
       existingDocs: requiredDocs.slice(0, -1),
-      releaseManifest: manifest,
+      releaseManifest: currentManifest,
       ownerHandoff,
     });
 
@@ -101,16 +118,16 @@ describe('owner go/no-go preflight — decision', () => {
   it('renders a sanitized Dutch markdown summary', () => {
     const result = buildOwnerGoNoGoPreflight({
       branch: 'main',
-      head: 'abcdef0',
+      head: currentHead,
       gitStatus: '## main...origin/main\n',
       existingDocs: requiredDocs,
-      releaseManifest: manifest,
+      releaseManifest: currentManifest,
       ownerHandoff,
     });
 
     const output = renderPreflightMarkdown(result);
     expect(output).toContain('GO voor eigenaarsbeoordeling');
-    expect(output).toContain('Manifest commit: 0123456');
+    expect(output).toContain(`Manifest commit: ${currentHeadShort}`);
     expect(output).not.toContain('local_dev_placeholder');
     expect(output).not.toContain('PGPASSWORD=');
     expect(output).not.toContain('DATABASE_URL=postgresql://');

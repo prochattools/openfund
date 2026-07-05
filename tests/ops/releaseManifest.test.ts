@@ -24,6 +24,7 @@ describe('release manifest — content', () => {
     expect(manifest).toContain('# Yeshua Academy Finance — Release Manifest');
     expect(manifest).toContain('Release Candidate 4');
     expect(manifest).toContain('## Versie-informatie');
+    expect(manifest).toContain('## Release-evidence');
     expect(manifest).toContain('## Openstaande blockers');
     expect(manifest).toContain('## Validatiecommando');
     expect(manifest).toContain('## Veiligheidsstatus');
@@ -79,6 +80,8 @@ describe('release manifest — content', () => {
   it('manifest records local readiness phases as complete for RC4', () => {
     const manifest = buildManifest();
     expect(manifest).toContain('Phase 8 — Infrastructuur en deployment | COMPLETE');
+    expect(manifest).toContain('Phase 3 — Historisch laden | COMPLETE LOKAAL / PRODUCTIE-IMPORT OWNER-GATED');
+    expect(manifest).toContain('Phase 4 — Maandelijkse import en review | COMPLETE LOKAAL / APP-WORKFLOW');
     expect(manifest).toContain('Phase 9 — Operationele hardening en overdracht | COMPLETE (lokaal, RC4)');
   });
 });

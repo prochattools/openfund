@@ -29,20 +29,22 @@ function extractManifestCommit(content: string) {
 describe('release evidence consistency — stale RC labels', () => {
   it('final readiness audit records Phase 8/9 as locally complete', () => {
     expect(finalAudit).toContain('Phase 8 — Infrastructuur | COMPLETE');
-    expect(finalAudit).toContain('Phase 9 — Operationele hardening en overdracht | COMPLETE (local-only RC3)');
+    expect(finalAudit).toContain('Phase 9 — Operationele hardening en overdracht | COMPLETE (local-only RC4)');
     expect(finalAudit).not.toContain('GEDEELTELIJK (INFRA-001, INFRA-002 gedocumenteerd)');
     expect(finalAudit).not.toContain('Phase 9 — Operationele hardening en overdracht | IN PROGRESS');
   });
 
   it('owner handoff no longer labels the one-step validation as RC2', () => {
-    expect(ownerHandoff).toContain('### RC3-validatie in één stap');
+    expect(ownerHandoff).toContain('### RC4-validatie in één stap');
+    expect(ownerHandoff).not.toContain('### RC3-validatie in één stap');
     expect(ownerHandoff).not.toContain('### RC2-validatie in één stap');
   });
 
-  it('roadmap and implementation plan identify the current handoff as RC3/RC4, not RC2', () => {
-    expect(roadmap).toContain('COMPLETE (local-only RC3)');
-    expect(implementationPlan).toContain('Current gate: Release Candidate 3 owner handoff');
-    expect(rebuildRun).toContain('Status: Release Candidate 3');
+  it('roadmap and implementation plan identify the current handoff as RC4, not RC2/RC3', () => {
+    expect(roadmap).toContain('COMPLETE (local-only RC4)');
+    expect(implementationPlan).toContain('Current gate: Release Candidate 4 owner review / roadmap closeout');
+    expect(rebuildRun).toContain('Status: Release Candidate 4');
+    expect(implementationPlan).not.toContain('Current gate: Release Candidate 3 owner handoff');
     expect(implementationPlan).not.toContain('Current gate: Release Candidate 2 readiness');
   });
 });
@@ -52,6 +54,7 @@ describe('release evidence consistency — manifest evidence', () => {
     expect(releaseManifest).toContain('Release Candidate 4');
     expect(releaseManifest).toContain('Phase 8 — Infrastructuur en deployment | COMPLETE');
     expect(releaseManifest).toContain('Phase 9 — Operationele hardening en overdracht | COMPLETE (lokaal, RC4)');
+    expect(releaseManifest).toContain('Release evidence validated through');
     expect(releaseManifest).not.toContain('| Commit (kort) | 4f9cedf |');
     expect(releaseManifest).not.toContain('docs: correct RC2 final test counts');
   });

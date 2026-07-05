@@ -1,6 +1,6 @@
-# Yeshua Academy Finance — Eigenaaroverdracht (RC3)
+# Yeshua Academy Finance — Eigenaaroverdracht (RC4)
 
-Status: Release Candidate 3 — live lokale rehearsal voltooid; productie niet aangeraakt
+Status: Release Candidate 4 — roadmap closeout lokaal gevalideerd; productie niet aangeraakt
 Datum: 2026-07-05  
 Taal: Nederlands  
 Doelgroep: eigenaar / beheerder
@@ -26,6 +26,7 @@ De volledige financiële applicatie is gebouwd, getest en lokaal gevalideerd:
 | Release Manifest generator | GEREED |
 | Productiecutover-documentatieplan | GEREED (documentatie-alleen) |
 | Lokale Docker Compose (PostgreSQL) | GEREED |
+| Historische laadmachinerie | GEREED LOKAAL / productie-import owner-gated |
 
 ---
 
@@ -58,7 +59,7 @@ Zie `docs/OWNER_DECISION_PACK_NL.md` voor de volledige beslissingschecklist met:
 
 ## Commando's die u kunt uitvoeren
 
-### RC3-validatie in één stap
+### RC4-validatie in één stap
 
 ```bash
 npm run validate:release-candidate

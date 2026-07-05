@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Eindaudit gereedheid
 
-Status: Release Candidate 3 — live lokale rehearsal voltooid; productie niet aangeraakt
+Status: Release Candidate 4 — roadmap closeout lokaal gevalideerd; productie niet aangeraakt
 Datum: 2026-07-05
 Taal: Nederlands
 Afhankelijkheden: `docs/ROADMAP.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/ADMIN_OPERATING_GUIDE_NL.md`
@@ -14,18 +14,18 @@ Afhankelijkheden: `docs/ROADMAP.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/ADMIN_
 | Phase 0 — Governance | COMPLETE | `73daabd` |
 | Phase 1 — Veilige categorisatiebasis | COMPLETE | `925a609` |
 | Phase 2 — Financieel domein | COMPLETE | `d2afb18` |
-| Phase 3 — Historisch laden (guarded dry-run) | IN PROGRESS | `0196910`, `b3b8afd`, `49386ad` |
-| Phase 4 — Maandelijkse import en review | GEÏMPLEMENTEERD | `c5d6312` |
+| Phase 3 — Historisch laden | COMPLETE LOKAAL / PRODUCTIE-IMPORT OWNER-GATED | `49386ad`, `7ce6e6d`, `43bfb90`, `42a6f49`, `43137b5`, `33d08c4` |
+| Phase 4 — Maandelijkse import en review | COMPLETE LOKAAL / APP-WORKFLOW | `c5d6312`, `7ce6e6d`, `43bfb90`, `42a6f49`, `43137b5`, `33d08c4` |
 | Phase 5 — Reconciliatie en sluiting | COMPLETE | `ba372d6` |
 | Phase 6 — Rapporten en distributie | COMPLETE | `a24ef3e`, `9e4dc45`, `d1430c2`, `dbf23e4`, `ba372d6` |
 | Phase 7 — Dutch UX en autorisatiehardening | COMPLETE | `7d58726`, `0d70f51`, `20ff64b` |
 | Phase 8 — Infrastructuur | COMPLETE (lokale gereedheid; productiecutover blijft geblokkeerd) | `13a32a5`, `dce8b9f`, `1cf2402` |
-| Phase 9 — Operationele hardening en overdracht | COMPLETE (local-only RC3) | `d51cfad`, `77ebbbd`, `8d5978c`, `519b69e`, `bb666ae`, `6341be4`, `73d8072`, `0a8c04d`, `fd1a6c2`, `4f9cedf`, `3ac4bfc`, `9b209c7` |
+| Phase 9 — Operationele hardening en overdracht | COMPLETE (local-only RC4) | `d51cfad`, `77ebbbd`, `8d5978c`, `519b69e`, `bb666ae`, `6341be4`, `73d8072`, `0a8c04d`, `fd1a6c2`, `4f9cedf`, `3ac4bfc`, `9b209c7`, `7ce6e6d`, `43bfb90`, `42a6f49`, `43137b5`, `33d08c4` |
 
 ### Meest recente commit bij aanvang van deze auditrondes
 
 ```
-9b209c7 test: add API route smoke coverage
+33d08c4 test: add release evidence consistency checks
 ```
 
 ---

@@ -18,13 +18,13 @@ Execution detail: `docs/IMPLEMENTATION_PLAN.md`
 Phase 0 — Governance and verified controls       COMPLETE
 Phase 1 — Safe categorization foundation         COMPLETE
 Phase 2 — Financial domain and historical model  COMPLETE
-Phase 3 — Historical loading and truth fixtures  IN PROGRESS
-Phase 4 — Monthly import and review workflow     COMPLETE
+Phase 3 — Historical loading and truth fixtures  COMPLETE_LOCAL_OWNER_GATED_PRODUCTION
+Phase 4 — Monthly import and review workflow     COMPLETE_LOCAL_APP_WORKFLOW
 Phase 5 — Reconciliation, close, and snapshots   COMPLETE
 Phase 6 — Visual reports and distribution        COMPLETE
 Phase 7 — Dutch UX and authorization hardening   COMPLETE
 Phase 8 — Infrastructure and deployment          COMPLETE (local readiness; production gated)
-Phase 9 — Operational hardening and handoff      COMPLETE (local-only RC3)
+Phase 9 — Operational hardening and handoff      COMPLETE (local-only RC4)
 ```
 
 ## Phase 0 — Governance and verified controls
@@ -121,17 +121,17 @@ Schema changes must be derived from verified workflow needs. Do not create a gen
 
 ## Phase 3 — Historical loading and truth fixtures
 
-Status: **in progress; guarded dry-run service completed through Packet G**
+Status: **complete local/sanitized; production import owner-gated** — sanitized fixtures, owner-approved local rehearsal adapter, retained-byte hashing, disposable local database rehearsal, and guarded dry-run command service are complete. Historical production import remains blocked until explicit owner approval.
 
 ### Outcomes
 
-- Build an exact loader for the concluded 2024 and 2025 workbooks.
+- Build an exact local/rehearsal loader for the concluded 2024 and 2025 workbooks.
 - Read dates only from the raw ING `Date` field.
 - Use the final transaction columns and resolved `Verduidelijking` sheets.
 - Preserve literal `Klant`, `Type`, and `Category` values.
 - Preserve `FR` history and use the first literal 2025 `FTK` transaction as the practical transition point.
 - Import the supplied 2026 statement as open, with July remaining incomplete.
-- Store source files unchanged and downloadable.
+- Store source files unchanged and downloadable in owner-approved local rehearsal or future approved production import.
 
 ### Current checkpoint
 
@@ -141,6 +141,7 @@ Status: **in progress; guarded dry-run service completed through Packet G**
 - The 2026 source remains partial/open and not close-eligible; no production import has occurred.
 - A guarded owner historical import command service now defaults to dry-run, returns only sanitized summaries, blocks production execution, and enforces local-only rehearsal database targets.
 - No owner source files, raw row dumps, generated output, production configuration, `.env`, `.graphifyignore`, or `graphify-out/` artifacts are committed.
+- Production historical import remains an owner-gated task; local/sanitized historical loading machinery is complete.
 
 ### Exit criteria
 
@@ -148,12 +149,12 @@ Status: **in progress; guarded dry-run service completed through Packet G**
 - 2025 loads exactly 413 rows, opens at EUR 12,184.15, and closes at EUR 10,350.86.
 - 2026 partial statement loads exactly 221 rows and closes at EUR 7,837.25.
 - Running-balance continuity errors equal zero.
-- Source file hashes and downloaded bytes match the originals.
+- Source file hashes and downloaded bytes match the originals in owner-approved local rehearsal; production import requires owner approval.
 - No historical label is changed.
 
 ## Phase 4 — Monthly import and review workflow
 
-Status: **in progress; FLOW-004 explicit rule creation from approved decisions implemented**
+Status: **complete for local/app workflow** — FLOW-001 through FLOW-004 are implemented and validated; future real owner monthly files remain operator-controlled through the guarded upload workflow.
 
 ### Outcomes
 
@@ -214,13 +215,13 @@ Status: **complete** — REPORT-001 through REPORT-005 complete.
 - Show totals by `Klant`, `Type`, and `Category` using literal historical wording.
 - Separate transfers, savings, deposits, refunds, reversals, and restricted-purpose movements from ordinary operating subtotals while preserving every euro.
 - Add month trends and transaction drill-down.
-- Generate HTML email, XLSX, and PDF from the same snapshot.
+- Generate HTML email and XLSX from the same snapshot; keep PDF as a placeholder until a PDF renderer is owner-approved.
 - Require a separate final administrator approval click before sending.
-- Store report and dispatch hashes, recipients, sender, time, and result.
+- Store report and dispatch hashes, recipients, sender, time, and metadata-only result; real e-mail sending remains blocked.
 
 ### Exit criteria
 
-- UI, HTML, XLSX, and PDF totals are identical.
+- UI, HTML, XLSX, and PDF placeholder artifacts include the same snapshot evidence; real rendered PDF output requires owner approval of a dependency.
 - Sent reports reference a locked immutable snapshot.
 - A report cannot be sent from an open or unbalanced period.
 - Original uploaded files remain separately downloadable.
@@ -264,7 +265,7 @@ Status: **complete (local readiness; production gated)** — INFRA-001 documente
 
 ## Phase 9 — Operational hardening and handoff
 
-Status: **complete (local-only RC3)** — OPS-001 (Dutch admin guide) committed as `d51cfad`; OPS-002 (backup/restore rehearsal) guards and dry-run support committed as `77ebbbd`; OPS-003 (final readiness audit) committed as `8d5978c`; RC2/RC3 hardening: backup rehearsal explicit flags (`519b69e`), validate:release-candidate strengthened (`bb666ae`), release manifest generator (`6341be4`), production blocker guard audit (`73d8072`), owner handoff bundle (`0a8c04d`), RC2 readiness evidence (`fd1a6c2`, `4f9cedf`), live local backup/restore evidence (`3ac4bfc`), API route smoke coverage (`9b209c7`).
+Status: **complete (local-only RC4)** — OPS-001 (Dutch admin guide) committed as `d51cfad`; OPS-002 (backup/restore rehearsal) guards and dry-run support committed as `77ebbbd`; OPS-003 (final readiness audit) committed as `8d5978c`; RC2/RC3 hardening: backup rehearsal explicit flags (`519b69e`), validate:release-candidate strengthened (`bb666ae`), release manifest generator (`6341be4`), production blocker guard audit (`73d8072`), owner handoff bundle (`0a8c04d`), RC2 readiness evidence (`fd1a6c2`, `4f9cedf`), live local backup/restore evidence (`3ac4bfc`), API route smoke coverage (`9b209c7`), RC4 handoff polish (`7ce6e6d`, `43bfb90`, `42a6f49`, `43137b5`, `33d08c4`).
 
 Remaining blockers before production:
 

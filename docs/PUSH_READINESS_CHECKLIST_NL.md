@@ -19,7 +19,7 @@ Deze checklist is de laatste handmatige controle vóór een toekomstige `git pus
 - [ ] Er zijn geen `.env`-wijzigingen.
 - [ ] Er zijn geen owner Excel/CSV/PDF-bronbestanden in Git geplaatst.
 - [ ] Er zijn geen ruwe transactiedumps of databasedumps in Git geplaatst.
-- [ ] Er is geen PDF-bibliotheek toegevoegd.
+- [ ] PDF-rendererkeuze is niet geïnstalleerd zonder eigenaar; PDF blijft geblokkeerd.
 - [ ] Er is geen historische productie-import uitgevoerd.
 - [ ] Er is geen echte e-mail verzonden.
 - [ ] Er is geen productie, Dokploy, MCP bridge of `10.0.2.4` gebruikt.
@@ -29,10 +29,13 @@ Deze checklist is de laatste handmatige controle vóór een toekomstige `git pus
 - [ ] Eigenaar heeft de release manifest gelezen.
 - [ ] Eigenaar heeft de eigenaaroverdracht gelezen.
 - [ ] Eigenaar heeft het beslissingspakket gelezen.
-- [ ] Eigenaar bevestigt dat productiecutover nog niet wordt uitgevoerd.
-- [ ] Eigenaar bevestigt dat historische productie-import nog niet wordt uitgevoerd.
-- [ ] Eigenaar bevestigt dat e-mailverzending nog niet wordt geactiveerd.
+- [ ] Eigenaar bevestigt dat Productiemigratie/productiecutover nog niet wordt uitgevoerd.
+- [ ] Eigenaar bevestigt dat Historische productie-import nog niet wordt uitgevoerd.
+- [ ] Eigenaar bevestigt dat PostgreSQL-productieversie nog niet als productiecutoverbron is gebruikt.
+- [ ] Eigenaar bevestigt dat Echte e-mailverzending nog niet wordt geactiveerd.
 - [ ] Eigenaar bevestigt dat PDF-rendererkeuze nog niet wordt geïnstalleerd.
+- [ ] Push blijft geblokkeerd tot expliciete eigenaargoedkeuring.
+- [ ] Geheimen blijven buiten Git en worden pas vóór productie geroteerd.
 - [ ] Eigenaar geeft expliciet toestemming voor de push.
 
 ## Commando's voor toekomstige operator

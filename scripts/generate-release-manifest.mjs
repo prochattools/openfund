@@ -23,7 +23,7 @@
 
 import { execSync } from 'child_process';
 import { readFileSync, writeFileSync } from 'fs';
-import { resolve, join } from 'path';
+import { resolve } from 'path';
 
 const MANIFEST_PATH = 'docs/RELEASE_MANIFEST_NL.md';
 
@@ -79,6 +79,18 @@ Gegenereerd op: ${generatedAt} (RC4)
 
 ---
 
+## Release-evidence
+
+| Veld | Waarde |
+|------|--------|
+| Manifest generated at commit | ${commit} |
+| Manifest generated at short commit | ${commitShort} |
+| Release evidence validated through | ${commit} |
+| Release evidence validated through short | ${commitShort} |
+| RC4 evidence commits | \`7ce6e6d\`, \`43bfb90\`, \`42a6f49\`, \`43137b5\`, \`33d08c4\` |
+
+---
+
 ## Geïmplementeerde fasen (samenvatting)
 
 | Fase | Status |
@@ -86,8 +98,8 @@ Gegenereerd op: ${generatedAt} (RC4)
 | Phase 0 — Governance | COMPLETE |
 | Phase 1 — Veilige categorisatiebasis | COMPLETE |
 | Phase 2 — Financieel domein en historisch model | COMPLETE |
-| Phase 3 — Historisch laden (guarded dry-run) | IN PROGRESS |
-| Phase 4 — Maandelijkse import en review | COMPLETE |
+| Phase 3 — Historisch laden | COMPLETE LOKAAL / PRODUCTIE-IMPORT OWNER-GATED |
+| Phase 4 — Maandelijkse import en review | COMPLETE LOKAAL / APP-WORKFLOW |
 | Phase 5 — Reconciliatie en afsluiting | COMPLETE |
 | Phase 6 — Rapporten en distributie | COMPLETE |
 | Phase 7 — Dutch UX en autorisatiehardening | COMPLETE |
@@ -108,6 +120,8 @@ De volgende blokkades zijn nog van kracht. Ze mogen **NIET** worden omzeild zond
 | 4 | Echte e-mailverzending | \`RESEND_API_KEY\` niet geconfigureerd; no-op modus actief |
 | 5 | PostgreSQL-productieversie bevestigen | Vereist verificatie bij hostingprovider vóór cutover |
 | 6 | Live backup/restore rehearsal | VOLTOOID op 2026-07-05 (RC3); productieback-up/herstel blijft geblokkeerd tot eigenaargoedkeuring |
+| 7 | Push naar remote | Vereist expliciete eigenaargoedkeuring |
+| 8 | Geheimen roteren | Vereist productievoorbereiding buiten Git vóór cutover |
 
 ---
 
