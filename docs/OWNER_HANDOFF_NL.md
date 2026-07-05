@@ -58,7 +58,7 @@ Zie `docs/OWNER_DECISION_PACK_NL.md` voor de volledige beslissingschecklist met:
 
 ## Commando's die u kunt uitvoeren
 
-### RC2-validatie in één stap
+### RC3-validatie in één stap
 
 ```bash
 npm run validate:release-candidate

@@ -74,8 +74,9 @@ Phase 9 RC2-001 backup rehearsal explicit flags: safe default + --live-local --c
 Phase 9 RC2-002 validate:release-candidate strengthened: prisma validate (local placeholder), prisma generate, git diff --check added; packageScriptSafety.test.ts (11 tests); committed as bb666ae
 Phase 9 RC2-003 release manifest generator: scripts/generate-release-manifest.mjs; docs/RELEASE_MANIFEST_NL.md; releaseManifest.test.ts (12 tests); committed as 6341be4
 Phase 9 RC2-004 production blocker guard audit: tests/ops/productionBlockerGuards.test.ts (24 tests); committed as 73d8072
-Phase 9 RC2-005 owner handoff bundle: docs/OWNER_HANDOFF_NL.md; committed as 5afb5e3
-Current gate: Release Candidate 2 readiness; owner decisions required before production cutover; historical production import remains operator-gated; live backup rehearsal requires Docker Compose start + finance_user role
+Phase 9 RC2-005 owner handoff bundle: docs/OWNER_HANDOFF_NL.md; committed as 0a8c04d
+Phase 9 RC3 evidence: final readiness counts corrected (`4f9cedf`), live local backup/restore evidence recorded (`3ac4bfc`), API route smoke coverage added (`9b209c7`)
+Current gate: Release Candidate 3 owner handoff; owner decisions required before production cutover, historical production import, PDF dependency, email provider, push, and production secret rotation
 ```
 
 ## Phase 0 — Governance and discovery

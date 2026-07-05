@@ -23,8 +23,8 @@ Phase 4 — Monthly import and review workflow     COMPLETE
 Phase 5 — Reconciliation, close, and snapshots   COMPLETE
 Phase 6 — Visual reports and distribution        COMPLETE
 Phase 7 — Dutch UX and authorization hardening   COMPLETE
-Phase 8 — Infrastructure and deployment          IN PROGRESS
-Phase 9 — Operational hardening and handoff      COMPLETE (local-only RC2)
+Phase 8 — Infrastructure and deployment          COMPLETE (local readiness; production gated)
+Phase 9 — Operational hardening and handoff      COMPLETE (local-only RC3)
 ```
 
 ## Phase 0 — Governance and verified controls
@@ -244,7 +244,7 @@ Status: **complete** — UX-001, AUTH-001, and UX-002 done.
 
 ## Phase 8 — Infrastructure and deployment
 
-Status: **in progress** — INFRA-001 and INFRA-002 documented; INFRA-003 production cutover plan created
+Status: **complete (local readiness; production gated)** — INFRA-001 documented as `13a32a5`; INFRA-002 local PostgreSQL Compose readiness committed as `dce8b9f`; INFRA-003 production cutover plan committed as `1cf2402`; RC3 local backup/restore evidence recorded as `3ac4bfc`.
 
 ### Outcomes
 
@@ -264,12 +264,12 @@ Status: **in progress** — INFRA-001 and INFRA-002 documented; INFRA-003 produc
 
 ## Phase 9 — Operational hardening and handoff
 
-Status: **complete (local-only RC2)** — OPS-001 (Dutch admin guide) committed as `d51cfad`; OPS-002 (backup/restore rehearsal) guards and dry-run support committed as `77ebbbd`; OPS-003 (final readiness audit) committed as `8d5978c`; RC2 hardening: backup rehearsal explicit flags (`519b69e`), validate:release-candidate strengthened (`bb666ae`), release manifest generator (`6341be4`), production blocker guard audit (`73d8072`), owner handoff bundle (`5afb5e3`).
+Status: **complete (local-only RC3)** — OPS-001 (Dutch admin guide) committed as `d51cfad`; OPS-002 (backup/restore rehearsal) guards and dry-run support committed as `77ebbbd`; OPS-003 (final readiness audit) committed as `8d5978c`; RC2/RC3 hardening: backup rehearsal explicit flags (`519b69e`), validate:release-candidate strengthened (`bb666ae`), release manifest generator (`6341be4`), production blocker guard audit (`73d8072`), owner handoff bundle (`0a8c04d`), RC2 readiness evidence (`fd1a6c2`, `4f9cedf`), live local backup/restore evidence (`3ac4bfc`), API route smoke coverage (`9b209c7`).
 
 Remaining blockers before production:
 
 - Real PDF renderer dependency requires owner approval.
-- Live local backup/restore rehearsal must be run with local PostgreSQL tools.
+- Live local backup/restore rehearsal is complete for RC3; production backup/restore remains gated by owner approval.
 - Production cutover requires explicit owner approval (see `docs/PRODUCTION_CUTOVER_PLAN_NL.md`).
 - Historical production import (2024/2025/2026) requires owner approval and dry-run acceptance.
 - Real email sending requires configured Resend provider and owner approval.
