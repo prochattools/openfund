@@ -1157,6 +1157,79 @@ Creates exactly one `PeriodClose` via `createPeriodClose`. Creates no report sna
 
 No production, Dokploy, MCP bridge, `10.0.2.4`, persistent owner-data import, production configuration, `.env`, `.graphifyignore`, `graphify-out/`, owner-source copy, raw row dump, generated output commit, report snapshot, transaction booking, historical production import, or push occurred.
 
+## Phase 5 CLOSE-004 audited reopen evidence
+
+### Implementation
+
+- `server/services/auditedPeriodReopenService.ts` — audited reopen service with `executeAuditedReopen`, `AuditedReopenError`, actor/input/result types.
+- `server/routes/auditedPeriodReopen.ts` — `POST /api/reconciliation/period-closes/:id/reopen`; admin-only; requires `reason` and workspace id from header/body; runs inside Prisma transaction.
+- `server/index.ts` — route registered.
+- `server/services/strictPeriodCloseService.ts` — removed unsafe exported `buildCloseControlHash(combined)` that risked hashing accountId as statementPeriodId with blank ledgerId; kept only `buildCloseControlHashFromParts(statementPeriodId, ledgerId, combined)`.
+- `tests/services/auditedPeriodReopenService.test.ts` — 13 service tests, including workspace-isolated lookup and cross-workspace 404 behavior.
+- `tests/routes/auditedPeriodReopen.test.ts` — 8 route tests for admin success, transaction use, workspace id propagation, input rejection, error mapping, and side-effect flags.
+- `tests/services/strictPeriodCloseService.test.ts` — 4 hash hardening tests added.
+
+### Reopen behavior
+
+Period may reopen only when:
+- Actor has admin role; viewer is rejected 403.
+- Reason is non-empty; blank reason rejected 400.
+- Workspace id is supplied by header/body.
+- `PeriodClose` exists in the requested workspace; missing or cross-workspace close is rejected with the same 404.
+- `PeriodClose` status is CLOSED; already reopened or other status rejected 409.
+
+Reopen updates the close:
+- `status = REOPENED`
+- `reopenedBy` = actor ID
+- `reopenedAt` = current timestamp
+- `reopenReason` = trimmed reason
+
+Reopen revokes active report approvals:
+- Finds report snapshots linked through `ReportSnapshotPeriodClose`.
+- Finds active approvals with `revokedAt: null`.
+- Sets `revokedBy`, `revokedAt`, `revokeReason` to revoke them.
+- Does not delete approvals or snapshots.
+
+Reopen writes audit event:
+- Action: `period.close.reopened`
+- Entity type: `periodClose`
+- Entity ID: close ID
+- Before/after status and reason
+- Actor ID/email, userId
+
+### Return
+
+Returns reopen summary:
+- closeId, priorStatus, newStatus, reopenedAt
+- revokedApprovalCount, affectedReportSnapshotIds
+- sideEffects: { updatesPeriodClose: true, writesAuditLog: true, revokesReportApprovals: boolean, createsReportSnapshot: false, createsTransactionBooking: false, dispatchesReport: false }
+
+### Hash hardening
+
+Removed unsafe exported `buildCloseControlHash(combined)` which:
+- Used `combined.statementReconciliation.accountId` as `statementPeriodId` (wrong)
+- Set `ledgerId = ''` (blank, unsafe)
+- Risked producing identical hashes for different statement periods
+
+Now only `buildCloseControlHashFromParts(statementPeriodId, ledgerId, combined)` is exported and used throughout. Tests prove:
+- Hash includes statementPeriodId; different periods produce different hashes
+- Hash includes ledgerId; different ledgers produce different hashes
+- Existing strict close path still accepts correct hash
+- Stale hash is rejected
+
+### Validation results
+
+- 77/77 test files pass; 425 tests pass; 3 skipped (pre-existing).
+- `prisma validate` passed with sanitized local-only URL `localhost:5452/close004_validate`; plain `prisma validate` remains environment-blocked when `DATABASE_URL` is unset.
+- `prisma generate` passed.
+- `npm run build:server` clean.
+- `npm run build` clean (lockfile warning pre-existing, unrelated).
+- `git diff --check` clean.
+- No Prisma schema or migration required.
+- No fixture files, `.env`, production config, `.graphifyignore`, or `graphify-out/` changes.
+
+No production, Dokploy, MCP bridge, `10.0.2.4`, persistent owner-data import, production configuration, `.env`, `.graphifyignore`, `graphify-out/`, owner-source copy, raw row dump, generated output commit, report snapshot, transaction booking, historical production import, or push occurred.
+
 ## Current next task
 
-CLOSE-002 is committed and verified. CLOSE-003 strict close gate and lock is implemented and verified. Current gate is CLOSE-004 audited reopen. Historical production import remains operator-gated and blocked. Do not execute a production historical import, modify production configuration, touch Graphify artifacts, or push.
+Phase 5 is complete: CLOSE-001, CLOSE-002, CLOSE-003, and CLOSE-004 all implemented and verified. Period reconciliation, close, reopen, and audit events are done. Next gate is Phase 6 REPORT-001 snapshot-based monthly report. Historical production import remains operator-gated and blocked. Do not execute a production historical import, modify production configuration, touch Graphify artifacts, or push.

@@ -60,7 +60,7 @@ Phase 4 FLOW-004 explicit rule creation from approved decisions: implemented; co
 Phase 5 CLOSE-001 statement reconciliation controls: implemented; read-only preview, no period close, no report snapshot, no bookings, no production import, production config, push, or Graphify changes
 Phase 5 CLOSE-002 category control totals: implemented; category income/expense totals reconcile exactly to statement totals, CLOSE-001 account-filter hardened, combined close evidence includes real category differences, no period close, no report snapshot, no bookings, no production import, production config, push, or Graphify changes
 Phase 5 CLOSE-003 strict close gate and lock: implemented; period may close only when CLOSE-001 and CLOSE-002 are both complete and balanced with all differences EUR 0.00; partial/open periods, unresolved reviews, missing dimensions, duplicate active closes, stale hash, and non-admin actors are rejected; creates exactly one PeriodClose, no report snapshots or dispatches; no Prisma migration required; no production import, production config, push, or Graphify changes
-Current gate: CLOSE-004 audited reopen; historical production import remains operator-gated
+Current gate: Phase 6 REPORT-001 snapshot-based monthly report; historical production import remains operator-gated
 ```
 
 ## Phase 0 — Governance and discovery
@@ -998,16 +998,53 @@ Acceptance:
 
 ### CLOSE-004 — Implement audited reopen
 
-Status: `TODO`
+Status: `DONE`
 
 Dependencies: CLOSE-003
+
+Files changed:
+
+- `server/services/auditedPeriodReopenService.ts` (new)
+- `server/routes/auditedPeriodReopen.ts` (new)
+- `server/index.ts` (route registered)
+- `server/services/strictPeriodCloseService.ts` (hash helper hardened)
+- `tests/services/auditedPeriodReopenService.test.ts` (new, 13 tests)
+- `tests/routes/auditedPeriodReopen.test.ts` (new, 8 tests)
+- `tests/services/strictPeriodCloseService.test.ts` (4 hash hardening tests added)
+
+Implemented behavior:
+
+- `executeAuditedReopen` accepts actor, workspaceId, periodCloseId, and reason.
+- Requires admin actor; rejects viewer/non-admin with 403.
+- Requires non-empty reason; rejects blank reason with 400.
+- Finds the `PeriodClose` by ID and workspaceId; missing or cross-workspace close is rejected with the same 404.
+- Rejects already reopened close or non-CLOSED close with 409.
+- Updates close to `REOPENED` status, stores `reopenedBy`, `reopenedAt`, `reopenReason`.
+- Finds report snapshots linked through `ReportSnapshotPeriodClose`.
+- Revokes active approvals by setting `revokedBy`, `revokedAt`, `revokeReason`.
+- Does not delete approvals or snapshots.
+- Writes exactly one audit event with action `period.close.reopened`.
+- Creates no `PeriodClose`, `ReportSnapshot`, `ReportArtifact`, `ReportDispatch`, or `TransactionBooking`.
+- Returns close id, prior/new status, reopenedAt, revokedApprovalCount, affectedReportSnapshotIds, and side-effect flags.
+- POST `/api/reconciliation/period-closes/:id/reopen` — admin-only, requires `reason` and workspace id from header/body, passes workspaceId into the service, runs entire operation inside Prisma transaction, returns 200 with reopen summary.
+- CLOSE-003 hash helper hardening: removed unsafe exported `buildCloseControlHash(combined)` that risked hashing accountId as statementPeriodId with blank ledgerId. Kept only `buildCloseControlHashFromParts(statementPeriodId, ledgerId, combined)`.
 
 Acceptance:
 
 - Administrator-only.
 - Requires reason.
+- Requires workspace id and isolates the close lookup by workspace.
 - Writes audit event.
 - Invalidates later report approval where necessary.
+- No Prisma schema or migration required.
+
+Validation:
+
+- Focused audited reopen service tests: 13 tests passed.
+- Focused audited reopen route tests: 8 tests passed.
+- Hash hardening tests: 4 tests passed.
+- Full suite: 425 tests passed (3 skipped); `prisma validate` passed with a sanitized local-only URL; `prisma generate` passed; `npm run build:server` passed; `npm run build` passed with 18 routes.
+- No fixture files, `.env`, production config, `.graphifyignore`, or `graphify-out/` changes.
 
 ## Phase 6 — Reports and distribution
 

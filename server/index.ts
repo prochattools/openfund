@@ -21,6 +21,7 @@ import { deactivateEmailRecipient, listEmailRecipients, upsertEmailRecipient } f
 import { getRules, postRule, patchRule, removeRule, previewRule, applyRule } from './routes/rules';
 import { getStatementReconciliationPreview } from './routes/statementReconciliationPreview';
 import { postStrictPeriodClose } from './routes/strictPeriodClose';
+import { postAuditedPeriodReopen } from './routes/auditedPeriodReopen';
 import { ensureCategorizationRuleConditionsColumn } from './db/ensureCategorizationRuleConditions';
 
 const app = express();
@@ -62,6 +63,7 @@ app.post('/api/rules/:id/preview', previewRule);
 app.post('/api/rules/:id/apply', applyRule);
 app.get('/api/reconciliation/statement-periods/:id/preview', getStatementReconciliationPreview);
 app.post('/api/reconciliation/statement-periods/:id/close', postStrictPeriodClose);
+app.post('/api/reconciliation/period-closes/:id/reopen', postAuditedPeriodReopen);
 
 async function start() {
   try {

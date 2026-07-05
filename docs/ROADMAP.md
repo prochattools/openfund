@@ -183,7 +183,7 @@ Status: **in progress; FLOW-004 explicit rule creation from approved decisions i
 
 ## Phase 5 — Reconciliation, close, and immutable snapshots
 
-Status: **in progress** (CLOSE-001, CLOSE-002, and CLOSE-003 done; CLOSE-004 planned)
+Status: **complete** (CLOSE-001, CLOSE-002, CLOSE-003, and CLOSE-004 all done)
 
 ### Outcomes
 
@@ -193,6 +193,7 @@ Status: **in progress** (CLOSE-001, CLOSE-002, and CLOSE-003 done; CLOSE-004 pla
 - Block close when any difference is not EUR 0.00.
 - Lock a complete month into an immutable period-close snapshot.
 - Require an administrator reason and audit event to reopen.
+- Isolate reopen lookup by workspace so cross-workspace closes are indistinguishable from missing closes.
 - Keep partial July 2026 open until a complete export is supplied.
 
 ### Exit criteria

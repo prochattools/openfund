@@ -86,36 +86,6 @@ export type CloseControlHashInput = {
   validatorVersions: string;
 };
 
-export const buildCloseControlHash = (combined: CombinedCloseControlPreview): string => {
-  const input: CloseControlHashInput = {
-    statementPeriodId: combined.statementReconciliation.accountId,
-    ledgerId: '',
-    periodStart: combined.statementReconciliation.periodStart,
-    periodEnd: combined.statementReconciliation.periodEnd,
-    statementTotals: {
-      incomeMinor: combined.statementReconciliation.source.incomeMinor,
-      expenseMinor: combined.statementReconciliation.source.expenseMinor,
-      balanceDifferenceMinor: combined.statementReconciliation.differences.balanceDifferenceMinor,
-      transactionCount: combined.statementReconciliation.source.transactionCount,
-    },
-    bookedTotals: {
-      incomeMinor: combined.statementReconciliation.booked.incomeMinor,
-      expenseMinor: combined.statementReconciliation.booked.expenseMinor,
-      transactionCount: combined.statementReconciliation.booked.transactionCount,
-      bookedTransactionCount: combined.statementReconciliation.booked.bookedTransactionCount,
-      unresolvedTransactionCount: combined.statementReconciliation.booked.unresolvedTransactionCount,
-    },
-    categoryDifferences: {
-      categoryIncomeDifferenceMinor: combined.categoryControls.differences.categoryIncomeDifferenceMinor,
-      categoryExpenseDifferenceMinor: combined.categoryControls.differences.categoryExpenseDifferenceMinor,
-      transactionCountDifference: combined.categoryControls.differences.transactionCountDifference,
-    },
-    closeEligible: combined.combinedCloseEligible,
-    validatorVersions: `${combined.statementReconciliation.validatorVersion}+${combined.categoryControls.validatorVersion}`,
-  };
-  return hashEvidence(input);
-};
-
 export const buildCloseControlHashFromParts = (
   statementPeriodId: string,
   ledgerId: string,

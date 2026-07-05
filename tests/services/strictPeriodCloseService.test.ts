@@ -504,3 +504,163 @@ describe('strict period close service — close control hash', () => {
     expect(result.closeControlHash).toBe(currentHash);
   });
 });
+
+describe('hash helper hardening — CLOSE-003 fix', () => {
+  it('buildCloseControlHashFromParts includes statementPeriodId in the hash', () => {
+    const periodStart = new Date('2026-01-01T00:00:00Z');
+    const periodEnd = new Date('2026-01-31T23:59:59Z');
+
+    const combined = buildCloseControlPreview(
+      buildStatementReconciliationPreview({
+        workspaceId: 'workspace-1',
+        accountId: 'account-1',
+        accountIdentifier: 'NL89INGB0006369960',
+        statementPeriodId: 'period-1',
+        periodStart,
+        periodEnd,
+        coverageStatus: StatementCoverageStatus.COMPLETE,
+        statementTotals: {
+          openingBalanceMinor: '100000',
+          incomeMinor: '8000',
+          expenseMinor: '3000',
+          closingBalanceMinor: '105000',
+          transactionCount: 3,
+        },
+        bookedTransactions: [
+          { transactionId: 'tx-1', amountMinor: 5000n, direction: 'credit', hasCompleteBooking: true, isUnresolved: false },
+          { transactionId: 'tx-2', amountMinor: 3000n, direction: 'credit', hasCompleteBooking: true, isUnresolved: false },
+          { transactionId: 'tx-3', amountMinor: 3000n, direction: 'debit', hasCompleteBooking: true, isUnresolved: false },
+        ],
+      }),
+      buildCategoryControlTotals({
+        workspaceId: 'workspace-1',
+        accountId: 'account-1',
+        accountIdentifier: 'NL89INGB0006369960',
+        periodStart,
+        periodEnd,
+        statementIncomeMinor: 8000n,
+        statementExpenseMinor: 3000n,
+        statementTransactionCount: 3,
+        transactions: [
+          { transactionId: 'tx-1', amountMinor: 5000n, direction: 'credit', hasCompleteBooking: true, isUnresolved: false, projectId: 'p1', transactionTypeId: 't1', categoryId: 'c1', literalProjectLabel: 'Klant A', literalTypeLabel: 'Inkomsten', literalCategoryLabel: 'Donaties' },
+          { transactionId: 'tx-2', amountMinor: 3000n, direction: 'credit', hasCompleteBooking: true, isUnresolved: false, projectId: 'p2', transactionTypeId: 't1', categoryId: 'c1', literalProjectLabel: 'Klant B', literalTypeLabel: 'Inkomsten', literalCategoryLabel: 'Donaties' },
+          { transactionId: 'tx-3', amountMinor: 3000n, direction: 'debit', hasCompleteBooking: true, isUnresolved: false, projectId: 'p1', transactionTypeId: 't2', categoryId: 'c2', literalProjectLabel: 'Klant A', literalTypeLabel: 'Uitgaven', literalCategoryLabel: 'Huur' },
+        ],
+      }),
+    );
+
+    const hash1 = buildCloseControlHashFromParts('period-1', 'ledger-1', combined);
+    const hash2 = buildCloseControlHashFromParts('period-2', 'ledger-1', combined);
+
+    expect(hash1).not.toBe(hash2);
+  });
+
+  it('buildCloseControlHashFromParts includes ledgerId in the hash', () => {
+    const periodStart = new Date('2026-01-01T00:00:00Z');
+    const periodEnd = new Date('2026-01-31T23:59:59Z');
+
+    const combined = buildCloseControlPreview(
+      buildStatementReconciliationPreview({
+        workspaceId: 'workspace-1',
+        accountId: 'account-1',
+        accountIdentifier: 'NL89INGB0006369960',
+        statementPeriodId: 'period-1',
+        periodStart,
+        periodEnd,
+        coverageStatus: StatementCoverageStatus.COMPLETE,
+        statementTotals: {
+          openingBalanceMinor: '100000',
+          incomeMinor: '8000',
+          expenseMinor: '3000',
+          closingBalanceMinor: '105000',
+          transactionCount: 3,
+        },
+        bookedTransactions: [
+          { transactionId: 'tx-1', amountMinor: 5000n, direction: 'credit', hasCompleteBooking: true, isUnresolved: false },
+          { transactionId: 'tx-2', amountMinor: 3000n, direction: 'credit', hasCompleteBooking: true, isUnresolved: false },
+          { transactionId: 'tx-3', amountMinor: 3000n, direction: 'debit', hasCompleteBooking: true, isUnresolved: false },
+        ],
+      }),
+      buildCategoryControlTotals({
+        workspaceId: 'workspace-1',
+        accountId: 'account-1',
+        accountIdentifier: 'NL89INGB0006369960',
+        periodStart,
+        periodEnd,
+        statementIncomeMinor: 8000n,
+        statementExpenseMinor: 3000n,
+        statementTransactionCount: 3,
+        transactions: [
+          { transactionId: 'tx-1', amountMinor: 5000n, direction: 'credit', hasCompleteBooking: true, isUnresolved: false, projectId: 'p1', transactionTypeId: 't1', categoryId: 'c1', literalProjectLabel: 'Klant A', literalTypeLabel: 'Inkomsten', literalCategoryLabel: 'Donaties' },
+          { transactionId: 'tx-2', amountMinor: 3000n, direction: 'credit', hasCompleteBooking: true, isUnresolved: false, projectId: 'p2', transactionTypeId: 't1', categoryId: 'c1', literalProjectLabel: 'Klant B', literalTypeLabel: 'Inkomsten', literalCategoryLabel: 'Donaties' },
+          { transactionId: 'tx-3', amountMinor: 3000n, direction: 'debit', hasCompleteBooking: true, isUnresolved: false, projectId: 'p1', transactionTypeId: 't2', categoryId: 'c2', literalProjectLabel: 'Klant A', literalTypeLabel: 'Uitgaven', literalCategoryLabel: 'Huur' },
+        ],
+      }),
+    );
+
+    const hash1 = buildCloseControlHashFromParts('period-1', 'ledger-1', combined);
+    const hash2 = buildCloseControlHashFromParts('period-1', 'ledger-2', combined);
+
+    expect(hash1).not.toBe(hash2);
+  });
+
+  it('existing strict close path still accepts the correct hash', async () => {
+    const { db, captured } = makeDb();
+    const periodStart = new Date('2026-01-01T00:00:00Z');
+    const periodEnd = new Date('2026-01-31T23:59:59Z');
+
+    const combined = buildCloseControlPreview(
+      buildStatementReconciliationPreview({
+        workspaceId: 'workspace-1',
+        accountId: 'account-1',
+        accountIdentifier: 'NL89INGB0006369960',
+        statementPeriodId: 'period-1',
+        periodStart,
+        periodEnd,
+        coverageStatus: StatementCoverageStatus.COMPLETE,
+        statementTotals: {
+          openingBalanceMinor: '100000',
+          incomeMinor: '8000',
+          expenseMinor: '3000',
+          closingBalanceMinor: '105000',
+          transactionCount: 3,
+        },
+        bookedTransactions: [
+          { transactionId: 'tx-1', amountMinor: 5000n, direction: 'credit', hasCompleteBooking: true, isUnresolved: false },
+          { transactionId: 'tx-2', amountMinor: 3000n, direction: 'credit', hasCompleteBooking: true, isUnresolved: false },
+          { transactionId: 'tx-3', amountMinor: 3000n, direction: 'debit', hasCompleteBooking: true, isUnresolved: false },
+        ],
+      }),
+      buildCategoryControlTotals({
+        workspaceId: 'workspace-1',
+        accountId: 'account-1',
+        accountIdentifier: 'NL89INGB0006369960',
+        periodStart,
+        periodEnd,
+        statementIncomeMinor: 8000n,
+        statementExpenseMinor: 3000n,
+        statementTransactionCount: 3,
+        transactions: [
+          { transactionId: 'tx-1', amountMinor: 5000n, direction: 'credit', hasCompleteBooking: true, isUnresolved: false, projectId: 'p1', transactionTypeId: 't1', categoryId: 'c1', literalProjectLabel: 'Klant A', literalTypeLabel: 'Inkomsten', literalCategoryLabel: 'Donaties' },
+          { transactionId: 'tx-2', amountMinor: 3000n, direction: 'credit', hasCompleteBooking: true, isUnresolved: false, projectId: 'p2', transactionTypeId: 't1', categoryId: 'c1', literalProjectLabel: 'Klant B', literalTypeLabel: 'Inkomsten', literalCategoryLabel: 'Donaties' },
+          { transactionId: 'tx-3', amountMinor: 3000n, direction: 'debit', hasCompleteBooking: true, isUnresolved: false, projectId: 'p1', transactionTypeId: 't2', categoryId: 'c2', literalProjectLabel: 'Klant A', literalTypeLabel: 'Uitgaven', literalCategoryLabel: 'Huur' },
+        ],
+      }),
+    );
+
+    const correctHash = buildCloseControlHashFromParts('period-1', 'ledger-1', combined);
+    const result = await executeStrictPeriodClose(db, makeInput({ expectedCloseControlHash: correctHash }));
+
+    expect(result.closeControlHash).toBe(correctHash);
+    expect(result.closeId).toBe('close-1');
+  });
+
+  it('existing strict close path rejects stale hash', async () => {
+    const { db } = makeDb();
+
+    const staleHash = 'stale-hash-does-not-match';
+    const input = makeInput({ expectedCloseControlHash: staleHash });
+
+    await expect(executeStrictPeriodClose(db, input)).rejects.toThrow(StrictPeriodCloseError);
+  });
+});
