@@ -1285,11 +1285,17 @@ Phase 6 implementation is complete: REPORT-001 through REPORT-005 all implemente
 
 No production, Dokploy, MCP bridge, `10.0.2.4`, persistent owner-data import, production configuration, `.env`, `.graphifyignore`, `graphify-out/`, owner-source copy, raw row dump, email dispatch, or push occurred.
 
-## Current gate: Phase 7 Dutch UX and authorization
+## Current gate: Phase 7 Dutch UX and authorization — in progress; Phase 9 operational hardening follows
 
-Phase 6 complete. Next gate is Phase 7 (UX-001 Dutch UX, AUTH-001 authorization hardening).
+Phase 6 complete. Phase 7 (UX-001 Dutch UX audit, AUTH-001 authorization hardening, UX-002 navigation simplification) and Phase 9 (OPS-001 Dutch admin guide, OPS-003 documentation alignment) are now in execution.
 
-Historical production import remains operator-gated and blocked. The following remain prohibited without separate explicit approval:
+Phase 8 (infrastructure and deployment) remains deliberately deferred until the financial workflow is stable and validated.
+
+Real PDF generation remains blocked: no PDF library is in package.json. The `PDF_BLOCKER` constant in `server/services/reportArtifactService.ts` documents the requirement. Real PDF requires explicit owner approval of the dependency before implementation.
+
+Historical production import remains operator-gated and blocked through `server/services/historicalOwnerImportCommandService.ts`. The production path returns `production-blocked` and requires a separate explicit production option, reviewed dry-run acceptance, operator confirmation, and source-bound confirmation token before any real import can run.
+
+The following remain prohibited without separate explicit approval:
 
 - No production historical import.
 - No real email sending.
@@ -1298,3 +1304,4 @@ Historical production import remains operator-gated and blocked. The following r
 - No .env edit.
 - No production configuration change.
 - No new dependency installation without documented justification.
+- No real PDF generation (PDF_BLOCKER active; no PDF library approved).
