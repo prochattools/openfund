@@ -19,7 +19,7 @@
 		"migrate": "prisma migrate deploy",
 		"postinstall": "prisma generate",
 		"validate:finance-readiness": "npm test && npm run build:server && npm run build && npx prisma validate && npx prisma generate",
-		"validate:release-candidate": "npm test && npm run build:server && npm run build && node scripts/backup-restore-rehearsal.mjs --dry-run"
+		"validate:release-candidate": "npm test && npm run build:server && npm run build && DATABASE_URL=postgresql://finance_user:local_dev_placeholder@127.0.0.1:5432/yaf_validate npx prisma validate && npx prisma generate && node scripts/backup-restore-rehearsal.mjs --dry-run && git diff --check"
 	},
 	"dependencies": {
 		"@clerk/nextjs": "^5.7.1",
