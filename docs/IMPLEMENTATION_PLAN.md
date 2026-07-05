@@ -59,7 +59,8 @@ Phase 4 FLOW-003 evidence-rich Dutch review queue: implemented; admin-only read 
 Phase 4 FLOW-004 explicit rule creation from approved decisions: implemented; committed as c5d6312
 Phase 5 CLOSE-001 statement reconciliation controls: implemented; read-only preview, no period close, no report snapshot, no bookings, no production import, production config, push, or Graphify changes
 Phase 5 CLOSE-002 category control totals: implemented; category income/expense totals reconcile exactly to statement totals, CLOSE-001 account-filter hardened, combined close evidence includes real category differences, no period close, no report snapshot, no bookings, no production import, production config, push, or Graphify changes
-Current gate: CLOSE-003 strict close gate and lock; historical production import remains operator-gated
+Phase 5 CLOSE-003 strict close gate and lock: implemented; period may close only when CLOSE-001 and CLOSE-002 are both complete and balanced with all differences EUR 0.00; partial/open periods, unresolved reviews, missing dimensions, duplicate active closes, stale hash, and non-admin actors are rejected; creates exactly one PeriodClose, no report snapshots or dispatches; no Prisma migration required; no production import, production config, push, or Graphify changes
+Current gate: CLOSE-004 audited reopen; historical production import remains operator-gated
 ```
 
 ## Phase 0 — Governance and discovery
@@ -961,16 +962,39 @@ Validation:
 
 ### CLOSE-003 — Implement strict close gate and lock
 
-Status: `TODO`
+Status: `DONE`
 
 Dependencies: CLOSE-002
+
+Files changed:
+
+- `server/services/strictPeriodCloseService.ts` (new)
+- `server/routes/strictPeriodClose.ts` (new)
+- `server/index.ts` (route registered)
+- `tests/services/strictPeriodCloseService.test.ts` (new, 21 tests)
+- `tests/routes/strictPeriodClose.test.ts` (new, 10 tests)
+- `docs/IMPLEMENTATION_PLAN.md`
+- `docs/ROADMAP.md`
+- `docs/finance-rebuild-run.md`
+
+Implemented behavior:
+
+- `executeStrictPeriodClose` builds CLOSE-001 statement reconciliation preview and CLOSE-002 category controls from live DB state, then runs `toCombinedReconciliationEvidence` and `createPeriodClose` only when all gates pass.
+- Rejects: partial/open coverage, unresolved review items, missing booking dimensions (project/type/category), non-zero statement differences, non-zero category differences, transaction count mismatch, existing active CLOSED period for the same statementPeriodId, stale close-control hash, missing explicit confirmation, viewer/non-admin actor.
+- `buildCloseControlHashFromParts` produces a deterministic SHA-256 hash over statementPeriodId, ledgerId, period dates, statement totals, booked totals, category differences, close eligibility, and combined validator version.
+- POST `/api/reconciliation/statement-periods/:id/close` — admin-only, requires `ledgerId`, `workspaceId`, `confirmed: true`, and optionally `expectedCloseControlHash`; runs entire close inside a Prisma transaction; returns 201 with close summary.
+- Creates exactly one `PeriodClose` through `createPeriodClose`; creates no report snapshots, approvals, artifacts, dispatches, or transaction bookings.
+- No Prisma schema or migration required.
 
 Acceptance:
 
 - No unresolved reviews.
 - All differences are EUR 0.00.
 - Partial periods cannot close.
-- Closed snapshot is immutable.
+- Closed snapshot is immutable (duplicate CLOSED close for same period is rejected 409).
+- Admin-only; viewer is rejected 403.
+- Stale hash is rejected 409; missing confirmation is rejected 400.
+- 75/75 test files pass; 400 tests pass; server TypeScript build passes.
 
 ### CLOSE-004 — Implement audited reopen
 

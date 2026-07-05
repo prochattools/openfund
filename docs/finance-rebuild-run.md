@@ -4,7 +4,7 @@ Date: 2026-07-02
 Run: `agent-f961650b-de17-4282-ab18-7a716cc72958`  
 Source: `yeshuaacademy-finance`  
 Branch: `main`  
-Status: Phase 1 committed as `925a609`; MODEL-001 committed as `73daabd`; MODEL-002 and MIGRATE-001 committed as `d2afb18`; MODEL-003 Packet A committed as `0196910`; MODEL-003 Packet B committed as `b3b8afd`; MODEL-004/005 committed as `49386ad`; Phase 3 Packet E retained source hash hardening implemented; CLOSE-002 category control totals implemented
+Status: Phase 1 committed as `925a609`; MODEL-001 committed as `73daabd`; MODEL-002 and MIGRATE-001 committed as `d2afb18`; MODEL-003 Packet A committed as `0196910`; MODEL-003 Packet B committed as `b3b8afd`; MODEL-004/005 committed as `49386ad`; Phase 3 Packet E retained source hash hardening implemented; CLOSE-002 category control totals implemented; CLOSE-003 strict close gate and lock implemented
 
 ## Authoritative document hierarchy
 
@@ -1116,6 +1116,47 @@ Validation:
 
 No production, Dokploy, MCP bridge, `10.0.2.4`, persistent owner-data import, production configuration, `.env`, `.graphifyignore`, `graphify-out/`, owner-source copy, raw row dump, generated output commit, period close, report snapshot, transaction booking, historical production import, or push occurred.
 
+## Phase 5 CLOSE-003 strict close gate and lock evidence
+
+### Implementation
+
+- `server/services/strictPeriodCloseService.ts` — strict close service with `executeStrictPeriodClose`, `buildCloseControlHashFromParts`, and `StrictPeriodCloseError`.
+- `server/routes/strictPeriodClose.ts` — `POST /api/reconciliation/statement-periods/:id/close`; admin-only; runs inside Prisma transaction.
+- `server/index.ts` — route registered.
+- `tests/services/strictPeriodCloseService.test.ts` — 21 service tests.
+- `tests/routes/strictPeriodClose.test.ts` — 10 route tests.
+
+### Close gate behavior
+
+Period may close only when:
+- CLOSE-001 statement reconciliation status is BALANCED and coverage is COMPLETE.
+- CLOSE-002 category controls status is BALANCED with all category differences EUR 0.00.
+- All transactions have complete bookings (project + type + category).
+- No unresolved review items.
+- Transaction count matches statement count exactly.
+- Explicit `confirmed: true` supplied by caller.
+- Actor has admin role.
+- No existing CLOSED `PeriodClose` for the same `statementPeriodId`.
+- If `expectedCloseControlHash` is supplied, it must match the current computed hash.
+
+### Close control hash
+
+`buildCloseControlHashFromParts(statementPeriodId, ledgerId, combined)` produces a deterministic SHA-256 over period dates, statement totals, booked totals, category differences, close eligibility, and combined validator version string. Stale or mismatched hash → 409.
+
+### Side effects
+
+Creates exactly one `PeriodClose` via `createPeriodClose`. Creates no report snapshots, approvals, artifacts, dispatches, or transaction bookings.
+
+### Validation results
+
+- 75/75 test files pass; 400 tests pass (31 new); 3 skipped (pre-existing).
+- `npm run build:server` clean.
+- `npm run build` clean (lockfile warning pre-existing, unrelated to CLOSE-003).
+- `git diff --check` clean.
+- No Prisma schema or migration required.
+
+No production, Dokploy, MCP bridge, `10.0.2.4`, persistent owner-data import, production configuration, `.env`, `.graphifyignore`, `graphify-out/`, owner-source copy, raw row dump, generated output commit, report snapshot, transaction booking, historical production import, or push occurred.
+
 ## Current next task
 
-Current gate is CLOSE-003 strict close gate and lock. Historical production import remains operator-gated and blocked. Do not execute a production historical import, modify production configuration, touch Graphify artifacts, or push.
+CLOSE-002 is committed and verified. CLOSE-003 strict close gate and lock is implemented and verified. Current gate is CLOSE-004 audited reopen. Historical production import remains operator-gated and blocked. Do not execute a production historical import, modify production configuration, touch Graphify artifacts, or push.
