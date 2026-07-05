@@ -53,7 +53,7 @@ npm test
 
 | Controle | Status |
 |---------|--------|
-| Volledig testsuite (88 bestanden, 622 tests) | GESLAAGD |
+| Volledig testsuite (89 bestanden, 643 tests) | GESLAAGD |
 | `tests/auth/adminMutationPolicy.test.ts` (24 tests) | GESLAAGD |
 | `tests/helpers/dutchTextAudit.test.ts` (20 tests) | GESLAAGD |
 | `tests/helpers/navigation.test.ts` (13 tests) | GESLAAGD |

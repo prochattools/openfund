@@ -4,7 +4,7 @@ Date: 2026-07-02
 Run: `agent-f961650b-de17-4282-ab18-7a716cc72958`  
 Source: `yeshuaacademy-finance`  
 Branch: `main`  
-Status: Release Candidate 2 — RC2 script hardening complete; backup rehearsal live mode requires explicit confirmation flags; release manifest generator added; production blockers audited (24 tests); owner handoff bundle ready; validate:release-candidate script strengthened with prisma validate, prisma generate, and git diff --check; 88 test files, 622 tests pass; awaiting owner decisions for production cutover, historical import, PDF dependency, email provider, and live backup rehearsal
+Status: Release Candidate 2 — RC2 script hardening complete; backup rehearsal live mode requires explicit confirmation flags; release manifest generator added; production blockers audited (24 tests); owner handoff bundle ready; validate:release-candidate script strengthened with prisma validate, prisma generate, and git diff --check; 89 test files, 643 tests pass; awaiting owner decisions for production cutover, historical import, PDF dependency, email provider, and live backup rehearsal
 
 ## RC2 Hardening Evidence
 

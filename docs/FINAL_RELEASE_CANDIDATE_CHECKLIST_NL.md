@@ -15,7 +15,7 @@ npm run validate:release-candidate
 ```
 
 Dit commando voert uit:
-1. `npm test` — volledig testsuite (88 bestanden, 622 tests inclusief RC-001 en RC-002)
+1. `npm test` — volledig testsuite (89 bestanden, 643 tests inclusief RC-001 en RC-002)
 2. `npm run build:server` — TypeScript server-compilatie
 3. `npm run build` — Next.js productiebuild (18 pagina's)
 4. `DATABASE_URL=... npx prisma validate` — schemavalidatie (lokale placeholder)
@@ -62,7 +62,7 @@ Zie `docs/OWNER_HANDOFF_NL.md` voor het volledige stappenplan.
 
 | Stap | Commando | Status |
 |------|---------|--------|
-| Volledig testsuite | `npm test` | GESLAAGD — 622 tests, 88 bestanden |
+| Volledig testsuite | `npm test` | GESLAAGD — 643 tests, 89 bestanden |
 | Server TypeScript-build | `npm run build:server` | GESLAAGD |
 | Next.js productiebuild | `npm run build` | GESLAAGD — 18 pagina's |
 | Prisma validate | `DATABASE_URL=... npx prisma validate` | GESLAAGD (in validate:release-candidate) |
