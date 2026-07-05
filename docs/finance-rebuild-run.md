@@ -1361,9 +1361,70 @@ Commit: `d51cfad docs: add Dutch administrator operating guide (OPS-001)`
 - `docs/finance-rebuild-run.md`: appended Phase 7 and Phase 9 evidence.
 - OPS-003 validation follows: `npm test`, `npm run build:server`, `npm run build`, `npx prisma validate`, `npx prisma generate`, `git diff --check`.
 
-## Current gate: Phase 9 OPS-003 documentation alignment in progress
+## Phase 8 — Infrastructure and deployment (in progress)
 
-Phase 8 (infrastructure and deployment) remains deliberately deferred.
+### INFRA-001 — PostgreSQL compatibility note
+
+- `docs/INFRASTRUCTURE_READINESS.md` created.
+- Records Prisma 6.x version (`^6.15.0`), active migration chain (4 migrations), local validation conventions,
+  recommendation criteria for PostgreSQL version, and requirement to confirm production PostgreSQL version
+  before cutover.
+- No production configuration changed.
+
+### INFRA-002 — Local Docker Compose cleanup
+
+- `docker-compose.local.yml` created.
+- PostgreSQL 16 only; `127.0.0.1:5432:5432` (localhost-only); named volume `finance_local_db`;
+  placeholder credentials only; healthcheck included.
+- Original `docker-compose.yml` retained (production Dokploy descriptor; must not be removed without
+  explicit owner approval).
+- No production changes.
+
+### INFRA-003 — Production cutover plan (documentation-only)
+
+- `docs/PRODUCTION_CUTOVER_PLAN_NL.md` created.
+- Dutch operator-facing plan: scope and non-goals, required owner approvals, secret rotation,
+  backup before cutover, migration dry-run, migration execution, post-migration validation,
+  historical import gate, report/PDF/email limitations, rollback plan, no-force-push rules.
+- Explicit confirmation: no production commands executed; no production credentials included.
+
+## Phase 9 — Operational hardening (continued)
+
+### OPS-002 — Backup/restore rehearsal guards
+
+- `scripts/backup-restore-rehearsal.mjs` created.
+  - Rejects non-local hosts, `10.0.2.4`, Dokploy hosts, and production-like database names.
+  - Creates/drops only `yaf_rehearsal_*` disposable databases.
+  - Never prints secrets; no production database access.
+  - Supports `--dry-run` mode.
+- `tests/ops/backupRestoreRehearsal.test.ts` created.
+  - 18 unit tests covering URL guards, command construction, and no-secret guarantees.
+  - All 18 tests pass.
+- `docs/BACKUP_RESTORE_REHEARSAL_NL.md` created.
+  - Dutch step-by-step manual rehearsal guide.
+  - Live rehearsal requires `pg_dump`/`pg_restore` installed locally and a running PostgreSQL instance.
+
+### OPS-003 — Documentation alignment (continued)
+
+- `docs/ROADMAP.md`: Phase 8 status updated to "in progress"; Phase 9 OPS-002 evidence added.
+- `docs/IMPLEMENTATION_PLAN.md`: INFRA-001/002/003 and OPS-002 updated to IMPLEMENTED with evidence.
+- `docs/FINAL_READINESS_AUDIT_NL.md` created — Dutch final readiness audit summarizing all phases,
+  known blockers, validation checklist, operational sign-off checklist, data safety checklist,
+  production cutover prerequisites, post-cutover verification, and rollback requirements.
+- `package.json`: added `validate:finance-readiness` script.
+
+### Phase 8/9 validation (2026-07-05)
+
+- `npm test`: 84 test files, 553 tests pass, 3 skipped. New: `tests/ops/backupRestoreRehearsal.test.ts` (18 tests).
+- `npm run build:server`: clean TypeScript compile.
+- `npm run build`: 18 static pages.
+- `npx prisma validate`: passed.
+- `npx prisma generate`: passed.
+- `git diff --check`: no whitespace errors.
+- No production, Dokploy, MCP bridge, `10.0.2.4`, `.env`, `.graphifyignore`, `graphify-out/`,
+  owner-file copy, raw row dump, or push occurred.
+
+## Current gate: Phase 9 OPS-003 documentation alignment in progress
 
 Real PDF generation remains blocked: no PDF library is in package.json. The `PDF_BLOCKER` constant in `server/services/reportArtifactService.ts` documents the requirement. Real PDF requires explicit owner approval of the dependency before implementation.
 

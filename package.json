@@ -17,7 +17,8 @@
 		"start": "node scripts/start-prod.mjs",
 		"start:api": "node dist/server/index.js",
 		"migrate": "prisma migrate deploy",
-		"postinstall": "prisma generate"
+		"postinstall": "prisma generate",
+		"validate:finance-readiness": "npm test && npm run build:server && npm run build && npx prisma validate && npx prisma generate"
 	},
 	"dependencies": {
 		"@clerk/nextjs": "^5.7.1",
