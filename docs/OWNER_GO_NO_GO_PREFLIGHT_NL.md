@@ -50,6 +50,7 @@ node scripts/owner-go-no-go-preflight.mjs --strict
 - `.env` wordt niet gelezen of gewijzigd.
 - Er wordt geen databaseverbinding geopend.
 - Er wordt geen e-mail of externe provider aangeroepen.
+- Er is geen push zonder expliciete eigenaargoedkeuring.
 - Er wordt niet gepusht en er wordt geen tag gemaakt.
 - Er wordt geen historische productie-import uitgevoerd.
 - Er wordt geen PDF-bibliotheek toegevoegd.
