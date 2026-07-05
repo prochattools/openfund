@@ -19,6 +19,7 @@ import { listAuditLogs } from './routes/audit';
 import { downloadImportBatchFile, listImportBatches } from './routes/importBatches';
 import { deactivateEmailRecipient, listEmailRecipients, upsertEmailRecipient } from './routes/emailRecipients';
 import { getRules, postRule, patchRule, removeRule, previewRule, applyRule } from './routes/rules';
+import { getStatementReconciliationPreview } from './routes/statementReconciliationPreview';
 import { ensureCategorizationRuleConditionsColumn } from './db/ensureCategorizationRuleConditions';
 
 const app = express();
@@ -58,6 +59,7 @@ app.patch('/api/rules/:id', patchRule);
 app.delete('/api/rules/:id', removeRule);
 app.post('/api/rules/:id/preview', previewRule);
 app.post('/api/rules/:id/apply', applyRule);
+app.get('/api/reconciliation/statement-periods/:id/preview', getStatementReconciliationPreview);
 
 async function start() {
   try {

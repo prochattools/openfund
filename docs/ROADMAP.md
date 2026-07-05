@@ -19,8 +19,8 @@ Phase 0 — Governance and verified controls       COMPLETE
 Phase 1 — Safe categorization foundation         COMPLETE
 Phase 2 — Financial domain and historical model  IN PROGRESS
 Phase 3 — Historical loading and truth fixtures  IN PROGRESS
-Phase 4 — Monthly import and review workflow     PLANNED
-Phase 5 — Reconciliation, close, and snapshots   PLANNED
+Phase 4 — Monthly import and review workflow     DONE
+Phase 5 — Reconciliation, close, and snapshots   IN PROGRESS
 Phase 6 — Visual reports and distribution        PLANNED
 Phase 7 — Dutch UX and authorization hardening   PLANNED
 Phase 8 — Infrastructure and deployment          PLANNED
@@ -183,7 +183,7 @@ Status: **in progress; FLOW-004 explicit rule creation from approved decisions i
 
 ## Phase 5 — Reconciliation, close, and immutable snapshots
 
-Status: **planned**
+Status: **in progress** (CLOSE-001 done; CLOSE-002 through CLOSE-004 planned)
 
 ### Outcomes
 

@@ -972,9 +972,9 @@ Validation evidence:
 
 No production, Dokploy, MCP bridge, `10.0.2.4`, persistent owner-data import, production configuration, `.env`, `.graphifyignore`, `graphify-out/`, owner-source copy, raw row dump, generated output commit, period close, transaction booking, historical production import, or push occurred.
 
-## Current next task
+## FLOW-003 through FLOW-004 status
 
-FLOW-003 evidence-rich Dutch review queue is implemented and validated locally. After commit, proceed to FLOW-004 explicit rule creation from approved decisions. Historical production import remains operator-gated and blocked. Do not execute a production historical import, modify production configuration, touch Graphify artifacts, or push.
+FLOW-003 evidence-rich Dutch review queue committed as `6618cb6`. FLOW-004 explicit rule creation from approved decisions committed as `c5d6312`. Historical production import remains operator-gated and blocked.
 
 ## Phase 4 FLOW-003 evidence-rich Dutch review queue evidence
 
@@ -1043,64 +1043,47 @@ Validation completed in this slice:
 
 No production, Dokploy, MCP bridge, `10.0.2.4`, persistent owner-data import, production configuration, `.env`, `.graphifyignore`, `graphify-out/`, owner-source copy, raw row dump, generated output commit, period close, transaction booking, historical production import, or push occurred.
 
-## Next Phase 5 prompt
+## Phase 5 CLOSE-001 statement reconciliation controls evidence
 
-Use this prompt for the next implementation session:
+FLOW-004 is committed as `c5d6312`. CLOSE-001 statement reconciliation controls are now implemented.
 
-```text
-Continue in source yeshuaacademy-finance only.
+Implementation summary:
 
-Current committed state:
-- Phase 3 Packet G guarded historical import dry-run is committed as 6610648.
-- Phase 4 FLOW-001 monthly import preview foundation is committed as b7db856.
-- Phase 4 FLOW-002 deterministic categorization decisions are committed as 5532582.
-- Phase 4 FLOW-003 evidence-rich Dutch review queue is committed as 6618cb6.
-- Phase 4 FLOW-004 explicit rule creation from approved decisions is implemented and validated locally.
-- Historical production import remains operator-gated and blocked.
-- No production, Dokploy, MCP bridge, 10.0.2.4, .env, Graphify, owner-file copy, raw row dump, generated output, transaction booking, period close, or production import work has been touched.
+- Added `server/services/statementReconciliationControlService.ts` as a pure read-only reconciliation preview builder following the `monthlyImportPreviewService` pattern.
+- Added `server/routes/statementReconciliationPreview.ts` as an admin-only GET route at `/api/reconciliation/statement-periods/:id/preview`.
+- Registered the route in `server/index.ts`.
+- Added `tests/services/statementReconciliationControlService.test.ts` (20 tests) and `tests/routes/statementReconciliationPreview.test.ts` (4 tests).
+- The preview validates statement totals with `assertStatementTotals` (opening + income - expenses = closing exactly).
+- The preview computes booked transaction totals from input and returns exact minor-unit string differences.
+- Status is `BALANCED` only when all totals match, all bookings are complete, and no transactions are unresolved.
+- Status is `INCOMPLETE` when unresolved transactions exist or booking dimensions are missing.
+- Status is `UNBALANCED` when financial totals or counts do not agree.
+- Partial/open coverage statements are never close-eligible.
+- `toBalancedReconciliationEvidence` produces evidence accepted by `assertCanClose` only for BALANCED+COMPLETE previews with zero differences.
+- No `PeriodClose`, `ReportSnapshot`, approval, dispatch, booking, or audit log is created.
+- `sideEffects: {createsPeriodClose: false, createsReportSnapshot: false, closesPeriod: false}` on every preview.
+- Route enforces admin-only via `requireAdmin`.
 
-Task:
-If FLOW-004 is committed, start Phase 5 CLOSE-001 statement reconciliation controls. Do not create period closes or report snapshots until the statement controls are previewed and validated.
+Validation evidence:
 
-Required context:
-1. Read the approved product/domain docs before coding:
-   - docs/PHILOSOPHY.md
-   - docs/STRATEGY.md
-   - docs/ROADMAP.md
-   - docs/IMPLEMENTATION_PLAN.md
-   - docs/finance-rebuild-run.md
-   - docs/DOMAIN_MODEL.md, if present
-2. Inspect the categorization and review services/tests:
-   - server/services/statementControlService.ts
-   - server/services/periodCloseService.ts
-   - server/services/reviewDecisionService.ts
-   - server/services/ruleCreationService.ts
-   - server/routes/review.ts
-   - src/libs/api.ts
-   - tests/services/statementControlService.test.ts
-   - tests/services/periodCloseService.test.ts
-   - tests/services/ruleCreationService.test.ts
-3. Confirm rule creation remains a separate administrator activation path and creates no bookings/closes.
+- Focused statement reconciliation control tests: 20 passed.
+- Focused route tests: 4 passed.
+- Statement control regression: 4 passed.
+- Period close regression: 6 passed.
+- Reconciliation service regression: 4 passed.
+- Review decision regression: 9 passed.
+- Review queue regression: 3 passed.
+- Monthly import preview regression: 10 passed.
+- Full suite: 72 files, 341 tests passed, 3 optional skipped.
+- Prisma validate passed with a local-only `localhost:5452/validate` URL.
+- Prisma Client generation passed.
+- Server TypeScript build passed.
+- Production build passed with 18 routes and the pre-existing Next/SWC lockfile warning.
+- `git diff --check` passed.
+- No Prisma schema or migration was required.
 
-Phase 5 constraints:
-- Preserve literal Klant, Type, and Category exactly as supplied.
-- Use raw ING Date only for transaction dates.
-- Use Verduidelijking as interpretation evidence, not as rewritten historical truth.
-- A period cannot close while statement controls differ, any transaction is unresolved, or any booking lacks complete dimensions.
-- Close preview/control checks must run before any close/report snapshot write.
-- Rule preview and activation must remain separate from TransactionBooking and PeriodClose writes.
-- Bulk acceptance must remain disabled.
-- Production historical execution requires a separately approved operator procedure and remains blocked.
-- Use only localhost/127.0.0.1/::1 for disposable databases.
-- Do not use production, Dokploy, MCP bridge, 10.0.2.4, or exposed production credentials.
-- Do not edit .env.
-- Do not touch .graphifyignore or graphify-out.
-- Do not push.
-- Stop before production deployment or any production data mutation.
+No production, Dokploy, MCP bridge, `10.0.2.4`, persistent owner-data import, production configuration, `.env`, `.graphifyignore`, `graphify-out/`, owner-source copy, raw row dump, generated output commit, period close, report snapshot, transaction booking, historical production import, or push occurred.
 
-Expected output:
-- CLOSE-001 statement control validation results.
-- Confirmation that no premature period close/report snapshot occurred.
-- Confirmation that no bookings, closes, or historical production import occurred.
-- Next gate for close/report snapshot implementation.
-```
+## Current next task
+
+Current gate is CLOSE-002 category control totals. Historical production import remains operator-gated and blocked. Do not execute a production historical import, modify production configuration, touch Graphify artifacts, or push.

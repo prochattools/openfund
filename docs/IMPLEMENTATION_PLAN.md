@@ -56,7 +56,9 @@ Phase 3 Packet G guarded dry-run service: implemented; default dry-run only, pro
 Phase 4 FLOW-001 monthly import preview foundation: implemented; retained-byte preview controls only, no bookings, period close, production import, production config, push, or Graphify changes
 Phase 4 FLOW-002 deterministic categorization decisions: implemented; complete deterministic rule/replay decisions only, no bookings, period close, production import, production config, push, or Graphify changes
 Phase 4 FLOW-003 evidence-rich Dutch review queue: implemented; admin-only read evidence, no bookings, period close, production import, production config, push, or Graphify changes
-Current gate: FLOW-004 explicit rule creation from approved decisions; historical production import remains operator-gated
+Phase 4 FLOW-004 explicit rule creation from approved decisions: implemented; committed as c5d6312
+Phase 5 CLOSE-001 statement reconciliation controls: implemented; read-only preview, no period close, no report snapshot, no bookings, no production import, production config, push, or Graphify changes
+Current gate: CLOSE-002 category control totals; historical production import remains operator-gated
 ```
 
 ## Phase 0 — Governance and discovery
@@ -893,14 +895,32 @@ Validation:
 
 ### CLOSE-001 — Implement statement reconciliation controls
 
-Status: `TODO`
+Status: `DONE`
 
 Dependencies: FLOW-003
+
+Files:
+
+- `server/services/statementReconciliationControlService.ts`
+- `server/routes/statementReconciliationPreview.ts`
+- `server/index.ts`
+- `tests/services/statementReconciliationControlService.test.ts`
+- `tests/routes/statementReconciliationPreview.test.ts`
 
 Acceptance:
 
 - Opening + income - expenses equals closing exactly.
 - Transaction totals and statement totals agree.
+- Partial/open statements are not close-eligible.
+- Unresolved or missing-booking transactions make preview incomplete.
+- Exact minor-unit string differences are returned.
+- No PeriodClose, ReportSnapshot, approval, dispatch, or booking is created.
+- `toBalancedReconciliationEvidence` produces evidence accepted by `assertCanClose` only for valid BALANCED+COMPLETE previews.
+- Route is admin-only and read-only.
+
+Validation:
+
+- Full validation passed and is recorded in `docs/finance-rebuild-run.md`: focused statement reconciliation tests (20+4), surrounding statement control / period close / reconciliation service / review / monthly import preview regressions, full suite (341 tests), Prisma validate/generate, server build, production build, diff check.
 
 ### CLOSE-002 — Implement category control totals
 
