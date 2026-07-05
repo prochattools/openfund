@@ -1285,11 +1285,85 @@ Phase 6 implementation is complete: REPORT-001 through REPORT-005 all implemente
 
 No production, Dokploy, MCP bridge, `10.0.2.4`, persistent owner-data import, production configuration, `.env`, `.graphifyignore`, `graphify-out/`, owner-source copy, raw row dump, email dispatch, or push occurred.
 
-## Current gate: Phase 7 Dutch UX and authorization — in progress; Phase 9 operational hardening follows
+## Phase 7 — Dutch UX and authorization hardening (complete)
 
-Phase 6 complete. Phase 7 (UX-001 Dutch UX audit, AUTH-001 authorization hardening, UX-002 navigation simplification) and Phase 9 (OPS-001 Dutch admin guide, OPS-003 documentation alignment) are now in execution.
+Phase 6 complete: REPORT-001 through REPORT-005 committed as a24ef3e, 9e4dc45, d1430c2, dbf23e4, ba372d6.
 
-Phase 8 (infrastructure and deployment) remains deliberately deferred until the financial workflow is stable and validated.
+Phase 7 implementation is complete: UX-001, AUTH-001, and UX-002 implemented and committed.
+
+### UX-001 — Dutch text audit
+
+Commit: `7d58726 test: add Dutch text audit and navigation helper tests`
+
+- Added `tests/helpers/dutchTextAudit.test.ts` (20 tests) covering:
+  - auth guard 403 Dutch error text
+  - upload route messages Dutch
+  - import feedback Dutch
+  - email helper subject/body Dutch
+  - review page helper label translations Dutch
+  - settings page helpers Dutch
+  - report snapshot error messages Dutch
+  - navigation labels Dutch
+
+### AUTH-001 — Admin mutation policy enforcement
+
+Commit: `0d70f51 test: add admin mutation policy enforcement tests`
+
+- Added `tests/auth/adminMutationPolicy.test.ts` (24 tests).
+- Every mutation route verified: viewer (role: `viewer`) receives HTTP 403 with `{ error: 'Alleen beheerders mogen deze actie uitvoeren.' }`.
+- Covers all import, review, rule, close, reopen, report snapshot, artifacts, approve, and dispatch routes.
+
+### UX-002 — Navigation simplification
+
+Commit: `20ff64b feat: centralize navigation in canonical Dutch helper`
+
+- Added `src/helpers/navigation.ts` with canonical `FINANCE_NAV_ITEMS`, `getNavLabel`, and `areNavItemsDutch` exports.
+- Updated `src/ui/FinanceAppFrame.tsx` to use `FINANCE_NAV_ITEMS` from the canonical helper.
+- Added `tests/helpers/navigation.test.ts` (13 tests) covering non-empty, Dutch labels, no SaaS/marketing/billing labels, workflow completeness, and getNavLabel.
+- No SaaS, marketing, billing, or unrelated surfaces remain in the navigation.
+
+### Phase 7 validation
+
+- Full test suite passed at each commit.
+- `npm run build:server` and `npm run build` clean at each commit.
+- `git diff --check` passed.
+- No Prisma schema or migration required.
+- No production, Dokploy, MCP bridge, `.env`, `.graphifyignore`, `graphify-out/`, or push occurred.
+
+## Phase 9 — Operational hardening and handoff (in progress)
+
+### OPS-001 — Dutch administrator operating guide
+
+Commit: `d51cfad docs: add Dutch administrator operating guide (OPS-001)`
+
+- Added `docs/ADMIN_OPERATING_GUIDE_NL.md` — 16-section Dutch guide covering:
+  1. Inloggen en rollen
+  2. Maandelijkse ING CSV-upload en importvoorbeeld
+  3. Deterministische categorisatie
+  4. Beoordelingsrij
+  5. Handmatige keuze van Klant, Type en Categorie
+  6. Regel aanmaken na goedgekeurde beslissing
+  7. Afschriftreconciliatie
+  8. Categoriecontroles
+  9. Periode afsluiten
+  10. Periode heropenen
+  11. Maand- en jaarrapporten
+  12. Rapportartefacten (incl. PDF_BLOCKER notice)
+  13. Rapportgoedkeuring en verzendmetadata
+  14. Bronbestand-downloads
+  15. Wat niet te doen
+  16. Probleemoplossing
+
+### OPS-003 — Documentation alignment audit (in progress)
+
+- `docs/ROADMAP.md`: updated "Current position" block, Phase 6 status (complete), Phase 7 status (complete), Phase 9 status (in progress).
+- `docs/IMPLEMENTATION_PLAN.md`: updated "Current position" block with Phase 7 and Phase 9 commit hashes; marked UX-001, AUTH-001, UX-002, OPS-001 as DONE with evidence; marked OPS-003 as CURRENT.
+- `docs/finance-rebuild-run.md`: appended Phase 7 and Phase 9 evidence.
+- OPS-003 validation follows: `npm test`, `npm run build:server`, `npm run build`, `npx prisma validate`, `npx prisma generate`, `git diff --check`.
+
+## Current gate: Phase 9 OPS-003 documentation alignment in progress
+
+Phase 8 (infrastructure and deployment) remains deliberately deferred.
 
 Real PDF generation remains blocked: no PDF library is in package.json. The `PDF_BLOCKER` constant in `server/services/reportArtifactService.ts` documents the requirement. Real PDF requires explicit owner approval of the dependency before implementation.
 

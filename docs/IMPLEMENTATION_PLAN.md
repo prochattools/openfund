@@ -60,7 +60,12 @@ Phase 4 FLOW-004 explicit rule creation from approved decisions: implemented; co
 Phase 5 CLOSE-001 statement reconciliation controls: implemented; read-only preview, no period close, no report snapshot, no bookings, no production import, production config, push, or Graphify changes
 Phase 5 CLOSE-002 category control totals: implemented; category income/expense totals reconcile exactly to statement totals, CLOSE-001 account-filter hardened, combined close evidence includes real category differences, no period close, no report snapshot, no bookings, no production import, production config, push, or Graphify changes
 Phase 5 CLOSE-003 strict close gate and lock: implemented; period may close only when CLOSE-001 and CLOSE-002 are both complete and balanced with all differences EUR 0.00; partial/open periods, unresolved reviews, missing dimensions, duplicate active closes, stale hash, and non-admin actors are rejected; creates exactly one PeriodClose, no report snapshots or dispatches; no Prisma migration required; no production import, production config, push, or Graphify changes
-Current gate: Phase 6 REPORT-001 snapshot-based monthly report; historical production import remains operator-gated
+Phase 6 REPORT-001 through REPORT-005: committed as a24ef3e, 9e4dc45, d1430c2, dbf23e4, ba372d6
+Phase 7 UX-001 Dutch text audit: committed as 7d58726
+Phase 7 AUTH-001 admin mutation policy: committed as 0d70f51
+Phase 7 UX-002 navigation simplification: committed as 20ff64b
+Phase 9 OPS-001 Dutch admin guide: committed as d51cfad
+Current gate: Phase 9 OPS-003 documentation alignment in progress; historical production import remains operator-gated
 ```
 
 ## Phase 0 — Governance and discovery
@@ -1136,9 +1141,14 @@ Evidence:
 
 ### UX-001 — Audit and translate all user-facing text
 
-Status: `TODO`
+Status: `DONE`
 
 Dependencies: core workflows implemented
+
+Evidence:
+
+- `tests/helpers/dutchTextAudit.test.ts` — 20 tests covering auth guard, upload, import feedback, email, review, settings, report snapshot, and navigation surfaces.
+- Commit: `7d58726 test: add Dutch text audit and navigation helper tests`
 
 Acceptance:
 
@@ -1147,9 +1157,14 @@ Acceptance:
 
 ### AUTH-001 — Enforce administrator mutations and view-only access
 
-Status: `TODO`
+Status: `DONE`
 
 Dependencies: MODEL-003
+
+Evidence:
+
+- `tests/auth/adminMutationPolicy.test.ts` — 24 tests; every mutation route verified to return 403 Dutch error for viewer role.
+- Commit: `0d70f51 test: add admin mutation policy enforcement tests`
 
 Acceptance:
 
@@ -1159,9 +1174,16 @@ Acceptance:
 
 ### UX-002 — Simplify navigation and remove unrelated surfaces
 
-Status: `TODO`
+Status: `DONE`
 
 Dependencies: UX-001 and AUTH-001
+
+Evidence:
+
+- `src/helpers/navigation.ts` — canonical `FINANCE_NAV_ITEMS` Dutch nav helper.
+- `src/ui/FinanceAppFrame.tsx` — uses canonical nav helper; no SaaS/marketing/billing surfaces.
+- `tests/helpers/navigation.test.ts` — 13 tests covering non-empty, Dutch labels, no English SaaS labels, workflow completeness, getNavLabel helper.
+- Commit: `20ff64b feat: centralize navigation in canonical Dutch helper`
 
 Acceptance:
 
@@ -1208,7 +1230,12 @@ Acceptance:
 
 ### OPS-001 — Write Dutch administrator operating guide
 
-Status: `TODO`
+Status: `DONE`
+
+Evidence:
+
+- `docs/ADMIN_OPERATING_GUIDE_NL.md` — 16-section Dutch guide covering rollen, ING CSV upload, deterministische categorisatie, beoordelingsrij, handmatige keuze dimensies, regel aanmaken, reconciliatie, categoriecontroles, periode afsluiten, periode heropenen, rapporten, artefacten, goedkeuring + verzendmetadata, bronbestand-downloads, wat niet te doen, probleemoplossing.
+- Commit: `d51cfad docs: add Dutch administrator operating guide (OPS-001)`
 
 Acceptance:
 
@@ -1224,12 +1251,14 @@ Acceptance:
 
 ### OPS-003 — Final documentation and code alignment audit
 
-Status: `TODO`
+Status: `CURRENT`
 
 Acceptance:
 
 - Philosophy, strategy, roadmap, implementation plan, README, schema, APIs, UI, and operations agree.
 - Legacy documents are clearly historical.
+- Phase statuses in ROADMAP.md and IMPLEMENTATION_PLAN.md agree with committed code.
+- Validation: `npm test`, `npm run build:server`, `npm run build`, `npx prisma validate`, `npx prisma generate`, `git diff --check`.
 
 ## Exact next execution sequence
 

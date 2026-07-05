@@ -17,14 +17,14 @@ Execution detail: `docs/IMPLEMENTATION_PLAN.md`
 ```text
 Phase 0 — Governance and verified controls       COMPLETE
 Phase 1 — Safe categorization foundation         COMPLETE
-Phase 2 — Financial domain and historical model  IN PROGRESS
+Phase 2 — Financial domain and historical model  COMPLETE
 Phase 3 — Historical loading and truth fixtures  IN PROGRESS
-Phase 4 — Monthly import and review workflow     DONE
-Phase 5 — Reconciliation, close, and snapshots   IN PROGRESS
-Phase 6 — Visual reports and distribution        IN PROGRESS
-Phase 7 — Dutch UX and authorization hardening   PLANNED
-Phase 8 — Infrastructure and deployment          PLANNED
-Phase 9 — Operational hardening and handoff      PLANNED
+Phase 4 — Monthly import and review workflow     COMPLETE
+Phase 5 — Reconciliation, close, and snapshots   COMPLETE
+Phase 6 — Visual reports and distribution        COMPLETE
+Phase 7 — Dutch UX and authorization hardening   COMPLETE
+Phase 8 — Infrastructure and deployment          DEFERRED
+Phase 9 — Operational hardening and handoff      IN PROGRESS
 ```
 
 ## Phase 0 — Governance and verified controls
@@ -205,7 +205,7 @@ Status: **complete** (CLOSE-001, CLOSE-002, CLOSE-003, and CLOSE-004 all done)
 
 ## Phase 6 — Visual reports and controlled distribution
 
-Status: **in progress** — REPORT-001 through REPORT-005 complete; Phase 7 (UX/auth) follows.
+Status: **complete** — REPORT-001 through REPORT-005 complete.
 
 ### Outcomes
 
@@ -227,21 +227,19 @@ Status: **in progress** — REPORT-001 through REPORT-005 complete; Phase 7 (UX/
 
 ## Phase 7 — Dutch UX and authorization hardening
 
-Status: **planned**
+Status: **complete** — UX-001, AUTH-001, and UX-002 done.
 
-### Outcomes
+### Outcomes (achieved)
 
-- Translate every user-facing screen, label, validation message, error, report, and email into Dutch.
-- Keep external ING source columns unchanged when displaying evidence.
-- Ensure administrator-only actions are enforced server-side.
-- Make all non-administrators view-only.
-- Simplify navigation around Importeren, Beoordelen, Administratie, Rapportages, and Instellingen.
-- Remove remaining SaaS, marketing, billing, and unrelated product surfaces.
+- Dutch text audit test suite covers auth, upload, import feedback, email, review, settings, report snapshot, and navigation surfaces.
+- Every mutation route enforced with `requireAdmin`; 24 admin mutation policy tests pass.
+- Navigation centralized in `src/helpers/navigation.ts` with canonical Dutch `FINANCE_NAV_ITEMS`.
+- `FinanceAppFrame.tsx` uses the canonical nav helper; no SaaS/marketing/billing surfaces in nav.
 
-### Exit criteria
+### Exit criteria (met)
 
 - No English user-facing application text remains, except original external ING evidence.
-- Authorization tests cover every financial mutation.
+- Authorization tests cover every financial mutation route.
 - The main monthly workflow is usable without technical knowledge.
 
 ## Phase 8 — Infrastructure and deployment
@@ -266,7 +264,7 @@ Status: **planned; deliberately deferred**
 
 ## Phase 9 — Operational hardening and handoff
 
-Status: **planned**
+Status: **in progress** — OPS-001 (Dutch admin guide) and OPS-003 (documentation alignment) in progress.
 
 ### Outcomes
 
