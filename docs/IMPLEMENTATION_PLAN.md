@@ -52,7 +52,8 @@ MODEL-004/005 statement, close, snapshot, and dispatch models: committed as 4938
 Phase 3 Packet D sanitized local DB rehearsal writer: implemented and locally validated; no real historical import, production config, push, or Graphify changes
 Phase 3 Packet E retained source hash hardening: implemented; no real owner-file import, production config, push, or Graphify changes
 Phase 3 Packet F owner-approved local rehearsal: implemented and locally validated with owner files outside Git; no production import, production config, push, or Graphify changes
-Current gate: review Packet F evidence before approving a production-safe import command or UI path
+Phase 3 Packet G guarded dry-run service: implemented; default dry-run only, production execution blocked, no production import, production config, push, or Graphify changes
+Current gate: operator review of the dry-run guard behavior before approving a production deployment/import procedure
 ```
 
 ## Phase 0 — Governance and discovery
@@ -712,6 +713,20 @@ Packet F owner-approved local rehearsal:
 - Sanitized controls matched the verified baselines: 2024 has 268 rows and closes at EUR 12,184.15; 2025 has 413 rows and closes at EUR 10,350.86; the 2026 partial statement has 221 rows and closes at EUR 7,837.25.
 - Owner-local rehearsal created only disposable local PostgreSQL databases on `localhost:5452`, dropped them after validation, and left no disposable rehearsal or migration databases behind.
 - Focused owner-local rehearsal, sanitized rehearsal, planner, and owner-file adapter tests passed; the full suite passed with 65 files and 277 tests.
+- No production, Dokploy, MCP bridge, `10.0.2.4`, `.env`, `.graphifyignore`, `graphify-out/`, owner-file copy, raw row dump, generated output commit, or push occurred.
+
+Packet G guarded dry-run service:
+
+- Added `server/services/historicalOwnerImportCommandService.ts` as the production-safe service surface for future CLI/UI wiring.
+- Default mode is `dry-run`; it reuses the owner-local parser/planner to return only sanitized file names, hashes, row counts, control totals, duplicate counts, and close eligibility.
+- The service returns no raw rows, no payment-purpose text, no counterparty values, and no retained file bytes.
+- Production mode is represented as `production-blocked`; Packet G intentionally does not perform production writes.
+- Future production execution remains blocked without an explicit production option, reviewed dry-run acceptance, an operator confirmation token, and a source-bound confirmation token.
+- Rehearsal mode refuses non-local DB targets and always rejects `10.0.2.4`.
+- Focused command-service tests cover dry-run defaults, sanitized output, production blocking, hash mismatch blocking, local-only rehearsal guards, owner paths inside Git, and 2024/2025/2026 close eligibility.
+- No Prisma schema or migration change was required.
+- Validation passed: focused command-service tests (8 tests), owner-local rehearsal tests (2 tests), sanitized rehearsal service tests (2 tests), historical import planner tests (3 tests), full suite (66 files, 285 tests), Prisma validate/generate, server build, production build (18 routes), `git diff --check`, changed executable/test high-risk scan, documentation secret-material scan, and changed-documentation runtime scan.
+- Disposable local rehearsal databases created during validation were dropped; the final cleanup check found zero matching disposable databases.
 - No production, Dokploy, MCP bridge, `10.0.2.4`, `.env`, `.graphifyignore`, `graphify-out/`, owner-file copy, raw row dump, generated output commit, or push occurred.
 
 ### HIST-001 — Build exact concluded-workbook parser

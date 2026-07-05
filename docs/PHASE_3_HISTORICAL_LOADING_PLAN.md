@@ -174,3 +174,18 @@ Use this packet to implement Phase 3 historical loading with no data import from
 - Production build passed with 18 routes and retained the pre-existing Next/SWC lockfile warning.
 - No disposable rehearsal or migration databases remained after cleanup.
 - The next gate is review of the local owner rehearsal evidence and an explicitly approved production-safe import command or UI path; no production import has occurred.
+
+## Packet G status
+
+- Added a guarded owner historical import command service as the production-safe implementation surface; no UI route and no production npm script were added.
+- The command service defaults to `dry-run`, reads the approved owner paths only to build a sanitized summary, and reports file names, hashes, row counts, control totals, duplicate counts, and close eligibility.
+- The service does not log or return raw owner rows, payment-purpose text, counterparty values, or retained file bytes.
+- Production mode returns `production-blocked`; Packet G intentionally implements guard and dry-run behavior only.
+- Production remains blocked unless a future task supplies an explicit production option, reviewed dry-run acceptance, the operator confirmation token, and the source-bound production confirmation token.
+- Rehearsal mode classifies database targets and allows only `localhost`, `127.0.0.1`, or `::1`; `10.0.2.4` is always forbidden.
+- Owner source files must remain outside Git and their expected hashes must match before planning.
+- The dry-run summary keeps 2024 and 2025 complete/close-eligible and the 2026 statement partial/not close-eligible.
+- Validation passed: focused command-service tests, owner-local rehearsal tests, sanitized rehearsal service tests, historical import planner tests, full suite, Prisma validate/generate, server build, production build, `git diff --check`, changed executable/test high-risk scan, documentation secret-material scan, and changed-documentation runtime scan.
+- Disposable local rehearsal databases created during validation were dropped; the final cleanup check found zero matching disposable databases.
+- No production import, persistent database write, Prisma migration, `.env`, production config, owner-file copy, raw row dump, generated output commit, `.graphifyignore`, `graphify-out/`, or push occurred.
+- The next gate is operator review of the dry-run guard behavior and an explicitly approved production deployment/import procedure design.

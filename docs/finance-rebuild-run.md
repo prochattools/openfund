@@ -871,9 +871,42 @@ Validation evidence:
 
 No production, Dokploy, MCP bridge, `10.0.2.4`, persistent owner-data import, production configuration, `.env`, `.graphifyignore`, `graphify-out/`, owner-source copy, raw row dump, generated output commit, or push occurred.
 
+## Phase 3 Packet G guarded dry-run service evidence
+
+Implementation summary:
+
+- Added `server/services/historicalOwnerImportCommandService.ts` as the production-safe service surface for future CLI or UI wiring.
+- Added `tests/services/historicalOwnerImportCommandService.test.ts` for the command guard behavior.
+- The command service defaults to `dry-run`, reuses the owner-local parser/planner, and returns only sanitized summaries: file names, SHA-256 hashes, sizes, row counts, control totals, duplicate counts, and close eligibility.
+- The result intentionally excludes raw owner rows, payment-purpose text, counterparty values, retained source bytes, test snapshots of rows, and generated output.
+- Production requests return `production-blocked`; Packet G does not execute production imports or database writes.
+- Future production execution remains blocked unless a later approved procedure supplies an explicit production option, reviewed dry-run acceptance, an operator confirmation token, and a source-bound production confirmation token.
+- Rehearsal mode only accepts localhost, `127.0.0.1`, or `::1` database targets. `10.0.2.4` is always rejected.
+- Source paths must be absolute, outside Git, present, and hash-matched before planning.
+- The dry-run guard keeps the verified close states: 2024 and 2025 are complete/close-eligible; the 2026 source is partial/not close-eligible.
+
+Validation evidence:
+
+- Focused historical owner import command tests passed: 8 tests.
+- Focused historical owner local rehearsal tests passed after solo rerun: 2 tests.
+- Focused sanitized historical import rehearsal service tests passed: 2 tests.
+- Focused historical import planner tests passed: 3 tests.
+- Full suite passed: 66 files, 285 tests.
+- Prisma validate and Prisma generate passed.
+- Server TypeScript build passed.
+- Production build passed with 18 routes and retained the pre-existing Next/SWC lockfile warning.
+- `git diff --check` passed.
+- Changed executable/test high-risk scan reported no unexpected findings.
+- Documentation secret-material scan reported no findings.
+- Changed-documentation runtime scan reported only expected no-production/no-push/local-only guardrail references.
+- Disposable local rehearsal databases created during validation were dropped; the final cleanup check found zero matching disposable databases.
+- No Prisma schema or migration was required.
+
+No production, Dokploy, MCP bridge, `10.0.2.4`, persistent owner-data import, production configuration, `.env`, `.graphifyignore`, `graphify-out/`, owner-source copy, raw row dump, generated output commit, database write through Packet G, or push occurred.
+
 ## Current next task
 
-Review the Packet F owner-local rehearsal evidence and design the explicitly approved production-safe import command or UI path. Do not import real historical data into production, modify production configuration, touch Graphify artifacts, or push.
+Review the Packet G guarded dry-run behavior and design the explicitly approved production deployment/import procedure. Do not execute a production import, modify production configuration, touch Graphify artifacts, or push.
 
 ## Next Phase 3 prompt
 
@@ -883,12 +916,12 @@ Use this prompt for the next implementation session:
 Continue in source yeshuaacademy-finance only.
 
 Current committed state:
-- MODEL-004/005 is committed as 49386ad.
-- Local disposable PostgreSQL validation passed on localhost:5452 using disposable database yaf_model004005_validate_20260704170627_16917, which was dropped afterward.
-- No production, Dokploy, MCP bridge, 10.0.2.4, .env, Graphify, or historical import work has been touched.
+- Phase 3 Packet F owner-local rehearsal is committed as 8a8d946.
+- Packet G adds a guarded historical owner import dry-run service; production execution remains blocked.
+- No production, Dokploy, MCP bridge, 10.0.2.4, .env, Graphify, owner-file copy, raw row dump, generated output, or production import work has been touched.
 
 Task:
-Plan Phase 3 historical loading and truth fixtures, but do not import production or real historical data yet.
+Review the Packet G guarded dry-run service and design the explicitly approved production deployment/import procedure. Do not execute a production import.
 
 Required context:
 1. Read the approved product/domain docs before coding:
@@ -898,18 +931,19 @@ Required context:
    - docs/IMPLEMENTATION_PLAN.md
    - docs/finance-rebuild-run.md
    - docs/DOMAIN_MODEL.md, if present
-2. Locate the owner-supplied source files without copying them into Git:
-   - two Excel sheets
-   - two CSV/PDF source files
-3. Identify exact sheet names, final transaction columns, and resolved Verduidelijking sheets.
+2. Inspect the dry-run guard service and tests:
+   - server/services/historicalOwnerImportCommandService.ts
+   - tests/services/historicalOwnerImportCommandService.test.ts
+   - lib/import/historicalOwnerLocalRehearsal.ts
+   - server/services/historicalImportRehearsalService.ts
+3. Confirm the service returns only sanitized summaries and blocks production execution.
 
 Phase 3 constraints:
 - Preserve literal Klant, Type, and Category exactly as supplied.
 - Use raw ING Date only for transaction dates.
 - Use Verduidelijking as interpretation evidence, not as rewritten historical truth.
-- Write tests and fixtures before any real data import.
-- Build sanitized deterministic fixture coverage first.
-- Create a disposable local import rehearsal only after parser and control tests pass.
+- Default behavior must remain dry-run.
+- Production execution requires a separately approved operator procedure and must remain blocked until that procedure exists.
 - Use only localhost/127.0.0.1/::1 for disposable databases.
 - Do not use production, Dokploy, MCP bridge, 10.0.2.4, or exposed production credentials.
 - Do not edit .env.
@@ -918,8 +952,8 @@ Phase 3 constraints:
 - Stop before production deployment or any production data mutation.
 
 Expected output:
-- A bounded Phase 3 implementation plan.
-- Parser/import fixture test list.
-- Source-file inventory with sanitized paths and hashes only where safe to record.
+- A production deployment/import procedure design with explicit approval gates.
+- Confirmation that Packet G dry-run output remains sanitized.
+- Confirmation that production mode remains blocked until the approved procedure is implemented and validated.
 - A stop point before real data import into any non-disposable database.
 ```

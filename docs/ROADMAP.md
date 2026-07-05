@@ -121,7 +121,7 @@ Schema changes must be derived from verified workflow needs. Do not create a gen
 
 ## Phase 3 — Historical loading and truth fixtures
 
-Status: **in progress; owner-approved local rehearsal completed through Packet F**
+Status: **in progress; guarded dry-run service completed through Packet G**
 
 ### Outcomes
 
@@ -139,6 +139,7 @@ Status: **in progress; owner-approved local rehearsal completed through Packet F
 - Sanitized rehearsal stores `SourceFile.sha256` as the hash of retained synthetic bytes, while source inventory hashes remain metadata.
 - Owner-approved local rehearsal reads only the approved owner files from absolute paths outside Git, verifies expected hashes, persists exact retained bytes to disposable local PostgreSQL, and validates the 2024, 2025, and 2026 controls.
 - The 2026 source remains partial/open and not close-eligible; no production import has occurred.
+- A guarded owner historical import command service now defaults to dry-run, returns only sanitized summaries, blocks production execution, and enforces local-only rehearsal database targets.
 - No owner source files, raw row dumps, generated output, production configuration, `.env`, `.graphifyignore`, or `graphify-out/` artifacts are committed.
 
 ### Exit criteria
