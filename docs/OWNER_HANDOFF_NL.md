@@ -182,6 +182,8 @@ Leg het resultaat vast in `docs/finance-rebuild-run.md` met datum, uitkomst, en 
 | `docs/ADMIN_OPERATING_GUIDE_NL.md` | Maandelijkse werkstroom voor beheerder |
 | `docs/FINAL_RELEASE_CANDIDATE_CHECKLIST_NL.md` | Geautomatiseerde RC-validatiechecklist |
 | `docs/OWNER_DECISION_PACK_NL.md` | Eigenaarsbeslissingen met achtergrond en instructies |
+| `docs/OWNER_GO_NO_GO_PREFLIGHT_NL.md` | Lokale go/no-go preflight vóór eigenaarsbeoordeling |
+| `docs/PUSH_READINESS_CHECKLIST_NL.md` | Checklist vóór een toekomstige push met eigenaargoedkeuring |
 | `docs/PRODUCTION_CUTOVER_PLAN_NL.md` | Stapsgewijs productieoverstapplan (documentatie-alleen) |
 | `docs/BACKUP_RESTORE_REHEARSAL_NL.md` | Back-up en herstelhandleiding |
 | `docs/RELEASE_MANIFEST_NL.md` | Actueel release manifest (versie, commit, blockers) |
