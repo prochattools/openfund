@@ -24,7 +24,7 @@ Phase 5 — Reconciliation, close, and snapshots   COMPLETE
 Phase 6 — Visual reports and distribution        COMPLETE
 Phase 7 — Dutch UX and authorization hardening   COMPLETE
 Phase 8 — Infrastructure and deployment          IN PROGRESS
-Phase 9 — Operational hardening and handoff      IN PROGRESS
+Phase 9 — Operational hardening and handoff      COMPLETE (local-only RC1)
 ```
 
 ## Phase 0 — Governance and verified controls
@@ -264,7 +264,16 @@ Status: **in progress** — INFRA-001 and INFRA-002 documented; INFRA-003 produc
 
 ## Phase 9 — Operational hardening and handoff
 
-Status: **in progress** — OPS-001 (Dutch admin guide) complete; OPS-002 (backup/restore rehearsal) guards and docs implemented; OPS-003 (documentation alignment) in progress.
+Status: **complete (local-only RC1)** — OPS-001 (Dutch admin guide) committed as `d51cfad`; OPS-002 (backup/restore rehearsal) guards and dry-run support committed as `77ebbbd`; OPS-003 (final readiness audit) committed as `8d5978c`.
+
+Remaining blockers before production:
+
+- Real PDF renderer dependency requires owner approval.
+- Live local backup/restore rehearsal must be run with local PostgreSQL tools.
+- Production cutover requires explicit owner approval (see `docs/PRODUCTION_CUTOVER_PLAN_NL.md`).
+- Historical production import (2024/2025/2026) requires owner approval and dry-run acceptance.
+- Real email sending requires configured Resend provider and owner approval.
+- PostgreSQL production version must be confirmed before cutover.
 
 ### Outcomes
 

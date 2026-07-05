@@ -4,7 +4,7 @@ Date: 2026-07-02
 Run: `agent-f961650b-de17-4282-ab18-7a716cc72958`  
 Source: `yeshuaacademy-finance`  
 Branch: `main`  
-Status: Phase 1 committed as `925a609`; MODEL-001 committed as `73daabd`; MODEL-002 and MIGRATE-001 committed as `d2afb18`; MODEL-003 Packet A committed as `0196910`; MODEL-003 Packet B committed as `b3b8afd`; MODEL-004/005 committed as `49386ad`; Phase 3 Packet E retained source hash hardening implemented; CLOSE-002 category control totals implemented; CLOSE-003 strict close gate and lock implemented
+Status: Release Candidate 1 — all Phases 0–9 implemented and validated locally; OPS-003 final readiness audit committed as `8d5978c`; backup/restore dry-run guard repaired as `b8d617a`; awaiting owner decisions for production cutover, historical import, PDF dependency, email provider, and live backup rehearsal
 
 ## Authoritative document hierarchy
 

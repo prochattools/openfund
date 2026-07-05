@@ -69,8 +69,8 @@ Phase 8 INFRA-001 PostgreSQL compatibility note: documented in docs/INFRASTRUCTU
 Phase 8 INFRA-002 local Docker Compose cleanup: docker-compose.local.yml created; original docker-compose.yml retained
 Phase 8 INFRA-003 production cutover plan: docs/PRODUCTION_CUTOVER_PLAN_NL.md created (documentation-only; no production commands executed)
 Phase 9 OPS-002 backup/restore rehearsal: scripts/backup-restore-rehearsal.mjs and tests/ops/backupRestoreRehearsal.test.ts implemented; 18 unit tests pass
-Phase 9 OPS-003 documentation alignment: docs/FINAL_READINESS_AUDIT_NL.md created; ROADMAP.md, IMPLEMENTATION_PLAN.md updated
-Current gate: OPS-003 documentation alignment in progress; historical production import remains operator-gated
+Phase 9 OPS-003 documentation alignment: docs/FINAL_READINESS_AUDIT_NL.md created; ROADMAP.md, IMPLEMENTATION_PLAN.md updated; committed as 8d5978c
+Current gate: Release Candidate 1 readiness; owner decisions required before production cutover; historical production import remains operator-gated
 ```
 
 ## Phase 0 — Governance and discovery
@@ -1288,7 +1288,12 @@ Acceptance:
 
 ### OPS-003 — Final documentation and code alignment audit
 
-Status: `CURRENT`
+Status: `DONE`
+
+Evidence:
+
+- `docs/FINAL_READINESS_AUDIT_NL.md` — complete audit document; full suite 83 files / 535 tests; builds and Prisma validated.
+- Committed as `8d5978c docs: add final readiness audit (OPS-003)`.
 
 Acceptance:
 
@@ -1299,8 +1304,13 @@ Acceptance:
 
 ## Exact next execution sequence
 
-1. Stage only `docs/DOMAIN_MODEL.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/ROADMAP.md`, and `docs/finance-rebuild-run.md`.
-2. Exclude `.graphifyignore`, `graphify-out/`, and every code, schema, migration, financial-source, Docker, dependency, and production-configuration path.
-3. Commit the four approved MODEL-001 documentation files with a focused message.
-4. Record the commit hash in this plan and `docs/finance-rebuild-run.md`.
-5. After the documentation checkpoint is recorded, prepare MODEL-002 as a bounded schema implementation task; do not modify Prisma during the documentation commit.
+Phases 0–9 are complete as local-only Release Candidate 1. The following owner decisions are required before any production work:
+
+1. Approve or defer real PDF renderer dependency (`PDF_BLOCKER` is active).
+2. Approve or defer production cutover (see `docs/PRODUCTION_CUTOVER_PLAN_NL.md`).
+3. Approve or defer historical production import (2024/2025/2026 owner workbooks).
+4. Approve or defer real email sending / Resend provider configuration.
+5. Confirm PostgreSQL production version compatibility.
+6. Run and confirm live local backup/restore rehearsal with PostgreSQL tools.
+
+See `docs/OWNER_DECISION_PACK_NL.md` for decision checkboxes and next-step prompts.
