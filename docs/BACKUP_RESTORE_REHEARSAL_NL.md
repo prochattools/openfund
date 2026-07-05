@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Back-up en herstel rehearsal (Beheerdersgids)
 
-Status: lokaal-alleen; geen productiedatabase gebruikt  
+Status: RC3 — live lokale rehearsal succesvol uitgevoerd op 2026-07-05; geen productiedatabase gebruikt
 Taal: Nederlands  
 Doelgroep: systeembeheerder / eigenaar
 
@@ -192,9 +192,49 @@ De unit-tests in `tests/ops/backupRestoreRehearsal.test.ts` dekken:
 
 ---
 
+## RC3 — Live rehearsal bewijs (2026-07-05)
+
+**Uitvoeringsomgeving:**
+
+| Gegeven | Waarde |
+|---------|--------|
+| Host | `127.0.0.1:5432` (lokaal-alleen) |
+| PostgreSQL versie | 15.17 (Homebrew) |
+| pg_dump versie | 15.17 |
+| pg_restore versie | 15.17 |
+| finance_user aangemaakt | Ja (lokale superuser, CREATEDB) |
+
+**Rehearsal uitkomst:**
+
+| Stap | Status |
+|------|--------|
+| Guards gecontroleerd: host lokaal | GESLAAGD |
+| Brondatabase aangemaakt (`yaf_rehearsal_src_*`) | GESLAAGD |
+| Doeldatabase aangemaakt (`yaf_rehearsal_tgt_*`) | GESLAAGD |
+| Migraties toegepast op bron (4/4) | GESLAAGD |
+| Dump aangemaakt | GESLAAGD (115.045 bytes) |
+| Dump hersteld naar doeldatabase | GESLAAGD |
+| `prisma validate` op doeldatabase | GESLAAGD |
+| `prisma migrate status` op doeldatabase | GESLAAGD — geen drift |
+| Brondatabase verwijderd | GESLAAGD |
+| Doeldatabase verwijderd | GESLAAGD |
+| Dumpbestand verwijderd | GESLAAGD |
+
+**Bevestigingen:**
+
+- Geen `yaf_rehearsal_*` databases resterend na afloop.
+- Geen `.dump`, `.sql`, `.backup`, `.tar` of database-exportbestand achtergebleven.
+- `git status --short` toont alleen `.graphifyignore` en `graphify-out/` (ongewijzigd).
+- Productie niet aangeraakt.
+- `.env` niet gelezen of gewijzigd.
+- Geen geheimen in scriptuitvoer.
+- Alle 4 migraties (`0_finance_baseline`, `20260703001200_add_workspace_dimensions`, `20260703193000_add_classification_records`, `20260704143000_add_statement_close_report_models`) succesvol toegepast en geverifieerd.
+
+---
+
 ## Beperkingen
 
 - Geen productiedatabase-back-ups worden gemaakt of hersteld via dit script.
-- De rehearsal gebruikt uitsluitend de wegwerpdatabases `yaf_rehearsal_bron_*` en `yaf_rehearsal_doel_*`.
+- De rehearsal gebruikt uitsluitend de wegwerpdatabases `yaf_rehearsal_src_*` en `yaf_rehearsal_tgt_*`.
 - De historische eigenaardata (2024, 2025, 2026 werkboeken) is **niet** onderdeel van de rehearsal.
 - Gesloten snapshotfixtures zijn gesanitiseerd en bevatten geen echte transactiedata.

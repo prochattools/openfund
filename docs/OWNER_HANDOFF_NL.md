@@ -1,6 +1,6 @@
-# Yeshua Academy Finance — Eigenaaroverdracht (RC2)
+# Yeshua Academy Finance — Eigenaaroverdracht (RC3)
 
-Status: Release Candidate 2 — lokaal gevalideerd; productie niet aangeraakt  
+Status: Release Candidate 3 — live lokale rehearsal voltooid; productie niet aangeraakt
 Datum: 2026-07-05  
 Taal: Nederlands  
 Doelgroep: eigenaar / beheerder
@@ -40,7 +40,7 @@ De volgende onderdelen zijn bewust geblokkeerd en vereisen expliciete eigenaargo
 | 3 | Historische productie-import (2024/2025/2026) | Afzonderlijke goedkeuring + dry-run acceptatie |
 | 4 | Echte e-mailverzending | Resend-API-sleutel configureren + goedkeuring |
 | 5 | PostgreSQL-productieversie bevestigen | Verificatie bij hostingprovider |
-| 6 | Live backup/restore rehearsal | Uitvoeren op lokale PostgreSQL-tools |
+| 6 | Live backup/restore rehearsal | VOLTOOID op 2026-07-05 (RC3) |
 | 7 | Push naar remote | Expliciete eigenaargoedkeuring vereist |
 | 8 | Geheimen roteren | Vóór productie uitvoeren |
 
@@ -170,7 +170,7 @@ Leg het resultaat vast in `docs/finance-rebuild-run.md` met datum, uitkomst, en 
 - [ ] Productiecutoverplan gelezen: `docs/PRODUCTION_CUTOVER_PLAN_NL.md`
 - [ ] Backup rehearsal handleiding gelezen: `docs/BACKUP_RESTORE_REHEARSAL_NL.md`
 - [ ] Alle openstaande blockers beoordeeld
-- [ ] Live backup rehearsal gepland of uitgevoerd
+- [x] Live backup rehearsal uitgevoerd op 2026-07-05 (RC3 — geslaagd)
 - [ ] PostgreSQL-productieversie bevestigd bij hostingprovider
 
 ---

@@ -1,8 +1,8 @@
 # Yeshua Academy Finance — Release Manifest
 
-Status: Release Candidate 2
+Status: Release Candidate 3 — live lokale rehearsal voltooid
 Taal: Nederlands
-Gegenereerd op: 2026-07-05 22:22:24 +0100
+Gegenereerd op: 2026-07-05 (RC3)
 
 ---
 
@@ -12,10 +12,10 @@ Gegenereerd op: 2026-07-05 22:22:24 +0100
 |------|--------|
 | Applicatieversie | 0.1.0 |
 | Branch | main |
-| Commit (volledig) | bb666ae8459b17a7bb2d5eb50c4c7cca2f6cf494 |
-| Commit (kort) | bb666ae |
-| Commit bericht | chore: harden release candidate validation script |
-| Commit datum | 2026-07-05 22:22:24 +0100 |
+| Commit (volledig) | 4f9cedfa5f574ecbb65ae9502932e4720f843401 |
+| Commit (kort) | 4f9cedf |
+| Commit bericht | docs: correct RC2 final test counts to 89 files / 643 tests |
+| Commit datum | 2026-07-05 |
 | Prisma versie (dev) | ^6.15.0 |
 | @prisma/client versie | ^6.15.0 |
 
@@ -34,7 +34,7 @@ Gegenereerd op: 2026-07-05 22:22:24 +0100
 | Phase 6 — Rapporten en distributie | COMPLETE |
 | Phase 7 — Dutch UX en autorisatiehardening | COMPLETE |
 | Phase 8 — Infrastructuur en deployment | IN PROGRESS |
-| Phase 9 — Operationele hardening en overdracht | COMPLETE (lokaal, RC2) |
+| Phase 9 — Operationele hardening en overdracht | COMPLETE (lokaal, RC3) |
 
 ---
 
@@ -49,7 +49,7 @@ De volgende blokkades zijn nog van kracht. Ze mogen **NIET** worden omzeild zond
 | 3 | Historische productie-import (2024/2025/2026) | Operator-gated; vereist eigenaargoedkeuring en dry-run |
 | 4 | Echte e-mailverzending | `RESEND_API_KEY` niet geconfigureerd; no-op modus actief |
 | 5 | PostgreSQL-productieversie bevestigen | Vereist verificatie bij hostingprovider vóór cutover |
-| 6 | Live backup/restore rehearsal | Vereist lokale PostgreSQL-tools (`pg_dump`, `psql`) |
+| 6 | Live backup/restore rehearsal | VOLTOOID op 2026-07-05 (RC3) |
 
 ---
 

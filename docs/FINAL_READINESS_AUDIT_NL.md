@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Eindaudit gereedheid
 
-Status: Release Candidate 2 — lokaal gevalideerd; productie niet aangeraakt
+Status: Release Candidate 3 — live lokale rehearsal voltooid; productie niet aangeraakt
 Datum: 2026-07-05
 Taal: Nederlands
 Afhankelijkheden: `docs/ROADMAP.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/ADMIN_OPERATING_GUIDE_NL.md`
@@ -111,19 +111,21 @@ node scripts/backup-restore-rehearsal.mjs --help
 | Dry-run script beschikbaar | GEREED |
 | Standaard aanroep vereist geen argumenten → exit 1 (veilig) | GEÏMPLEMENTEERD |
 | Live mode vereist `--live-local --confirm-disposable` | GEÏMPLEMENTEERD |
-| Live rehearsal (vereist pg_dump + actieve finance_user) | Handmatig uitvoeren vóór productie |
+| Live rehearsal uitgevoerd op 2026-07-05 | GESLAAGD |
 
-#### Live rehearsal status RC2
+#### Live rehearsal bewijs RC3 (2026-07-05)
 
-PostgreSQL-client tools aanwezig: pg_dump 15.17, psql 15.17, pg_restore 15.17.
+Host: `127.0.0.1:5432` (lokaal-alleen, PostgreSQL 15.17 Homebrew).
+`finance_user` aangemaakt als lokale rol met CREATEDB-bevoegdheid.
+Commando: `node scripts/backup-restore-rehearsal.mjs --live-local --confirm-disposable`
 
-Blocker: lokale PostgreSQL draait op 127.0.0.1:5432 maar `finance_user`-rol bestaat nog niet.
-Start Docker Compose eerst om de rol aan te maken:
-
-```bash
-docker compose -f docker-compose.local.yml up -d
-node scripts/backup-restore-rehearsal.mjs --live-local --confirm-disposable
-```
+Resultaten:
+- Wegwerpdatabases `yaf_rehearsal_src_*` en `yaf_rehearsal_tgt_*` aangemaakt en verwijderd.
+- Alle 4 migraties succesvol toegepast op brondatabase.
+- Dumpbestand: 115.045 bytes — aangemaakt, gebruikt en verwijderd.
+- Herstelde doeldatabase: `prisma validate` en `prisma migrate status` — geen drift.
+- Geen dumpbestanden achtergelaten. Geen databases resterend.
+- Productie niet aangeraakt. `.env` niet gelezen.
 
 ---
 
