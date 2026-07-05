@@ -904,11 +904,43 @@ Validation evidence:
 
 No production, Dokploy, MCP bridge, `10.0.2.4`, persistent owner-data import, production configuration, `.env`, `.graphifyignore`, `graphify-out/`, owner-source copy, raw row dump, generated output commit, database write through Packet G, or push occurred.
 
+## Phase 4 FLOW-001 monthly import preview foundation evidence
+
+Implementation summary:
+
+- Added `server/services/monthlyImportPreviewService.ts` as a pure monthly ING CSV preview service.
+- Added `tests/services/monthlyImportPreviewService.test.ts` and `tests/routes/monthlyImportPreview.test.ts`.
+- Added guarded route wiring for `POST /api/upload/preview`; the existing `POST /api/upload` import path is unchanged.
+- The preview accepts retained CSV bytes, computes the SHA-256 from those exact bytes, and returns a SourceFile-compatible sanitized source summary.
+- The preview parses ING CSV rows, computes period start/end, opening balance, income, expenses, net movement, closing balance, row count, duplicate count, new transaction count, running-balance findings, coverage status, and close eligibility.
+- Duplicate detection uses import fingerprints and can compare against existing transactions through a caller-supplied lookup.
+- FLOW-001 does not create `Transaction`, `TransactionBooking`, `PeriodClose`, report, dispatch, production import, or production configuration records.
+- 2026-style partial/open statements remain not close-eligible.
+- The preview output intentionally excludes raw rows, payment-purpose text, counterparty text, retained bytes, row snapshots, and generated output.
+- Historical production import remains operator-gated through the Packet G dry-run/production-blocked boundary.
+
+Validation evidence:
+
+- Focused monthly import preview service and route tests passed: 9 tests.
+- Focused ING CSV parser test passed: 1 test.
+- Focused historical owner import command regression tests passed: 8 tests.
+- Full suite passed: 68 files, 294 tests.
+- Prisma validate and Prisma generate passed with the local localhost database URL convention.
+- Server TypeScript build passed.
+- Production build passed with 18 routes and retained the pre-existing Next/SWC lockfile warning.
+- `git diff --check` passed.
+- Changed executable/test high-risk scan reported no unexpected findings; raw source fields appear only for fingerprint computation and no raw rows are returned.
+- Documentation secret-material scan reported no findings.
+- Disposable DB-backed regression tests used local `localhost:5452`, created and dropped `historical_rehearsal_1783242082901_add19d4c` and `owner_historical_rehearsal_1783242083500_08515855`; the final cleanup check found zero matching disposable databases.
+- No Prisma schema or migration was required.
+
+No production, Dokploy, MCP bridge, `10.0.2.4`, persistent owner-data import, production configuration, `.env`, `.graphifyignore`, `graphify-out/`, owner-source copy, raw row dump, generated output commit, period close, transaction booking, historical production import, or push occurred.
+
 ## Current next task
 
-Review the Packet G guarded dry-run behavior and design the explicitly approved production deployment/import procedure. Do not execute a production import, modify production configuration, touch Graphify artifacts, or push.
+Validate and review FLOW-001 monthly import preview foundation, then proceed to FLOW-002 deterministic categorization only after the preview controls pass. Do not execute a production historical import, modify production configuration, touch Graphify artifacts, or push.
 
-## Next Phase 3 prompt
+## Next Phase 4 prompt
 
 Use this prompt for the next implementation session:
 
@@ -916,12 +948,13 @@ Use this prompt for the next implementation session:
 Continue in source yeshuaacademy-finance only.
 
 Current committed state:
-- Phase 3 Packet F owner-local rehearsal is committed as 8a8d946.
-- Packet G adds a guarded historical owner import dry-run service; production execution remains blocked.
-- No production, Dokploy, MCP bridge, 10.0.2.4, .env, Graphify, owner-file copy, raw row dump, generated output, or production import work has been touched.
+- Phase 3 Packet G guarded historical import dry-run is committed as 6610648.
+- Phase 4 FLOW-001 monthly import preview foundation is implemented with validation evidence recorded in the current run.
+- Historical production import remains operator-gated and blocked.
+- No production, Dokploy, MCP bridge, 10.0.2.4, .env, Graphify, owner-file copy, raw row dump, generated output, transaction booking, period close, or production import work has been touched.
 
 Task:
-Review the Packet G guarded dry-run service and design the explicitly approved production deployment/import procedure. Do not execute a production import.
+Validate and review FLOW-001 monthly ING import preview foundation. If it passes and is committed, plan FLOW-002 deterministic categorization. Do not execute a production historical import.
 
 Required context:
 1. Read the approved product/domain docs before coding:
@@ -931,19 +964,23 @@ Required context:
    - docs/IMPLEMENTATION_PLAN.md
    - docs/finance-rebuild-run.md
    - docs/DOMAIN_MODEL.md, if present
-2. Inspect the dry-run guard service and tests:
-   - server/services/historicalOwnerImportCommandService.ts
-   - tests/services/historicalOwnerImportCommandService.test.ts
-   - lib/import/historicalOwnerLocalRehearsal.ts
-   - server/services/historicalImportRehearsalService.ts
-3. Confirm the service returns only sanitized summaries and blocks production execution.
+2. Inspect the monthly preview service, route wiring, and tests:
+   - server/services/monthlyImportPreviewService.ts
+   - server/routes/upload.ts
+   - server/index.ts
+   - tests/services/monthlyImportPreviewService.test.ts
+   - tests/routes/monthlyImportPreview.test.ts
+   - lib/import/ingCsvParser.ts
+   - server/services/transactionFingerprint.ts
+3. Confirm the preview returns sanitized controls only and creates no bookings/closes.
 
-Phase 3 constraints:
+Phase 4 constraints:
 - Preserve literal Klant, Type, and Category exactly as supplied.
 - Use raw ING Date only for transaction dates.
 - Use Verduidelijking as interpretation evidence, not as rewritten historical truth.
-- Default behavior must remain dry-run.
-- Production execution requires a separately approved operator procedure and must remain blocked until that procedure exists.
+- Monthly preview must retain uploaded CSV bytes as the source hash basis.
+- Preview must not create TransactionBooking or PeriodClose records.
+- Production historical execution requires a separately approved operator procedure and remains blocked.
 - Use only localhost/127.0.0.1/::1 for disposable databases.
 - Do not use production, Dokploy, MCP bridge, 10.0.2.4, or exposed production credentials.
 - Do not edit .env.
@@ -952,8 +989,8 @@ Phase 3 constraints:
 - Stop before production deployment or any production data mutation.
 
 Expected output:
-- A production deployment/import procedure design with explicit approval gates.
-- Confirmation that Packet G dry-run output remains sanitized.
-- Confirmation that production mode remains blocked until the approved procedure is implemented and validated.
-- A stop point before real data import into any non-disposable database.
+- FLOW-001 validation results.
+- Confirmation that preview output remains sanitized.
+- Confirmation that no bookings, closes, or historical production import occurred.
+- Next gate for FLOW-002 deterministic categorization.
 ```

@@ -2,6 +2,12 @@ import { Request, Response } from 'express';
 import { LockedPeriodError, processImportBuffer } from '../services/importService';
 import { LedgerMismatchError, MissingOpeningBalanceError } from '../services/reconciliationService';
 import { requireAdmin } from '../auth/requestContext';
+import { prisma } from '../prismaClient';
+import {
+  buildMonthlyImportPreview,
+  MonthlyImportPreviewError,
+  type MonthlyImportPreview,
+} from '../services/monthlyImportPreviewService';
 
 const ALLOWED_MIME_TYPES = new Set([
   'text/csv',
@@ -23,6 +29,14 @@ export const isAllowedUpload = (file: Pick<Express.Multer.File, 'originalname' |
   }
 
   return ALLOWED_MIME_TYPES.has(file.mimetype) || extensionAllowed;
+};
+
+export const isAllowedMonthlyImportPreviewUpload = (
+  file: Pick<Express.Multer.File, 'originalname' | 'mimetype'>,
+): boolean => {
+  const filename = file.originalname.toLowerCase();
+  const mediaType = (file.mimetype ?? '').toLowerCase().split(';')[0]?.trim() ?? '';
+  return filename.endsWith('.csv') && ['text/csv', 'application/csv', 'application/vnd.ms-excel'].includes(mediaType);
 };
 
 const getDutchErrorMessage = (error: unknown): string => {
@@ -53,6 +67,17 @@ export const buildImportUploadResponse = <T extends ImportUploadResponseSummary>
   ...summary,
   message: buildImportMessage(summary),
 });
+
+export const buildMonthlyImportPreviewUploadResponse = (preview: MonthlyImportPreview) => ({
+  preview,
+  message: 'Importvoorbeeld gemaakt. Er zijn nog geen transacties geboekt.',
+});
+
+const parseOptionalDate = (value: unknown): Date | null => {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
 
 export const handleImportUpload = async (req: Request, res: Response) => {
   const actor = requireAdmin(req, res);
@@ -103,6 +128,78 @@ export const handleImportUpload = async (req: Request, res: Response) => {
     }
 
     return res.status(400).json({ error: message });
+  }
+};
+
+export const handleMonthlyImportPreviewUpload = async (req: Request, res: Response) => {
+  const actor = requireAdmin(req, res);
+  if (!actor) {
+    return;
+  }
+
+  if (!req.file) {
+    return res.status(400).json({
+      error: 'Upload eerst een ING CSV-bestand.',
+    });
+  }
+
+  if (!isAllowedMonthlyImportPreviewUpload(req.file)) {
+    return res.status(400).json({
+      error: 'Dit bestandstype wordt niet ondersteund. Upload een ING CSV-bestand.',
+    });
+  }
+
+  if (!req.file.buffer?.length) {
+    return res.status(400).json({
+      error: 'Dit CSV-bestand is leeg.',
+    });
+  }
+
+  try {
+    const accountId = typeof req.body?.accountId === 'string' && req.body.accountId.trim()
+      ? req.body.accountId.trim()
+      : null;
+    const accountIdentifier = typeof req.body?.accountIdentifier === 'string' && req.body.accountIdentifier.trim()
+      ? req.body.accountIdentifier.trim()
+      : null;
+    const preview = await buildMonthlyImportPreview({
+      workspaceId: actor.userId,
+      accountId,
+      accountIdentifier,
+      actorId: actor.actorId,
+      originalFilename: req.file.originalname,
+      mediaType: req.file.mimetype,
+      retainedCsvBytes: req.file.buffer,
+      expectedPeriodStart: parseOptionalDate(req.body?.periodStart),
+      expectedPeriodEnd: parseOptionalDate(req.body?.periodEnd),
+    }, {
+      findExistingImportFingerprints: async ({ workspaceId, accountId: scopedAccountId, fingerprints }) => {
+        const existing = await prisma.transaction.findMany({
+          where: {
+            userId: workspaceId,
+            importFingerprint: {
+              in: fingerprints,
+            },
+            ...(scopedAccountId ? { accountId: scopedAccountId } : {}),
+          },
+          select: {
+            importFingerprint: true,
+          },
+        });
+        return existing
+          .map((transaction) => transaction.importFingerprint)
+          .filter((fingerprint): fingerprint is string => Boolean(fingerprint));
+      },
+    });
+
+    return res.json(buildMonthlyImportPreviewUploadResponse(preview));
+  } catch (error) {
+    const message = error instanceof MonthlyImportPreviewError
+      ? error.message
+      : 'Het importvoorbeeld kon niet worden gemaakt. Controleer het ING CSV-bestand.';
+    const statusCode = error instanceof MonthlyImportPreviewError ? error.statusCode : 400;
+    console.error('Importvoorbeeld kon niet worden verwerkt', { message });
+    return res.status(statusCode).json({ error: message });
   }
 };
 

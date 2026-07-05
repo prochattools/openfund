@@ -2,7 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
-import { handleImportUpload } from './routes/upload';
+import { handleImportUpload, handleMonthlyImportPreviewUpload } from './routes/upload';
 import { getLedger } from './routes/ledger';
 import { getReviewTransactions, updateTransactionCategory, clearReviewQueue } from './routes/review';
 import { listAccounts, lockOpeningBalance, upsertOpeningBalance } from './routes/accounts';
@@ -26,6 +26,7 @@ app.get('/healthz', (_req, res) => {
 });
 
 app.post('/api/upload', upload.single('file'), handleImportUpload);
+app.post('/api/upload/preview', upload.single('file'), handleMonthlyImportPreviewUpload);
 app.get('/api/ledger', getLedger);
 app.get('/api/review', getReviewTransactions);
 app.post('/api/review/clear', clearReviewQueue);

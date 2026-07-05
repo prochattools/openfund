@@ -153,13 +153,15 @@ Status: **in progress; guarded dry-run service completed through Packet G**
 
 ## Phase 4 — Monthly import and review workflow
 
-Status: **planned**
+Status: **in progress; FLOW-001 monthly import preview foundation implemented**
 
 ### Outcomes
 
 - Provide one clear Dutch monthly ING upload workflow.
 - Show account, period, row count, duplicates, overlap, opening, income, expenses, and closing before committing.
 - Reject invalid controls before ledger changes.
+- Retain exact uploaded CSV bytes as the hash basis for preview source-file evidence.
+- Keep FLOW-001 preview-only: no transaction bookings, period closes, historical production import, or production configuration changes.
 - Apply only approved deterministic rules automatically.
 - Rank fuzzy suggestions without booking them.
 - Show full payment purpose and matching evidence in the review queue.

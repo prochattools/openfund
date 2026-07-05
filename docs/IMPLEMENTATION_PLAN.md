@@ -53,7 +53,8 @@ Phase 3 Packet D sanitized local DB rehearsal writer: implemented and locally va
 Phase 3 Packet E retained source hash hardening: implemented; no real owner-file import, production config, push, or Graphify changes
 Phase 3 Packet F owner-approved local rehearsal: implemented and locally validated with owner files outside Git; no production import, production config, push, or Graphify changes
 Phase 3 Packet G guarded dry-run service: implemented; default dry-run only, production execution blocked, no production import, production config, push, or Graphify changes
-Current gate: operator review of the dry-run guard behavior before approving a production deployment/import procedure
+Phase 4 FLOW-001 monthly import preview foundation: implemented; retained-byte preview controls only, no bookings, period close, production import, production config, push, or Graphify changes
+Current gate: FLOW-002 deterministic categorization; historical production import remains operator-gated
 ```
 
 ## Phase 0 — Governance and discovery
@@ -798,18 +799,28 @@ Acceptance:
 
 ### FLOW-001 — Implement controlled ING import preview
 
-Status: `TODO`
+Status: `IMPLEMENTED`
 
-Dependencies: HIST-004
+Dependencies: HIST-004 production execution remains operator-gated; Packet G dry-run evidence is available
 
 Acceptance:
 
 - Dutch preview shows account, period, counts, duplicates, overlap, and statement totals before commit.
 - Failed controls prevent commit.
+- Original uploaded CSV bytes are hashed with retained-byte semantics and represented as a SourceFile-compatible preview summary.
+- Duplicate import fingerprints are detected against existing transactions when a duplicate lookup is supplied.
+- The preview does not create `Transaction`, `TransactionBooking`, `PeriodClose`, report, dispatch, production import, or production configuration records.
+- The `/api/upload/preview` route returns a Dutch preview response and leaves `/api/upload` import behavior unchanged.
+- 2026-style partial/open statements remain not close-eligible.
+
+Validation:
+
+- Focused monthly import preview service and route tests cover retained-byte hashing, statement totals, running-balance success/failure, duplicate fingerprints, non-booking behavior, partial close blocking, non-CSV rejection, malformed ING CSV rejection, and sanitized output.
+- Full validation passed and is recorded in `docs/finance-rebuild-run.md`: focused monthly preview tests, ING CSV parser regression, historical owner import command regression, full suite, Prisma validate/generate, server build, production build, diff check, executable/test high-risk scan, and documentation scans.
 
 ### FLOW-002 — Implement deterministic automatic categorization service
 
-Status: `TODO`
+Status: `CURRENT`
 
 Dependencies: FLOW-001 and MODEL-003
 
