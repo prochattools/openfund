@@ -24,7 +24,7 @@ Phase 5 — Reconciliation, close, and snapshots   COMPLETE
 Phase 6 — Visual reports and distribution        COMPLETE
 Phase 7 — Dutch UX and authorization hardening   COMPLETE
 Phase 8 — Infrastructure and deployment          IN PROGRESS
-Phase 9 — Operational hardening and handoff      COMPLETE (local-only RC1)
+Phase 9 — Operational hardening and handoff      COMPLETE (local-only RC2)
 ```
 
 ## Phase 0 — Governance and verified controls
@@ -264,7 +264,7 @@ Status: **in progress** — INFRA-001 and INFRA-002 documented; INFRA-003 produc
 
 ## Phase 9 — Operational hardening and handoff
 
-Status: **complete (local-only RC1)** — OPS-001 (Dutch admin guide) committed as `d51cfad`; OPS-002 (backup/restore rehearsal) guards and dry-run support committed as `77ebbbd`; OPS-003 (final readiness audit) committed as `8d5978c`.
+Status: **complete (local-only RC2)** — OPS-001 (Dutch admin guide) committed as `d51cfad`; OPS-002 (backup/restore rehearsal) guards and dry-run support committed as `77ebbbd`; OPS-003 (final readiness audit) committed as `8d5978c`; RC2 hardening: backup rehearsal explicit flags (`519b69e`), validate:release-candidate strengthened (`bb666ae`), release manifest generator (`6341be4`), production blocker guard audit (`73d8072`), owner handoff bundle (`5afb5e3`).
 
 Remaining blockers before production:
 

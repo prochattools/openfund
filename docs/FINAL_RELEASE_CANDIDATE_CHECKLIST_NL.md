@@ -1,7 +1,7 @@
 # Yeshua Academy Finance — Release Candidate Validatiechecklist
 
-Status: Release Candidate 1  
-Datum: 2026-07-05  
+Status: Release Candidate 2
+Datum: 2026-07-05
 Taal: Nederlands
 
 ---
@@ -15,10 +15,13 @@ npm run validate:release-candidate
 ```
 
 Dit commando voert uit:
-1. `npm test` — volledig testsuite (86 bestanden, ~596 tests inclusief RC-001 en RC-002)
+1. `npm test` — volledig testsuite (88 bestanden, 622 tests inclusief RC-001 en RC-002)
 2. `npm run build:server` — TypeScript server-compilatie
 3. `npm run build` — Next.js productiebuild (18 pagina's)
-4. `node scripts/backup-restore-rehearsal.mjs --dry-run` — guard-check, geen database vereist
+4. `DATABASE_URL=... npx prisma validate` — schemavalidatie (lokale placeholder)
+5. `npx prisma generate` — Prisma Client genereren
+6. `node scripts/backup-restore-rehearsal.mjs --dry-run` — guard-check, geen database vereist
+7. `git diff --check` — geen onverwachte wijzigingen
 
 Verwacht resultaat: alle stappen slagen, exit 0.
 
@@ -43,27 +46,30 @@ Stel `DATABASE_URL` in op een lokale disposable database:
 DATABASE_URL=postgresql://finance_user:local_dev_placeholder@127.0.0.1:5432/yaf_validate npx prisma validate
 ```
 
-### Live backup/restore rehearsal (vereist pg_dump/pg_restore)
+### Live backup/restore rehearsal (vereist pg_dump/pg_restore en actieve finance_user)
 
 ```bash
-node scripts/backup-restore-rehearsal.mjs
+docker compose -f docker-compose.local.yml up -d
+node scripts/backup-restore-rehearsal.mjs --live-local --confirm-disposable
 ```
 
 Zie `docs/BACKUP_RESTORE_REHEARSAL_NL.md` voor stapsgewijze instructies.
+Zie `docs/OWNER_HANDOFF_NL.md` voor het volledige stappenplan.
 
 ---
 
-## Validatiestatus RC-001
+## Validatiestatus RC-002
 
 | Stap | Commando | Status |
 |------|---------|--------|
-| Volledig testsuite | `npm test` | GESLAAGD — 593 tests, 86 bestanden |
+| Volledig testsuite | `npm test` | GESLAAGD — 622 tests, 88 bestanden |
 | Server TypeScript-build | `npm run build:server` | GESLAAGD |
 | Next.js productiebuild | `npm run build` | GESLAAGD — 18 pagina's |
+| Prisma validate | `DATABASE_URL=... npx prisma validate` | GESLAAGD (in validate:release-candidate) |
+| Prisma generate | `npx prisma generate` | GESLAAGD (in validate:release-candidate) |
 | Backup dry-run | `node scripts/backup-restore-rehearsal.mjs --dry-run` | GESLAAGD — exit 0 |
-| Prisma validate | `npx prisma validate` | Handmatig (vereist DATABASE_URL) |
-| Prisma generate | `npx prisma generate` | Handmatig (vereist DATABASE_URL) |
-| Live rehearsal | `node scripts/backup-restore-rehearsal.mjs` | Handmatig (vereist pg_dump) |
+| Git diff check | `git diff --check` | GESLAAGD — exit 0 |
+| Live rehearsal | `node scripts/backup-restore-rehearsal.mjs --live-local --confirm-disposable` | Handmatig (vereist Docker Compose + pg_dump) |
 
 ---
 

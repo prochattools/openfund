@@ -4,7 +4,30 @@ Date: 2026-07-02
 Run: `agent-f961650b-de17-4282-ab18-7a716cc72958`  
 Source: `yeshuaacademy-finance`  
 Branch: `main`  
-Status: Release Candidate 1 — all Phases 0–9 implemented and validated locally; OPS-003 final readiness audit committed as `8d5978c`; backup/restore dry-run guard repaired as `b8d617a`; awaiting owner decisions for production cutover, historical import, PDF dependency, email provider, and live backup rehearsal
+Status: Release Candidate 2 — RC2 script hardening complete; backup rehearsal live mode requires explicit confirmation flags; release manifest generator added; production blockers audited (24 tests); owner handoff bundle ready; validate:release-candidate script strengthened with prisma validate, prisma generate, and git diff --check; 88 test files, 622 tests pass; awaiting owner decisions for production cutover, historical import, PDF dependency, email provider, and live backup rehearsal
+
+## RC2 Hardening Evidence
+
+| Task | Commit | Tests |
+|------|--------|-------|
+| Backup rehearsal safe default + explicit flags | `519b69e` | 28 tests pass |
+| Validate:release-candidate strengthened | `bb666ae` | 11 package script safety tests |
+| Release manifest generator | `6341be4` | 12 manifest tests |
+| Production blocker guard audit | `73d8072` | 24 blocker guard tests |
+| Owner handoff bundle | `5afb5e3` | (docs) |
+
+### Live backup rehearsal status
+
+PostgreSQL client tools available: pg_dump 15.17 (Homebrew), psql 15.17, pg_restore 15.17.
+
+**Blocker**: Local PostgreSQL at 127.0.0.1:5432 is running but `finance_user` role does not exist. Docker Compose (`docker-compose.local.yml`) would create the proper role and user. Live rehearsal must be run by the operator after starting Docker Compose:
+
+```bash
+docker compose -f docker-compose.local.yml up -d
+node scripts/backup-restore-rehearsal.mjs --live-local --confirm-disposable
+```
+
+No database dump committed. No production touched.
 
 ## Authoritative document hierarchy
 

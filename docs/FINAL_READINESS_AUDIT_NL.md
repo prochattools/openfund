@@ -1,8 +1,8 @@
 # Yeshua Academy Finance — Eindaudit gereedheid
 
-Status: lokaal gevalideerd; productie niet aangeraakt  
-Datum: 2026-07-05  
-Taal: Nederlands  
+Status: Release Candidate 2 — lokaal gevalideerd; productie niet aangeraakt
+Datum: 2026-07-05
+Taal: Nederlands
 Afhankelijkheden: `docs/ROADMAP.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/ADMIN_OPERATING_GUIDE_NL.md`
 
 ---
@@ -53,11 +53,14 @@ npm test
 
 | Controle | Status |
 |---------|--------|
-| Volledig testsuite (83 bestanden, 535 tests) | GESLAAGD |
+| Volledig testsuite (88 bestanden, 622 tests) | GESLAAGD |
 | `tests/auth/adminMutationPolicy.test.ts` (24 tests) | GESLAAGD |
 | `tests/helpers/dutchTextAudit.test.ts` (20 tests) | GESLAAGD |
 | `tests/helpers/navigation.test.ts` (13 tests) | GESLAAGD |
-| `tests/ops/backupRestoreRehearsal.test.ts` (18 tests) | GESLAAGD |
+| `tests/ops/backupRestoreRehearsal.test.ts` (28 tests, incl. safe default + explicit flags) | GESLAAGD |
+| `tests/ops/packageScriptSafety.test.ts` (11 tests) | GESLAAGD |
+| `tests/ops/releaseManifest.test.ts` (12 tests) | GESLAAGD |
+| `tests/ops/productionBlockerGuards.test.ts` (24 tests) | GESLAAGD |
 | Servicesentest-sets (report, close, review, import) | GESLAAGD |
 
 ### Builds
@@ -99,13 +102,28 @@ npx prisma generate
 
 ```bash
 node scripts/backup-restore-rehearsal.mjs --dry-run
+node scripts/backup-restore-rehearsal.mjs --help
 ```
 
 | Controle | Status |
 |---------|--------|
-| Guards unit tests (18) | GESLAAGD |
+| Guards unit tests (28, incl. safe default + explicit flags) | GESLAAGD |
 | Dry-run script beschikbaar | GEREED |
-| Live rehearsal (vereist lokale PostgreSQL) | Handmatig uitvoeren vóór productie |
+| Standaard aanroep vereist geen argumenten → exit 1 (veilig) | GEÏMPLEMENTEERD |
+| Live mode vereist `--live-local --confirm-disposable` | GEÏMPLEMENTEERD |
+| Live rehearsal (vereist pg_dump + actieve finance_user) | Handmatig uitvoeren vóór productie |
+
+#### Live rehearsal status RC2
+
+PostgreSQL-client tools aanwezig: pg_dump 15.17, psql 15.17, pg_restore 15.17.
+
+Blocker: lokale PostgreSQL draait op 127.0.0.1:5432 maar `finance_user`-rol bestaat nog niet.
+Start Docker Compose eerst om de rol aan te maken:
+
+```bash
+docker compose -f docker-compose.local.yml up -d
+node scripts/backup-restore-rehearsal.mjs --live-local --confirm-disposable
+```
 
 ---
 

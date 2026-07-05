@@ -70,7 +70,12 @@ Phase 8 INFRA-002 local Docker Compose cleanup: docker-compose.local.yml created
 Phase 8 INFRA-003 production cutover plan: docs/PRODUCTION_CUTOVER_PLAN_NL.md created (documentation-only; no production commands executed)
 Phase 9 OPS-002 backup/restore rehearsal: scripts/backup-restore-rehearsal.mjs and tests/ops/backupRestoreRehearsal.test.ts implemented; 18 unit tests pass
 Phase 9 OPS-003 documentation alignment: docs/FINAL_READINESS_AUDIT_NL.md created; ROADMAP.md, IMPLEMENTATION_PLAN.md updated; committed as 8d5978c
-Current gate: Release Candidate 1 readiness; owner decisions required before production cutover; historical production import remains operator-gated
+Phase 9 RC2-001 backup rehearsal explicit flags: safe default + --live-local --confirm-disposable required; 28 unit tests; committed as 519b69e
+Phase 9 RC2-002 validate:release-candidate strengthened: prisma validate (local placeholder), prisma generate, git diff --check added; packageScriptSafety.test.ts (11 tests); committed as bb666ae
+Phase 9 RC2-003 release manifest generator: scripts/generate-release-manifest.mjs; docs/RELEASE_MANIFEST_NL.md; releaseManifest.test.ts (12 tests); committed as 6341be4
+Phase 9 RC2-004 production blocker guard audit: tests/ops/productionBlockerGuards.test.ts (24 tests); committed as 73d8072
+Phase 9 RC2-005 owner handoff bundle: docs/OWNER_HANDOFF_NL.md; committed as 5afb5e3
+Current gate: Release Candidate 2 readiness; owner decisions required before production cutover; historical production import remains operator-gated; live backup rehearsal requires Docker Compose start + finance_user role
 ```
 
 ## Phase 0 — Governance and discovery
