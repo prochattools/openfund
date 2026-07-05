@@ -55,7 +55,8 @@ Phase 3 Packet F owner-approved local rehearsal: implemented and locally validat
 Phase 3 Packet G guarded dry-run service: implemented; default dry-run only, production execution blocked, no production import, production config, push, or Graphify changes
 Phase 4 FLOW-001 monthly import preview foundation: implemented; retained-byte preview controls only, no bookings, period close, production import, production config, push, or Graphify changes
 Phase 4 FLOW-002 deterministic categorization decisions: implemented; complete deterministic rule/replay decisions only, no bookings, period close, production import, production config, push, or Graphify changes
-Current gate: FLOW-003 evidence-rich Dutch review queue; historical production import remains operator-gated
+Phase 4 FLOW-003 evidence-rich Dutch review queue: implemented; admin-only read evidence, no bookings, period close, production import, production config, push, or Graphify changes
+Current gate: FLOW-004 explicit rule creation from approved decisions; historical production import remains operator-gated
 ```
 
 ## Phase 0 — Governance and discovery
@@ -867,15 +868,26 @@ Validation:
 
 ### FLOW-004 — Implement explicit rule creation from approved decision
 
-Status: `CURRENT`
+Status: `IMPLEMENTED`
 
 Dependencies: FLOW-003
 
 Acceptance:
 
 - Rule creation is a separate administrator choice.
-- Rule conditions and expected category are previewed before activation.
-- Ambiguous or broad rules are rejected.
+- Rule conditions and expected `Klant`, `Type`, and `Category` are previewed before activation.
+- Activation requires an explicit confirmation and the current preview hash.
+- Ambiguous, broad, duplicate, conflicting, incomplete, or non-exact rules are rejected.
+- Rule preview and activation do not create `TransactionBooking`, `PeriodClose`, production import, or production configuration records.
+- The implementation uses the existing `CategorizationRule` persistence model; complete expected dimensions are previewed and validated before activation, while the current rule row remains category-scoped until a later schema slice adds first-class rule dimensions.
+
+Validation:
+
+- Focused rule creation service tests cover preview-only behavior, explicit activation, hash validation, broad/ambiguous rejection, conflicting active rule rejection, and admin-only access.
+- Focused review route tests cover admin-only preview/activation routes and confirm preview does not activate a rule.
+- Focused review page helper tests cover Dutch rule creation activation labels.
+- Surrounding rule engine, categorization, review queue, review decision, deterministic categorization, and monthly import preview regressions passed locally.
+- Full validation passed and is recorded in `docs/finance-rebuild-run.md`: focused FLOW-004 tests, surrounding review/categorization regressions, full suite, Prisma validate/generate, server build, production build, diff check, changed executable/test high-risk scan, and documentation scans.
 
 ## Phase 5 — Reconciliation and close
 

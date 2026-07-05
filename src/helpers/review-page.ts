@@ -1,5 +1,5 @@
 import type { LedgerTransaction } from './api-transaction-mapper';
-import type { EvidenceRichReviewItem, ReviewEvidenceStatus } from '@/libs/api';
+import type { EvidenceRichReviewItem, ReviewEvidenceStatus, RuleCreationPreview } from '@/libs/api';
 
 export type ReviewCategory = {
   id: string;
@@ -108,6 +108,24 @@ export const getReviewEvidenceSummary = (item: Pick<EvidenceRichReviewItem, 'det
     parts.push(item.alternatives.length === 1 ? '1 alternatief' : `${item.alternatives.length} alternatieven`);
   }
   return parts.join(' · ');
+};
+
+export const canActivateRuleCreation = (
+  preview: Pick<RuleCreationPreview, 'activationAllowed' | 'previewHash' | 'expected'> | null | undefined,
+): boolean =>
+  Boolean(preview?.activationAllowed && preview.previewHash && preview.expected);
+
+export const getRuleCreationStatusLabel = (
+  preview: Pick<RuleCreationPreview, 'activationAllowed' | 'rejectionReasons' | 'matchedTransactionIds'> | null | undefined,
+): string => {
+  if (!preview) return 'Maak eerst een regelvoorbeeld';
+  if (!preview.activationAllowed) {
+    return preview.rejectionReasons[0] ?? 'Deze regel is niet veilig genoeg om te activeren';
+  }
+  const count = preview.matchedTransactionIds.length;
+  return count === 1
+    ? 'Regel kan worden geactiveerd voor 1 voorbeeldmatch'
+    : `Regel kan worden geactiveerd voor ${count} voorbeeldmatches`;
 };
 
 export const resolveDefaultReviewSelection = (

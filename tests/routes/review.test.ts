@@ -1,9 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getReviewTransactions, updateTransactionCategory } from '../../server/routes/review';
+import {
+  activateReviewRuleCreation,
+  getReviewTransactions,
+  previewReviewRuleCreation,
+  updateTransactionCategory,
+} from '../../server/routes/review';
 import { INCOMPLETE_DIMENSIONS_MESSAGE } from '../../server/services/reviewDecisionService';
 
 const serviceMocks = vi.hoisted(() => ({
   getEvidenceRichReviewQueue: vi.fn(),
+  previewRuleCreation: vi.fn(),
+  activateRuleCreation: vi.fn(),
+  prismaTransaction: vi.fn(),
+}));
+
+vi.mock('../../server/prismaClient', () => ({
+  prisma: {
+    $transaction: serviceMocks.prismaTransaction,
+  },
 }));
 
 vi.mock('../../server/services/reviewQueueService', async (importOriginal) => {
@@ -11,6 +25,15 @@ vi.mock('../../server/services/reviewQueueService', async (importOriginal) => {
   return {
     ...actual,
     getEvidenceRichReviewQueue: serviceMocks.getEvidenceRichReviewQueue,
+  };
+});
+
+vi.mock('../../server/services/ruleCreationService', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../server/services/ruleCreationService')>();
+  return {
+    ...actual,
+    previewRuleCreation: serviceMocks.previewRuleCreation,
+    activateRuleCreation: serviceMocks.activateRuleCreation,
   };
 });
 
@@ -54,6 +77,10 @@ const makeRequest = ({
 describe('review routes', () => {
   beforeEach(() => {
     serviceMocks.getEvidenceRichReviewQueue.mockReset();
+    serviceMocks.previewRuleCreation.mockReset();
+    serviceMocks.activateRuleCreation.mockReset();
+    serviceMocks.prismaTransaction.mockReset();
+    serviceMocks.prismaTransaction.mockImplementation((callback: (db: unknown) => unknown) => callback({}));
   });
 
   it('review route returns Dutch evidence-rich items for admins without approving anything', async () => {
@@ -147,5 +174,97 @@ describe('review routes', () => {
 
     expect(response.statusCode).toBe(400);
     expect(response.body).toEqual({ error: 'Transactie id ontbreekt.' });
+  });
+
+  it('previews rule creation for an approved review decision without activating it', async () => {
+    serviceMocks.previewRuleCreation.mockResolvedValueOnce({
+      transactionId: 'tx-1',
+      activationAllowed: true,
+      previewHash: 'hash-1',
+      sideEffects: {
+        createsTransactionBooking: false,
+        closesPeriod: false,
+      },
+    });
+    const response = makeResponse();
+
+    await previewReviewRuleCreation(makeRequest({
+      body: {
+        projectId: 'project-1',
+        transactionTypeId: 'type-1',
+        categoryId: 'cat-1',
+        conditions: [{ field: 'paymentPurpose', matchType: 'contains', value: 'Gift voor mei' }],
+      },
+    }) as any, response as any);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toMatchObject({
+      activationAllowed: true,
+      sideEffects: {
+        createsTransactionBooking: false,
+        closesPeriod: false,
+      },
+    });
+    expect(serviceMocks.previewRuleCreation).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      actor: expect.objectContaining({ userId: 'user-1', role: 'admin' }),
+      transactionId: 'tx-1',
+      projectId: 'project-1',
+      transactionTypeId: 'type-1',
+      categoryId: 'cat-1',
+    }));
+    expect(serviceMocks.activateRuleCreation).not.toHaveBeenCalled();
+  });
+
+  it('activates rule creation only through the explicit activation route', async () => {
+    serviceMocks.activateRuleCreation.mockResolvedValueOnce({
+      rule: { id: 'rule-1' },
+      preview: { previewHash: 'hash-1' },
+      sideEffects: {
+        createsTransactionBooking: false,
+        closesPeriod: false,
+      },
+    });
+    const response = makeResponse();
+
+    await activateReviewRuleCreation(makeRequest({
+      body: {
+        projectId: 'project-1',
+        transactionTypeId: 'type-1',
+        categoryId: 'cat-1',
+        previewHash: 'hash-1',
+        explicitConfirmation: true,
+      },
+    }) as any, response as any);
+
+    expect(response.statusCode).toBe(201);
+    expect(response.body).toMatchObject({
+      rule: { id: 'rule-1' },
+      sideEffects: {
+        createsTransactionBooking: false,
+        closesPeriod: false,
+      },
+    });
+    expect(serviceMocks.activateRuleCreation).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      transactionId: 'tx-1',
+      previewHash: 'hash-1',
+      explicitConfirmation: true,
+    }));
+  });
+
+  it('keeps rule creation admin-only', async () => {
+    const response = makeResponse();
+
+    await previewReviewRuleCreation(makeRequest({
+      role: 'viewer',
+      body: {
+        projectId: 'project-1',
+        transactionTypeId: 'type-1',
+        categoryId: 'cat-1',
+      },
+    }) as any, response as any);
+
+    expect(response.statusCode).toBe(403);
+    expect(response.body).toEqual({ error: 'Alleen beheerders mogen deze actie uitvoeren.' });
+    expect(serviceMocks.previewRuleCreation).not.toHaveBeenCalled();
   });
 });

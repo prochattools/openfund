@@ -10,11 +10,17 @@ import {
   isCompleteReviewAssignmentPayload,
   ReviewDecisionError,
 } from '../services/reviewDecisionService';
+import {
+  activateRuleCreation,
+  previewRuleCreation,
+  RuleCreationError,
+  type RuleCreationCondition,
+} from '../services/ruleCreationService';
 import { requireAdmin } from '../auth/requestContext';
 import { readRouteParam } from './routeParams';
 
 const sendReviewDecisionError = (res: Response, error: unknown, fallback: string) => {
-  if (error instanceof ReviewDecisionError) {
+  if (error instanceof ReviewDecisionError || error instanceof RuleCreationError) {
     return res.status(error.statusCode).json({ error: error.message });
   }
 
@@ -99,5 +105,84 @@ export const clearReviewQueue = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Beoordelingsrij kon niet worden afgerond', error);
     return sendReviewDecisionError(res, error, 'De beoordelingsrij kon niet worden afgerond.');
+  }
+};
+
+const readRuleCreationPayload = (body: unknown): {
+  reviewDecisionId?: string | null;
+  projectId?: string | null;
+  transactionTypeId?: string | null;
+  categoryId?: string | null;
+  label?: string | null;
+  conditions?: RuleCreationCondition[];
+  confidence?: string | null;
+  previewHash?: string | null;
+  explicitConfirmation?: boolean;
+} => {
+  const payload = (body ?? {}) as Record<string, unknown>;
+  return {
+    reviewDecisionId: typeof payload.reviewDecisionId === 'string' ? payload.reviewDecisionId : null,
+    projectId: typeof payload.projectId === 'string' ? payload.projectId : null,
+    transactionTypeId: typeof payload.transactionTypeId === 'string' ? payload.transactionTypeId : null,
+    categoryId: typeof payload.categoryId === 'string' ? payload.categoryId : null,
+    label: typeof payload.label === 'string' ? payload.label : null,
+    conditions: Array.isArray(payload.conditions) ? payload.conditions as RuleCreationCondition[] : [],
+    confidence: typeof payload.confidence === 'string' ? payload.confidence : null,
+    previewHash: typeof payload.previewHash === 'string' ? payload.previewHash : null,
+    explicitConfirmation: payload.explicitConfirmation === true,
+  };
+};
+
+export const previewReviewRuleCreation = async (req: Request, res: Response) => {
+  const actor = requireAdmin(req, res);
+  if (!actor) {
+    return;
+  }
+
+  const transactionId = readRouteParam(req, 'id');
+  if (!transactionId) {
+    return res.status(400).json({ error: 'Transactie id ontbreekt.' });
+  }
+
+  try {
+    const preview = await prisma.$transaction((db) => previewRuleCreation(db, {
+      actor,
+      transactionId,
+      ...readRuleCreationPayload(req.body),
+    }));
+
+    return res.json(preview);
+  } catch (error) {
+    console.error('Regelvoorbeeld kon niet worden opgebouwd', error);
+    return sendReviewDecisionError(res, error, 'Regelvoorbeeld kon niet worden opgebouwd.');
+  }
+};
+
+export const activateReviewRuleCreation = async (req: Request, res: Response) => {
+  const actor = requireAdmin(req, res);
+  if (!actor) {
+    return;
+  }
+
+  const transactionId = readRouteParam(req, 'id');
+  if (!transactionId) {
+    return res.status(400).json({ error: 'Transactie id ontbreekt.' });
+  }
+
+  try {
+    const result = await prisma.$transaction((db) => activateRuleCreation(db, {
+      actor,
+      transactionId,
+      ...readRuleCreationPayload(req.body),
+    }));
+
+    return res.status(201).json({
+      rule: result.rule,
+      preview: result.preview,
+      sideEffects: result.sideEffects,
+    });
+  } catch (error) {
+    console.error('Regel kon niet worden geactiveerd', error);
+    return sendReviewDecisionError(res, error, 'Regel kon niet worden geactiveerd.');
   }
 };

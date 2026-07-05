@@ -1011,7 +1011,39 @@ Validation evidence:
 
 No production, Dokploy, MCP bridge, `10.0.2.4`, persistent owner-data import, production configuration, `.env`, `.graphifyignore`, `graphify-out/`, owner-source copy, raw row dump, generated output commit, period close, transaction booking, historical production import, or push occurred.
 
-## Next Phase 4 prompt
+## Phase 4 FLOW-004 explicit rule creation evidence
+
+FLOW-004 explicit rule creation from approved decisions is implemented locally.
+
+Implementation notes:
+- Added `server/services/ruleCreationService.ts` for administrator-only rule creation preview and activation.
+- Preview requires a complete expected `Klant`, `Type`, and `Category`, validates that the source transaction has an approved matching decision/booking, shows sanitized matching transaction ids, and returns a preview hash.
+- Activation is a separate route and requires `explicitConfirmation: true` plus the current preview hash.
+- Broad, ambiguous, duplicate, conflicting, incomplete, and non-exact rule candidates are rejected before any rule write.
+- The existing `CategorizationRule` model remains unchanged; activation creates an active category-scoped rule row with condition JSON after full-dimension preview validation.
+- Preview and activation create no `TransactionBooking` records, close no periods, perform no historical production import, and do not touch production configuration.
+- Added route/API/helper support for `POST /api/review/:id/rule/preview` and `POST /api/review/:id/rule/activate`.
+
+Validation completed in this slice:
+- Focused rule creation service tests passed: 5 tests.
+- Focused review route tests passed: 8 tests.
+- Focused review page helper tests passed: 10 tests.
+- Focused rule engine tests passed: 9 tests.
+- Focused categorization and review queue regressions passed: 7 tests.
+- Focused review decision, deterministic categorization, and monthly import preview regressions passed: 27 tests.
+- Full test suite passed: 70 files; 317 tests passed; 3 skipped.
+- Prisma validate passed with a local-only `localhost:5452/flow004_validate` URL.
+- Prisma Client generation passed.
+- Server TypeScript build passed.
+- Production build passed with 18 routes and the existing non-blocking SWC lockfile warning.
+- `git diff --check` passed.
+- Changed executable/test high-risk scan reported no unexpected findings; matches were existing env/fetch wrappers, explicit no-booking flags, and test fixture/current-booking reads.
+- Changed-documentation secret-material scan reported no unexpected findings; matches were prior validation notes and local-only placeholder database references.
+- Changed-documentation runtime scan reported only expected historical notes and no-production/no-push/local-only guardrail references.
+
+No production, Dokploy, MCP bridge, `10.0.2.4`, persistent owner-data import, production configuration, `.env`, `.graphifyignore`, `graphify-out/`, owner-source copy, raw row dump, generated output commit, period close, transaction booking, historical production import, or push occurred.
+
+## Next Phase 5 prompt
 
 Use this prompt for the next implementation session:
 
@@ -1022,12 +1054,13 @@ Current committed state:
 - Phase 3 Packet G guarded historical import dry-run is committed as 6610648.
 - Phase 4 FLOW-001 monthly import preview foundation is committed as b7db856.
 - Phase 4 FLOW-002 deterministic categorization decisions are committed as 5532582.
-- Phase 4 FLOW-003 evidence-rich Dutch review queue is implemented and validated locally.
+- Phase 4 FLOW-003 evidence-rich Dutch review queue is committed as 6618cb6.
+- Phase 4 FLOW-004 explicit rule creation from approved decisions is implemented and validated locally.
 - Historical production import remains operator-gated and blocked.
 - No production, Dokploy, MCP bridge, 10.0.2.4, .env, Graphify, owner-file copy, raw row dump, generated output, transaction booking, period close, or production import work has been touched.
 
 Task:
-If FLOW-003 is committed, implement FLOW-004 explicit rule creation from approved decisions. Do not create TransactionBooking records from queue display or suggestions.
+If FLOW-004 is committed, start Phase 5 CLOSE-001 statement reconciliation controls. Do not create period closes or report snapshots until the statement controls are previewed and validated.
 
 Required context:
 1. Read the approved product/domain docs before coding:
@@ -1038,33 +1071,24 @@ Required context:
    - docs/finance-rebuild-run.md
    - docs/DOMAIN_MODEL.md, if present
 2. Inspect the categorization and review services/tests:
-   - server/services/deterministicCategorizationService.ts
-   - server/services/monthlyImportPreviewService.ts
-   - server/services/categorizationService.ts
-   - server/services/ruleEngine.ts
-   - server/services/reviewQueueService.ts
+   - server/services/statementControlService.ts
+   - server/services/periodCloseService.ts
    - server/services/reviewDecisionService.ts
-   - server/services/transactionFingerprint.ts
+   - server/services/ruleCreationService.ts
    - server/routes/review.ts
    - src/libs/api.ts
-   - src/helpers/review-page.ts
-   - tests/services/categorizationService.test.ts
-   - tests/services/ruleEngine.test.ts
-   - tests/services/reviewQueueService.test.ts
-   - tests/services/reviewDecisionService.test.ts
-   - tests/routes/review.test.ts
-   - tests/helpers/reviewPage.test.ts
-   - tests/services/deterministicCategorizationService.test.ts
-3. Confirm review queue output returns sanitized evidence only and creates no bookings/closes.
+   - tests/services/statementControlService.test.ts
+   - tests/services/periodCloseService.test.ts
+   - tests/services/ruleCreationService.test.ts
+3. Confirm rule creation remains a separate administrator activation path and creates no bookings/closes.
 
-Phase 4 constraints:
+Phase 5 constraints:
 - Preserve literal Klant, Type, and Category exactly as supplied.
 - Use raw ING Date only for transaction dates.
 - Use Verduidelijking as interpretation evidence, not as rewritten historical truth.
-- Finalization requires exactly one complete deterministic source: approved unique complete rule, complete exact historical replay, or both agreeing exactly.
-- Conflicts, ambiguous matches, incomplete dimensions, and non-exact confidence must not finalize.
-- FLOW-003 must not create TransactionBooking or PeriodClose records.
-- Queue display must require administrator access and remain read-only.
+- A period cannot close while statement controls differ, any transaction is unresolved, or any booking lacks complete dimensions.
+- Close preview/control checks must run before any close/report snapshot write.
+- Rule preview and activation must remain separate from TransactionBooking and PeriodClose writes.
 - Bulk acceptance must remain disabled.
 - Production historical execution requires a separately approved operator procedure and remains blocked.
 - Use only localhost/127.0.0.1/::1 for disposable databases.
@@ -1075,8 +1099,8 @@ Phase 4 constraints:
 - Stop before production deployment or any production data mutation.
 
 Expected output:
-- FLOW-003 evidence-rich Dutch review queue validation results.
-- Confirmation that review queue output remains sanitized.
+- CLOSE-001 statement control validation results.
+- Confirmation that no premature period close/report snapshot occurred.
 - Confirmation that no bookings, closes, or historical production import occurred.
-- Next gate for FLOW-004 explicit rule creation from approved decisions.
+- Next gate for close/report snapshot implementation.
 ```

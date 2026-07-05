@@ -281,6 +281,59 @@ type RulePayload = {
   isActive?: boolean;
 };
 
+export type RuleCreationCondition = {
+  field: 'payee' | 'counterparty' | 'description' | 'paymentPurpose' | 'amount' | 'source' | 'reference';
+  matchType: 'contains' | 'startsWith' | 'endsWith' | 'equals' | 'regex';
+  value: string;
+};
+
+export type RuleCreationPreviewPayload = {
+  reviewDecisionId?: string | null;
+  projectId: string;
+  transactionTypeId: string;
+  categoryId: string;
+  label?: string | null;
+  conditions: RuleCreationCondition[];
+  confidence?: string | null;
+};
+
+export type RuleCreationPreview = {
+  transactionId: string;
+  reviewDecisionId: string | null;
+  label: string;
+  conditions: RuleCreationCondition[];
+  expected: {
+    projectId: string;
+    projectLabel: string;
+    transactionTypeId: string;
+    transactionTypeLabel: string;
+    categoryId: string;
+    categoryLabel: string;
+  } | null;
+  matchedTransactionIds: string[];
+  activationAllowed: boolean;
+  rejectionReasons: string[];
+  previewHash: string;
+  sideEffects: {
+    createsTransactionBooking: false;
+    closesPeriod: false;
+  };
+};
+
+export type RuleCreationActivationPayload = RuleCreationPreviewPayload & {
+  previewHash: string;
+  explicitConfirmation: true;
+};
+
+export type RuleCreationActivationResponse = {
+  rule: unknown;
+  preview: RuleCreationPreview;
+  sideEffects: {
+    createsTransactionBooking: false;
+    closesPeriod: false;
+  };
+};
+
 export const fetchCategorizationRules = async () => {
   const response = await fetch(getApiUrl('/api/rules'), withUserHeader({ cache: 'no-store' }));
 
@@ -320,6 +373,46 @@ export const updateCategorizationRule = async (id: string, payload: Partial<Rule
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Categorisatieregel kon niet worden bijgewerkt.' }));
     throw new Error(error.error ?? 'Categorisatieregel kon niet worden bijgewerkt.');
+  }
+
+  return response.json();
+};
+
+export const previewReviewRuleCreation = async (
+  transactionId: string,
+  payload: RuleCreationPreviewPayload,
+): Promise<RuleCreationPreview> => {
+  const response = await fetch(getApiUrl(`/api/review/${encodeApiPathSegment(transactionId)}/rule/preview`), withUserHeader({
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  }));
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Regelvoorbeeld kon niet worden opgebouwd.' }));
+    throw new Error(error.error ?? 'Regelvoorbeeld kon niet worden opgebouwd.');
+  }
+
+  return response.json();
+};
+
+export const activateReviewRuleCreation = async (
+  transactionId: string,
+  payload: RuleCreationActivationPayload,
+): Promise<RuleCreationActivationResponse> => {
+  const response = await fetch(getApiUrl(`/api/review/${encodeApiPathSegment(transactionId)}/rule/activate`), withUserHeader({
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  }));
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Regel kon niet worden geactiveerd.' }));
+    throw new Error(error.error ?? 'Regel kon niet worden geactiveerd.');
   }
 
   return response.json();

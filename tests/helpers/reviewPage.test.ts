@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildReviewSubcategoryMap,
+  canActivateRuleCreation,
   canAcceptReviewSuggestion,
   findCategoryIdByName,
   formatReviewEuro,
+  getRuleCreationStatusLabel,
   getReviewSuggestedLabel,
   getReviewEvidenceSummary,
   getSuggestedMain,
@@ -95,6 +97,45 @@ describe('review page helpers', () => {
         evidenceHashes: [],
       },
     })).toBe('conflict, handmatig beoordelen · 1 regel · historisch bewijs · 2 alternatieven');
+  });
+
+  it('labels rule creation preview activation states', () => {
+    expect(canActivateRuleCreation(null)).toBe(false);
+    expect(getRuleCreationStatusLabel(null)).toBe('Maak eerst een regelvoorbeeld');
+    expect(canActivateRuleCreation({
+      activationAllowed: false,
+      previewHash: 'hash-1',
+      expected: {
+        projectId: 'project-1',
+        projectLabel: 'Yeshua Academy',
+        transactionTypeId: 'type-1',
+        transactionTypeLabel: 'Schenking in',
+        categoryId: 'cat-1',
+        categoryLabel: 'Giften',
+      },
+    })).toBe(false);
+    expect(getRuleCreationStatusLabel({
+      activationAllowed: false,
+      rejectionReasons: ['De regelvoorwaarde is te breed om veilig te activeren.'],
+      matchedTransactionIds: [],
+    })).toBe('De regelvoorwaarde is te breed om veilig te activeren.');
+    expect(canActivateRuleCreation({
+      activationAllowed: true,
+      previewHash: 'hash-1',
+      expected: {
+        projectId: 'project-1',
+        projectLabel: 'Yeshua Academy',
+        transactionTypeId: 'type-1',
+        transactionTypeLabel: 'Schenking in',
+        categoryId: 'cat-1',
+        categoryLabel: 'Giften',
+      },
+    })).toBe(true);
+    expect(getRuleCreationStatusLabel({
+      activationAllowed: true,
+      rejectionReasons: [],
+      matchedTransactionIds: ['tx-1', 'tx-2'],
+    })).toBe('Regel kan worden geactiveerd voor 2 voorbeeldmatches');
   });
 
   it('formats review display values and accept-action availability', () => {

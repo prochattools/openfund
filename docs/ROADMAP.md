@@ -153,7 +153,7 @@ Status: **in progress; guarded dry-run service completed through Packet G**
 
 ## Phase 4 — Monthly import and review workflow
 
-Status: **in progress; FLOW-003 evidence-rich Dutch review queue implemented**
+Status: **in progress; FLOW-004 explicit rule creation from approved decisions implemented**
 
 ### Outcomes
 
@@ -169,6 +169,9 @@ Status: **in progress; FLOW-003 evidence-rich Dutch review queue implemented**
 - Show full payment purpose and matching evidence in the review queue.
 - Require explicit administrator approval or categorization.
 - Allow deliberate rule creation from confirmed decisions.
+- Preview rule conditions and expected `Klant`, `Type`, and `Category` before activation.
+- Reject broad, ambiguous, duplicate, conflicting, incomplete, or non-exact rule candidates.
+- Keep rule preview and activation separate from transaction booking and period close writes.
 - Remove or disable unsafe bulk-confirm actions.
 
 ### Exit criteria
