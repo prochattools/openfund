@@ -22,6 +22,7 @@ describe('release manifest — content', () => {
   it('manifest contains required Dutch section headers', () => {
     const manifest = buildManifest();
     expect(manifest).toContain('# Yeshua Academy Finance — Release Manifest');
+    expect(manifest).toContain('Release Candidate 4');
     expect(manifest).toContain('## Versie-informatie');
     expect(manifest).toContain('## Openstaande blockers');
     expect(manifest).toContain('## Validatiecommando');
@@ -42,6 +43,7 @@ describe('release manifest — content', () => {
     expect(manifest).toContain('RESEND_API_KEY');
     expect(manifest).toContain('PostgreSQL');
     expect(manifest).toContain('Live backup/restore rehearsal');
+    expect(manifest).toContain('VOLTOOID op 2026-07-05');
   });
 
   it('manifest includes validate:release-candidate command', () => {
@@ -73,6 +75,12 @@ describe('release manifest — content', () => {
     expect(manifest).toContain('OWNER_DECISION_PACK_NL');
     expect(manifest).toContain('OWNER_HANDOFF_NL');
   });
+
+  it('manifest records local readiness phases as complete for RC4', () => {
+    const manifest = buildManifest();
+    expect(manifest).toContain('Phase 8 — Infrastructuur en deployment | COMPLETE');
+    expect(manifest).toContain('Phase 9 — Operationele hardening en overdracht | COMPLETE (lokaal, RC4)');
+  });
 });
 
 describe('release manifest — CLI (stdout mode)', () => {
@@ -82,6 +90,7 @@ describe('release manifest — CLI (stdout mode)', () => {
       cwd: process.cwd(),
     });
     expect(output).toContain('# Yeshua Academy Finance — Release Manifest');
+    expect(output).toContain('Release Candidate 4');
     expect(output).toContain('Versie-informatie');
   });
 

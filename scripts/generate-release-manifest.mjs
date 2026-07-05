@@ -58,9 +58,9 @@ export function buildManifest() {
 
   const manifest = `# Yeshua Academy Finance — Release Manifest
 
-Status: Release Candidate 2
+Status: Release Candidate 4 — final owner handoff polish
 Taal: Nederlands
-Gegenereerd op: ${generatedAt}
+Gegenereerd op: ${generatedAt} (RC4)
 
 ---
 
@@ -91,8 +91,8 @@ Gegenereerd op: ${generatedAt}
 | Phase 5 — Reconciliatie en afsluiting | COMPLETE |
 | Phase 6 — Rapporten en distributie | COMPLETE |
 | Phase 7 — Dutch UX en autorisatiehardening | COMPLETE |
-| Phase 8 — Infrastructuur en deployment | IN PROGRESS |
-| Phase 9 — Operationele hardening en overdracht | COMPLETE (lokaal, RC2) |
+| Phase 8 — Infrastructuur en deployment | COMPLETE (lokale gereedheid; productiecutover blijft geblokkeerd) |
+| Phase 9 — Operationele hardening en overdracht | COMPLETE (lokaal, RC4) |
 
 ---
 
@@ -107,7 +107,7 @@ De volgende blokkades zijn nog van kracht. Ze mogen **NIET** worden omzeild zond
 | 3 | Historische productie-import (2024/2025/2026) | Operator-gated; vereist eigenaargoedkeuring en dry-run |
 | 4 | Echte e-mailverzending | \`RESEND_API_KEY\` niet geconfigureerd; no-op modus actief |
 | 5 | PostgreSQL-productieversie bevestigen | Vereist verificatie bij hostingprovider vóór cutover |
-| 6 | Live backup/restore rehearsal | Vereist lokale PostgreSQL-tools (\`pg_dump\`, \`psql\`) |
+| 6 | Live backup/restore rehearsal | VOLTOOID op 2026-07-05 (RC3); productieback-up/herstel blijft geblokkeerd tot eigenaargoedkeuring |
 
 ---
 
