@@ -153,7 +153,7 @@ Status: **in progress; guarded dry-run service completed through Packet G**
 
 ## Phase 4 — Monthly import and review workflow
 
-Status: **in progress; FLOW-001 monthly import preview foundation implemented**
+Status: **in progress; FLOW-002 deterministic categorization decisions implemented**
 
 ### Outcomes
 
@@ -163,6 +163,8 @@ Status: **in progress; FLOW-001 monthly import preview foundation implemented**
 - Retain exact uploaded CSV bytes as the hash basis for preview source-file evidence.
 - Keep FLOW-001 preview-only: no transaction bookings, period closes, historical production import, or production configuration changes.
 - Apply only approved deterministic rules automatically.
+- Final categorization decisions require exactly one complete deterministic source, or an approved rule and exact historical replay that agree on all three dimensions.
+- Conflicting, incomplete, ambiguous, or non-exact matches remain review suggestions or unmatched.
 - Rank fuzzy suggestions without booking them.
 - Show full payment purpose and matching evidence in the review queue.
 - Require explicit administrator approval or categorization.

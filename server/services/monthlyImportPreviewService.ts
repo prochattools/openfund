@@ -7,6 +7,10 @@ import {
 import { parseHistoricalIngCsvStatement, type ParsedIngCsvRow } from '../../lib/import/ingCsvParser';
 import { hashSourceContent } from './statementControlService';
 import { normalizeWhitespace, toISODateString } from '../../lib/import/normalizers';
+import type {
+  DeterministicCategorizationResult,
+  DeterministicTransactionFacts,
+} from './deterministicCategorizationService';
 
 export class MonthlyImportPreviewError extends Error {
   statusCode: number;
@@ -43,6 +47,9 @@ export type MonthlyImportPreviewInput = {
 
 export type MonthlyImportPreviewOptions = {
   findExistingImportFingerprints?: MonthlyImportDuplicateLookup;
+  categorizePreviewTransactions?: (
+    input: MonthlyImportPreviewCategorizationInput,
+  ) => Promise<DeterministicCategorizationResult[]>;
 };
 
 export type MonthlyImportPreviewSourceFile = {
@@ -66,6 +73,22 @@ export type MonthlyImportPreviewRunningBalanceFinding = {
   expectedBalanceMinor: string | null;
   actualBalanceMinor: string | null;
   message: string;
+};
+
+export type MonthlyImportPreviewCategorizationInput = {
+  workspaceId: string;
+  accountId: string | null;
+  accountIdentifier: string | null;
+  transactions: DeterministicTransactionFacts[];
+};
+
+export type MonthlyImportPreviewCategorizationSummary = {
+  finalizedCandidateCount: number;
+  reviewSuggestedCount: number;
+  conflictCount: number;
+  unmatchedCount: number;
+  createsTransactionBookings: false;
+  closesPeriod: false;
 };
 
 export type MonthlyImportPreview = {
@@ -99,6 +122,7 @@ export type MonthlyImportPreview = {
     createsTransactionBookings: false;
     closesPeriod: false;
   };
+  categorization: MonthlyImportPreviewCategorizationSummary | null;
 };
 
 const CSV_MEDIA_TYPES = new Set([
@@ -178,6 +202,17 @@ const readAccountIdentifier = (rows: ParsedIngCsvRow[], fallback?: string | null
   return rows.find((row) => row.accountIdentifier)?.accountIdentifier ?? null;
 };
 
+const summarizeCategorization = (
+  results: DeterministicCategorizationResult[],
+): MonthlyImportPreviewCategorizationSummary => ({
+  finalizedCandidateCount: results.filter((result) => result.status === 'finalized').length,
+  reviewSuggestedCount: results.filter((result) => result.status === 'review_suggested').length,
+  conflictCount: results.filter((result) => result.status === 'conflict').length,
+  unmatchedCount: results.filter((result) => result.status === 'unmatched').length,
+  createsTransactionBookings: false,
+  closesPeriod: false,
+});
+
 export const buildMonthlyImportPreview = async (
   input: MonthlyImportPreviewInput,
   options: MonthlyImportPreviewOptions = {},
@@ -230,6 +265,17 @@ export const buildMonthlyImportPreview = async (
     ...existingFingerprints,
   ])].sort();
   const duplicateCount = countDuplicateRows(fingerprints, existingFingerprints);
+  const accountIdentifier = readAccountIdentifier(controlRows, input.accountIdentifier);
+  const categorizationResults = options.categorizePreviewTransactions
+    ? await options.categorizePreviewTransactions({
+        workspaceId: input.workspaceId,
+        accountId: input.accountId ?? null,
+        accountIdentifier,
+        transactions: fingerprints.map((fingerprint) => ({
+          importFingerprint: fingerprint,
+        })),
+      })
+    : null;
   const closeReasons: string[] = [];
   if (statement.coverageStatus !== 'COMPLETE') {
     closeReasons.push('Gedeeltelijke of open afschriften kunnen niet worden gesloten.');
@@ -253,7 +299,7 @@ export const buildMonthlyImportPreview = async (
     },
     workspaceId: input.workspaceId,
     accountId: input.accountId ?? null,
-    accountIdentifier: readAccountIdentifier(controlRows, input.accountIdentifier),
+    accountIdentifier,
     uploadedBy: input.actorId ?? null,
     rowCount: statement.rowCount,
     periodStart: statement.periodStart ? toISODateString(statement.periodStart) : null,
@@ -286,5 +332,6 @@ export const buildMonthlyImportPreview = async (
       createsTransactionBookings: false,
       closesPeriod: false,
     },
+    categorization: categorizationResults ? summarizeCategorization(categorizationResults) : null,
   };
 };

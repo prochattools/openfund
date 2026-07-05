@@ -5,6 +5,7 @@ import {
   buildMonthlyImportPreview,
   MonthlyImportPreviewError,
 } from '../../server/services/monthlyImportPreviewService';
+import { decideDeterministicCategorization } from '../../server/services/deterministicCategorizationService';
 
 const csv = (rows: string[]) => Buffer.from([
   'Date;Name / Description;Account;Counterparty;Code;Debit/credit;Amount (EUR);Transaction type;Notifications;Resulting balance;Tag',
@@ -118,6 +119,7 @@ describe('monthly import preview service', () => {
       createsTransactionBookings: false,
       closesPeriod: false,
     });
+    expect(preview.categorization).toBeNull();
   });
 
   it('counts only repeated upload rows as in-file duplicates', async () => {
@@ -147,6 +149,56 @@ describe('monthly import preview service', () => {
     expect(preview.closeEligibility).toEqual({
       eligible: false,
       reasons: ['Gedeeltelijke of open afschriften kunnen niet worden gesloten.'],
+    });
+  });
+
+  it('returns categorization counts without creating transactions, bookings, or closes', async () => {
+    const preview = await buildMonthlyImportPreview(baseInput, {
+      categorizePreviewTransactions: async ({ transactions }) => [
+        decideDeterministicCategorization({
+          transaction: transactions[0]!,
+          ruleCandidates: [{
+            ruleId: 'rule-complete',
+            active: true,
+            approved: true,
+            confidence: 'deterministic',
+            projectId: 'project-1',
+            transactionTypeId: 'type-1',
+            categoryId: 'cat-1',
+            evidenceHash: 'rule-evidence-1',
+          }],
+        }),
+        decideDeterministicCategorization({
+          transaction: transactions[1]!,
+          ruleCandidates: [{
+            ruleId: 'rule-partial',
+            active: true,
+            approved: true,
+            confidence: 'deterministic',
+            projectId: null,
+            transactionTypeId: 'type-1',
+            categoryId: 'cat-1',
+            evidenceHash: 'rule-evidence-2',
+          }],
+        }),
+        decideDeterministicCategorization({
+          transaction: transactions[2]!,
+        }),
+      ],
+    });
+
+    expect(preview.categorization).toEqual({
+      finalizedCandidateCount: 1,
+      reviewSuggestedCount: 1,
+      conflictCount: 0,
+      unmatchedCount: 1,
+      createsTransactionBookings: false,
+      closesPeriod: false,
+    });
+    expect(preview.booking).toEqual({
+      createsTransactions: false,
+      createsTransactionBookings: false,
+      closesPeriod: false,
     });
   });
 

@@ -57,6 +57,7 @@ describe('monthly import preview route', () => {
         createsTransactionBookings: false,
         closesPeriod: false,
       },
+      categorization: null,
     };
 
     expect(buildMonthlyImportPreviewUploadResponse(preview)).toEqual({

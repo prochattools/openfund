@@ -936,9 +936,45 @@ Validation evidence:
 
 No production, Dokploy, MCP bridge, `10.0.2.4`, persistent owner-data import, production configuration, `.env`, `.graphifyignore`, `graphify-out/`, owner-source copy, raw row dump, generated output commit, period close, transaction booking, historical production import, or push occurred.
 
+## Phase 4 FLOW-002 deterministic categorization evidence
+
+Implementation summary:
+
+- Added `server/services/deterministicCategorizationService.ts` as a pure decision layer for deterministic categorization.
+- Added `tests/services/deterministicCategorizationService.test.ts`.
+- Extended `server/services/monthlyImportPreviewService.ts` with an optional categorization summary hook; preview remains side-effect free.
+- Extended monthly preview tests to cover deterministic categorization summary counts.
+- Finalization is allowed only for one approved complete deterministic rule, one complete exact historical replay, or both sources agreeing on the same complete `projectId`, `transactionTypeId`, and `categoryId`.
+- Multiple matching rules, multiple historical dimension triples, missing dimensions, non-exact confidence, inactive/unapproved rules, and rule/history conflicts do not finalize.
+- The deterministic result distinguishes `finalized`, `review_suggested`, `unmatched`, and `conflict`.
+- Evidence includes matched rule IDs, historical record IDs, evidence hashes, import fingerprint/replay key, and a reason, but no raw row dumps.
+- FLOW-002 does not create `TransactionBooking`, `PeriodClose`, report, dispatch, production import, or production configuration records.
+- Historical production import remains operator-gated through the Packet G dry-run/production-blocked boundary.
+
+Validation evidence:
+
+- Focused deterministic categorization tests passed: 11 tests.
+- Focused monthly import preview regression tests passed: 10 tests.
+- Focused categorization service regression tests passed: 15 tests.
+- Focused rule engine regression tests passed: 9 tests.
+- Focused review queue regression test passed: 1 test.
+- Focused review decision regression tests passed: 8 tests.
+- Full suite passed: 69 files, 306 tests.
+- Prisma validate and Prisma generate passed with the local localhost database URL convention.
+- Server TypeScript build passed.
+- Production build passed with 18 routes and retained the pre-existing Next/SWC lockfile warning.
+- Disposable DB-backed regression tests used local `localhost:5452`, created and dropped `historical_rehearsal_1783246779929_3688c713` and `owner_historical_rehearsal_1783246780262_88a6002b`; final cleanup found zero matching disposable databases remaining.
+- `git diff --check` passed.
+- Changed executable/test high-risk scan reported no unexpected findings; source row terms appear only in existing fingerprint construction, fixtures, and negative sanitization assertions.
+- Documentation secret-material scan reported no findings.
+- Changed-documentation runtime scan reported only expected no-production/no-push guardrail references.
+- No Prisma schema or migration was required.
+
+No production, Dokploy, MCP bridge, `10.0.2.4`, persistent owner-data import, production configuration, `.env`, `.graphifyignore`, `graphify-out/`, owner-source copy, raw row dump, generated output commit, period close, transaction booking, historical production import, or push occurred.
+
 ## Current next task
 
-Validate and review FLOW-001 monthly import preview foundation, then proceed to FLOW-002 deterministic categorization only after the preview controls pass. Do not execute a production historical import, modify production configuration, touch Graphify artifacts, or push.
+Validate and review FLOW-002 deterministic categorization decisions, then proceed to FLOW-003 evidence-rich Dutch review queue only after the deterministic decision boundary passes. Historical production import remains operator-gated and blocked. Do not execute a production historical import, modify production configuration, touch Graphify artifacts, or push.
 
 ## Next Phase 4 prompt
 
@@ -949,12 +985,13 @@ Continue in source yeshuaacademy-finance only.
 
 Current committed state:
 - Phase 3 Packet G guarded historical import dry-run is committed as 6610648.
-- Phase 4 FLOW-001 monthly import preview foundation is implemented with validation evidence recorded in the current run.
+- Phase 4 FLOW-001 monthly import preview foundation is committed as b7db856.
+- Phase 4 FLOW-002 deterministic categorization decisions are implemented locally and must be validated/reviewed before commit.
 - Historical production import remains operator-gated and blocked.
 - No production, Dokploy, MCP bridge, 10.0.2.4, .env, Graphify, owner-file copy, raw row dump, generated output, transaction booking, period close, or production import work has been touched.
 
 Task:
-Validate and review FLOW-001 monthly ING import preview foundation. If it passes and is committed, plan FLOW-002 deterministic categorization. Do not execute a production historical import.
+Validate and review FLOW-002 deterministic categorization decisions. If it passes and is committed, plan FLOW-003 evidence-rich Dutch review queue. Do not create TransactionBooking records from preview.
 
 Required context:
 1. Read the approved product/domain docs before coding:
@@ -964,22 +1001,30 @@ Required context:
    - docs/IMPLEMENTATION_PLAN.md
    - docs/finance-rebuild-run.md
    - docs/DOMAIN_MODEL.md, if present
-2. Inspect the monthly preview service, route wiring, and tests:
+2. Inspect the categorization and review services/tests:
+   - server/services/deterministicCategorizationService.ts
    - server/services/monthlyImportPreviewService.ts
-   - server/routes/upload.ts
-   - server/index.ts
-   - tests/services/monthlyImportPreviewService.test.ts
-   - tests/routes/monthlyImportPreview.test.ts
-   - lib/import/ingCsvParser.ts
+   - server/services/categorizationService.ts
+   - server/services/ruleEngine.ts
+   - server/services/reviewQueueService.ts
+   - server/services/reviewDecisionService.ts
    - server/services/transactionFingerprint.ts
-3. Confirm the preview returns sanitized controls only and creates no bookings/closes.
+   - server/routes/review.ts
+   - tests/services/categorizationService.test.ts
+   - tests/services/ruleEngine.test.ts
+   - tests/services/reviewQueueService.test.ts
+   - tests/services/reviewDecisionService.test.ts
+   - tests/routes/review.test.ts
+   - tests/services/deterministicCategorizationService.test.ts
+3. Confirm deterministic decisions return sanitized evidence only and create no bookings/closes.
 
 Phase 4 constraints:
 - Preserve literal Klant, Type, and Category exactly as supplied.
 - Use raw ING Date only for transaction dates.
 - Use Verduidelijking as interpretation evidence, not as rewritten historical truth.
-- Monthly preview must retain uploaded CSV bytes as the source hash basis.
-- Preview must not create TransactionBooking or PeriodClose records.
+- Finalization requires exactly one complete deterministic source: approved unique complete rule, complete exact historical replay, or both agreeing exactly.
+- Conflicts, ambiguous matches, incomplete dimensions, and non-exact confidence must not finalize.
+- FLOW-002 must not create TransactionBooking or PeriodClose records.
 - Production historical execution requires a separately approved operator procedure and remains blocked.
 - Use only localhost/127.0.0.1/::1 for disposable databases.
 - Do not use production, Dokploy, MCP bridge, 10.0.2.4, or exposed production credentials.
@@ -989,8 +1034,8 @@ Phase 4 constraints:
 - Stop before production deployment or any production data mutation.
 
 Expected output:
-- FLOW-001 validation results.
-- Confirmation that preview output remains sanitized.
+- FLOW-002 deterministic categorization validation results.
+- Confirmation that deterministic output remains sanitized.
 - Confirmation that no bookings, closes, or historical production import occurred.
-- Next gate for FLOW-002 deterministic categorization.
+- Next gate for FLOW-003 evidence-rich Dutch review queue.
 ```

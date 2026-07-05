@@ -54,7 +54,8 @@ Phase 3 Packet E retained source hash hardening: implemented; no real owner-file
 Phase 3 Packet F owner-approved local rehearsal: implemented and locally validated with owner files outside Git; no production import, production config, push, or Graphify changes
 Phase 3 Packet G guarded dry-run service: implemented; default dry-run only, production execution blocked, no production import, production config, push, or Graphify changes
 Phase 4 FLOW-001 monthly import preview foundation: implemented; retained-byte preview controls only, no bookings, period close, production import, production config, push, or Graphify changes
-Current gate: FLOW-002 deterministic categorization; historical production import remains operator-gated
+Phase 4 FLOW-002 deterministic categorization decisions: implemented; complete deterministic rule/replay decisions only, no bookings, period close, production import, production config, push, or Graphify changes
+Current gate: FLOW-003 evidence-rich Dutch review queue; historical production import remains operator-gated
 ```
 
 ## Phase 0 — Governance and discovery
@@ -820,7 +821,7 @@ Validation:
 
 ### FLOW-002 — Implement deterministic automatic categorization service
 
-Status: `CURRENT`
+Status: `IMPLEMENTED`
 
 Dependencies: FLOW-001 and MODEL-003
 
@@ -828,10 +829,22 @@ Acceptance:
 
 - Only approved unique rules and complete exact replays finalize categories.
 - Conflicting matches produce review suggestions.
+- Finalization requires a complete `projectId`, `transactionTypeId`, and `categoryId`.
+- A single approved complete deterministic rule can finalize a candidate.
+- A complete exact historical replay can finalize a candidate.
+- Rule and historical replay agreement can finalize a candidate.
+- Multiple rules, multiple historical dimension triples, missing dimensions, non-exact confidence, or rule/history disagreement do not finalize.
+- The service returns sanitized deterministic evidence and side-effect flags, but creates no `TransactionBooking`, `PeriodClose`, production import, or production configuration records.
+- Monthly preview can optionally summarize deterministic categorization counts without exposing per-row evidence or creating transactions/bookings/closes.
+
+Validation:
+
+- Focused deterministic categorization tests cover unique complete rules, inactive/unapproved rules, multiple rules, complete and partial historical replay, ambiguous historical replay, rule/history agreement, rule/history conflict, mixed complete/partial evidence, missing dimensions, sanitized evidence, and no booking/close side effects.
+- Full validation passed and is recorded in `docs/finance-rebuild-run.md`: focused deterministic categorization tests, monthly preview regression, categorization service, rule engine, review queue, review decision, full suite, Prisma validate/generate, server build, production build, diff check, executable/test high-risk scan, and documentation scans.
 
 ### FLOW-003 — Implement evidence-rich Dutch review queue
 
-Status: `TODO`
+Status: `CURRENT`
 
 Dependencies: FLOW-002
 
