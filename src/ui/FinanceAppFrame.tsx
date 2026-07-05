@@ -1,14 +1,13 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { FINANCE_NAV_ITEMS } from '@/helpers/navigation';
 
-const navItems = [
-  { label: 'Dashboard', href: '/' },
-  { label: 'Importeren', href: '/ledger#importeren' },
-  { label: 'Te beoordelen', href: '/review' },
-  { label: 'Transacties', href: '/ledger#transacties' },
-  { label: 'Rapporten', href: '/reports' },
-  { label: 'Instellingen', href: '/settings' },
-];
+// Use canonical Dutch nav items from navigation helper (UX-002).
+// Navigation is limited to the confirmed finance workflow only.
+const navItems = FINANCE_NAV_ITEMS.map((item) => ({
+  label: item.label === 'Beoordelen' ? 'Te beoordelen' : item.label,
+  href: item.href,
+}));
 
 export function FinanceAppFrame({
   children,
