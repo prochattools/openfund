@@ -174,6 +174,60 @@ describe('backup restore rehearsal — buildRestoreCommand', () => {
   });
 });
 
+// ─── Safe default (no arguments) ─────────────────────────────────────────────
+
+describe('backup restore rehearsal — safe default invocation', () => {
+  it('no-argument invocation exits non-zero without running DB commands', () => {
+    let exitCode = 0;
+    let stderr = '';
+    try {
+      execSync('node scripts/backup-restore-rehearsal.mjs', {
+        encoding: 'utf-8',
+        cwd: process.cwd(),
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+      exitCode = 0;
+    } catch (err: any) {
+      exitCode = err.status ?? 1;
+      stderr = err.stderr ?? '';
+    }
+    expect(exitCode).not.toBe(0);
+    // Must not have executed any live DB commands
+    expect(stderr).not.toContain('psql');
+    expect(stderr).not.toContain('pg_dump');
+    expect(stderr).not.toContain('pg_restore');
+  });
+
+  it('--help exits 0 and documents flags', () => {
+    const result = execSync(
+      'node scripts/backup-restore-rehearsal.mjs --help',
+      { encoding: 'utf-8', cwd: process.cwd() },
+    );
+    expect(result).toContain('--dry-run');
+    expect(result).toContain('--live-local');
+    expect(result).toContain('--confirm-disposable');
+    expect(result).toContain('--help');
+  });
+
+  it('--live-local without --confirm-disposable exits non-zero', () => {
+    let exitCode = 0;
+    let stderr = '';
+    try {
+      execSync('node scripts/backup-restore-rehearsal.mjs --live-local', {
+        encoding: 'utf-8',
+        cwd: process.cwd(),
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+      exitCode = 0;
+    } catch (err: any) {
+      exitCode = err.status ?? 1;
+      stderr = err.stderr ?? '';
+    }
+    expect(exitCode).not.toBe(0);
+    expect(stderr).toContain('--confirm-disposable');
+  });
+});
+
 // ─── Dry-run mode ─────────────────────────────────────────────────────────────
 
 describe('backup restore rehearsal — dry-run mode', () => {

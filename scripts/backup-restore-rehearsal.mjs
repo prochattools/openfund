@@ -8,8 +8,12 @@
  * - Never connects to a production database.
  * - Creates and drops only disposable databases named yaf_rehearsal_*.
  *
+ * SAFE DEFAULT: No arguments → prints help and exits 1. No DB commands run.
+ *
  * Usage:
- *   node scripts/backup-restore-rehearsal.mjs [--dry-run]
+ *   node scripts/backup-restore-rehearsal.mjs --help
+ *   node scripts/backup-restore-rehearsal.mjs --dry-run
+ *   node scripts/backup-restore-rehearsal.mjs --live-local --confirm-disposable
  */
 
 import { execSync } from 'child_process';
@@ -34,6 +38,36 @@ const BLOCKED_DB_PATTERNS = [
 ];
 
 const REHEARSAL_DB_PREFIX = 'yaf_rehearsal_';
+
+const HELP_TEXT = `
+Yeshua Academy Finance — Backup/Restore Rehearsal Script
+=========================================================
+
+VEILIG GEBRUIK / SAFE USAGE:
+
+  --help                          Toon dit helpscherm en sluit af (exit 0)
+  --dry-run                       Guard-check zonder databaseverbinding (exit 0)
+  --live-local --confirm-disposable  Live rehearsal op lokale wegwerpdatabases
+
+STANDAARD GEDRAG / DEFAULT BEHAVIOR:
+  Geen argumenten → dit helpscherm + exit 1 (VEILIG, geen DB-commando's uitgevoerd)
+
+VEREISTEN VOOR --live-local:
+  - Beide vlaggen --live-local EN --confirm-disposable zijn verplicht
+  - Host moet localhost, 127.0.0.1, of ::1 zijn
+  - Databases worden aangemaakt als yaf_rehearsal_* (wegwerp)
+  - Productiehosts (10.0.2.4, Dokploy, externe hosts) worden geblokkeerd
+  - Productieachtige databasenamen worden geblokkeerd
+
+VERBODEN / FORBIDDEN:
+  - 10.0.2.4, Dokploy, externe hosts
+  - Databases: finance, *prod*, *production*, *live* (zonder rehearsal-prefix)
+  - Productieconfiguratie aanraken
+  - .env lezen of wijzigen
+
+SAFE STARTING POINT:
+  node scripts/backup-restore-rehearsal.mjs --dry-run
+`.trim();
 
 /**
  * Parse a PostgreSQL connection URL and extract host and database name.
@@ -112,9 +146,15 @@ export function buildRestoreCommand({ host, port, username, targetDatabase, inpu
   ].join(' ');
 }
 
-// ─── Main rehearsal runner ────────────────────────────────────────────────────
+// ─── Mode detection ───────────────────────────────────────────────────────────
 
-const isDryRun = process.argv.includes('--dry-run');
+const args = process.argv.slice(2);
+const isHelp = args.includes('--help');
+const isDryRun = args.includes('--dry-run');
+const isLiveLocal = args.includes('--live-local');
+const isConfirmDisposable = args.includes('--confirm-disposable');
+
+// ─── Main rehearsal runner ────────────────────────────────────────────────────
 
 const BASE_URL = 'postgresql://finance_user:local_dev_placeholder@127.0.0.1:5432/postgres';
 const timestamp = Date.now().toString().slice(-10);
@@ -150,78 +190,159 @@ function psql(sql) {
 }
 
 async function main() {
-  log(`Mode: ${isDryRun ? 'dry-run' : 'live'}`);
-  log(`Host: 127.0.0.1:5432 (local-only)`);
+  if (isHelp) {
+    console.log(HELP_TEXT);
+    process.exit(0);
+  }
 
-  // Guard: confirm base URL is local
-  assertLocalDbUrl(BASE_URL);
-  assertLocalDbUrl(SOURCE_URL);
-  assertLocalDbUrl(TARGET_URL);
+  if (isDryRun) {
+    log('Mode: dry-run');
+    log('Host: 127.0.0.1:5432 (local-only)');
 
-  log('Guards passed: local-only host confirmed.');
+    // Guard: confirm base URL is local
+    assertLocalDbUrl(BASE_URL);
+    assertLocalDbUrl(SOURCE_URL);
+    assertLocalDbUrl(TARGET_URL);
 
-  try {
-    // Step 1: Create disposable databases
+    log('Guards passed: local-only host confirmed.');
+
+    // Simulate dry-run steps without executing any DB commands
     log(`Creating source database: ${SOURCE_DB}`);
     psql(`CREATE DATABASE ${SOURCE_DB};`);
 
     log(`Creating target database: ${TARGET_DB}`);
     psql(`CREATE DATABASE ${TARGET_DB};`);
 
-    // Step 2: Apply migrations to source
     log('Applying migrations to source database...');
     run('npx prisma migrate deploy', { DATABASE_URL: SOURCE_URL });
 
-    // Step 3: Dump source
     log(`Dumping source database to ${DUMP_FILE}...`);
-    const parsed = parseDbUrl(SOURCE_URL);
+    const parsedDry = parseDbUrl(SOURCE_URL);
     const dumpCmd = buildDumpCommand({
-      host: parsed.host,
-      port: parsed.port,
+      host: parsedDry.host,
+      port: parsedDry.port,
       username: 'finance_user',
       database: SOURCE_DB,
       outputFile: DUMP_FILE,
     });
     run(`PGPASSWORD=local_dev_placeholder ${dumpCmd}`);
 
-    if (!isDryRun) {
-      const stat = statSync(DUMP_FILE);
-      log(`Dump file size: ${stat.size} bytes`);
-      if (stat.size === 0) throw new Error('Dump file is empty — rehearsal aborted.');
-    }
-
-    // Step 4: Restore into target
     log(`Restoring dump into target database: ${TARGET_DB}...`);
     const restoreCmd = buildRestoreCommand({
-      host: parsed.host,
-      port: parsed.port,
+      host: parsedDry.host,
+      port: parsedDry.port,
       username: 'finance_user',
       targetDatabase: TARGET_DB,
       inputFile: DUMP_FILE,
     });
     run(`PGPASSWORD=local_dev_placeholder ${restoreCmd}`);
 
-    // Step 5: Validate restored database
     log('Validating restored database schema...');
     run('npx prisma validate', { DATABASE_URL: TARGET_URL });
     run('npx prisma migrate status', { DATABASE_URL: TARGET_URL });
 
-    log('Rehearsal validation passed.');
-  } finally {
-    // Step 6: Cleanup — always runs, even on error
-    log(`Dropping source database: ${SOURCE_DB}`);
-    try { psql(`DROP DATABASE IF EXISTS ${SOURCE_DB};`); } catch { /* ignore */ }
-
-    log(`Dropping target database: ${TARGET_DB}`);
-    try { psql(`DROP DATABASE IF EXISTS ${TARGET_DB};`); } catch { /* ignore */ }
-
-    if (!isDryRun && existsSync(DUMP_FILE)) {
-      unlinkSync(DUMP_FILE);
-      log(`Removed dump file: ${DUMP_FILE}`);
-    }
+    log('Dropping source database: ' + SOURCE_DB);
+    psql(`DROP DATABASE IF EXISTS ${SOURCE_DB};`);
+    log('Dropping target database: ' + TARGET_DB);
+    psql(`DROP DATABASE IF EXISTS ${TARGET_DB};`);
 
     log('Cleanup complete. No disposable databases remain.');
+    log('Dry-run complete. No database was connected or modified.');
+    return;
   }
+
+  if (isLiveLocal && isConfirmDisposable) {
+    log('Mode: live-local (--live-local --confirm-disposable)');
+    log('Host: 127.0.0.1:5432 (local-only)');
+
+    // Guard: confirm base URL is local
+    assertLocalDbUrl(BASE_URL);
+    assertLocalDbUrl(SOURCE_URL);
+    assertLocalDbUrl(TARGET_URL);
+
+    log('Guards passed: local-only host confirmed.');
+
+    try {
+      // Step 1: Create disposable databases
+      log(`Creating source database: ${SOURCE_DB}`);
+      psql(`CREATE DATABASE ${SOURCE_DB};`);
+
+      log(`Creating target database: ${TARGET_DB}`);
+      psql(`CREATE DATABASE ${TARGET_DB};`);
+
+      // Step 2: Apply migrations to source
+      log('Applying migrations to source database...');
+      run('npx prisma migrate deploy', { DATABASE_URL: SOURCE_URL });
+
+      // Step 3: Dump source
+      log(`Dumping source database to ${DUMP_FILE}...`);
+      const parsed = parseDbUrl(SOURCE_URL);
+      const dumpCmd = buildDumpCommand({
+        host: parsed.host,
+        port: parsed.port,
+        username: 'finance_user',
+        database: SOURCE_DB,
+        outputFile: DUMP_FILE,
+      });
+      run(`PGPASSWORD=local_dev_placeholder ${dumpCmd}`);
+
+      const stat = statSync(DUMP_FILE);
+      log(`Dump file size: ${stat.size} bytes`);
+      if (stat.size === 0) throw new Error('Dump file is empty — rehearsal aborted.');
+
+      // Step 4: Restore into target
+      log(`Restoring dump into target database: ${TARGET_DB}...`);
+      const restoreCmd = buildRestoreCommand({
+        host: parsed.host,
+        port: parsed.port,
+        username: 'finance_user',
+        targetDatabase: TARGET_DB,
+        inputFile: DUMP_FILE,
+      });
+      run(`PGPASSWORD=local_dev_placeholder ${restoreCmd}`);
+
+      // Step 5: Validate restored database
+      log('Validating restored database schema...');
+      run('npx prisma validate', { DATABASE_URL: TARGET_URL });
+      run('npx prisma migrate status', { DATABASE_URL: TARGET_URL });
+
+      log('Rehearsal validation passed.');
+    } finally {
+      // Step 6: Cleanup — always runs, even on error
+      log(`Dropping source database: ${SOURCE_DB}`);
+      try { psql(`DROP DATABASE IF EXISTS ${SOURCE_DB};`); } catch { /* ignore */ }
+
+      log(`Dropping target database: ${TARGET_DB}`);
+      try { psql(`DROP DATABASE IF EXISTS ${TARGET_DB};`); } catch { /* ignore */ }
+
+      if (existsSync(DUMP_FILE)) {
+        unlinkSync(DUMP_FILE);
+        log(`Removed dump file: ${DUMP_FILE}`);
+      }
+
+      log('Cleanup complete. No disposable databases remain.');
+    }
+    return;
+  }
+
+  // No valid mode — print help and exit 1 (safe default)
+  if (isLiveLocal && !isConfirmDisposable) {
+    console.error('[rehearsal] FOUT: --live-local vereist ook --confirm-disposable');
+    console.error('[rehearsal] ERROR: --live-local requires --confirm-disposable');
+    console.error('[rehearsal] Gebruik: node scripts/backup-restore-rehearsal.mjs --live-local --confirm-disposable');
+    console.error('');
+    console.error(HELP_TEXT);
+    process.exit(1);
+  }
+
+  // Default: no arguments or unrecognized arguments
+  console.error('[rehearsal] Geen geldig uitvoermodus opgegeven.');
+  console.error('[rehearsal] No valid execution mode specified.');
+  console.error('[rehearsal] Gebruik --dry-run voor een veilige guard-check zonder database.');
+  console.error('[rehearsal] Use --dry-run for a safe guard-check without a database.');
+  console.error('');
+  console.error(HELP_TEXT);
+  process.exit(1);
 }
 
 // Only run main() when executed directly (not when imported by tests)
