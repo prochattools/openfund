@@ -1,0 +1,272 @@
+# Yeshua Academy Finance — Eigenaarsbeslissingsoverzicht
+
+Status: Release Candidate 1 — lokaal gevalideerd  
+Datum: 2026-07-05  
+Taal: Nederlands  
+Afhankelijkheden: `docs/PRODUCTION_CUTOVER_PLAN_NL.md`, `docs/BACKUP_RESTORE_REHEARSAL_NL.md`, `docs/ADMIN_OPERATING_GUIDE_NL.md`
+
+---
+
+Dit document bevat de beslissingen die de eigenaar moet nemen voordat de applicatie in productie kan worden gebruikt. Elke beslissing is onafhankelijk — u kunt ze in willekeurige volgorde behandelen.
+
+**Beveiligingsregel:** Voeg geen geheimen, hostnamen, wachtwoorden of productieconfiguratie toe aan dit document of aan Git.
+
+---
+
+## Beslissing 1 — Echte PDF-renderer
+
+### Wat dit mogelijk maakt
+
+Een echte PDF-versie van maandelijkse en jaarlijkse rapporten, naast de al werkende HTML- en XLSX-versies. Momenteel wordt een placeholder gegenereerd (`PDF_BLOCKER` actief).
+
+### Wat geblokkeerd blijft zonder goedkeuring
+
+Rapporten kunnen niet als PDF worden gedownload of verzonden. HTML en XLSX werken volledig.
+
+### Veiligheidschecks vóór uitvoering
+
+- [ ] Controleer of de gekozen bibliotheek (bijv. `puppeteer`, `pdfmake`, `@react-pdf/renderer`) in de afhankelijkheden van dit project past (licentietype, grootte, serverbelasting).
+- [ ] Voer `npm audit` uit na installatie.
+- [ ] Verifieer dat de server TypeScript-build slaagt na toevoeging.
+- [ ] Verifieer dat bestaande tests slagen.
+
+### Terugrolregel
+
+Als de build of tests mislukken na installatie van de PDF-bibliotheek: `git revert` de afhankelijkheidswijziging en verwijder de bibliotheek.
+
+### Beslissing
+
+- [ ] **Goedgekeurd** — installeer `____________` (naam bibliotheek invullen)
+- [ ] **Uitgesteld** — HTML en XLSX zijn voldoende voor nu
+
+### Volgende prompt na goedkeuring
+
+```
+Installeer [naam bibliotheek] als PDF-renderer voor reportArtifactService.ts.
+Vervang generatePdfPlaceholder door een echte renderer.
+Verifieer: npm test, npm run build:server, npm run build, git diff --check.
+```
+
+---
+
+## Beslissing 2 — Productiemigratie en overstap
+
+### Wat dit mogelijk maakt
+
+De applicatie draait op de productieserver met de volledige migratiescyclus toegepast op de productiedatabase. Zie `docs/PRODUCTION_CUTOVER_PLAN_NL.md` voor het volledige stappenplan.
+
+### Wat geblokkeerd blijft zonder goedkeuring
+
+De applicatie blijft lokaal; geen productiegebruikers kunnen inloggen of gegevens invoeren.
+
+### Veiligheidschecks vóór uitvoering
+
+- [ ] Back-up van de productiedatabase gemaakt (zie §2 van het cutoverplan).
+- [ ] Geheimen geroteerd (database-URL, Clerk-sleutels, Resend-API-sleutel).
+- [ ] PostgreSQL-versie op productieserver bevestigd (zie Beslissing 5).
+- [ ] `prisma migrate status` op de productiedatabase toont geen conflicten.
+- [ ] Dry-run migratie geslaagd (zie §5 van het cutoverplan).
+- [ ] Live backup/restore rehearsal geslaagd (zie Beslissing 6).
+
+### Terugrolregel
+
+Als de migratie mislukt: herstel de productiedatabase vanuit de back-up. Zie §10 van `docs/PRODUCTION_CUTOVER_PLAN_NL.md`. Leg de reden vast in `docs/finance-rebuild-run.md`.
+
+### Beslissing
+
+- [ ] **Goedgekeurd** — ga verder met `docs/PRODUCTION_CUTOVER_PLAN_NL.md`
+- [ ] **Uitgesteld** — applicatie blijft lokaal
+
+### Volgende prompt na goedkeuring
+
+```
+Voer de productieoverstap uit zoals beschreven in docs/PRODUCTION_CUTOVER_PLAN_NL.md.
+Bevestig: geen force-push, geen .env-wijzigingen in Git, geen owner-bestanden in Git.
+```
+
+---
+
+## Beslissing 3 — Historische productie-import (2024/2025/2026)
+
+### Wat dit mogelijk maakt
+
+Het laden van de werkelijke historische transacties uit de bestanden `YA financieel jaar 2024.xlsx`, `YA financieel jaar 2025 v2.xlsx`, en de 2026 ING CSV/PDF in de productiedatabase. Dit is de basis voor reconciliatie en rapportage van historische periodes.
+
+### Wat geblokkeerd blijft zonder goedkeuring
+
+De applicatie bevat geen historische boekingen. Maandelijkse import van nieuwe transacties werkt wel, maar zonder historisch saldo-verloop.
+
+### Veiligheidschecks vóór uitvoering
+
+- [ ] Productiemigratie is voltooid (Beslissing 2 goedgekeurd).
+- [ ] Dry-run van de historische import geslaagd (verwachte aantallen: 268 rijen 2024, 413 rijen 2025, 221 rijen 2026).
+- [ ] Slotcontroles kloppen: 2024 sluit op EUR 12.184,15; 2025 op EUR 10.350,86; 2026-YTD op EUR 7.837,25.
+- [ ] Operator bevestigt exact bericht: "Dry-run geslaagd, geen productiewijzigingen."
+- [ ] Bevestig dat originele bronbestanden buiten Git blijven.
+
+### Terugrolregel
+
+Als de import onjuiste aantallen of saldobedragen oplevert: herstel de database vanuit back-up. Herhaal dry-run om de oorzaak te analyseren.
+
+### Beslissing
+
+- [ ] **Goedgekeurd** — voer import uit na dry-run-acceptatie
+- [ ] **Uitgesteld** — start met nieuwe maandelijkse transacties zonder historisch saldo
+
+### Volgende prompt na goedkeuring
+
+```
+Voer de historische import uit voor 2024, 2025, en 2026 YTD via de
+owner-approved rehearsal adapter. Bevestig: aantallen en slotcontroles
+kloppen, geen ruw-data commit, geen push voor eigenaargoedkeuring.
+```
+
+---
+
+## Beslissing 4 — Echte e-mailverzending (Resend-provider)
+
+### Wat dit mogelijk maakt
+
+Het daadwerkelijk verzenden van maandelijkse en jaarlijkse rapporten per e-mail via de Resend API. Momenteel wordt alleen metadata opgeslagen (status PENDING); er wordt geen e-mail verzonden.
+
+### Wat geblokkeerd blijft zonder goedkeuring
+
+Rapporten kunnen worden goedgekeurd en dispatch-metadata kan worden aangemaakt, maar ontvangers ontvangen geen e-mail.
+
+### Veiligheidschecks vóór uitvoering
+
+- [ ] Een Resend-account is aangemaakt en het domein is geverifieerd.
+- [ ] `RESEND_API_KEY` is ingesteld in de productie-omgevingsvariabelen (niet in Git).
+- [ ] Testmail verzonden naar intern adres en ontvangen.
+- [ ] Controleer dat de API-sleutel niet in broncode of logbestanden terechtkomt.
+
+### Terugrolregel
+
+Als e-mailverzending mislukt of ongewenste ontvangers bereikt: deactiveer de API-sleutel onmiddellijk in het Resend-dashboard.
+
+### Beslissing
+
+- [ ] **Goedgekeurd** — configureer `RESEND_API_KEY` en activeer verzending
+- [ ] **Uitgesteld** — metadata-opslag is voldoende voor nu
+
+### Volgende prompt na goedkeuring
+
+```
+Activeer echte e-mailverzending via Resend. RESEND_API_KEY is geconfigureerd
+in productie-omgevingsvariabelen. Update de dispatch-service om de API aan
+te roepen. Verifieer: geen sleutel in Git, testmail ontvangen, tests slagen.
+```
+
+---
+
+## Beslissing 5 — PostgreSQL-productieversie bevestigen
+
+### Wat dit mogelijk maakt
+
+Zekerheid dat de productiedatabase compatibel is met Prisma 6.x en de actieve migratieketen.
+
+### Wat geblokkeerd blijft zonder bevestiging
+
+Productieoverstap kan niet veilig worden uitgevoerd totdat de versie is geverifieerd.
+
+### Veiligheidschecks vóór uitvoering
+
+- [ ] Log in op de hostingprovider en controleer de PostgreSQL-versie.
+- [ ] Verifieer dat `docs/INFRASTRUCTURE_READINESS.md` §PostgreSQL-versie overeenstemt met de productieversie.
+- [ ] Controleer de Prisma 6.x compatibiliteitsmatrix voor de gevonden versie.
+
+### Beslissing
+
+- [ ] **Bevestigd** — productieversie is PostgreSQL `_____` (versienummer invullen)
+- [ ] **Nog te controleren**
+
+### Volgende prompt na bevestiging
+
+```
+Bevestig in docs/INFRASTRUCTURE_READINESS.md dat productie PostgreSQL versie
+[versienummer] draait en compatibel is met Prisma 6.x.
+```
+
+---
+
+## Beslissing 6 — Live lokale backup/restore rehearsal
+
+### Wat dit mogelijk maakt
+
+Zekerheid dat de backup- en herstelprocedure werkt voordat productiedata afhankelijk worden van de applicatie.
+
+### Wat geblokkeerd blijft zonder bevestiging
+
+Er is geen bewijs dat een productiedatabaseback-up daadwerkelijk herstelbaar is.
+
+### Veiligheidschecks vóór uitvoering
+
+- [ ] Lokale PostgreSQL-tools (`pg_dump`, `pg_restore`, `psql`) zijn geïnstalleerd.
+- [ ] Een lokale PostgreSQL-instantie draait op `127.0.0.1` of `localhost`.
+- [ ] Controleer dat `DATABASE_URL` in de lokale omgeving naar `localhost` wijst (niet naar productie).
+- [ ] Lees `docs/BACKUP_RESTORE_REHEARSAL_NL.md` vóór uitvoering.
+
+### Terugrolregel
+
+Als de rehearsal mislukt: herstel de disposable databases handmatig (`DROP DATABASE yaf_rehearsal_*`) en analyseer de foutmelding. Productie wordt nooit aangeraakt door dit script.
+
+### Beslissing
+
+- [ ] **Geslaagd** — live rehearsal succesvol uitgevoerd op `_______` (datum)
+- [ ] **Nog niet uitgevoerd**
+
+### Volgende prompt na bevestiging
+
+```
+Voer de live backup/restore rehearsal uit:
+node scripts/backup-restore-rehearsal.mjs
+Bevestig: dump-bestandsgrootte > 0, herstel geslaagd, prisma validate geslaagd,
+disposable databases verwijderd.
+```
+
+---
+
+## Beslissing 7 — Geen push vóór finale eigenaargoedkeuring
+
+### Toestand
+
+Alle commits staan lokaal op branch `main`. Er is niets gepusht naar de remote.
+
+### Vereiste bevestiging
+
+- [ ] **Bevestigd** — de eigenaar is op de hoogte dat er niet gepusht wordt totdat alle vereiste beslissingen zijn genomen en de eigenaar expliciet goedkeuring geeft voor de push.
+
+---
+
+## Beslissing 8 — Geheimen geroteerd vóór productie
+
+### Toestand
+
+Lokale placeholder-credentials zijn in gebruik (`local_dev_placeholder`). Productiecredentials mogen nooit dezelfde zijn als de lokale placeholders.
+
+### Vereiste acties vóór productie
+
+- [ ] Genereer een nieuw sterk wachtwoord voor `finance_user` op de productiedatabase.
+- [ ] Vernieuwd Clerk publishable key en secret key voor de productieomgeving.
+- [ ] Vernieuw of stel `RESEND_API_KEY` in als e-mailverzending goedgekeurd is.
+- [ ] Sla alle geheimen op in de secrets manager van de hostingprovider (Dokploy / omgevingsvariabelen) — nooit in `.env` in Git.
+
+### Beslissing
+
+- [ ] **Bevestigd** — alle productiegeheimen zijn geroteerd en opgeslagen buiten Git
+- [ ] **Nog te doen**
+
+---
+
+## Overzichtstabel
+
+| # | Beslissing | Status |
+|---|-----------|--------|
+| 1 | PDF-renderer afhankelijkheid | ☐ Goedgekeurd / ☐ Uitgesteld |
+| 2 | Productiemigratie en overstap | ☐ Goedgekeurd / ☐ Uitgesteld |
+| 3 | Historische productie-import | ☐ Goedgekeurd / ☐ Uitgesteld |
+| 4 | Echte e-mailverzending | ☐ Goedgekeurd / ☐ Uitgesteld |
+| 5 | PostgreSQL-productieversie bevestigd | ☐ Bevestigd / ☐ Nog te doen |
+| 6 | Live backup/restore rehearsal | ☐ Geslaagd / ☐ Nog te doen |
+| 7 | Geen push vóór goedkeuring | ☐ Bevestigd |
+| 8 | Geheimen geroteerd | ☐ Bevestigd / ☐ Nog te doen |
