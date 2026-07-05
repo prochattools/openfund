@@ -1,4 +1,5 @@
 import type { LedgerTransaction } from './api-transaction-mapper';
+import type { EvidenceRichReviewItem, ReviewEvidenceStatus } from '@/libs/api';
 
 export type ReviewCategory = {
   id: string;
@@ -79,6 +80,34 @@ export const translateSuggestionConfidence = (
     default:
       return 'geen volledige historische match';
   }
+};
+
+export const translateReviewEvidenceStatus = (status: ReviewEvidenceStatus): string => {
+  switch (status) {
+    case 'finalized':
+      return 'veilige deterministische kandidaat';
+    case 'conflict':
+      return 'conflict, handmatig beoordelen';
+    case 'review_suggested':
+      return 'suggestie, handmatig beoordelen';
+    case 'unmatched':
+    default:
+      return 'geen match, handmatig classificeren';
+  }
+};
+
+export const getReviewEvidenceSummary = (item: Pick<EvidenceRichReviewItem, 'deterministicStatus' | 'alternatives' | 'evidence'>): string => {
+  const parts = [translateReviewEvidenceStatus(item.deterministicStatus)];
+  if (item.evidence.matchedRuleIds.length) {
+    parts.push(`${item.evidence.matchedRuleIds.length} regel${item.evidence.matchedRuleIds.length === 1 ? '' : 's'}`);
+  }
+  if (item.evidence.historicalRecordIds.length || item.evidence.evidenceHashes.length) {
+    parts.push('historisch bewijs');
+  }
+  if (item.alternatives.length) {
+    parts.push(item.alternatives.length === 1 ? '1 alternatief' : `${item.alternatives.length} alternatieven`);
+  }
+  return parts.join(' · ');
 };
 
 export const resolveDefaultReviewSelection = (

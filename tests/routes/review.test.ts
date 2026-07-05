@@ -1,6 +1,18 @@
-import { describe, expect, it } from 'vitest';
-import { updateTransactionCategory } from '../../server/routes/review';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { getReviewTransactions, updateTransactionCategory } from '../../server/routes/review';
 import { INCOMPLETE_DIMENSIONS_MESSAGE } from '../../server/services/reviewDecisionService';
+
+const serviceMocks = vi.hoisted(() => ({
+  getEvidenceRichReviewQueue: vi.fn(),
+}));
+
+vi.mock('../../server/services/reviewQueueService', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../server/services/reviewQueueService')>();
+  return {
+    ...actual,
+    getEvidenceRichReviewQueue: serviceMocks.getEvidenceRichReviewQueue,
+  };
+});
 
 const makeResponse = () => {
   const response = {
@@ -40,6 +52,58 @@ const makeRequest = ({
 });
 
 describe('review routes', () => {
+  beforeEach(() => {
+    serviceMocks.getEvidenceRichReviewQueue.mockReset();
+  });
+
+  it('review route returns Dutch evidence-rich items for admins without approving anything', async () => {
+    serviceMocks.getEvidenceRichReviewQueue.mockResolvedValueOnce({
+      transactions: [{
+        transactionId: 'tx-1',
+        deterministicStatus: 'conflict',
+        statusLabel: 'Conflict, handmatig beoordelen',
+        alternatives: [{ suggestionId: 'suggestion-1' }],
+        sideEffects: {
+          createsTransactionBooking: false,
+          closesPeriod: false,
+        },
+      }],
+      categories: [],
+      projects: [],
+      transactionTypes: [],
+      message: 'Beoordelingsrij geladen. Er zijn geen boekingen of periodeafsluitingen gemaakt.',
+    });
+    const response = makeResponse();
+
+    await getReviewTransactions(makeRequest({}) as any, response as any);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toMatchObject({
+      message: 'Beoordelingsrij geladen. Er zijn geen boekingen of periodeafsluitingen gemaakt.',
+      transactions: [
+        {
+          transactionId: 'tx-1',
+          deterministicStatus: 'conflict',
+          sideEffects: {
+            createsTransactionBooking: false,
+            closesPeriod: false,
+          },
+        },
+      ],
+    });
+    expect(serviceMocks.getEvidenceRichReviewQueue).toHaveBeenCalledWith(expect.anything(), 'user-1');
+  });
+
+  it('review route remains admin-only', async () => {
+    const response = makeResponse();
+
+    await getReviewTransactions(makeRequest({ role: 'viewer' }) as any, response as any);
+
+    expect(response.statusCode).toBe(403);
+    expect(response.body).toEqual({ error: 'Alleen beheerders mogen deze actie uitvoeren.' });
+    expect(serviceMocks.getEvidenceRichReviewQueue).not.toHaveBeenCalled();
+  });
+
   it('rejects category-only updates before touching persistence', async () => {
     const response = makeResponse();
 

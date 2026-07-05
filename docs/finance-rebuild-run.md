@@ -974,7 +974,42 @@ No production, Dokploy, MCP bridge, `10.0.2.4`, persistent owner-data import, pr
 
 ## Current next task
 
-Validate and review FLOW-002 deterministic categorization decisions, then proceed to FLOW-003 evidence-rich Dutch review queue only after the deterministic decision boundary passes. Historical production import remains operator-gated and blocked. Do not execute a production historical import, modify production configuration, touch Graphify artifacts, or push.
+FLOW-003 evidence-rich Dutch review queue is implemented and validated locally. After commit, proceed to FLOW-004 explicit rule creation from approved decisions. Historical production import remains operator-gated and blocked. Do not execute a production historical import, modify production configuration, touch Graphify artifacts, or push.
+
+## Phase 4 FLOW-003 evidence-rich Dutch review queue evidence
+
+Implementation summary:
+
+- Extended `server/services/reviewQueueService.ts` with a read-only evidence-rich Dutch review queue builder.
+- `GET /api/review` now requires an administrator and delegates queue shaping to the review queue service.
+- Review items include transaction id/import fingerprint, raw ING display date, counterparty/IBAN where available, amount, direction, description/payment purpose, proposed `Klant`, `Type`, `Category`, deterministic status, Dutch reason text, rule ids, historical evidence, evidence hashes, and alternatives.
+- The queue distinguishes finalized deterministic candidates, review suggestions, conflicts, unmatched items, and incomplete dimension candidates.
+- Added bounded API/helper types and Dutch helper labels for evidence-rich review statuses.
+- Bulk acceptance remains disabled through `reviewDecisionService`.
+- Queue reads do not create `TransactionBooking`, `PeriodClose`, report, dispatch, production import, or production configuration records.
+- Explicit administrator approval with complete `projectId`, `transactionTypeId`, and `categoryId` remains required before a booking can be created.
+- Historical production import remains operator-gated through the Packet G dry-run/production-blocked boundary.
+
+Validation evidence:
+
+- Focused review queue tests passed: 3 tests.
+- Focused review decision tests passed: 8 tests.
+- Focused review route tests passed: 7 tests.
+- Focused review page helper tests passed: 9 tests.
+- Focused deterministic categorization tests passed: 11 tests.
+- Focused monthly import preview regression tests passed: 10 tests.
+- Full suite passed: 69 files, 311 tests.
+- Prisma validate and Prisma generate passed with the local localhost database URL convention.
+- Server TypeScript build passed.
+- Production build passed with 18 routes and retained the pre-existing Next/SWC lockfile warning.
+- Disposable DB-backed regression tests used local `localhost:5452`, created and dropped `historical_rehearsal_1783249009004_31539786` and `owner_historical_rehearsal_1783249009298_dc69e7e8`; final cleanup found zero matching disposable databases remaining.
+- `git diff --check` passed.
+- Changed executable/test high-risk scan reported no unexpected findings; matches were expected read-only evidence fields, negative sanitization assertions, and explicit no-booking flags.
+- Documentation secret-material scan reported no findings.
+- Changed-documentation runtime scan reported only expected no-production/no-push guardrail references.
+- No Prisma schema or migration was required.
+
+No production, Dokploy, MCP bridge, `10.0.2.4`, persistent owner-data import, production configuration, `.env`, `.graphifyignore`, `graphify-out/`, owner-source copy, raw row dump, generated output commit, period close, transaction booking, historical production import, or push occurred.
 
 ## Next Phase 4 prompt
 
@@ -986,12 +1021,13 @@ Continue in source yeshuaacademy-finance only.
 Current committed state:
 - Phase 3 Packet G guarded historical import dry-run is committed as 6610648.
 - Phase 4 FLOW-001 monthly import preview foundation is committed as b7db856.
-- Phase 4 FLOW-002 deterministic categorization decisions are implemented locally and must be validated/reviewed before commit.
+- Phase 4 FLOW-002 deterministic categorization decisions are committed as 5532582.
+- Phase 4 FLOW-003 evidence-rich Dutch review queue is implemented and validated locally.
 - Historical production import remains operator-gated and blocked.
 - No production, Dokploy, MCP bridge, 10.0.2.4, .env, Graphify, owner-file copy, raw row dump, generated output, transaction booking, period close, or production import work has been touched.
 
 Task:
-Validate and review FLOW-002 deterministic categorization decisions. If it passes and is committed, plan FLOW-003 evidence-rich Dutch review queue. Do not create TransactionBooking records from preview.
+If FLOW-003 is committed, implement FLOW-004 explicit rule creation from approved decisions. Do not create TransactionBooking records from queue display or suggestions.
 
 Required context:
 1. Read the approved product/domain docs before coding:
@@ -1010,13 +1046,16 @@ Required context:
    - server/services/reviewDecisionService.ts
    - server/services/transactionFingerprint.ts
    - server/routes/review.ts
+   - src/libs/api.ts
+   - src/helpers/review-page.ts
    - tests/services/categorizationService.test.ts
    - tests/services/ruleEngine.test.ts
    - tests/services/reviewQueueService.test.ts
    - tests/services/reviewDecisionService.test.ts
    - tests/routes/review.test.ts
+   - tests/helpers/reviewPage.test.ts
    - tests/services/deterministicCategorizationService.test.ts
-3. Confirm deterministic decisions return sanitized evidence only and create no bookings/closes.
+3. Confirm review queue output returns sanitized evidence only and creates no bookings/closes.
 
 Phase 4 constraints:
 - Preserve literal Klant, Type, and Category exactly as supplied.
@@ -1024,7 +1063,9 @@ Phase 4 constraints:
 - Use Verduidelijking as interpretation evidence, not as rewritten historical truth.
 - Finalization requires exactly one complete deterministic source: approved unique complete rule, complete exact historical replay, or both agreeing exactly.
 - Conflicts, ambiguous matches, incomplete dimensions, and non-exact confidence must not finalize.
-- FLOW-002 must not create TransactionBooking or PeriodClose records.
+- FLOW-003 must not create TransactionBooking or PeriodClose records.
+- Queue display must require administrator access and remain read-only.
+- Bulk acceptance must remain disabled.
 - Production historical execution requires a separately approved operator procedure and remains blocked.
 - Use only localhost/127.0.0.1/::1 for disposable databases.
 - Do not use production, Dokploy, MCP bridge, 10.0.2.4, or exposed production credentials.
@@ -1034,8 +1075,8 @@ Phase 4 constraints:
 - Stop before production deployment or any production data mutation.
 
 Expected output:
-- FLOW-002 deterministic categorization validation results.
-- Confirmation that deterministic output remains sanitized.
+- FLOW-003 evidence-rich Dutch review queue validation results.
+- Confirmation that review queue output remains sanitized.
 - Confirmation that no bookings, closes, or historical production import occurred.
-- Next gate for FLOW-003 evidence-rich Dutch review queue.
+- Next gate for FLOW-004 explicit rule creation from approved decisions.
 ```

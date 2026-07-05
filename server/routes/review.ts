@@ -1,13 +1,16 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prismaClient';
-import { clearReviewQueue as clearReviewQueueForUser } from '../services/reviewQueueService';
+import {
+  clearReviewQueue as clearReviewQueueForUser,
+  getEvidenceRichReviewQueue,
+} from '../services/reviewQueueService';
 import {
   assignManualBooking,
   INCOMPLETE_DIMENSIONS_MESSAGE,
   isCompleteReviewAssignmentPayload,
   ReviewDecisionError,
 } from '../services/reviewDecisionService';
-import { getRequestActor, requireAdmin } from '../auth/requestContext';
+import { requireAdmin } from '../auth/requestContext';
 import { readRouteParam } from './routeParams';
 
 const sendReviewDecisionError = (res: Response, error: unknown, fallback: string) => {
@@ -19,71 +22,13 @@ const sendReviewDecisionError = (res: Response, error: unknown, fallback: string
 };
 
 export const getReviewTransactions = async (req: Request, res: Response) => {
-  const { userId } = getRequestActor(req);
+  const actor = requireAdmin(req, res);
+  if (!actor) {
+    return;
+  }
 
   try {
-    const [transactions, categories, projects, transactionTypes] = await Promise.all([
-      prisma.transaction.findMany({
-        where: {
-          userId,
-          OR: [
-            { transactionBooking: null },
-            { categoryId: null },
-            { classificationSource: 'none' },
-            { classificationSource: 'import' },
-          ],
-        },
-        include: {
-          account: true,
-          transactionBooking: true,
-          categorizationSuggestions: {
-            where: {
-              status: 'PENDING',
-            },
-            orderBy: {
-              rank: 'asc',
-            },
-          },
-        },
-        orderBy: {
-          date: 'desc',
-        },
-      }),
-      prisma.category.findMany({
-        orderBy: {
-          name: 'asc',
-        },
-      }),
-      prisma.project.findMany({
-        where: { isActive: true },
-        orderBy: { name: 'asc' },
-      }),
-      prisma.transactionType.findMany({
-        where: { isActive: true },
-        orderBy: [{ sortOrder: 'asc' }, { literalName: 'asc' }],
-      }),
-    ]);
-
-    return res.json({
-      transactions: transactions.map((tx) => ({
-        id: tx.id,
-        date: tx.date,
-        description: tx.description,
-        amount: Number(tx.amountMinor) / 100,
-        amountMinor: tx.amountMinor.toString(),
-        currency: tx.currency,
-        source: tx.source,
-        counterparty: tx.counterparty,
-        accountIdentifier: tx.account?.identifier ?? null,
-        accountName: tx.account?.name ?? null,
-        createdAt: tx.createdAt,
-        booking: tx.transactionBooking,
-        suggestions: tx.categorizationSuggestions,
-      })),
-      categories,
-      projects,
-      transactionTypes,
-    });
+    return res.json(await getEvidenceRichReviewQueue(prisma, actor.userId));
   } catch (error) {
     console.error('Beoordelingsrij kon niet worden geladen', error);
     return res.status(500).json({ error: 'De beoordelingsrij kon niet worden geladen.' });

@@ -20,6 +20,79 @@ export type ClientRole = 'admin' | 'viewer';
 export const getClientRole = (): ClientRole => DEFAULT_USER_ROLE;
 export const isClientAdmin = () => getClientRole() === 'admin';
 
+export type ReviewEvidenceStatus = 'finalized' | 'review_suggested' | 'conflict' | 'unmatched';
+
+export type ReviewDimensionCandidate = {
+  projectId: string | null;
+  projectCode: string | null;
+  projectLabel: string | null;
+  transactionTypeId: string | null;
+  transactionTypeLabel: string | null;
+  categoryId: string | null;
+  categoryLabel: string | null;
+  complete: boolean;
+};
+
+export type ReviewEvidenceAlternative = ReviewDimensionCandidate & {
+  suggestionId: string;
+  rank: number;
+  matcher: string;
+  confidence: string;
+  confidenceLabel: string;
+  reason: string;
+  matchedRuleIds: string[];
+  historicalRecordIds: string[];
+  evidenceHashes: string[];
+  evidenceHash: string;
+};
+
+export type EvidenceRichReviewItem = {
+  id: string;
+  transactionId: string;
+  previewFingerprint: string | null;
+  displayDate: string;
+  rawIngDate: string;
+  counterparty: string | null;
+  counterpartyIban: string | null;
+  accountIdentifier: string | null;
+  accountName: string | null;
+  amount: number;
+  amountMinor: string;
+  currency: string;
+  direction: 'credit' | 'debit';
+  directionLabel: string;
+  description: string;
+  paymentPurpose: string | null;
+  source: string;
+  deterministicStatus: ReviewEvidenceStatus;
+  statusLabel: string;
+  reason: string;
+  proposed: ReviewDimensionCandidate | null;
+  alternatives: ReviewEvidenceAlternative[];
+  evidence: {
+    matchedRuleIds: string[];
+    historicalRecordIds: string[];
+    evidenceHashes: string[];
+    importFingerprint: string | null;
+    exactReplayKey: string | null;
+    reason: string;
+  };
+  safeDeterministicCandidate: boolean;
+  requiresAdministratorApproval: true;
+  sideEffects: {
+    createsTransactionBooking: false;
+    closesPeriod: false;
+  };
+};
+
+export type EvidenceRichReviewResponse = {
+  transactions: EvidenceRichReviewItem[];
+  categories: unknown[];
+  projects: unknown[];
+  transactionTypes: unknown[];
+  message: string;
+};
+
 const getApiUrl = (path: string): string => {
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
   return `${API_BASE_URL}${cleanPath}`;
@@ -43,7 +116,7 @@ export const fetchLedger = async () => {
   return response.json();
 };
 
-export const fetchReview = async () => {
+export const fetchReview = async (): Promise<EvidenceRichReviewResponse> => {
   const response = await fetch(getApiUrl('/api/review'), withUserHeader({ cache: 'no-store' }));
 
   if (!response.ok) {

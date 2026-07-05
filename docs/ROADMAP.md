@@ -153,7 +153,7 @@ Status: **in progress; guarded dry-run service completed through Packet G**
 
 ## Phase 4 — Monthly import and review workflow
 
-Status: **in progress; FLOW-002 deterministic categorization decisions implemented**
+Status: **in progress; FLOW-003 evidence-rich Dutch review queue implemented**
 
 ### Outcomes
 

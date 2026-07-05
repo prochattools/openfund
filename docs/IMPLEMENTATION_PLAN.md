@@ -844,19 +844,30 @@ Validation:
 
 ### FLOW-003 — Implement evidence-rich Dutch review queue
 
-Status: `CURRENT`
+Status: `IMPLEMENTED`
 
 Dependencies: FLOW-002
 
 Acceptance:
 
 - Shows date, counterparty, IBAN, amount, direction, full payment purpose, proposed `Klant`, `Type`, `Category`, evidence, confidence, and alternatives.
-- Administrator can approve or choose exact historical labels.
-- No unsafe bulk acceptance.
+- Shows deterministic statuses for finalized candidates, review suggestions, conflicts, and unmatched items.
+- Preserves exact `Klant`, `Type`, and `Category` labels from existing dimension records.
+- Route/API output is admin-only and does not return retained file bytes, source-file contents, owner workbook dumps, or raw source rows.
+- Queue display creates no `TransactionBooking` or `PeriodClose` records.
+- Administrator approval still flows only through the existing reviewed-decision path with complete `projectId`, `transactionTypeId`, and `categoryId`.
+- Unsafe bulk acceptance remains disabled.
+
+Validation:
+
+- Focused review queue tests cover enriched Dutch evidence, deterministic sorting, finalized candidates, conflicts, incomplete candidates, alternatives, historical hashes, rule ids, sanitization, and no booking/close side effects.
+- Focused review route tests cover admin-only behavior and evidence-rich read responses without approving anything.
+- Focused review page helper tests cover Dutch evidence status and summary labels.
+- Full validation passed and is recorded in `docs/finance-rebuild-run.md`: review queue, review decision, review route, review page, deterministic categorization, monthly import preview, full suite, Prisma validate/generate, server build, production build, diff check, executable/test high-risk scan, and documentation scans.
 
 ### FLOW-004 — Implement explicit rule creation from approved decision
 
-Status: `TODO`
+Status: `CURRENT`
 
 Dependencies: FLOW-003
 

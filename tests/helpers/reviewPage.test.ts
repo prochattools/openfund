@@ -5,12 +5,14 @@ import {
   findCategoryIdByName,
   formatReviewEuro,
   getReviewSuggestedLabel,
+  getReviewEvidenceSummary,
   getSuggestedMain,
   getSuggestedSub,
   isReviewPlaceholderCategory,
   normalizeLabel,
   parseReviewDate,
   resolveDefaultReviewSelection,
+  translateReviewEvidenceStatus,
   translateSuggestionConfidence,
 } from '../../src/helpers/review-page';
 import type { LedgerTransaction } from '../../src/helpers/api-transaction-mapper';
@@ -76,6 +78,23 @@ describe('review page helpers', () => {
     expect(translateSuggestionConfidence('fuzzy')).toBe('waarschijnlijke suggestie');
     expect(translateSuggestionConfidence('review')).toBe('handmatige controle nodig');
     expect(translateSuggestionConfidence(null)).toBe('geen volledige historische match');
+  });
+
+  it('translates evidence-rich review status and summary labels', () => {
+    expect(translateReviewEvidenceStatus('finalized')).toBe('veilige deterministische kandidaat');
+    expect(translateReviewEvidenceStatus('conflict')).toBe('conflict, handmatig beoordelen');
+    expect(translateReviewEvidenceStatus('review_suggested')).toBe('suggestie, handmatig beoordelen');
+    expect(translateReviewEvidenceStatus('unmatched')).toBe('geen match, handmatig classificeren');
+
+    expect(getReviewEvidenceSummary({
+      deterministicStatus: 'conflict',
+      alternatives: [{ suggestionId: 'suggestion-1' }, { suggestionId: 'suggestion-2' }] as any,
+      evidence: {
+        matchedRuleIds: ['rule-1'],
+        historicalRecordIds: ['history-1'],
+        evidenceHashes: [],
+      },
+    })).toBe('conflict, handmatig beoordelen · 1 regel · historisch bewijs · 2 alternatieven');
   });
 
   it('formats review display values and accept-action availability', () => {
