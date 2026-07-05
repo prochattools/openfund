@@ -23,7 +23,7 @@ Phase 4 — Monthly import and review workflow     COMPLETE
 Phase 5 — Reconciliation, close, and snapshots   COMPLETE
 Phase 6 — Visual reports and distribution        COMPLETE
 Phase 7 — Dutch UX and authorization hardening   COMPLETE
-Phase 8 — Infrastructure and deployment          DEFERRED
+Phase 8 — Infrastructure and deployment          IN PROGRESS
 Phase 9 — Operational hardening and handoff      IN PROGRESS
 ```
 
@@ -244,7 +244,7 @@ Status: **complete** — UX-001, AUTH-001, and UX-002 done.
 
 ## Phase 8 — Infrastructure and deployment
 
-Status: **planned; deliberately deferred**
+Status: **in progress** — INFRA-001 and INFRA-002 documented; INFRA-003 production cutover plan created
 
 ### Outcomes
 
@@ -264,7 +264,7 @@ Status: **planned; deliberately deferred**
 
 ## Phase 9 — Operational hardening and handoff
 
-Status: **in progress** — OPS-001 (Dutch admin guide) and OPS-003 (documentation alignment) in progress.
+Status: **in progress** — OPS-001 (Dutch admin guide) complete; OPS-002 (backup/restore rehearsal) guards and docs implemented; OPS-003 (documentation alignment) in progress.
 
 ### Outcomes
 

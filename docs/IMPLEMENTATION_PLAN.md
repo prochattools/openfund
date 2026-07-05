@@ -65,7 +65,12 @@ Phase 7 UX-001 Dutch text audit: committed as 7d58726
 Phase 7 AUTH-001 admin mutation policy: committed as 0d70f51
 Phase 7 UX-002 navigation simplification: committed as 20ff64b
 Phase 9 OPS-001 Dutch admin guide: committed as d51cfad
-Current gate: Phase 9 OPS-003 documentation alignment in progress; historical production import remains operator-gated
+Phase 8 INFRA-001 PostgreSQL compatibility note: documented in docs/INFRASTRUCTURE_READINESS.md
+Phase 8 INFRA-002 local Docker Compose cleanup: docker-compose.local.yml created; original docker-compose.yml retained
+Phase 8 INFRA-003 production cutover plan: docs/PRODUCTION_CUTOVER_PLAN_NL.md created (documentation-only; no production commands executed)
+Phase 9 OPS-002 backup/restore rehearsal: scripts/backup-restore-rehearsal.mjs and tests/ops/backupRestoreRehearsal.test.ts implemented; 18 unit tests pass
+Phase 9 OPS-003 documentation alignment: docs/FINAL_READINESS_AUDIT_NL.md created; ROADMAP.md, IMPLEMENTATION_PLAN.md updated
+Current gate: OPS-003 documentation alignment in progress; historical production import remains operator-gated
 ```
 
 ## Phase 0 — Governance and discovery
@@ -1194,7 +1199,13 @@ Acceptance:
 
 ### INFRA-001 — Select and validate PostgreSQL version
 
-Status: `DEFERRED`
+Status: `IMPLEMENTED`
+
+Evidence:
+
+- `docs/INFRASTRUCTURE_READINESS.md` — documents Prisma 6.x version, active migration chain (4 migrations),
+  local validation conventions, PostgreSQL version recommendation criteria, and requirement to confirm
+  production version before cutover.
 
 Dependencies: financial workflow stable
 
@@ -1205,7 +1216,15 @@ Acceptance:
 
 ### INFRA-002 — Replace obsolete Docker Compose locally
 
-Status: `DEFERRED`
+Status: `IMPLEMENTED`
+
+Evidence:
+
+- `docker-compose.local.yml` — PostgreSQL 16 only; localhost-only port mapping (`127.0.0.1:5432:5432`);
+  placeholder credentials only; named volume `finance_local_db`; healthcheck included.
+- `docs/INFRASTRUCTURE_READINESS.md` §Lokale Docker Compose — usage instructions documented.
+- Original `docker-compose.yml` (WordPress/MySQL/Postgres) is left in place and not deleted; it is the
+  production Dokploy descriptor and must not be removed without explicit owner approval.
 
 Dependencies: INFRA-001
 
@@ -1218,7 +1237,14 @@ Acceptance:
 
 ### INFRA-003 — Prepare separate production cutover plan
 
-Status: `DEFERRED`
+Status: `IMPLEMENTED`
+
+Evidence:
+
+- `docs/PRODUCTION_CUTOVER_PLAN_NL.md` — Dutch operator-facing plan including: scope and non-goals,
+  required owner approvals, secret rotation, backup before cutover, migration dry-run, migration
+  execution, post-migration validation, historical import gate, report/PDF/email limitations, rollback
+  plan, no-force-push rules, and explicit confirmation that no production commands were executed.
 
 Dependencies: INFRA-002
 
@@ -1243,7 +1269,18 @@ Acceptance:
 
 ### OPS-002 — Test backup and restore
 
-Status: `TODO`
+Status: `IMPLEMENTED`
+
+Evidence:
+
+- `docs/BACKUP_RESTORE_REHEARSAL_NL.md` — Dutch step-by-step local rehearsal guide.
+- `scripts/backup-restore-rehearsal.mjs` — guarded rehearsal script; rejects non-local hosts,
+  10.0.2.4, Dokploy hosts, and production-like database names; creates and drops only
+  `yaf_rehearsal_*` disposable databases; never prints secrets.
+- `tests/ops/backupRestoreRehearsal.test.ts` — 18 unit tests covering URL guards, command
+  construction, and no-secret guarantees.
+- Live pg_dump/pg_restore requires `pg_dump`/`pg_restore` to be installed locally; the
+  script supports `--dry-run` mode for environments without PostgreSQL client tools.
 
 Acceptance:
 
