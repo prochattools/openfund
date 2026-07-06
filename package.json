@@ -23,7 +23,9 @@
 		"preflight:owner-go-no-go": "node scripts/owner-go-no-go-preflight.mjs",
 		"preflight:owner-decision": "node scripts/owner-decision-preflight.mjs",
 		"preflight:owner-action-plan": "node scripts/owner-approved-action-plan.mjs",
-		"preflight:push-readiness": "node scripts/push-readiness-preflight.mjs"
+		"preflight:push-readiness": "node scripts/push-readiness-preflight.mjs",
+		"preflight:final-owner-review": "node scripts/final-owner-review-preflight.mjs --check",
+		"audit:final-docs": "node scripts/final-docs-consistency-audit.mjs"
 	},
 	"dependencies": {
 		"@clerk/nextjs": "^5.7.1",

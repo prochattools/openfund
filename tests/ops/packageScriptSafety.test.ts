@@ -13,6 +13,8 @@ const pkg = JSON.parse(
   readFileSync(resolve(process.cwd(), 'package.json'), 'utf-8'),
 ) as { scripts: Record<string, string> };
 
+const allScripts = Object.entries(pkg.scripts);
+
 const rcScript = pkg.scripts['validate:release-candidate'] ?? '';
 
 describe('package script safety — validate:release-candidate', () => {
@@ -74,5 +76,70 @@ describe('package script safety — validate:release-candidate', () => {
       expect(rcScript).toContain('127.0.0.1');
       expect(rcScript).not.toContain('10.0.2.4');
     }
+  });
+});
+
+describe('package script safety — all scripts', () => {
+  it('no script contains git push', () => {
+    for (const [name, value] of allScripts) {
+      expect(value, `${name} must not contain git push`).not.toMatch(/git\s+push/);
+    }
+  });
+
+  it('no script contains git tag', () => {
+    for (const [name, value] of allScripts) {
+      expect(value, `${name} must not contain git tag`).not.toMatch(/git\s+tag/);
+    }
+  });
+
+  it('no script installs dependencies', () => {
+    for (const [name, value] of allScripts) {
+      expect(value, `${name} must not install dependencies`).not.toMatch(/npm\s+install\b/);
+      expect(value, `${name} must not run npm ci`).not.toMatch(/npm\s+ci\b/);
+    }
+  });
+
+  it('no script references production host or Dokploy', () => {
+    for (const [name, value] of allScripts) {
+      expect(value, `${name} must not reference 10.0.2.4`).not.toContain('10.0.2.4');
+      expect(value, `${name} must not reference dokploy`).not.toMatch(/dokploy/i);
+    }
+  });
+
+  it('no script sends email or references RESEND_API_KEY', () => {
+    for (const [name, value] of allScripts) {
+      expect(value, `${name} must not reference resend`).not.toMatch(/resend/i);
+      expect(value, `${name} must not reference sendMail`).not.toMatch(/sendMail/i);
+      expect(value, `${name} must not reference RESEND_API_KEY`).not.toContain('RESEND_API_KEY');
+    }
+  });
+
+  it('no script runs historical production import', () => {
+    for (const [name, value] of allScripts) {
+      expect(value, `${name} must not run historical import`).not.toMatch(/historical.*import/i);
+      expect(value, `${name} must not reference owner.*import`).not.toMatch(/owner.*import/i);
+    }
+  });
+});
+
+describe('package script safety — new preflight scripts', () => {
+  it('preflight:final-owner-review exists and is local-only', () => {
+    const script = pkg.scripts['preflight:final-owner-review'] ?? '';
+    expect(script).toBeTruthy();
+    expect(script).toContain('final-owner-review-preflight.mjs');
+    expect(script).not.toMatch(/git\s+push|git\s+tag|10\.0\.2\.4|dokploy/i);
+  });
+
+  it('audit:final-docs exists and is local-only', () => {
+    const script = pkg.scripts['audit:final-docs'] ?? '';
+    expect(script).toBeTruthy();
+    expect(script).toContain('final-docs-consistency-audit.mjs');
+    expect(script).not.toMatch(/git\s+push|git\s+tag|10\.0\.2\.4|dokploy/i);
+  });
+
+  it('release-candidate validation still uses backup dry-run only', () => {
+    const rcScript = pkg.scripts['validate:release-candidate'] ?? '';
+    expect(rcScript).toContain('--dry-run');
+    expect(rcScript).not.toContain('--live-local');
   });
 });
