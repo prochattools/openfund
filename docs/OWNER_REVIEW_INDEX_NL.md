@@ -153,6 +153,9 @@ Plaats hier geen geheimen, hostnamen, wachtwoorden, API-keys, owner-bestandspade
 | `docs/OWNER_HANDOFF_NL.md` | Eerste eigenaaroverdracht |
 | `docs/OWNER_DECISION_PACK_NL.md` | Beslissingspakket |
 | `docs/OWNER_DECISION_READINESS_MATRIX_NL.md` | Per-beslissing readiness matrix |
+| `docs/OWNER_APPROVAL_INTAKE_NL.md` | Eigenaarsgoedkeuring intake |
+| `docs/OWNER_APPROVED_ACTION_PLAN_NL.md` | Goedgekeurd actieplan |
+| `docs/OWNER_REVIEW_FINAL_PACKET_NL.md` | Samenvatting final owner review packet |
 | `docs/OWNER_GO_NO_GO_PREFLIGHT_NL.md` | Repo go/no-go preflight |
 | `docs/OWNER_DECISION_PREFLIGHT_NL.md` | Gegenereerde beslissing-preflight |
 | `docs/PUSH_READINESS_CHECKLIST_NL.md` | Push checklist |
