@@ -2,7 +2,7 @@
 
 Status: Release Candidate 4 — final owner handoff polish
 Taal: Nederlands
-Gegenereerd op: 2026-07-06 12:10:20 +0100 (RC4)
+Gegenereerd op: 2026-07-06 12:46:17 +0100 (RC4)
 
 ---
 
@@ -12,10 +12,10 @@ Gegenereerd op: 2026-07-06 12:10:20 +0100 (RC4)
 |------|--------|
 | Applicatieversie | 0.1.0 |
 | Branch | main |
-| Commit (volledig) | e55a8b90d8a2fe931e1ffe452a65d9f726a1a606 |
-| Commit (kort) | e55a8b9 |
-| Commit bericht | feat: add owner approved action planning |
-| Commit datum | 2026-07-06 12:10:20 +0100 |
+| Commit (volledig) | 9dae30c0b7286f48d63bb6e2eaede53fedceeb39 |
+| Commit (kort) | 9dae30c |
+| Commit bericht | docs: finalize owner review documentation |
+| Commit datum | 2026-07-06 12:46:17 +0100 |
 | Prisma versie (dev) | ^6.15.0 |
 | @prisma/client versie | ^6.15.0 |
 
@@ -25,10 +25,10 @@ Gegenereerd op: 2026-07-06 12:10:20 +0100 (RC4)
 
 | Veld | Waarde |
 |------|--------|
-| Manifest generated at commit | e55a8b90d8a2fe931e1ffe452a65d9f726a1a606 |
-| Manifest generated at short commit | e55a8b9 |
-| Release evidence validated through | e55a8b90d8a2fe931e1ffe452a65d9f726a1a606 |
-| Release evidence validated through short | e55a8b9 |
+| Manifest generated at commit | 9dae30c0b7286f48d63bb6e2eaede53fedceeb39 |
+| Manifest generated at short commit | 9dae30c |
+| Release evidence validated through | 9dae30c0b7286f48d63bb6e2eaede53fedceeb39 |
+| Release evidence validated through short | 9dae30c |
 | RC4 evidence commits | `7ce6e6d`, `43bfb90`, `42a6f49`, `43137b5`, `33d08c4` |
 
 ---

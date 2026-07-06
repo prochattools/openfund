@@ -1,7 +1,7 @@
 # Yeshua Academy Finance — Eigenaarsbeslissing preflight
 
 Branch: main
-HEAD: e55a8b9
+HEAD: 9dae30c
 Besluitstatus: GEREED VOOR EIGENAARSREVIEW
 Goedkeuring buiten Git geregistreerd: NEE
 
