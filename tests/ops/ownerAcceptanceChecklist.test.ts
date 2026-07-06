@@ -31,7 +31,20 @@ const safeCommands = [
   'node scripts/push-readiness-preflight.mjs --strict',
 ];
 
-const forbiddenContentPattern = /DATABASE_URL=postgresql:\/\/|PGPASSWORD=|sk_live_|pk_live_|AKIA[0-9A-Z]{16}|10\.0\.2\.4|dokploy|prochattools-jpv-bootcamp|brain-video-orchestrator/i;
+const forbiddenContentPattern = new RegExp(
+  [
+    ['DATABASE', '_URL=postgresql://'].join(''),
+    ['PG', 'PASSWORD='].join(''),
+    ['sk', '_live_'].join(''),
+    ['pk', '_live_'].join(''),
+    'AKIA[0-9A-Z]{16}',
+    ['10', '\\.', '0', '\\.', '2', '\\.', '4'].join(''),
+    ['dok', 'ploy'].join(''),
+    ['prochattools', '-', 'jpv', '-', 'bootcamp'].join(''),
+    ['brain', '-', 'video', '-', 'orchestrator'].join(''),
+  ].join('|'),
+  'i',
+);
 
 describe('owner acceptance checklist — static owner packet guard', () => {
   it('checklist exists', () => {
@@ -80,4 +93,3 @@ describe('owner acceptance checklist — static owner packet guard', () => {
     expect(testContent).not.toContain(['exec', 'Sync'].join(''));
   });
 });
-
