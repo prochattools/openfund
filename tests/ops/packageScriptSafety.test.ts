@@ -137,6 +137,22 @@ describe('package script safety — new preflight scripts', () => {
     expect(script).not.toMatch(/git\s+push|git\s+tag|10\.0\.2\.4|dokploy/i);
   });
 
+  it('preflight:owner-decision-menu exists and is static/local-only', () => {
+    const script = pkg.scripts['preflight:owner-decision-menu'] ?? '';
+    expect(script).toBeTruthy();
+    expect(script).toContain('owner-decision-menu.mjs');
+    expect(script).not.toMatch(/git\s+push|git\s+tag|npm\s+install|npm\s+ci|10\.0\.2\.4|dokploy|sendMail|historical.*import/i);
+  });
+
+  it('preflight:owner-acceptance exists and only runs static owner review/menu preflights', () => {
+    const script = pkg.scripts['preflight:owner-acceptance'] ?? '';
+    expect(script).toBeTruthy();
+    expect(script).toContain('final-owner-review-preflight.mjs --check');
+    expect(script).toContain('owner-decision-menu.mjs');
+    expect(script).not.toContain('npm run build');
+    expect(script).not.toMatch(/git\s+push|git\s+tag|npm\s+install|npm\s+ci|10\.0\.2\.4|dokploy|sendMail|historical.*import/i);
+  });
+
   it('release-candidate validation still uses backup dry-run only', () => {
     const rcScript = pkg.scripts['validate:release-candidate'] ?? '';
     expect(rcScript).toContain('--dry-run');
