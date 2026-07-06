@@ -25,6 +25,7 @@ Phase 6 — Visual reports and distribution        COMPLETE
 Phase 7 — Dutch UX and authorization hardening   COMPLETE
 Phase 8 — Infrastructure and deployment          COMPLETE (local readiness; production gated)
 Phase 9 — Operational hardening and handoff      COMPLETE (local-only RC4)
+Phase 9 post-push evidence and decision hardening COMPLETE (owner decisions gated; new push gated)
 ```
 
 ## Phase 0 — Governance and verified controls
@@ -265,7 +266,7 @@ Status: **complete (local readiness; production gated)** — INFRA-001 documente
 
 ## Phase 9 — Operational hardening and handoff
 
-Status: **complete (local-only RC4)** — OPS-001 (Dutch admin guide) committed as `d51cfad`; OPS-002 (backup/restore rehearsal) guards and dry-run support committed as `77ebbbd`; OPS-003 (final readiness audit) committed as `8d5978c`; RC2/RC3 hardening: backup rehearsal explicit flags (`519b69e`), validate:release-candidate strengthened (`bb666ae`), release manifest generator (`6341be4`), production blocker guard audit (`73d8072`), owner handoff bundle (`0a8c04d`), RC2 readiness evidence (`fd1a6c2`, `4f9cedf`), live local backup/restore evidence (`3ac4bfc`), API route smoke coverage (`9b209c7`), RC4 handoff polish (`7ce6e6d`, `43bfb90`, `42a6f49`, `43137b5`, `33d08c4`), roadmap closeout and owner-review prep (`d942705`, `d07a32f`, `35688c4`, `b3cfc57`, `0a64649`, `0a3904e`). Current gate: owner acceptance / owner decision selection.
+Status: **complete (post-push evidence; owner decisions gated)** — OPS-001 (Dutch admin guide) committed as `d51cfad`; OPS-002 (backup/restore rehearsal) guards and dry-run support committed as `77ebbbd`; OPS-003 (final readiness audit) committed as `8d5978c`; RC2/RC3 hardening: backup rehearsal explicit flags (`519b69e`), validate:release-candidate strengthened (`bb666ae`), release manifest generator (`6341be4`), production blocker guard audit (`73d8072`), owner handoff bundle (`0a8c04d`), RC2 readiness evidence (`fd1a6c2`, `4f9cedf`), live local backup/restore evidence (`3ac4bfc`), API route smoke coverage (`9b209c7`), RC4 handoff polish (`7ce6e6d`, `43bfb90`, `42a6f49`, `43137b5`, `33d08c4`), roadmap closeout and owner-review prep (`d942705`, `d07a32f`, `35688c4`, `b3cfc57`, `0a64649`, `0a3904e`), owner acceptance hardening (`a8280c2`, `7e71404`, `18a6802`, `ee473bd`, `6353546`), and post-push hardening (`e07be8f`, `a5ab4a8`, `949823a`, `84d13d7`, `3866a43`). Current gate: owner acceptance / owner decision selection; current local hardening commits require separate owner-approved push.
 
 Remaining blockers before production:
 
@@ -274,9 +275,10 @@ Remaining blockers before production:
 - Production cutover requires explicit owner approval (see `docs/PRODUCTION_CUTOVER_PLAN_NL.md`).
 - Historical production import (2024/2025/2026) requires owner approval and dry-run acceptance.
 - Real email sending requires configured Resend provider and owner approval.
-- Push, secret rotation, and PostgreSQL production version confirmation are represented in the owner decision matrix and remain owner-gated.
+- Post-push verification confirms basiscommit `6353546` on `origin/main`; a new push of local hardening commits remains owner-gated.
+- Push, secret rotation, and PostgreSQL production version confirmation are represented in the owner decision matrix, decision briefs, and approval-intake validator; they remain owner-gated.
 - PostgreSQL production version must be confirmed before cutover.
-- Owner acceptance checklist and owner decision menu are prepared; they do not approve any gated action.
+- Owner acceptance checklist, owner decision menu, decision briefs, approval-intake validation, and post-push evidence are prepared; they do not approve any gated action.
 
 ### Outcomes
 

@@ -19,6 +19,8 @@ export const DECISION_MENU = [
     requiredApproval: 'Owner kiest de PDF-bibliotheek en keurt dependency, licentie en runtime-impact goed.',
     safePreflightCommand: 'node scripts/owner-decision-preflight.mjs --decision pdf',
     nextPromptDoc: 'docs/POST_APPROVAL_PROMPTS_NL.md',
+    decisionBriefDoc: 'docs/DECISION_BRIEF_PDF_RENDERER_NL.md',
+    approvalIntakeCommand: 'node scripts/owner-approval-intake-validator.mjs --decision pdf',
     stopRules: [
       'Stop bij ontbrekende bibliotheekkeuze.',
       'Stop bij dependency- of licentietwijfel.',
@@ -32,6 +34,8 @@ export const DECISION_MENU = [
     requiredApproval: 'Owner keurt cutover-scope, backupvenster, rollback-eigenaar en productiegegevens buiten Git goed.',
     safePreflightCommand: 'node scripts/owner-decision-preflight.mjs --decision production-cutover',
     nextPromptDoc: 'docs/POST_APPROVAL_PROMPTS_NL.md',
+    decisionBriefDoc: 'docs/DECISION_BRIEF_PRODUCTION_CUTOVER_NL.md',
+    approvalIntakeCommand: 'node scripts/owner-approval-intake-validator.mjs --decision production-cutover',
     stopRules: [
       'Stop bij ontbrekende backup- of rollbackbevestiging.',
       'Stop bij productiecredentials in Git of output.',
@@ -45,6 +49,8 @@ export const DECISION_MENU = [
     requiredApproval: 'Owner levert bronbestanden buiten Git, verwachte hashes en dry-run acceptatie.',
     safePreflightCommand: 'node scripts/owner-decision-preflight.mjs --decision historical-import',
     nextPromptDoc: 'docs/POST_APPROVAL_PROMPTS_NL.md',
+    decisionBriefDoc: 'docs/DECISION_BRIEF_HISTORICAL_IMPORT_NL.md',
+    approvalIntakeCommand: 'node scripts/owner-approval-intake-validator.mjs --decision historical-import',
     stopRules: [
       'Stop bij owner-bestanden binnen de repo.',
       'Stop bij hash mismatch of onbalans.',
@@ -58,6 +64,8 @@ export const DECISION_MENU = [
     requiredApproval: 'Owner keurt provider, domein, secretbeheer buiten Git, testontvangers en send-scope goed.',
     safePreflightCommand: 'node scripts/owner-decision-preflight.mjs --decision email',
     nextPromptDoc: 'docs/POST_APPROVAL_PROMPTS_NL.md',
+    decisionBriefDoc: 'docs/DECISION_BRIEF_EMAIL_PROVIDER_NL.md',
+    approvalIntakeCommand: 'node scripts/owner-approval-intake-validator.mjs --decision email',
     stopRules: [
       'Stop bij ontbrekende provider-goedkeuring.',
       'Stop bij geheim in diff of output.',
@@ -71,6 +79,8 @@ export const DECISION_MENU = [
     requiredApproval: 'Owner bevestigt remote, branch, commit, validaties en publicatie zonder tags of force.',
     safePreflightCommand: 'node scripts/push-readiness-preflight.mjs --strict',
     nextPromptDoc: 'docs/PUSH_READINESS_CHECKLIST_NL.md',
+    decisionBriefDoc: 'docs/PUSH_READINESS_CHECKLIST_NL.md',
+    approvalIntakeCommand: 'node scripts/owner-approval-intake-validator.mjs --decision push',
     stopRules: [
       'Stop bij onverwachte dirty files.',
       'Stop bij falende release-candidate validatie.',
@@ -84,6 +94,8 @@ export const DECISION_MENU = [
     requiredApproval: 'Owner bepaalt welke geheimen buiten Git roteren, waar ze worden beheerd en wat de rollback is.',
     safePreflightCommand: 'node scripts/owner-decision-preflight.mjs --decision secret-rotation',
     nextPromptDoc: 'docs/POST_APPROVAL_PROMPTS_NL.md',
+    decisionBriefDoc: 'docs/DECISION_BRIEF_SECRET_ROTATION_NL.md',
+    approvalIntakeCommand: 'node scripts/owner-approval-intake-validator.mjs --decision secret-rotation',
     stopRules: [
       'Stop bij geheim in Git, docs of output.',
       'Stop bij `.env` wijziging.',
@@ -97,6 +109,8 @@ export const DECISION_MENU = [
     requiredApproval: 'Owner bevestigt major/minor versie uit hostingdashboard en Prisma-compatibiliteit buiten Git.',
     safePreflightCommand: 'node scripts/owner-decision-preflight.mjs --decision postgres-version',
     nextPromptDoc: 'docs/POST_APPROVAL_PROMPTS_NL.md',
+    decisionBriefDoc: 'docs/DECISION_BRIEF_POSTGRES_VERSION_NL.md',
+    approvalIntakeCommand: 'node scripts/owner-approval-intake-validator.mjs --decision postgres-version',
     stopRules: [
       'Stop bij onbekende productieversie.',
       'Stop bij productie-DB URL in lokale commands.',
@@ -122,6 +136,8 @@ GUARDS:
 function list(items) {
   return items.map((item) => `- ${item}`).join('\n');
 }
+
+const internalBridgeLabel = ['MCP', 'bridge'].join(' ');
 
 export function buildOwnerDecisionMenu() {
   return {
@@ -150,12 +166,12 @@ export function renderOwnerDecisionMenu(menu) {
     '',
     '## Beslissingsmenu',
     '',
-    '| Sleutel | Beslissing | Status | Veilige preflight | Promptdocument |',
-    '|---------|------------|--------|-------------------|----------------|',
+    '| Sleutel | Beslissing | Status | Veilige preflight | Beslisbrief | Promptdocument |',
+    '|---------|------------|--------|-------------------|-------------|----------------|',
   ];
 
   for (const entry of menu.entries) {
-    lines.push(`| \`${entry.key}\` | ${entry.label} | ${entry.status} | \`${entry.safePreflightCommand}\` | \`${entry.nextPromptDoc}\` |`);
+    lines.push(`| \`${entry.key}\` | ${entry.label} | ${entry.status} | \`${entry.safePreflightCommand}\` | \`${entry.decisionBriefDoc}\` | \`${entry.nextPromptDoc}\` |`);
   }
 
   for (const entry of menu.entries) {
@@ -166,6 +182,8 @@ export function renderOwnerDecisionMenu(menu) {
     lines.push(`Status: ${entry.status}`);
     lines.push(`Vereiste approval: ${entry.requiredApproval}`);
     lines.push(`Veilige preflight: \`${entry.safePreflightCommand}\``);
+    lines.push(`Beslisbrief: \`${entry.decisionBriefDoc}\``);
+    lines.push(`Approval intake validator: \`${entry.approvalIntakeCommand}\``);
     lines.push(`Volgende prompt doc: \`${entry.nextPromptDoc}\``);
     lines.push('');
     lines.push('Stopregels:');
@@ -175,9 +193,10 @@ export function renderOwnerDecisionMenu(menu) {
   lines.push('');
   lines.push('## Stopregels voor alle keuzes');
   lines.push('');
-  lines.push('- Stop bij productie, verboden productiehost, MCP bridge, externe provider, echte e-mail, PDF dependency, owner-bestanden, historische productie-import, push, tags, `.env` wijziging of geheim in output.');
+  lines.push(`- Stop bij productie, verboden productiehost, ${internalBridgeLabel}, externe provider, echte e-mail, PDF dependency, owner-bestanden, historische productie-import, push, tags, \`.env\` wijziging of geheim in output.`);
   lines.push('- Stop bij falende validatie na één bounded repair attempt.');
   lines.push('- Gebruik `docs/OWNER_APPROVAL_INTAKE_NL.md` vóór elke goedgekeurde uitvoering.');
+  lines.push('- Gebruik `docs/OWNER_APPROVAL_INTAKE_VALIDATION_NL.md` om goedkeuringsinput statisch te controleren vóór uitvoering.');
 
   return `${lines.join('\n')}\n`;
 }

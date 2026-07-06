@@ -1,8 +1,8 @@
 # Yeshua Academy Finance — Release Manifest
 
-Status: Release Candidate 4 — final owner handoff polish
+Status: Release Candidate 4 — post-push verification and owner decision hardening
 Taal: Nederlands
-Gegenereerd op: 2026-07-06 14:23:50 +0100 (RC4)
+Gegenereerd op: 2026-07-06 20:25:20 +0100 (RC4)
 
 ---
 
@@ -12,10 +12,10 @@ Gegenereerd op: 2026-07-06 14:23:50 +0100 (RC4)
 |------|--------|
 | Applicatieversie | 0.1.0 |
 | Branch | main |
-| Commit (volledig) | a8280c2ec2d559130fb4b3abe27d06c8b3799e14 |
-| Commit (kort) | a8280c2 |
-| Commit bericht | docs: update owner acceptance handoff |
-| Commit datum | 2026-07-06 14:23:50 +0100 |
+| Commit (volledig) | 3866a43527f619d0d062d40d5bd9214e4060db8c |
+| Commit (kort) | 3866a43 |
+| Commit bericht | chore: add post push owner preflight scripts |
+| Commit datum | 2026-07-06 20:25:20 +0100 |
 | Prisma versie (dev) | ^6.15.0 |
 | @prisma/client versie | ^6.15.0 |
 
@@ -25,11 +25,13 @@ Gegenereerd op: 2026-07-06 14:23:50 +0100 (RC4)
 
 | Veld | Waarde |
 |------|--------|
-| Manifest generated at commit | a8280c2ec2d559130fb4b3abe27d06c8b3799e14 |
-| Manifest generated at short commit | a8280c2 |
-| Release evidence validated through | a8280c2ec2d559130fb4b3abe27d06c8b3799e14 |
-| Release evidence validated through short | a8280c2 |
+| Manifest generated at commit | 3866a43527f619d0d062d40d5bd9214e4060db8c |
+| Manifest generated at short commit | 3866a43 |
+| Release evidence validated through | 3866a43527f619d0d062d40d5bd9214e4060db8c |
+| Release evidence validated through short | 3866a43 |
 | RC4 evidence commits | `7ce6e6d`, `43bfb90`, `42a6f49`, `43137b5`, `33d08c4` |
+| Post-push basis verified on origin/main | `6353546` |
+| Local post-push hardening commits | `e07be8f`, `a5ab4a8`, `949823a`, `84d13d7`, `3866a43` |
 
 ---
 
@@ -90,6 +92,9 @@ Aanvullende veilige validaties:
 node scripts/backup-restore-rehearsal.mjs --help
 node scripts/backup-restore-rehearsal.mjs --dry-run
 node scripts/generate-release-manifest.mjs
+npm run preflight:approval-intake
+npm run preflight:post-push
+npm run preflight:decision-briefs
 ```
 
 ---
@@ -99,7 +104,8 @@ node scripts/generate-release-manifest.mjs
 | Controle | Status |
 |---------|--------|
 | Geen productiedatabase aangeraakt | BEVESTIGD |
-| Geen push uitgevoerd | BEVESTIGD |
+| Post-push basiscommit `6353546` staat op origin/main | BEVESTIGD |
+| Geen nieuwe push van lokale hardening commits uitgevoerd | BEVESTIGD |
 | Geen .env gewijzigd | BEVESTIGD |
 | Geen Graphify aangeraakt | BEVESTIGD |
 | Geen owner-bronbestanden in Git | BEVESTIGD |

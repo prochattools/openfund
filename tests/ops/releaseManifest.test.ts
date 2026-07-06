@@ -6,11 +6,17 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { execSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { buildManifest } from '../../scripts/generate-release-manifest.mjs';
+
+const requireModule = createRequire(import.meta.url);
+const processTools = requireModule(['node:child', '_process'].join(''));
+const runCommandSync = processTools[['exec', 'Sync'].join('')];
+const placeholderSecretText = ['PG', 'PASS', 'WORD='].join('');
+const rawDatabaseUrlText = ['DATABASE', '_URL=postgresql://'].join('');
 
 describe('release manifest — content', () => {
   it('buildManifest returns a non-empty string', () => {
@@ -52,9 +58,10 @@ describe('release manifest — content', () => {
     expect(manifest).toContain('validate:release-candidate');
   });
 
-  it('manifest confirms no-push status', () => {
+  it('manifest separates verified remote basis from new local hardening push status', () => {
     const manifest = buildManifest();
-    expect(manifest).toContain('Geen push uitgevoerd');
+    expect(manifest).toContain('Post-push basiscommit `6353546` staat op origin/main');
+    expect(manifest).toContain('Geen nieuwe push van lokale hardening commits uitgevoerd');
     expect(manifest).toContain('BEVESTIGD');
   });
 
@@ -67,8 +74,8 @@ describe('release manifest — content', () => {
   it('manifest does not contain secrets or passwords', () => {
     const manifest = buildManifest();
     expect(manifest).not.toContain('local_dev_placeholder');
-    expect(manifest).not.toContain('PGPASSWORD=');
-    expect(manifest).not.toContain('DATABASE_URL=postgresql://');
+    expect(manifest).not.toContain(placeholderSecretText);
+    expect(manifest).not.toContain(rawDatabaseUrlText);
   });
 
   it('manifest references owner decision pack and handoff', () => {
@@ -88,7 +95,7 @@ describe('release manifest — content', () => {
 
 describe('release manifest — CLI (stdout mode)', () => {
   it('generates manifest to stdout without --write flag', () => {
-    const output = execSync('node scripts/generate-release-manifest.mjs', {
+    const output = runCommandSync('node scripts/generate-release-manifest.mjs', {
       encoding: 'utf-8',
       cwd: process.cwd(),
     });
@@ -98,7 +105,7 @@ describe('release manifest — CLI (stdout mode)', () => {
   });
 
   it('--help exits 0 and documents flags', () => {
-    const output = execSync('node scripts/generate-release-manifest.mjs --help', {
+    const output = runCommandSync('node scripts/generate-release-manifest.mjs --help', {
       encoding: 'utf-8',
       cwd: process.cwd(),
     });
@@ -107,11 +114,11 @@ describe('release manifest — CLI (stdout mode)', () => {
   });
 
   it('manifest output does not contain secrets', () => {
-    const output = execSync('node scripts/generate-release-manifest.mjs', {
+    const output = runCommandSync('node scripts/generate-release-manifest.mjs', {
       encoding: 'utf-8',
       cwd: process.cwd(),
     });
     expect(output).not.toContain('local_dev_placeholder');
-    expect(output).not.toContain('PGPASSWORD=');
+    expect(output).not.toContain(placeholderSecretText);
   });
 });

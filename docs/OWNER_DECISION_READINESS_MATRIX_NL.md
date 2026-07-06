@@ -1,24 +1,24 @@
 # Yeshua Academy Finance — Eigenaarsbeslissing readiness matrix
 
-Status: Release Candidate 4 — owner-review voorbereiding; geen productieactie uitgevoerd  
+Status: Release Candidate 4 — post-push evidence en owner-decision hardening voorbereid; geen productieactie uitgevoerd
 Taal: Nederlands  
 Doel: per owner-gated beslissing tonen wat klaar is, wat geblokkeerd blijft, welke input nodig is, en welk prompt-pad pas na goedkeuring gebruikt mag worden. De huidige gate is owner acceptance / owner decision selection.
 
 Beveiligingsregel: zet geen geheimen, hostnamen, wachtwoorden, owner-bestandspaden, ruwe transactierijen, database-dumps of productieconfiguratie in dit document of in Git.
 
-Gebruik vóór een beslissing ook `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md` en `docs/OWNER_DECISION_MENU_NL.md`.
+Gebruik vóór een beslissing ook `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md`, `docs/OWNER_DECISION_MENU_NL.md`, `docs/OWNER_APPROVAL_INTAKE_VALIDATION_NL.md` en de relevante beslisbrief.
 
 ## Matrix
 
 | Beslissing | Status | Klaar nu | Blijft geblokkeerd | Vereiste eigenaarinput | Preflight | Safe dry-run | Uitvoering pas na goedkeuring |
 |------------|--------|----------|--------------------|------------------------|-----------|--------------|-------------------------------|
-| Echte PDF-renderer | Geblokkeerd | HTML/XLSX en PDF-placeholder bestaan | Dependency-installatie en echte PDF-rendering | Bibliotheeknaam, licentie/runtime akkoord | `node scripts/owner-decision-preflight.mjs --decision pdf` | `npm test -- --test-name-pattern "production blocker"` | Gebruik PDF-prompt in `docs/POST_APPROVAL_PROMPTS_NL.md` |
-| Productiemigratie/cutover | Geblokkeerd | Documentatie-only cutoverplan en lokale validaties | Productiehost, productie-DB, productieconfig | Expliciete cutover-go, back-upvenster, rollback-eigenaar | `node scripts/owner-decision-preflight.mjs --decision production-cutover` | `npm run validate:release-candidate` | Gebruik cutover-prompt in `docs/POST_APPROVAL_PROMPTS_NL.md` |
-| Historische productie-import | Geblokkeerd | Local/sanitized loader en owner-local rehearsal adapter | Productie-import en owner-bestanden in Git | Owner-bestanden buiten Git, hashes, dry-run acceptatie | `node scripts/owner-decision-preflight.mjs --decision historical-import` | `npm test -- --test-name-pattern "Phase 3 historical loading closeout"` | Gebruik historische-import prompt in `docs/POST_APPROVAL_PROMPTS_NL.md` |
-| Echte e-mailverzending | Geblokkeerd | Dispatch-metadata zonder provider-call | Provider-call, echte ontvangers, API-key | Providerkeuze, domein, testontvangers, secret buiten Git | `node scripts/owner-decision-preflight.mjs --decision email` | `npm test -- --test-name-pattern "production blocker"` | Gebruik e-mailprompt in `docs/POST_APPROVAL_PROMPTS_NL.md` |
-| Push naar remote | Geblokkeerd | Push checklist en owner go/no-go preflight | Publicatie naar remote en tags | Expliciete push-go, doelremote/branch buiten dit document | `node scripts/owner-decision-preflight.mjs --decision push` | `node scripts/owner-go-no-go-preflight.mjs --strict` | Gebruik push-prompt in `docs/POST_APPROVAL_PROMPTS_NL.md` |
-| Geheimen roteren | Geblokkeerd | Secret blockers en negatieve secret-output tests | Secret-wijziging, `.env`, providersecret | Secretlijst buiten Git, vault-bestemming, cutovervolgorde | `node scripts/owner-decision-preflight.mjs --decision secret-rotation` | `git diff --check` | Gebruik secret-rotation prompt in `docs/POST_APPROVAL_PROMPTS_NL.md` |
-| PostgreSQL-productieversie | Geblokkeerd | Lokale Prisma-validatie en migratiebewijs | Hostingprovider-query vanuit deze repo | Versienummer en Prisma-compatibiliteitsbevestiging | `node scripts/owner-decision-preflight.mjs --decision postgres-version` | `npx prisma validate` met uitsluitend een lokale placeholder `DATABASE_URL` buiten dit rapport | Gebruik PostgreSQL-versie prompt in `docs/POST_APPROVAL_PROMPTS_NL.md` |
+| Echte PDF-renderer | Geblokkeerd | HTML/XLSX, PDF-placeholder en `docs/DECISION_BRIEF_PDF_RENDERER_NL.md` bestaan | Dependency-installatie en echte PDF-rendering | Bibliotheeknaam, licentie/runtime akkoord | `node scripts/owner-decision-preflight.mjs --decision pdf` en `node scripts/owner-approval-intake-validator.mjs --decision pdf` | `npm test -- --test-name-pattern "production blocker"` | Gebruik PDF-prompt in `docs/POST_APPROVAL_PROMPTS_NL.md` |
+| Productiemigratie/cutover | Geblokkeerd | Documentatie-only cutoverplan, lokale validaties en `docs/DECISION_BRIEF_PRODUCTION_CUTOVER_NL.md` | Productiehost, productie-DB, productieconfig | Expliciete cutover-go, back-upvenster, rollback-eigenaar | `node scripts/owner-decision-preflight.mjs --decision production-cutover` en `node scripts/owner-approval-intake-validator.mjs --decision production-cutover` | `npm run validate:release-candidate` | Gebruik cutover-prompt in `docs/POST_APPROVAL_PROMPTS_NL.md` |
+| Historische productie-import | Geblokkeerd | Local/sanitized loader, owner-local rehearsal adapter en `docs/DECISION_BRIEF_HISTORICAL_IMPORT_NL.md` | Productie-import en owner-bestanden in Git | Owner-bestanden buiten Git, hashes, dry-run acceptatie | `node scripts/owner-decision-preflight.mjs --decision historical-import` en `node scripts/owner-approval-intake-validator.mjs --decision historical-import` | `npm test -- --test-name-pattern "Phase 3 historical loading closeout"` | Gebruik historische-import prompt in `docs/POST_APPROVAL_PROMPTS_NL.md` |
+| Echte e-mailverzending | Geblokkeerd | Dispatch-metadata zonder provider-call en `docs/DECISION_BRIEF_EMAIL_PROVIDER_NL.md` | Provider-call, echte ontvangers, API-key | Providerkeuze, domein, testontvangers, secret buiten Git | `node scripts/owner-decision-preflight.mjs --decision email` en `node scripts/owner-approval-intake-validator.mjs --decision email` | `npm test -- --test-name-pattern "production blocker"` | Gebruik e-mailprompt in `docs/POST_APPROVAL_PROMPTS_NL.md` |
+| Nieuwe push naar remote | Geblokkeerd | Basiscommit `6353546` is op `origin/main` geverifieerd; push checklist en post-push evidence bestaan | Nieuwe publicatie naar remote en tags | Expliciete push-go, doelremote/branch buiten dit document | `node scripts/owner-decision-preflight.mjs --decision push` en `node scripts/owner-approval-intake-validator.mjs --decision push` | `node scripts/owner-go-no-go-preflight.mjs --strict` | Gebruik push-prompt in `docs/POST_APPROVAL_PROMPTS_NL.md` |
+| Geheimen roteren | Geblokkeerd | Secret blockers, negatieve secret-output tests en `docs/DECISION_BRIEF_SECRET_ROTATION_NL.md` | Secret-wijziging, `.env`, providersecret | Secretlijst buiten Git, vault-bestemming, cutovervolgorde | `node scripts/owner-decision-preflight.mjs --decision secret-rotation` en `node scripts/owner-approval-intake-validator.mjs --decision secret-rotation` | `git diff --check` | Gebruik secret-rotation prompt in `docs/POST_APPROVAL_PROMPTS_NL.md` |
+| PostgreSQL-productieversie | Geblokkeerd | Lokale Prisma-validatie, migratiebewijs en `docs/DECISION_BRIEF_POSTGRES_VERSION_NL.md` | Hostingprovider-query vanuit deze repo | Versienummer en Prisma-compatibiliteitsbevestiging | `node scripts/owner-decision-preflight.mjs --decision postgres-version` en `node scripts/owner-approval-intake-validator.mjs --decision postgres-version` | `npx prisma validate` met uitsluitend lokale placeholderconfig buiten dit rapport | Gebruik PostgreSQL-versie prompt in `docs/POST_APPROVAL_PROMPTS_NL.md` |
 
 ## Per-beslissing details
 
@@ -104,11 +104,12 @@ Exacte volgende prompt:
 ### Push naar remote
 
 Wat klaar is:
-- Push checklist en owner go/no-go preflight bestaan.
-- Alleen `.graphifyignore` en `graphify-out/` zijn verwachte untracked paden.
+- Post-push evidence bevestigt dat basiscommit `6353546` op `origin/main` staat.
+- Push checklist, approval-intake validator en owner go/no-go preflight bestaan.
+- Alleen `.graphifyignore` en `graphify-out/` zijn verwachte untracked paden wanneer er geen lokale hardening-diff openstaat.
 
 Wat blijft geblokkeerd:
-- Geen remote publicatie.
+- Geen nieuwe remote publicatie.
 - Geen tags.
 
 Rollback:

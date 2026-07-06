@@ -8,6 +8,7 @@ Algemene regels voor alle prompts:
 - Start vanuit commit: `<STARTING_COMMIT_PLACEHOLDER>`.
 - Werk uitsluitend in `yeshuaacademy-finance`.
 - Gebruik `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md` en `docs/OWNER_DECISION_MENU_NL.md` als pre-approval context.
+- Lees de relevante beslisbrief en valideer de approval intake met `node scripts/owner-approval-intake-validator.mjs --decision <decision>` voordat je iets uitvoert.
 - Raak `.graphifyignore` en `graphify-out/` niet aan.
 - Wijzig of commit geen `.env`.
 - Zet geen geheimen, owner-bestanden, ruwe transactierijen, database-dumps of productieconfiguratie in Git.
@@ -32,6 +33,7 @@ Hard constraints:
 - Add only the approved PDF dependency.
 
 Task:
+0. Lees `docs/DECISION_BRIEF_PDF_RENDERER_NL.md` en valideer de intake met `node scripts/owner-approval-intake-validator.mjs --decision pdf`.
 1. Install and wire <PDF_LIBRARY_NAME> as the real report PDF renderer.
 2. Replace the placeholder only where PDF_BLOCKER currently blocks real output.
 3. Add tests proving PDF output is generated from the same immutable snapshot totals as HTML and XLSX.
@@ -73,6 +75,7 @@ Hard constraints:
 - Do not push or tag.
 
 Task:
+0. Lees `docs/DECISION_BRIEF_POSTGRES_VERSION_NL.md` en valideer de intake met `node scripts/owner-approval-intake-validator.mjs --decision postgres-version`.
 1. Update the relevant infrastructure/readiness docs with the confirmed PostgreSQL version and Prisma compatibility statement.
 2. Keep production cutover blocked until separate owner approval.
 3. Add or update docs/tests so the version-confirmation blocker cannot be marked complete without explicit evidence text.
@@ -112,6 +115,7 @@ Hard constraints:
 - Do not use owner files.
 
 Task:
+0. Lees `docs/DECISION_BRIEF_PRODUCTION_CUTOVER_NL.md` en valideer de intake met `node scripts/owner-approval-intake-validator.mjs --decision production-cutover`.
 1. Re-read docs/PRODUCTION_CUTOVER_PLAN_NL.md.
 2. Convert any ambiguous production step into an explicit checklist item with owner confirmation.
 3. Add a dry-run-only operator checklist for the next approved cutover prompt.
@@ -151,6 +155,7 @@ Hard constraints:
 - Do not push or tag.
 
 Task:
+0. Lees `docs/DECISION_BRIEF_HISTORICAL_IMPORT_NL.md` en valideer de intake met `node scripts/owner-approval-intake-validator.mjs --decision historical-import`.
 1. Run only the owner-approved dry-run/rehearsal path.
 2. Verify source hashes, row counts, opening/closing controls, and July partial status.
 3. Record only sanitized summary evidence in docs.
@@ -188,6 +193,7 @@ Hard constraints:
 - Do not push or tag.
 
 Task:
+0. Lees `docs/DECISION_BRIEF_EMAIL_PROVIDER_NL.md` en valideer de intake met `node scripts/owner-approval-intake-validator.mjs --decision email`.
 1. Add provider integration behind an explicit disabled-by-default guard.
 2. Keep current metadata-only dispatch behavior unless a separate approved send flag is present.
 3. Add tests proving no provider call happens by default and secrets are never logged.
@@ -223,6 +229,7 @@ Hard constraints:
 - Stop if worktree has unexpected dirty files.
 
 Task:
+0. Lees `docs/PUSH_READINESS_CHECKLIST_NL.md`, `docs/POST_PUSH_VERIFICATION_NL.md`, en valideer de intake met `node scripts/owner-approval-intake-validator.mjs --decision push`.
 1. Run push readiness preflight.
 2. Run release candidate validation.
 3. Confirm final git status.
@@ -259,6 +266,7 @@ Hard constraints:
 - Do not push or tag.
 
 Task:
+0. Lees `docs/DECISION_BRIEF_SECRET_ROTATION_NL.md` en valideer de intake met `node scripts/owner-approval-intake-validator.mjs --decision secret-rotation`.
 1. Produce or update a checklist naming secret categories only, not values.
 2. Confirm where each secret will be stored outside Git.
 3. Define rotation order, rollback owner, and validation steps.

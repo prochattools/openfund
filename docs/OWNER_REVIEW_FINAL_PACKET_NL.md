@@ -1,11 +1,11 @@
 # Yeshua Academy Finance — Final owner review packet
 
-Status: final owner-review packet — owner acceptance / decision selection ready; geen owner-gated actie uitgevoerd
+Status: final owner-review packet — post-push verification recorded; owner acceptance / decision selection ready; geen nieuwe owner-gated actie uitgevoerd
 Taal: Nederlands
 
 ## 1. Huidige release-status
 
-De applicatie is lokaal release-candidate-ready voor eigenaarsbeoordeling. De resterende acties zijn owner-gated en mogen pas worden uitgevoerd na expliciete goedkeuring buiten Git.
+De applicatie is lokaal release-candidate-ready voor eigenaarsbeoordeling. De eerder goedgekeurde remote publish is lokaal geverifieerd: basiscommit `6353546` staat op `origin/main`. De post-push evidence, decision briefs, approval-intake validator en bijbehorende guards zijn lokale hardening commits; een nieuwe push daarvan blijft owner-gated.
 
 Veilige lokale status:
 
@@ -14,8 +14,9 @@ Veilige lokale status:
 - Backup/restore live lokaal gerehearsed; productieback-up/herstel blijft geblokkeerd.
 - Rapporten HTML/XLSX klaar; echte PDF-renderer geblokkeerd.
 - Dispatch-metadata klaar; echte e-mailverzending geblokkeerd.
-- Push is voorbereid maar niet uitgevoerd.
+- Remote basiscommit `6353546` is post-push geverifieerd; nieuwe lokale hardening commits zijn niet gepusht.
 - Owner acceptance checklist en decision menu zijn beschikbaar voor de volgende expliciete eigenaarskeuze.
+- Decision briefs en approval-intake validation zijn beschikbaar voor elke owner-gated beslissing.
 
 ## 2. Veilige commando's voor review
 
@@ -31,7 +32,11 @@ node scripts/owner-decision-preflight.mjs --decision email
 node scripts/push-readiness-preflight.mjs --strict
 node scripts/owner-approved-action-plan.mjs --decision pdf
 node scripts/owner-decision-menu.mjs
+node scripts/owner-approval-intake-validator.mjs --decision pdf
 npm run preflight:owner-acceptance
+npm run preflight:approval-intake
+npm run preflight:post-push
+npm run preflight:decision-briefs
 ```
 
 Deze commando's zijn lokaal en voeren geen productieactie uit.
@@ -46,11 +51,18 @@ Deze commando's zijn lokaal en voeren geen productieactie uit.
 | Productiecutover | Geblokkeerd tot expliciete cutover-goedkeuring |
 | Historische productie-import | Geblokkeerd tot owner-bestanden buiten Git en dry-run acceptatie |
 | Echte e-mailverzending | Geblokkeerd tot provider/secret-goedkeuring |
-| Push naar remote | Geblokkeerd tot expliciete push-goedkeuring |
+| Nieuwe push naar remote | Geblokkeerd tot expliciete push-goedkeuring |
 | Secret-rotatie | Geblokkeerd tot aparte beheeractie buiten Git |
 | PostgreSQL-productieversie | Te bevestigen bij hostingprovider vóór cutover |
 
-Gebruik `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md` om het lokale owner-review pakket te accepteren zonder uitvoering. Gebruik `docs/OWNER_DECISION_MENU_NL.md` om daarna exact één volgende owner-gated beslissing te kiezen.
+Gebruik `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md` om het lokale owner-review pakket te accepteren zonder uitvoering. Gebruik `docs/OWNER_DECISION_MENU_NL.md` om daarna exact één volgende owner-gated beslissing te kiezen. Lees vóór goedkeuring ook de bijbehorende beslisbrief:
+
+- `docs/DECISION_BRIEF_PDF_RENDERER_NL.md`
+- `docs/DECISION_BRIEF_POSTGRES_VERSION_NL.md`
+- `docs/DECISION_BRIEF_PRODUCTION_CUTOVER_NL.md`
+- `docs/DECISION_BRIEF_HISTORICAL_IMPORT_NL.md`
+- `docs/DECISION_BRIEF_EMAIL_PROVIDER_NL.md`
+- `docs/DECISION_BRIEF_SECRET_ROTATION_NL.md`
 
 ## 4. Exacte volgende prompts
 
@@ -95,7 +107,7 @@ Owner approval received for remote publish. Run push readiness preflight and rel
 - Geen historische productie-import.
 - Geen echte e-mailverzending.
 - Geen PDF-dependency installeren.
-- Geen push of tags.
+- Geen nieuwe push of tags.
 - Geen secret-rotatie via Git.
 
 ## 6. Lokale backup/restore evidence
@@ -112,9 +124,17 @@ Zie `docs/BACKUP_RESTORE_REHEARSAL_NL.md` en `docs/FINAL_READINESS_AUDIT_NL.md`.
 - `docs/OWNER_DECISION_READINESS_MATRIX_NL.md`
 - `docs/OWNER_DECISION_PREFLIGHT_NL.md`
 - `docs/OWNER_APPROVAL_INTAKE_NL.md`
+- `docs/OWNER_APPROVAL_INTAKE_VALIDATION_NL.md`
 - `docs/OWNER_APPROVED_ACTION_PLAN_NL.md`
 - `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md`
 - `docs/OWNER_DECISION_MENU_NL.md`
+- `docs/POST_PUSH_VERIFICATION_NL.md`
+- `docs/DECISION_BRIEF_PDF_RENDERER_NL.md`
+- `docs/DECISION_BRIEF_POSTGRES_VERSION_NL.md`
+- `docs/DECISION_BRIEF_PRODUCTION_CUTOVER_NL.md`
+- `docs/DECISION_BRIEF_HISTORICAL_IMPORT_NL.md`
+- `docs/DECISION_BRIEF_EMAIL_PROVIDER_NL.md`
+- `docs/DECISION_BRIEF_SECRET_ROTATION_NL.md`
 - `docs/POST_APPROVAL_PROMPTS_NL.md`
 - `docs/PUSH_READINESS_CHECKLIST_NL.md`
 - `docs/PRODUCTION_CUTOVER_PLAN_NL.md`
@@ -127,10 +147,13 @@ Zie `docs/BACKUP_RESTORE_REHEARSAL_NL.md` en `docs/FINAL_READINESS_AUDIT_NL.md`.
 ## 8. Ready for owner review
 
 - [ ] Eigenaar leest release manifest.
+- [ ] Eigenaar leest post-push verification evidence voor `6353546`.
+- [ ] Eigenaar leest de relevante beslisbrief vóór een gated beslissing.
 - [ ] Eigenaar draait of laat draaien: `npm run validate:release-candidate`.
 - [ ] Eigenaar draait of laat draaien: `node scripts/owner-go-no-go-preflight.mjs --strict`.
 - [ ] Eigenaar accepteert het lokale pakket via `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md`.
 - [ ] Eigenaar kiest de volgende beslissing via `docs/OWNER_DECISION_MENU_NL.md`.
 - [ ] Eigenaar kiest exact welke owner-gated beslissing wordt goedgekeurd.
 - [ ] Eigenaar vult `docs/OWNER_APPROVAL_INTAKE_NL.md` buiten Git in of bevestigt schriftelijk buiten Git.
+- [ ] Eigenaar valideert de approval intake met `node scripts/owner-approval-intake-validator.mjs --decision <decision>`.
 - [ ] Geen owner-gated actie wordt uitgevoerd zonder aparte prompt.

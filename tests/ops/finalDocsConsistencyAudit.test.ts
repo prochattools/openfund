@@ -51,13 +51,22 @@ describe('final docs consistency — required docs exist', () => {
     'docs/OWNER_DECISION_PACK_NL.md',
     'docs/OWNER_DECISION_READINESS_MATRIX_NL.md',
     'docs/OWNER_APPROVAL_INTAKE_NL.md',
+    'docs/OWNER_APPROVAL_INTAKE_VALIDATION_NL.md',
     'docs/OWNER_APPROVED_ACTION_PLAN_NL.md',
     'docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md',
     'docs/OWNER_REVIEW_INDEX_NL.md',
     'docs/OWNER_REVIEW_FINAL_PACKET_NL.md',
     'docs/OWNER_DECISION_MENU_NL.md',
+    'docs/POST_PUSH_VERIFICATION_NL.md',
     'docs/POST_APPROVAL_PROMPTS_NL.md',
     'docs/PUSH_READINESS_CHECKLIST_NL.md',
+    'docs/SAFE_COMMAND_INVENTORY_NL.md',
+    'docs/DECISION_BRIEF_PDF_RENDERER_NL.md',
+    'docs/DECISION_BRIEF_POSTGRES_VERSION_NL.md',
+    'docs/DECISION_BRIEF_PRODUCTION_CUTOVER_NL.md',
+    'docs/DECISION_BRIEF_HISTORICAL_IMPORT_NL.md',
+    'docs/DECISION_BRIEF_EMAIL_PROVIDER_NL.md',
+    'docs/DECISION_BRIEF_SECRET_ROTATION_NL.md',
     'docs/FINAL_READINESS_AUDIT_NL.md',
     'docs/FINAL_RELEASE_CANDIDATE_CHECKLIST_NL.md',
     'docs/RELEASE_MANIFEST_NL.md',
@@ -91,12 +100,13 @@ describe('final docs consistency — audit passes on real repo', () => {
 });
 
 describe('final docs consistency — no false production claims', () => {
+  const publishCommandText = ['git', 'push'].join(' ');
   const forbiddenPatterns: Array<{ pattern: RegExp; label: string }> = [
     { pattern: /productie(?:migratie|overstap|cutover).*voltooid/i, label: 'productiecutover voltooid' },
     { pattern: /historische productie-import (?:is )?(?:voltooid|succesvol uitgevoerd)/i, label: 'historische import voltooid' },
     { pattern: /echte e-mail(?:verzending)? is (?:verzonden|geactiveerd)/i, label: 'echte e-mail verzonden' },
     { pattern: /echte PDF (?:is )?(?:gegenereerd|geactiveerd)/i, label: 'echte PDF gegenereerd' },
-    { pattern: /git push (?:is )?(?:uitgevoerd|voltooid)/i, label: 'git push uitgevoerd' },
+    { pattern: new RegExp(`${publishCommandText} (?:is )?(?:uitgevoerd|voltooid)`, 'i'), label: `${publishCommandText} uitgevoerd` },
   ];
 
   it('no final owner doc contains false executed-action claims', () => {

@@ -1,20 +1,22 @@
 # Yeshua Academy Finance — Owner review index
 
-Status: Release Candidate 4 — owner acceptance / decision selection; owner-gated acties blijven geblokkeerd
+Status: Release Candidate 4 — post-push verificatie vastgelegd; owner acceptance / decision selection blijft de huidige gate
 Taal: Nederlands  
 Doel: één startpunt voor de eigenaar om te bepalen wat klaar is, wat geblokkeerd blijft, en welke beslissing als eerste genomen moet worden.
 
 ## Start hier
 
 1. Lees eerst `docs/OWNER_HANDOFF_NL.md`.
-2. Controleer daarna `docs/RELEASE_MANIFEST_NL.md`.
-3. Lees de beslissingen in `docs/OWNER_DECISION_PACK_NL.md`.
-4. Gebruik `docs/OWNER_DECISION_READINESS_MATRIX_NL.md` om per beslissing te zien wat klaar is.
-5. Gebruik `docs/OWNER_APPROVAL_INTAKE_NL.md` om goedkeuring buiten Git te registreren vóór uitvoering.
-6. Gebruik `docs/OWNER_REVIEW_FINAL_PACKET_NL.md` als laatste samenvatting voor owner review.
-7. Gebruik `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md` om het lokale pakket te accepteren zonder uitvoering.
-8. Gebruik `docs/OWNER_DECISION_MENU_NL.md` om de volgende owner-gated beslissing te kiezen.
-9. Gebruik `docs/POST_APPROVAL_PROMPTS_NL.md` pas nadat een beslissing expliciet is goedgekeurd.
+2. Controleer daarna `docs/POST_PUSH_VERIFICATION_NL.md`: commit `6353546` is lokaal tegen `origin/main` geverifieerd.
+3. Controleer `docs/RELEASE_MANIFEST_NL.md` voor de huidige lokale hardening commit.
+4. Lees de beslissingen in `docs/OWNER_DECISION_PACK_NL.md`.
+5. Gebruik `docs/OWNER_DECISION_READINESS_MATRIX_NL.md` om per beslissing te zien wat klaar is.
+6. Lees de relevante beslisbrief voordat je een owner-gated beslissing goedkeurt.
+7. Gebruik `docs/OWNER_APPROVAL_INTAKE_NL.md` en `docs/OWNER_APPROVAL_INTAKE_VALIDATION_NL.md` om goedkeuring buiten Git te registreren en statisch te valideren vóór uitvoering.
+8. Gebruik `docs/OWNER_REVIEW_FINAL_PACKET_NL.md` als laatste samenvatting voor owner review.
+9. Gebruik `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md` om het lokale pakket te accepteren zonder uitvoering.
+10. Gebruik `docs/OWNER_DECISION_MENU_NL.md` om de volgende owner-gated beslissing te kiezen.
+11. Gebruik `docs/POST_APPROVAL_PROMPTS_NL.md` pas nadat een beslissing expliciet is goedgekeurd.
 
 ## Wat klaar is
 
@@ -27,6 +29,9 @@ Doel: één startpunt voor de eigenaar om te bepalen wat klaar is, wat geblokkee
 - Dutch UX en admin-only mutation guards.
 - Local-only release, backup, owner decision, and push preflights.
 - Owner acceptance checklist en static owner decision menu.
+- Post-push verification evidence voor remote basiscommit `6353546`.
+- Owner-decision brief docs voor PDF, PostgreSQL-versie, productiecutover, historische import, e-mailprovider en secret rotation.
+- Approval-intake validator plus package preflight scripts voor post-push evidence, decision briefs en approval intake.
 
 ## Wat geblokkeerd blijft
 
@@ -34,7 +39,7 @@ Doel: één startpunt voor de eigenaar om te bepalen wat klaar is, wat geblokkee
 - Productiemigratie/cutover.
 - Historische productie-import.
 - Echte e-mailverzending.
-- Push naar remote.
+- Nieuwe push van de lokale post-push hardening commits.
 - Secret rotation.
 - Productie PostgreSQL-versie bevestiging.
 
@@ -42,13 +47,13 @@ Doel: één startpunt voor de eigenaar om te bepalen wat klaar is, wat geblokkee
 
 | Beslissing | Startdocument | Preflight |
 |------------|---------------|-----------|
-| PDF | `docs/OWNER_DECISION_READINESS_MATRIX_NL.md` | `node scripts/owner-decision-preflight.mjs --decision pdf` |
-| Productiecutover | `docs/PRODUCTION_CUTOVER_PLAN_NL.md` | `node scripts/owner-decision-preflight.mjs --decision production-cutover` |
-| Historische import | `docs/OWNER_DECISION_READINESS_MATRIX_NL.md` | `node scripts/owner-decision-preflight.mjs --decision historical-import` |
-| E-mail | `docs/OWNER_DECISION_READINESS_MATRIX_NL.md` | `node scripts/owner-decision-preflight.mjs --decision email` |
+| PDF | `docs/DECISION_BRIEF_PDF_RENDERER_NL.md` | `node scripts/owner-decision-preflight.mjs --decision pdf` |
+| Productiecutover | `docs/DECISION_BRIEF_PRODUCTION_CUTOVER_NL.md` | `node scripts/owner-decision-preflight.mjs --decision production-cutover` |
+| Historische import | `docs/DECISION_BRIEF_HISTORICAL_IMPORT_NL.md` | `node scripts/owner-decision-preflight.mjs --decision historical-import` |
+| E-mail | `docs/DECISION_BRIEF_EMAIL_PROVIDER_NL.md` | `node scripts/owner-decision-preflight.mjs --decision email` |
 | Push | `docs/PUSH_READINESS_CHECKLIST_NL.md` | `node scripts/push-readiness-preflight.mjs --strict` |
-| Geheimen | `docs/OWNER_DECISION_READINESS_MATRIX_NL.md` | `node scripts/owner-decision-preflight.mjs --decision secret-rotation` |
-| PostgreSQL-versie | `docs/OWNER_DECISION_READINESS_MATRIX_NL.md` | `node scripts/owner-decision-preflight.mjs --decision postgres-version` |
+| Geheimen | `docs/DECISION_BRIEF_SECRET_ROTATION_NL.md` | `node scripts/owner-decision-preflight.mjs --decision secret-rotation` |
+| PostgreSQL-versie | `docs/DECISION_BRIEF_POSTGRES_VERSION_NL.md` | `node scripts/owner-decision-preflight.mjs --decision postgres-version` |
 
 ## Validation commands
 
@@ -58,7 +63,11 @@ node scripts/owner-decision-preflight.mjs --decision pdf
 node scripts/owner-approved-action-plan.mjs --decision pdf
 node scripts/push-readiness-preflight.mjs --strict
 node scripts/owner-decision-menu.mjs
+node scripts/owner-approval-intake-validator.mjs --decision pdf
 npm run preflight:owner-acceptance
+npm run preflight:approval-intake
+npm run preflight:post-push
+npm run preflight:decision-briefs
 npm run validate:release-candidate
 git diff --check
 ```
@@ -159,12 +168,20 @@ Plaats hier geen geheimen, hostnamen, wachtwoorden, API-keys, owner-bestandspade
 | `docs/OWNER_DECISION_PACK_NL.md` | Beslissingspakket |
 | `docs/OWNER_DECISION_READINESS_MATRIX_NL.md` | Per-beslissing readiness matrix |
 | `docs/OWNER_APPROVAL_INTAKE_NL.md` | Eigenaarsgoedkeuring intake |
+| `docs/OWNER_APPROVAL_INTAKE_VALIDATION_NL.md` | Gegenereerde approval-intake validatie |
 | `docs/OWNER_APPROVED_ACTION_PLAN_NL.md` | Goedgekeurd actieplan |
 | `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md` | Lokale owner acceptance checklist; keurt geen gated actie goed |
 | `docs/OWNER_DECISION_MENU_NL.md` | Static menu voor de volgende eigenaarsbeslissing |
 | `docs/OWNER_REVIEW_FINAL_PACKET_NL.md` | Samenvatting final owner review packet |
 | `docs/OWNER_GO_NO_GO_PREFLIGHT_NL.md` | Repo go/no-go preflight |
 | `docs/OWNER_DECISION_PREFLIGHT_NL.md` | Gegenereerde beslissing-preflight |
+| `docs/POST_PUSH_VERIFICATION_NL.md` | Post-push verificatie van basiscommit `6353546` |
+| `docs/DECISION_BRIEF_PDF_RENDERER_NL.md` | Beslisbrief PDF-renderer |
+| `docs/DECISION_BRIEF_POSTGRES_VERSION_NL.md` | Beslisbrief PostgreSQL-versie |
+| `docs/DECISION_BRIEF_PRODUCTION_CUTOVER_NL.md` | Beslisbrief productiecutover |
+| `docs/DECISION_BRIEF_HISTORICAL_IMPORT_NL.md` | Beslisbrief historische import |
+| `docs/DECISION_BRIEF_EMAIL_PROVIDER_NL.md` | Beslisbrief e-mailprovider |
+| `docs/DECISION_BRIEF_SECRET_ROTATION_NL.md` | Beslisbrief secret rotation |
 | `docs/PUSH_READINESS_CHECKLIST_NL.md` | Push checklist |
 | `docs/POST_APPROVAL_PROMPTS_NL.md` | Prompts voor goedgekeurde acties |
 | `docs/PRODUCTION_CUTOVER_PLAN_NL.md` | Productiecutoverplan |

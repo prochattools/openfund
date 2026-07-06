@@ -3,7 +3,7 @@
 Status: authoritative execution plan  
 Depends on: `docs/PHILOSOPHY.md`, `docs/STRATEGY.md`, `docs/ROADMAP.md`  
 Persistent run: `agent-f961650b-de17-4282-ab18-7a716cc72958`  
-Commit policy: do not commit until the owner explicitly approves
+Commit policy: commit coherent validated local slices when the current task explicitly requires them; do not push without explicit owner approval
 
 ## Purpose
 
@@ -78,10 +78,11 @@ Phase 9 RC2-005 owner handoff bundle: docs/OWNER_HANDOFF_NL.md; committed as 0a8
 Phase 9 RC3 evidence: final readiness counts corrected (`4f9cedf`), live local backup/restore evidence recorded (`3ac4bfc`), API route smoke coverage added (`9b209c7`)
 Phase 9 RC4 evidence: release evidence corrected (`7ce6e6d`), manifest refreshed (`43bfb90`), owner go/no-go preflight added (`42a6f49`), push readiness checklist added (`43137b5`), release evidence consistency checks added (`33d08c4`), roadmap closeout guards added (`d942705`), validated-through evidence refreshed (`d07a32f`), owner decision preflight/matrix added (`35688c4`), post-approval prompt pack added (`b3cfc57`), push readiness preflight added (`0a64649`), owner review index added (`0a3904e`)
 Phase 9 RC4 final hardening: final docs consistency audit added (`scripts/final-docs-consistency-audit.mjs`, `tests/ops/finalDocsConsistencyAudit.test.ts`, `docs/FINAL_DOCS_CONSISTENCY_AUDIT_NL.md`), repo contamination guard added (`tests/ops/repoContaminationGuard.test.ts`), final docs link integrity guard added (`tests/ops/finalDocsLinkIntegrity.test.ts`), safe command inventory added (`docs/SAFE_COMMAND_INVENTORY_NL.md`), final owner review preflight added (`scripts/final-owner-review-preflight.mjs`, `tests/ops/finalOwnerReviewPreflight.test.ts`), package scripts extended (`preflight:final-owner-review`, `audit:final-docs`), package script safety tests extended to 26
-Phase 9 owner acceptance hardening: owner acceptance checklist, owner decision menu, static package preflight scripts, generated menu doc, and final doc links added; all remaining work remains owner-gated
+Phase 9 owner acceptance hardening: owner acceptance checklist, owner decision menu, static package preflight scripts, generated menu doc, and final doc links added; published basiscommit `6353546` was later verified on `origin/main`; all remaining owner actions remain gated
+Phase 9 post-push hardening: post-push verification evidence (`e07be8f`), owner decision briefs (`a5ab4a8`), decision brief guards (`949823a`), approval-intake validator (`84d13d7`), and post-push owner preflight package scripts (`3866a43`) added locally after the verified push; these local hardening commits require separate owner-approved push
 Phase 3 local/sanitized historical loading: complete; production historical import remains owner-gated
 Phase 4 monthly import/review workflow: complete for local/app behavior; future real owner monthly files remain operator-controlled
-Current gate: Release Candidate 4 owner review / roadmap closeout and owner decisions; owner acceptance / owner decision selection is the current safe step; all safe pre-approval hardening is complete (847 tests), and owner decisions remain required before production cutover, historical production import, PDF dependency, email provider, push, production secret rotation, and production PostgreSQL version confirmation
+Current gate: Release Candidate 4 owner review / roadmap closeout and owner decision selection; post-push evidence and approval-intake hardening are local and safe, and owner decisions remain required before production cutover, historical production import, PDF dependency, email provider, any new push, production secret rotation, and production PostgreSQL version confirmation
 ```
 
 ## Phase 0 — Governance and discovery

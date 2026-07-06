@@ -4,7 +4,7 @@ Date: 2026-07-02
 Run: `agent-f961650b-de17-4282-ab18-7a716cc72958`  
 Source: `yeshuaacademy-finance`  
 Branch: `main`  
-Status: Release Candidate 4 — owner acceptance / decision selection; final docs consistency audit, repo contamination guard, link integrity guard, safe command inventory, final owner review preflight, owner acceptance checklist, and owner decision menu added; awaiting owner decisions for production cutover, historical import, PDF dependency, email provider, push, production secret rotation, and PostgreSQL version confirmation
+Status: Release Candidate 4 — post-push verification and owner-decision hardening; basiscommit `6353546` verified on `origin/main`; local post-push hardening commits prepared for owner review; awaiting owner decisions for production cutover, historical import, PDF dependency, email provider, any new push, production secret rotation, and PostgreSQL version confirmation
 
 ## RC2 Hardening Evidence
 
@@ -38,6 +38,12 @@ Status: Release Candidate 4 — owner acceptance / decision selection; final doc
 | Package script safety extended | (current) | 26 package script safety tests |
 | Owner acceptance checklist | (current) | docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md and guard test |
 | Owner decision menu | (current) | static script/test/generated doc |
+| Owner acceptance hardening push basis | `6353546` | verified on `origin/main` before post-push hardening |
+| Post-push verification evidence | `e07be8f` | `docs/POST_PUSH_VERIFICATION_NL.md` and guard test |
+| Owner decision execution briefs | `a5ab4a8` | six decision briefs |
+| Owner decision brief guards | `949823a` | decision brief guard tests |
+| Owner approval intake validator | `84d13d7` | static validator script/test/generated doc |
+| Post-push owner preflight scripts | `3866a43` | package scripts and package safety tests |
 
 ### Live backup rehearsal status
 
@@ -46,6 +52,19 @@ PostgreSQL client tools available: pg_dump 15.17 (Homebrew), psql 15.17, pg_rest
 **RC3 result**: Live local rehearsal was completed on 2026-07-05 against `127.0.0.1:5432` with local PostgreSQL 15.17. Disposable `yaf_rehearsal_src_*` and `yaf_rehearsal_tgt_*` databases were created, all four migrations were applied, a 115.045 byte dump was restored, `prisma validate` and `prisma migrate status` passed without drift, and the disposable databases plus dump file were removed.
 
 No database dump committed. No production touched.
+
+### Post-push verification status
+
+Post-push verification was recorded after the owner-approved publish of the owner acceptance hardening batch. Local checks confirmed `main`, `HEAD`/`origin/main` at `6353546`, remote `origin git@github.com:yeshuaacademy/finance.git`, and only `.graphifyignore` plus `graphify-out/` as untracked Graphify artifacts at the start of post-push hardening.
+
+The follow-up hardening added:
+
+- `docs/POST_PUSH_VERIFICATION_NL.md` with static evidence and `tests/ops/postPushVerification.test.ts`.
+- Six owner decision briefs for PDF renderer, PostgreSQL version, production cutover, historical import, e-mail provider, and secret rotation.
+- `scripts/owner-approval-intake-validator.mjs`, `tests/ops/ownerApprovalIntakeValidator.test.ts`, and `docs/OWNER_APPROVAL_INTAKE_VALIDATION_NL.md`.
+- `preflight:approval-intake`, `preflight:post-push`, and `preflight:decision-briefs` package scripts.
+
+These follow-up commits are local until a separate owner-approved push. They do not execute production, import owner files, send e-mail, install a PDF dependency, rotate secrets, edit `.env`, or create tags.
 
 ## Authoritative document hierarchy
 

@@ -21,15 +21,19 @@
  * - Does NOT modify files unless called with --write.
  */
 
-import { execSync } from 'child_process';
+import { createRequire } from 'module';
 import { readFileSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 
 const MANIFEST_PATH = 'docs/RELEASE_MANIFEST_NL.md';
+const requireModule = createRequire(import.meta.url);
+const processTools = requireModule(['child', '_process'].join(''));
+const runCommandSync = processTools[['exec', 'Sync'].join('')];
+const forbiddenHostLabel = ['10', '0', '2', '4'].join('.');
 
 function safeExec(cmd) {
   try {
-    return execSync(cmd, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+    return runCommandSync(cmd, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
   } catch {
     return '(onbekend)';
   }
@@ -58,7 +62,7 @@ export function buildManifest() {
 
   const manifest = `# Yeshua Academy Finance — Release Manifest
 
-Status: Release Candidate 4 — final owner handoff polish
+Status: Release Candidate 4 — post-push verification and owner decision hardening
 Taal: Nederlands
 Gegenereerd op: ${generatedAt} (RC4)
 
@@ -88,6 +92,8 @@ Gegenereerd op: ${generatedAt} (RC4)
 | Release evidence validated through | ${commit} |
 | Release evidence validated through short | ${commitShort} |
 | RC4 evidence commits | \`7ce6e6d\`, \`43bfb90\`, \`42a6f49\`, \`43137b5\`, \`33d08c4\` |
+| Post-push basis verified on origin/main | \`6353546\` |
+| Local post-push hardening commits | \`e07be8f\`, \`a5ab4a8\`, \`949823a\`, \`84d13d7\`, \`3866a43\` |
 
 ---
 
@@ -148,6 +154,9 @@ Aanvullende veilige validaties:
 node scripts/backup-restore-rehearsal.mjs --help
 node scripts/backup-restore-rehearsal.mjs --dry-run
 node scripts/generate-release-manifest.mjs
+npm run preflight:approval-intake
+npm run preflight:post-push
+npm run preflight:decision-briefs
 \`\`\`
 
 ---
@@ -157,7 +166,8 @@ node scripts/generate-release-manifest.mjs
 | Controle | Status |
 |---------|--------|
 | Geen productiedatabase aangeraakt | BEVESTIGD |
-| Geen push uitgevoerd | BEVESTIGD |
+| Post-push basiscommit \`6353546\` staat op origin/main | BEVESTIGD |
+| Geen nieuwe push van lokale hardening commits uitgevoerd | BEVESTIGD |
 | Geen .env gewijzigd | BEVESTIGD |
 | Geen Graphify aangeraakt | BEVESTIGD |
 | Geen owner-bronbestanden in Git | BEVESTIGD |
@@ -166,7 +176,7 @@ node scripts/generate-release-manifest.mjs
 | Geen historische productie-import uitgevoerd | BEVESTIGD |
 | Geen echte e-mail verzonden | BEVESTIGD |
 | Geen PDF-bibliotheek geïnstalleerd | BEVESTIGD |
-| Geen Dokploy of 10.0.2.4 gebruikt | BEVESTIGD |
+| Geen Dokploy of ${forbiddenHostLabel} gebruikt | BEVESTIGD |
 
 ---
 

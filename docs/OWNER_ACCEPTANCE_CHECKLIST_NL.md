@@ -6,7 +6,7 @@ Afhankelijkheden: `docs/OWNER_REVIEW_FINAL_PACKET_NL.md`, `docs/OWNER_APPROVAL_I
 
 ## 1. Huidige release-status
 
-De repository staat klaar voor de volgende expliciete eigenaarsbeslissing. De lokale release-candidate workflow, final owner review preflight, owner go/no-go preflight, push-readiness preflight, documentatie-audits en release-evidence zijn voorbereid voor review.
+De repository staat klaar voor de volgende expliciete eigenaarsbeslissing. De remote basiscommit `6353546` is post-push geverifieerd op `origin/main`; de huidige lokale hardening commits met post-push evidence, decision briefs, approval-intake validator en doc guards blijven ongepusht tot aparte owner-goedkeuring.
 
 Deze checklist registreert alleen acceptatie van het lokale pakket. Deze checklist keurt geen productieactie, push, PDF-renderer, historische import, echte e-mail, secret rotation of PostgreSQL-productieversieclaim goed.
 
@@ -17,6 +17,7 @@ Deze checklist registreert alleen acceptatie van het lokale pakket. Deze checkli
 - Dispatch-metadata bestaat; echte e-mail wordt niet verzonden.
 - Backup/restore rehearsal evidence is lokaal vastgelegd; productieback-up/herstel blijft owner-gated.
 - Owner review documenten, beslissingsoverzicht, approval intake, action plan, final packet en decision menu zijn aanwezig.
+- Post-push evidence, zes decision briefs en approval-intake validation zijn aanwezig.
 - Veilige preflight-commando's zijn beschikbaar zonder productie, externe provider, databaseverplichting of `.env`-lezing.
 
 ## 3. Wat owner-gated blijft
@@ -25,7 +26,7 @@ Deze checklist registreert alleen acceptatie van het lokale pakket. Deze checkli
 - Productiecutover of productiemigratie.
 - Historische productie-import.
 - Echte e-mailverzending.
-- Push naar remote.
+- Push naar remote voor nieuwe lokale hardening commits.
 - Secret rotation.
 - Productie PostgreSQL-versie bevestigen.
 
@@ -39,6 +40,9 @@ npm run preflight:final-owner-review
 node scripts/final-owner-review-preflight.mjs --check
 node scripts/owner-go-no-go-preflight.mjs --strict
 node scripts/push-readiness-preflight.mjs --strict
+npm run preflight:approval-intake
+npm run preflight:post-push
+npm run preflight:decision-briefs
 ```
 
 Optioneel voor de beslissingskeuze:
@@ -53,9 +57,11 @@ node scripts/owner-decision-menu.mjs
 - [ ] Lokale workflow geaccepteerd.
 - [ ] Documentatiepakket geaccepteerd.
 - [ ] Backup rehearsal evidence geaccepteerd.
+- [ ] Post-push verification evidence voor `6353546` geaccepteerd.
+- [ ] Decision briefs en approval-intake validation geaccepteerd als pre-approval hulpmiddelen.
 - [ ] Resterende blockers begrepen.
 - [ ] Bevestigd: productie is niet aangeraakt.
-- [ ] Bevestigd: er is nog niet gepusht.
+- [ ] Bevestigd: de eerder goedgekeurde basispush is geverifieerd, maar de huidige lokale hardening commits zijn nog niet opnieuw gepusht.
 
 ## 6. Niet goedgekeurd door deze checklist
 
@@ -65,7 +71,7 @@ Deze checklist geeft expliciet geen toestemming voor:
 - Productiecutover of productiemigratie uitvoeren.
 - Historische productie-import uitvoeren.
 - Echte e-mail verzenden of een provider-call doen.
-- Push naar remote of tags maken.
+- Push naar remote voor nieuwe lokale hardening commits of tags maken.
 - Secret rotation uitvoeren.
 - Productie PostgreSQL-versie als bevestigd registreren zonder owner-evidence buiten Git.
 
@@ -100,3 +106,4 @@ Stop direct wanneer:
 - Plaats geen geheimen, hostnamen, wachtwoorden, API-keys, owner-bestandspaden, ruwe transactierijen of databasedumps in dit document.
 - Kopieer geen owner Excel/CSV/PDF-bestanden naar Git.
 - Claim geen productiecutover, historische productie-import, echte e-mail, echte PDF, push, tags, secret rotation of productie PostgreSQL-versiebevestiging zolang daar geen aparte owner-goedkeuring en evidence buiten Git voor is.
+- Claim geen nieuwe remote publish van lokale hardening commits zolang die niet met aparte owner-goedkeuring is uitgevoerd.

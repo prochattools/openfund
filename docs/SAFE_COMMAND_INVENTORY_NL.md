@@ -129,6 +129,31 @@ npm run preflight:owner-acceptance
 
 Voert alleen de finale owner-review preflight en het static decision menu uit. Geen build, geen productie, geen push, geen e-mail, geen import.
 
+### Approval intake validator
+
+```bash
+node scripts/owner-approval-intake-validator.mjs --decision pdf
+npm run preflight:approval-intake
+```
+
+Controleert statisch welke owner approval velden, stopregels en evidence per beslissing nodig zijn. Voert geen owner-gated actie uit en schrijft alleen `docs/OWNER_APPROVAL_INTAKE_VALIDATION_NL.md` met `--write`.
+
+### Post-push verification guard
+
+```bash
+npm run preflight:post-push
+```
+
+Voert alleen de post-push verification guard tests uit. Dit bevestigt de gedocumenteerde basis: commit `6353546` is op `origin/main` geverifieerd; het voert geen nieuwe push uit.
+
+### Decision brief guards
+
+```bash
+npm run preflight:decision-briefs
+```
+
+Voert alleen de owner decision brief guard tests uit en bewaakt dat de zes beslisbrieven geen uitvoering, secrets, productie, externe providers of owner-data bevatten.
+
 ### Push readiness preflight
 
 ```bash
@@ -190,7 +215,7 @@ De volgende commando's mogen **NOOIT** worden uitgevoerd zonder expliciete eigen
 
 | Verboden commando | Reden |
 |-------------------|-------|
-| `git push` | Publiceert naar remote; vereist eigenaargoedkeuring |
+| Nieuwe `git push` | Publiceert lokale commits naar remote; vereist eigenaargoedkeuring |
 | `git tag` | Maakt een tag aan; vereist eigenaargoedkeuring |
 | `git push --force` | Destructief; altijd geblokkeerd op main |
 | Productiecutover-script | Vereist eigenaargoedkeuring en voorbereiding |
@@ -228,7 +253,11 @@ Na eigenaargoedkeuring buiten Git, gebruik de exacte prompts in `docs/POST_APPRO
 | `node scripts/final-docs-consistency-audit.mjs` | `GESLAAGD`, exit 0 |
 | `node scripts/final-owner-review-preflight.mjs --check` | `GEREED VOOR EIGENAARSBEOORDELING: JA`, exit 0, zonder git-commando's |
 | `node scripts/owner-decision-menu.mjs` | Static owner decision menu, exit 0 |
+| `node scripts/owner-approval-intake-validator.mjs --decision pdf` | Static approval-intake advies, exit 0 |
 | `npm run preflight:owner-acceptance` | Finale owner-review preflight plus decision menu, exit 0 |
+| `npm run preflight:approval-intake` | Static approval-intake overzicht, exit 0 |
+| `npm run preflight:post-push` | Post-push verification guard tests, exit 0 |
+| `npm run preflight:decision-briefs` | Decision brief guard tests, exit 0 |
 | `node scripts/backup-restore-rehearsal.mjs --dry-run` | Guard-check geslaagd, exit 0 |
 | `node scripts/generate-release-manifest.mjs` | Release manifest met RC4-status |
 
@@ -256,6 +285,8 @@ Stop direct en meld een blocker als een commando:
 - `docs/OWNER_REVIEW_INDEX_NL.md` — overzicht eigenaarsbeoordeling
 - `docs/OWNER_HANDOFF_NL.md` — eigenaaroverdracht
 - `docs/OWNER_DECISION_PACK_NL.md` — beslissingspakket
+- `docs/POST_PUSH_VERIFICATION_NL.md` — post-push basisverificatie
+- `docs/OWNER_APPROVAL_INTAKE_VALIDATION_NL.md` — static approval intake validation
 - `docs/POST_APPROVAL_PROMPTS_NL.md` — prompts voor goedgekeurde acties
 - `docs/PUSH_READINESS_CHECKLIST_NL.md` — push checklist
 - `docs/PRODUCTION_CUTOVER_PLAN_NL.md` — productiecutoverplan

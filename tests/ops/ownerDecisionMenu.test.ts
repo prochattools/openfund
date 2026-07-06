@@ -62,6 +62,10 @@ describe('owner decision menu — model', () => {
     }
     expect(output).toContain('Vereiste approval');
     expect(output).toContain('Veilige preflight');
+    expect(output).toContain('Beslisbrief');
+    expect(output).toContain('Approval intake validator');
+    expect(output).toContain('docs/DECISION_BRIEF_PDF_RENDERER_NL.md');
+    expect(output).toContain('owner-approval-intake-validator.mjs --decision pdf');
     expect(output).toContain('Volgende prompt doc');
     expect(output).toContain('Stopregels');
     expect(output).not.toMatch(forbiddenRuntimePattern);
