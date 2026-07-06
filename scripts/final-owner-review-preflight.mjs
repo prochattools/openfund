@@ -12,9 +12,10 @@
  * - Does NOT send email.
  * - Does NOT run historical import.
  * - Does NOT mutate files.
+ * - Does NOT run git; live branch/worktree checks remain delegated to
+ *   push-readiness preflight.
  */
 
-import { execSync } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 
@@ -46,8 +47,6 @@ const REQUIRED_SCRIPTS = [
   'scripts/final-owner-review-preflight.mjs',
 ];
 
-const ALLOWED_DIRTY_PATHS = ['.graphifyignore', 'graphify-out/'];
-
 const FORBIDDEN_PACKAGE_SCRIPT_PATTERNS = [
   /git\s+push/,
   /git\s+tag/,
@@ -68,7 +67,7 @@ const SAFE_NEXT_COMMANDS = [
   'node scripts/final-docs-consistency-audit.mjs',
 ];
 
-const HELP_TEXT = `Yeshua Academy Finance — Finale eigenaarsbeoordeling preflight
+export const HELP_TEXT = `Yeshua Academy Finance — Finale eigenaarsbeoordeling preflight
 
 GEBRUIK / USAGE:
   node scripts/final-owner-review-preflight.mjs            Markdown samenvatting
@@ -80,41 +79,23 @@ GEBRUIK / USAGE:
 GUARDS:
   - Leest geen .env
   - Geen push, tag, migratie, import, database, netwerk
+  - Geen git-commando's; branch/worktree blijven gedelegeerd aan push-readiness preflight
   - Geen dependencies installeren
   - Geen e-mail versturen
   - Muteert geen bestanden`;
 
-function safeExec(cmd) {
-  try {
-    return execSync(cmd, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
-  } catch {
-    return '';
-  }
-}
-
-function parseDirtyPaths(statusOutput) {
-  return statusOutput
+function extractManifestField(content, label) {
+  const rowPrefix = `| ${label} |`;
+  const row = content
     .split('\n')
-    .map((line) => line.trimEnd())
-    .filter(Boolean)
-    .filter((line) => !line.startsWith('## '))
-    .map((line) => line.slice(3).trim());
-}
-
-function isAllowedDirtyPath(path) {
-  return ALLOWED_DIRTY_PATHS.some((allowed) => {
-    if (allowed.endsWith('/')) return path === allowed.slice(0, -1) || path.startsWith(allowed);
-    return path === allowed;
-  });
+    .find((line) => line.startsWith(rowPrefix));
+  if (!row) return '';
+  const cells = row.split('|').map((cell) => cell.trim());
+  return cells[2] ?? '';
 }
 
 export function buildFinalOwnerReviewPreflight(input = {}) {
   const repoRoot = input.repoRoot ?? process.cwd();
-  const branch = input.branch ?? safeExec('git branch --show-current');
-  const head = input.head ?? safeExec('git rev-parse --short HEAD');
-  const status = input.status ?? safeExec('git status --short --branch');
-  const dirtyPaths = input.dirtyPaths ?? parseDirtyPaths(status);
-  const unexpectedDirty = dirtyPaths.filter((p) => !isAllowedDirtyPath(p));
 
   const missingFiles = REQUIRED_FILES.filter((f) => !existsSync(resolve(repoRoot, f)));
   const missingScripts = REQUIRED_SCRIPTS.filter((s) => !existsSync(resolve(repoRoot, s)));
@@ -134,26 +115,32 @@ export function buildFinalOwnerReviewPreflight(input = {}) {
   }
 
   const releaseManifestPath = resolve(repoRoot, 'docs/RELEASE_MANIFEST_NL.md');
-  const manifestContent = existsSync(releaseManifestPath)
+  const manifestContent = input.manifestContent ?? (existsSync(releaseManifestPath)
     ? readFileSync(releaseManifestPath, 'utf-8')
-    : '';
+    : '');
   const manifestIsRC4 = manifestContent.includes('Release Candidate 4');
   const manifestHasEvidence = manifestContent.includes('Release evidence validated through');
+  const branch = input.branch ?? extractManifestField(manifestContent, 'Branch');
+  const head = input.head ?? extractManifestField(manifestContent, 'Manifest generated at short commit');
+  const fullHead = input.fullHead ?? extractManifestField(manifestContent, 'Manifest generated at commit');
+  const evidenceHead = input.evidenceHead ?? extractManifestField(manifestContent, 'Release evidence validated through');
+  const manifestDelegatesWorktree = manifestContent.includes('git diff --check') &&
+    SAFE_NEXT_COMMANDS.some((cmd) => cmd.includes('push-readiness-preflight.mjs'));
 
   const checks = [
     {
       id: 'branch',
-      label: 'Branch is main',
+      label: 'Release manifest branch is main',
       ok: branch === 'main',
       detail: branch || '(onbekend)',
     },
     {
-      id: 'worktree',
-      label: 'Worktree bevat alleen toegestane Graphify-artifacts',
-      ok: unexpectedDirty.length === 0,
-      detail: unexpectedDirty.length === 0
-        ? 'schoon'
-        : unexpectedDirty.join(', '),
+      id: 'worktree_delegated',
+      label: 'Live worktreecontrole gedelegeerd aan push-readiness preflight',
+      ok: manifestDelegatesWorktree,
+      detail: manifestDelegatesWorktree
+        ? 'Delegatie vastgelegd; deze preflight voert geen git-status uit'
+        : 'Delegatie ontbreekt in manifest of veilige commando\'s',
     },
     {
       id: 'required_files',
@@ -197,6 +184,8 @@ export function buildFinalOwnerReviewPreflight(input = {}) {
     readyForOwnerReview,
     branch,
     head,
+    fullHead,
+    evidenceHead,
     blockers: checks.filter((c) => !c.ok).map((c) => c.label),
     safeNextCommands: SAFE_NEXT_COMMANDS,
     checks,
@@ -208,8 +197,9 @@ export function renderFinalOwnerReviewPreflightMarkdown(result) {
     '# Yeshua Academy Finance — Finale eigenaarsbeoordeling preflight',
     '',
     `GEREED VOOR EIGENAARSBEOORDELING: ${result.readyForOwnerReview}`,
-    `Branch: ${result.branch || '(onbekend)'}`,
-    `HEAD: ${result.head || '(onbekend)'}`,
+    `Manifest branch: ${result.branch || '(onbekend)'}`,
+    `Manifest generated commit: ${result.fullHead || result.head || '(onbekend)'}`,
+    `Release evidence validated through: ${result.evidenceHead || '(onbekend)'}`,
     '',
     '| Controle | Status | Detail |',
     '|----------|--------|--------|',
@@ -234,33 +224,43 @@ export function renderFinalOwnerReviewPreflightMarkdown(result) {
 
   lines.push('');
   lines.push('Bevestiging: deze preflight heeft geen .env gelezen, geen push of tag uitgevoerd,');
-  lines.push('geen database geraakt, geen netwerk gebruikt en geen bestanden gewijzigd.');
+  lines.push('geen database geraakt, geen netwerk gebruikt, geen git-commando uitgevoerd en geen bestanden gewijzigd.');
+  lines.push('Live branch/worktree-status blijft gedelegeerd aan `node scripts/push-readiness-preflight.mjs --strict`.');
 
   return `${lines.join('\n')}\n`;
 }
 
-const cliArgs = process.argv.slice(2);
-const isHelp = cliArgs.includes('--help');
-const isJson = cliArgs.includes('--json');
-const isStrict = cliArgs.includes('--strict');
-// --check performs the same static checks; kept for forward-compat with test contracts
-// const isCheck = cliArgs.includes('--check');
+export function main(args = process.argv.slice(2), options = {}) {
+  const stdout = options.stdout ?? process.stdout;
+  const repoRoot = options.repoRoot ?? process.cwd();
+  const isHelp = args.includes('--help');
+  const isJson = args.includes('--json');
+  const isStrict = args.includes('--strict');
+  // --check performs the same static checks; kept for forward-compat with test contracts
 
-if (import.meta.url === `file://${process.argv[1]}`) {
   if (isHelp) {
-    console.log(HELP_TEXT);
-    process.exit(0);
+    stdout.write(`${HELP_TEXT}\n`);
+    return 0;
   }
 
-  const result = buildFinalOwnerReviewPreflight();
+  const result = buildFinalOwnerReviewPreflight({ repoRoot });
 
   if (isJson) {
-    console.log(JSON.stringify(result, null, 2));
+    stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   } else {
-    process.stdout.write(renderFinalOwnerReviewPreflightMarkdown(result));
+    stdout.write(renderFinalOwnerReviewPreflightMarkdown(result));
   }
 
   if (isStrict && result.decision !== 'READY_FOR_OWNER_REVIEW') {
-    process.exit(1);
+    return 1;
+  }
+
+  return 0;
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const exitCode = main();
+  if (exitCode !== 0) {
+    process.exit(exitCode);
   }
 }

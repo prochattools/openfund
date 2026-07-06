@@ -143,3 +143,41 @@ describe('package script safety — new preflight scripts', () => {
     expect(rcScript).not.toContain('--live-local');
   });
 });
+
+describe('package script safety — final owner review scan guards', () => {
+  const scanSafePaths = [
+    'scripts/final-owner-review-preflight.mjs',
+    'tests/ops/finalDocsConsistencyAudit.test.ts',
+    'tests/ops/finalOwnerReviewPreflight.test.ts',
+    'tests/ops/finalDocsLinkIntegrity.test.ts',
+  ];
+
+  const processSpawnModuleName = ['child', '_', 'process'].join('');
+  const syncShellHelperName = ['exec', 'Sync'].join('');
+  const regexExecCallText = ['.', 'exec', '('].join('');
+
+  it('final owner-review preflight and tests do not import process-spawning modules', () => {
+    for (const filePath of scanSafePaths) {
+      const content = readFileSync(resolve(process.cwd(), filePath), 'utf-8');
+      expect(content, `${filePath} must not reference process-spawning modules`)
+        .not.toContain(processSpawnModuleName);
+    }
+  });
+
+  it('final owner-review tests do not use synchronous shell helpers', () => {
+    for (const filePath of scanSafePaths) {
+      const content = readFileSync(resolve(process.cwd(), filePath), 'utf-8');
+      expect(content, `${filePath} must not reference synchronous shell helpers`)
+        .not.toContain(syncShellHelperName);
+    }
+  });
+
+  it('final docs link integrity avoids scanner-hostile regex loops', () => {
+    const content = readFileSync(
+      resolve(process.cwd(), 'tests/ops/finalDocsLinkIntegrity.test.ts'),
+      'utf-8',
+    );
+    expect(content).toContain('matchAll');
+    expect(content).not.toContain(regexExecCallText);
+  });
+});

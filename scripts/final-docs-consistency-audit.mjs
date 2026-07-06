@@ -254,7 +254,7 @@ export function renderAuditMarkdown(result) {
 
 const WRITE_PATH = 'docs/FINAL_DOCS_CONSISTENCY_AUDIT_NL.md';
 
-const HELP_TEXT = `Yeshua Academy Finance — Eindaudit documentatieconsistentie
+export const HELP_TEXT = `Yeshua Academy Finance — Eindaudit documentatieconsistentie
 
 GEBRUIK / USAGE:
   node scripts/final-docs-consistency-audit.mjs           Markdown samenvatting
@@ -268,28 +268,37 @@ GUARDS:
   - Geen productiecommando's
   - Muteert alleen bestanden met --write`;
 
-const cliArgs = process.argv.slice(2);
-const isHelp = cliArgs.includes('--help');
-const isWrite = cliArgs.includes('--write');
+export function main(args = process.argv.slice(2), options = {}) {
+  const repoRoot = options.repoRoot ?? process.cwd();
+  const stdout = options.stdout ?? process.stdout;
+  const isHelp = args.includes('--help');
+  const isWrite = args.includes('--write');
 
-if (import.meta.url === `file://${process.argv[1]}`) {
   if (isHelp) {
-    console.log(HELP_TEXT);
-    process.exit(0);
+    stdout.write(`${HELP_TEXT}\n`);
+    return 0;
   }
 
-  const repoRoot = process.cwd();
   const result = runFinalDocsConsistencyAudit(repoRoot);
   const markdown = renderAuditMarkdown(result);
 
   if (isWrite) {
     writeFileSync(resolve(repoRoot, WRITE_PATH), markdown, 'utf-8');
-    console.log(`Geschreven naar ${WRITE_PATH}`);
+    stdout.write(`Geschreven naar ${WRITE_PATH}\n`);
   } else {
-    process.stdout.write(markdown);
+    stdout.write(markdown);
   }
 
   if (!result.ok) {
-    process.exit(1);
+    return 1;
+  }
+
+  return 0;
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const exitCode = main();
+  if (exitCode !== 0) {
+    process.exit(exitCode);
   }
 }

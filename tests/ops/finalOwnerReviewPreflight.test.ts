@@ -6,23 +6,30 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { execSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import {
   buildFinalOwnerReviewPreflight,
+  main,
   renderFinalOwnerReviewPreflightMarkdown,
 } from '../../scripts/final-owner-review-preflight.mjs';
 
 const repoRoot = process.cwd();
 
 describe('final owner review preflight — CLI guards', () => {
-  it('--help exits 0 and documents guards', () => {
-    const output = execSync('node scripts/final-owner-review-preflight.mjs --help', {
-      encoding: 'utf-8',
-      cwd: repoRoot,
+  function runMain(args: string[]) {
+    let output = '';
+    const exitCode = main(args, {
+      repoRoot,
+      stdout: { write: (chunk: string) => { output += chunk; } },
     });
+    return { exitCode, output };
+  }
+
+  it('--help returns 0 and documents guards', () => {
+    const { exitCode, output } = runMain(['--help']);
+    expect(exitCode).toBe(0);
     expect(output).toContain('--check');
     expect(output).toContain('--strict');
     expect(output).toContain('--help');
@@ -31,20 +38,16 @@ describe('final owner review preflight — CLI guards', () => {
   });
 
   it('default mode prints a Dutch report', () => {
-    const output = execSync('node scripts/final-owner-review-preflight.mjs', {
-      encoding: 'utf-8',
-      cwd: repoRoot,
-    });
+    const { exitCode, output } = runMain([]);
+    expect(exitCode).toBe(0);
     expect(output).toContain('Yeshua Academy Finance');
     expect(output).toContain('GEREED VOOR EIGENAARSBEOORDELING');
     expect(output).toContain('Bevestiging:');
   });
 
-  it('--check mode exits 0 and prints Dutch report', () => {
-    const output = execSync('node scripts/final-owner-review-preflight.mjs --check', {
-      encoding: 'utf-8',
-      cwd: repoRoot,
-    });
+  it('--check mode returns 0 and prints Dutch report', () => {
+    const { exitCode, output } = runMain(['--check']);
+    expect(exitCode).toBe(0);
     expect(output).toContain('Yeshua Academy Finance');
   });
 });
@@ -77,9 +80,11 @@ describe('final owner review preflight — decision on real repo', () => {
     expect(result.readyForOwnerReview).toBe('JA');
   });
 
-  it('HEAD is populated', () => {
+  it('manifest commit evidence is populated', () => {
     const result = buildFinalOwnerReviewPreflight({ repoRoot });
     expect(result.head).toMatch(/^[0-9a-f]{7,}/);
+    expect(result.fullHead).toMatch(/^[0-9a-f]{40}$/);
+    expect(result.evidenceHead).toMatch(/^[0-9a-f]{40}$/);
   });
 
   it('includes safe next commands', () => {
@@ -108,22 +113,29 @@ describe('final owner review preflight — guards against forbidden state', () =
       repoRoot,
       branch: 'feature/test',
       head: 'abc1234',
-      status: '## feature/test...origin/feature/test\n',
-      dirtyPaths: [],
     });
     expect(result.decision).toBe('NOT_READY');
     expect(result.checks.find((c) => c.id === 'branch')?.ok).toBe(false);
   });
 
-  it('returns NOT_READY when unexpected dirty files exist', () => {
+  it('returns NOT_READY when worktree delegation evidence is missing', () => {
     const result = buildFinalOwnerReviewPreflight({
       repoRoot,
       branch: 'main',
       head: 'abc1234',
-      status: '## main...origin/main\n M docs/OWNER_HANDOFF_NL.md\n',
-      dirtyPaths: ['docs/OWNER_HANDOFF_NL.md'],
+      evidenceHead: 'a'.repeat(40),
+      fullHead: 'a'.repeat(40),
+      manifestContent: [
+        '# Yeshua Academy Finance — Release Manifest',
+        'Status: Release Candidate 4 — final owner handoff polish',
+        '',
+        '| Branch | main |',
+        '| Manifest generated at short commit | abc1234 |',
+        '| Manifest generated at commit | aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa |',
+        '| Release evidence validated through | aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa |',
+      ].join('\n'),
     });
     expect(result.decision).toBe('NOT_READY');
-    expect(result.checks.find((c) => c.id === 'worktree')?.ok).toBe(false);
+    expect(result.checks.find((c) => c.id === 'worktree_delegated')?.ok).toBe(false);
   });
 });

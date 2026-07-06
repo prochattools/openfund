@@ -36,32 +36,20 @@ const FORBIDDEN_BACKTICK_REF_PATTERNS = [
 ];
 
 function extractBacktickedDocRefs(content: string): string[] {
-  const refs: string[] = [];
   const backtickPattern = /`(docs\/[^\s`]+\.md)`/g;
-  let match: RegExpExecArray | null;
-  while ((match = backtickPattern.exec(content)) !== null) {
-    refs.push(match[1]);
-  }
+  const refs = Array.from(content.matchAll(backtickPattern), (match) => match[1]);
   return [...new Set(refs)];
 }
 
 function extractBacktickedScriptRefs(content: string): string[] {
-  const refs: string[] = [];
   const backtickPattern = /`(scripts\/[^\s`]+\.mjs)`/g;
-  let match: RegExpExecArray | null;
-  while ((match = backtickPattern.exec(content)) !== null) {
-    refs.push(match[1]);
-  }
+  const refs = Array.from(content.matchAll(backtickPattern), (match) => match[1]);
   return [...new Set(refs)];
 }
 
 function extractNpmScriptRefs(content: string): string[] {
-  const refs: string[] = [];
   const npmPattern = /`npm run ([a-z:_-]+)`/g;
-  let match: RegExpExecArray | null;
-  while ((match = npmPattern.exec(content)) !== null) {
-    refs.push(match[1]);
-  }
+  const refs = Array.from(content.matchAll(npmPattern), (match) => match[1]);
   return [...new Set(refs)];
 }
 

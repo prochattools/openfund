@@ -6,11 +6,11 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { execSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import {
+  main,
   runFinalDocsConsistencyAudit,
   renderAuditMarkdown,
 } from '../../scripts/final-docs-consistency-audit.mjs';
@@ -18,11 +18,18 @@ import {
 const repoRoot = process.cwd();
 
 describe('final docs consistency — script guards', () => {
-  it('--help exits 0', () => {
-    const output = execSync('node scripts/final-docs-consistency-audit.mjs --help', {
-      encoding: 'utf-8',
-      cwd: repoRoot,
+  function runMain(args: string[]) {
+    let output = '';
+    const exitCode = main(args, {
+      repoRoot,
+      stdout: { write: (chunk: string) => { output += chunk; } },
     });
+    return { exitCode, output };
+  }
+
+  it('--help returns 0', () => {
+    const { exitCode, output } = runMain(['--help']);
+    expect(exitCode).toBe(0);
     expect(output).toContain('--write');
     expect(output).toContain('--help');
     expect(output).toContain('Leest geen .env');
@@ -30,10 +37,8 @@ describe('final docs consistency — script guards', () => {
   });
 
   it('default mode prints a Dutch report', () => {
-    const output = execSync('node scripts/final-docs-consistency-audit.mjs', {
-      encoding: 'utf-8',
-      cwd: repoRoot,
-    });
+    const { exitCode, output } = runMain([]);
+    expect(exitCode).toBe(0);
     expect(output).toContain('Yeshua Academy Finance');
     expect(output).toContain('GESLAAGD');
     expect(output).toContain('Bevestiging:');
@@ -105,10 +110,13 @@ describe('final docs consistency — no false production claims', () => {
 
 describe('final docs consistency — --write produces valid output', () => {
   it('--write updates FINAL_DOCS_CONSISTENCY_AUDIT_NL.md', () => {
-    execSync('node scripts/final-docs-consistency-audit.mjs --write', {
-      encoding: 'utf-8',
-      cwd: repoRoot,
+    let output = '';
+    const exitCode = main(['--write'], {
+      repoRoot,
+      stdout: { write: (chunk: string) => { output += chunk; } },
     });
+    expect(exitCode).toBe(0);
+    expect(output).toContain('Geschreven naar docs/FINAL_DOCS_CONSISTENCY_AUDIT_NL.md');
     expect(existsSync(resolve(repoRoot, 'docs/FINAL_DOCS_CONSISTENCY_AUDIT_NL.md'))).toBe(true);
   });
 });
