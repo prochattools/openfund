@@ -21,6 +21,8 @@ Veilige lokale status:
 ```bash
 npm run validate:release-candidate
 node scripts/owner-go-no-go-preflight.mjs --strict
+node scripts/final-docs-consistency-audit.mjs
+node scripts/final-owner-review-preflight.mjs --check
 node scripts/owner-decision-preflight.mjs --decision pdf
 node scripts/owner-decision-preflight.mjs --decision production-cutover
 node scripts/owner-decision-preflight.mjs --decision historical-import

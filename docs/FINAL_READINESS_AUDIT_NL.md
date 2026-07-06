@@ -55,16 +55,20 @@ npm test
 
 | Controle | Status |
 |---------|--------|
-| Volledig testsuite (89 bestanden, 643 tests) | GESLAAGD |
+| Volledig testsuite (847 tests) | GESLAAGD |
 | `tests/auth/adminMutationPolicy.test.ts` (24 tests) | GESLAAGD |
 | `tests/helpers/dutchTextAudit.test.ts` (20 tests) | GESLAAGD |
 | `tests/helpers/navigation.test.ts` (13 tests) | GESLAAGD |
 | `tests/ops/backupRestoreRehearsal.test.ts` (28 tests, incl. safe default + explicit flags) | GESLAAGD |
-| `tests/ops/packageScriptSafety.test.ts` (11 tests) | GESLAAGD |
+| `tests/ops/packageScriptSafety.test.ts` (26 tests) | GESLAAGD |
 | `tests/ops/releaseManifest.test.ts` (12 tests) | GESLAAGD |
 | `tests/ops/productionBlockerGuards.test.ts` (24 tests) | GESLAAGD |
 | `tests/ops/ownerDecisionPreflight.test.ts` (15 tests) | GESLAAGD |
 | `tests/ops/pushReadinessPreflight.test.ts` (8 tests) | GESLAAGD |
+| `tests/ops/finalDocsConsistencyAudit.test.ts` (finale documentatieconsistentie) | GESLAAGD |
+| `tests/ops/repoContaminationGuard.test.ts` (repo-vervuilingsbeveiliging) | GESLAAGD |
+| `tests/ops/finalDocsLinkIntegrity.test.ts` (link-integriteitsguard) | GESLAAGD |
+| `tests/ops/finalOwnerReviewPreflight.test.ts` (finale eigenaarsbeoordeling preflight) | GESLAAGD |
 | Servicesentest-sets (report, close, review, import) | GESLAAGD |
 
 ### Builds

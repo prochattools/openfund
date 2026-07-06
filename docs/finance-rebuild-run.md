@@ -4,7 +4,7 @@ Date: 2026-07-02
 Run: `agent-f961650b-de17-4282-ab18-7a716cc72958`  
 Source: `yeshuaacademy-finance`  
 Branch: `main`  
-Status: Release Candidate 4 — roadmap closeout in progress; local backup/restore rehearsal completed and recorded; API route smoke coverage and release evidence consistency checks added; release manifest, owner handoff, owner preflight, and push readiness checklist ready; validate:release-candidate script strengthened with prisma validate, prisma generate, and git diff --check; awaiting owner decisions for production cutover, historical import, PDF dependency, email provider, push, and production secret rotation
+Status: Release Candidate 4 — all safe pre-approval hardening complete (847 tests); final docs consistency audit, repo contamination guard, link integrity guard, safe command inventory, and final owner review preflight added; awaiting owner decisions for production cutover, historical import, PDF dependency, email provider, push, and production secret rotation
 
 ## RC2 Hardening Evidence
 
@@ -29,6 +29,13 @@ Status: Release Candidate 4 — roadmap closeout in progress; local backup/resto
 | Post-approval prompt pack | `b3cfc57` | documentation-only prompts for approved future actions |
 | Push readiness preflight | `0a64649` | no-push future publish preflight script/tests |
 | Owner review index | `0a3904e` | Dutch owner landing page and doc alignment |
+| Owner approval intake + decision pack + action plan | `e55a8b9` | owner suite complete |
+| Final docs consistency audit | `0ecd9ee` | consistency audit script/test/doc |
+| Repo contamination guard | (current) | contamination guard test |
+| Final docs link integrity guard | (current) | link integrity guard test |
+| Safe command inventory | (current) | docs/SAFE_COMMAND_INVENTORY_NL.md |
+| Final owner review preflight | (current) | preflight script/test |
+| Package script safety extended | (current) | 26 package script safety tests |
 
 ### Live backup rehearsal status
 

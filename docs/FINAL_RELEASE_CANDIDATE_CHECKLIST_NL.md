@@ -62,13 +62,15 @@ Zie `docs/OWNER_HANDOFF_NL.md` voor het volledige stappenplan.
 
 | Stap | Commando | Status |
 |------|---------|--------|
-| Volledig testsuite | `npm test` | GESLAAGD in laatste lokale RC-validatie |
+| Volledig testsuite (847 tests) | `npm test` | GESLAAGD in laatste lokale RC-validatie |
 | Server TypeScript-build | `npm run build:server` | GESLAAGD |
 | Next.js productiebuild | `npm run build` | GESLAAGD — 18 pagina's |
 | Prisma validate | `DATABASE_URL=... npx prisma validate` | GESLAAGD (in validate:release-candidate) |
 | Prisma generate | `npx prisma generate` | GESLAAGD (in validate:release-candidate) |
 | Backup dry-run | `node scripts/backup-restore-rehearsal.mjs --dry-run` | GESLAAGD — exit 0 |
 | Git diff check | `git diff --check` | GESLAAGD — exit 0 |
+| Finale docs consistentie-audit | `node scripts/final-docs-consistency-audit.mjs` | GESLAAGD |
+| Finale eigenaarsbeoordeling preflight | `node scripts/final-owner-review-preflight.mjs --check` | GESLAAGD |
 | Live rehearsal | `node scripts/backup-restore-rehearsal.mjs --live-local --confirm-disposable` | Handmatig (vereist Docker Compose + pg_dump) |
 
 ---
