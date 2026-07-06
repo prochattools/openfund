@@ -8,7 +8,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { execSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -130,13 +130,23 @@ describe('owner decision preflight — CLI', () => {
   });
 
   it('--write produces the generated doc without secrets', () => {
-    execSync('node scripts/owner-decision-preflight.mjs --decision pdf --write', {
-      cwd: process.cwd(),
-      encoding: 'utf-8',
-    });
-    const content = readFileSync(resolve(process.cwd(), OUTPUT_PATH), 'utf-8');
-    expect(content).toContain('Echte PDF-renderer afhankelijkheid');
-    expect(content).not.toMatch(dangerousCommandPattern);
-    expect(content).not.toContain('PGPASSWORD=');
+    const outputPath = resolve(process.cwd(), OUTPUT_PATH);
+    const before = existsSync(outputPath) ? readFileSync(outputPath, 'utf-8') : null;
+    try {
+      execSync('node scripts/owner-decision-preflight.mjs --decision pdf --write', {
+        cwd: process.cwd(),
+        encoding: 'utf-8',
+      });
+      const content = readFileSync(outputPath, 'utf-8');
+      expect(content).toContain('Echte PDF-renderer afhankelijkheid');
+      expect(content).not.toMatch(dangerousCommandPattern);
+      expect(content).not.toContain('PGPASSWORD=');
+    } finally {
+      if (before == null) {
+        if (existsSync(outputPath)) unlinkSync(outputPath);
+      } else {
+        writeFileSync(outputPath, before, 'utf-8');
+      }
+    }
   });
 });
