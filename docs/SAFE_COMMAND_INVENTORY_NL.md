@@ -1,0 +1,239 @@
+# Yeshua Academy Finance — Veilige commando-inventaris
+
+Status: Release Candidate 4 — pre-goedkeuring
+Taal: Nederlands
+Doel: Overzicht van alle veilige lokale commando's en alle verboden commando-categorieën voor eigenaarsbeoordeling.
+
+---
+
+## 1. Veilige validatiecommando's
+
+Deze commando's zijn volledig lokaal, raken geen productie, lezen geen `.env`, en zijn altijd veilig uit te voeren vóór eigenaargoedkeuring.
+
+### Testsuite
+
+```bash
+npm test
+```
+
+Verwacht: alle tests slagen (exit 0). Geen database. Geen externe calls.
+
+### Server TypeScript-compilatie
+
+```bash
+npm run build:server
+```
+
+Verwacht: schone compilatie (exit 0).
+
+### Next.js productiebuild
+
+```bash
+npm run build
+```
+
+Verwacht: succesvolle build (exit 0), ~18 statische pagina's.
+
+### Release-candidate validatie (alles in één stap)
+
+```bash
+npm run validate:release-candidate
+```
+
+Voert uit: `npm test`, `npm run build:server`, `npm run build`, Prisma validate (lokale placeholder), Prisma generate, backup dry-run, `git diff --check`.  
+Verwacht: exit 0, geen fouten.
+
+### Prisma schemavalidatie
+
+```bash
+DATABASE_URL=postgresql://finance_user:local_dev_placeholder@127.0.0.1:5432/yaf_validate npx prisma validate
+```
+
+Verwacht: schema geldig (exit 0). Vereist geen draaiende database.
+
+### Prisma Client genereren
+
+```bash
+npx prisma generate
+```
+
+Verwacht: Prisma Client gegenereerd (exit 0).
+
+### Git whitespace check
+
+```bash
+git diff --check
+```
+
+Verwacht: geen uitvoer, exit 0.
+
+---
+
+## 2. Veilige preflight-commando's
+
+### Owner go/no-go preflight
+
+```bash
+node scripts/owner-go-no-go-preflight.mjs --strict
+```
+
+Controleert: branch, release manifest, vereiste documenten, worktree, productieblockers.  
+Verwacht: `GO_FOR_OWNER_REVIEW`.
+
+```bash
+npm run preflight:owner-go-no-go
+```
+
+### Owner decision preflight (voorbeeld: PDF)
+
+```bash
+node scripts/owner-decision-preflight.mjs --decision pdf
+```
+
+Controleert readiness voor een specifieke eigenaarsbeslissing. Veilig voor alle beslissingen.  
+Andere beslissingen: `production-cutover`, `historical-import`, `email`, `secret-rotation`, `postgres-version`.
+
+```bash
+npm run preflight:owner-decision
+```
+
+### Owner approved action plan (voorbeeld: PDF)
+
+```bash
+node scripts/owner-approved-action-plan.mjs --decision pdf
+```
+
+Genereert een actieplan voor goedgekeurde beslissingen. Voert geen actie uit.
+
+```bash
+npm run preflight:owner-action-plan
+```
+
+### Push readiness preflight
+
+```bash
+node scripts/push-readiness-preflight.mjs --strict
+```
+
+Controleert: branch, worktree, validatiescript, vereiste bestanden, `.env`, dumps, owner-bronbestanden.  
+Verwacht: `READY_FOR_OWNER_APPROVED_PUSH`.
+
+```bash
+npm run preflight:push-readiness
+```
+
+### Backup dry-run
+
+```bash
+node scripts/backup-restore-rehearsal.mjs --dry-run
+```
+
+Voert geen databasecommando's uit. Controleert alleen guards. Verwacht: exit 0.
+
+### Finale documentatieconsistentie-audit
+
+```bash
+node scripts/final-docs-consistency-audit.mjs
+```
+
+Controleert: vereiste documenten aanwezig, blockers consistent, geen valse productie-beweringen, manifest evidence, links.
+
+```bash
+npm run audit:final-docs
+```
+
+### Finale owner review preflight
+
+```bash
+node scripts/final-owner-review-preflight.mjs --check
+```
+
+Controleert: alle vereiste bestanden aanwezig, geen verboden commando's in scripts, worktree schoon.
+
+```bash
+npm run preflight:final-owner-review
+```
+
+### Release manifest bekijken
+
+```bash
+node scripts/generate-release-manifest.mjs
+```
+
+Bekijkt het huidige manifest. Veilig altijd.
+
+---
+
+## 3. Commando's die NOOIT zijn toegestaan vóór eigenaargoedkeuring
+
+De volgende commando's mogen **NOOIT** worden uitgevoerd zonder expliciete eigenaargoedkeuring buiten Git:
+
+| Verboden commando | Reden |
+|-------------------|-------|
+| `git push` | Publiceert naar remote; vereist eigenaargoedkeuring |
+| `git tag` | Maakt een tag aan; vereist eigenaargoedkeuring |
+| `git push --force` | Destructief; altijd geblokkeerd op main |
+| Productiecutover-script | Vereist eigenaargoedkeuring en voorbereiding |
+| Historische productie-import | Vereist eigenaargoedkeuring en dry-run-acceptatie |
+| Echte e-mail sturen (Resend) | Vereist geconfigureerde API-sleutel + goedkeuring |
+| PDF-bibliotheek installeren | Vereist keuze en goedkeuring eigenaar |
+| Secret rotation | Vereist productievoorbereiding buiten Git |
+| `node scripts/backup-restore-rehearsal.mjs --live-local` | Verbindt met lokale database; vereist `--confirm-disposable` én voorbereiding |
+| Productiedatabasecommando's | Altijd geblokkeerd tot na productie-cutovergoedkeuring |
+| Wijzigingen in `.env` | Nooit in Git; geheimen horen in de secret vault |
+
+---
+
+## 4. Commando's die expliciete eigenaargoedkeuring en een aparte prompt vereisen
+
+Na eigenaargoedkeuring buiten Git, gebruik de exacte prompts in `docs/POST_APPROVAL_PROMPTS_NL.md`:
+
+| Beslissing | Post-approval prompt |
+|------------|---------------------|
+| PDF-renderer | `docs/POST_APPROVAL_PROMPTS_NL.md` §PDF |
+| Productiecutover | `docs/POST_APPROVAL_PROMPTS_NL.md` §Productiecutover |
+| Historische import | `docs/POST_APPROVAL_PROMPTS_NL.md` §Historische import |
+| E-mail provider | `docs/POST_APPROVAL_PROMPTS_NL.md` §E-mail |
+| Push | `docs/POST_APPROVAL_PROMPTS_NL.md` §Push |
+
+---
+
+## 5. Verwachte uitvoer-samenvatting
+
+| Commando | Verwacht resultaat |
+|----------|-------------------|
+| `npm run validate:release-candidate` | Exit 0, alle stappen geslaagd |
+| `node scripts/owner-go-no-go-preflight.mjs --strict` | `GO_FOR_OWNER_REVIEW`, exit 0 |
+| `node scripts/push-readiness-preflight.mjs --strict` | `READY_FOR_OWNER_APPROVED_PUSH`, exit 0 |
+| `node scripts/final-docs-consistency-audit.mjs` | `GESLAAGD`, exit 0 |
+| `node scripts/backup-restore-rehearsal.mjs --dry-run` | Guard-check geslaagd, exit 0 |
+| `node scripts/generate-release-manifest.mjs` | Release manifest met RC4-status |
+
+---
+
+## 6. Stopregels
+
+Stop direct en meld een blocker als een commando:
+- Vereist productie, Dokploy, MCP bridge, of `10.0.2.4`.
+- Vereist eigenaargoedkeuring die nog niet ontvangen is.
+- Een non-lokale DATABASE_URL detecteert.
+- Een PDF-dependency wil installeren.
+- Echte e-mail wil verzenden.
+- Een historische productie-import wil uitvoeren.
+- `git push` of `git tag` zou uitvoeren.
+- Een secret zou roteren.
+- `.env` zou wijzigen of committen.
+- Owner Excel/CSV/PDF-bestanden in Git zou plaatsen.
+- Ruwe transactiedumps of databasedumps zou committen.
+
+---
+
+## Verwijzingen
+
+- `docs/OWNER_REVIEW_INDEX_NL.md` — overzicht eigenaarsbeoordeling
+- `docs/OWNER_HANDOFF_NL.md` — eigenaaroverdracht
+- `docs/OWNER_DECISION_PACK_NL.md` — beslissingspakket
+- `docs/POST_APPROVAL_PROMPTS_NL.md` — prompts voor goedgekeurde acties
+- `docs/PUSH_READINESS_CHECKLIST_NL.md` — push checklist
+- `docs/PRODUCTION_CUTOVER_PLAN_NL.md` — productiecutoverplan
+- `docs/BACKUP_RESTORE_REHEARSAL_NL.md` — backup/restore rehearsal
