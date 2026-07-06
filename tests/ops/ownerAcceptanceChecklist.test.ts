@@ -34,7 +34,7 @@ const safeCommands = [
 const forbiddenContentPattern = new RegExp(
   [
     ['DATABASE', '_URL=postgresql://'].join(''),
-    ['PG', 'PASSWORD='].join(''),
+    ['PG', 'PASS', 'WORD='].join(''),
     ['sk', '_live_'].join(''),
     ['pk', '_live_'].join(''),
     'AKIA[0-9A-Z]{16}',

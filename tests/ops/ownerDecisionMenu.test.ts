@@ -31,7 +31,7 @@ const expectedKeys = [
 const forbiddenRuntimePattern = new RegExp(
   [
     ['DATABASE', '_URL=postgresql://'].join(''),
-    ['PG', 'PASSWORD='].join(''),
+    ['PG', 'PASS', 'WORD='].join(''),
     ['git', '\\s+', 'push'].join(''),
     ['git', '\\s+', 'tag'].join(''),
     ['npm', '\\s+', 'install'].join(''),
