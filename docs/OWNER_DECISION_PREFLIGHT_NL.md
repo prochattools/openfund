@@ -1,7 +1,7 @@
 # Yeshua Academy Finance — Eigenaarsbeslissing preflight
 
 Branch: main
-HEAD: 9dae30c
+HEAD: a8280c2
 Besluitstatus: GEREED VOOR EIGENAARSREVIEW
 Goedkeuring buiten Git geregistreerd: NEE
 
@@ -18,7 +18,7 @@ Goedkeuring buiten Git geregistreerd: NEE
 
 ## Worktree
 
-- Dirty paths: docs/RELEASE_MANIFEST_NL.md, .graphifyignore, graphify-out/
+- Dirty paths: docs/FINAL_DOCS_CONSISTENCY_AUDIT_NL.md, .graphifyignore, graphify-out/
 
 ## Echte PDF-renderer afhankelijkheid
 
