@@ -148,7 +148,7 @@ npm run audit:final-docs
 node scripts/final-owner-review-preflight.mjs --check
 ```
 
-Controleert: alle vereiste bestanden aanwezig, geen verboden commando's in scripts, worktree schoon.
+Controleert: release-manifest evidence, alle vereiste bestanden aanwezig, geen verboden commando's in scripts, en dat live branch/worktree-controle expliciet gedelegeerd blijft aan `node scripts/push-readiness-preflight.mjs --strict`. Dit script voert zelf geen git-commando's uit.
 
 ```bash
 npm run preflight:final-owner-review
@@ -206,6 +206,7 @@ Na eigenaargoedkeuring buiten Git, gebruik de exacte prompts in `docs/POST_APPRO
 | `node scripts/owner-go-no-go-preflight.mjs --strict` | `GO_FOR_OWNER_REVIEW`, exit 0 |
 | `node scripts/push-readiness-preflight.mjs --strict` | `READY_FOR_OWNER_APPROVED_PUSH`, exit 0 |
 | `node scripts/final-docs-consistency-audit.mjs` | `GESLAAGD`, exit 0 |
+| `node scripts/final-owner-review-preflight.mjs --check` | `GEREED VOOR EIGENAARSBEOORDELING: JA`, exit 0, zonder git-commando's |
 | `node scripts/backup-restore-rehearsal.mjs --dry-run` | Guard-check geslaagd, exit 0 |
 | `node scripts/generate-release-manifest.mjs` | Release manifest met RC4-status |
 

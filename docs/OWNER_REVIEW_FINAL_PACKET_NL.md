@@ -33,6 +33,8 @@ node scripts/owner-approved-action-plan.mjs --decision pdf
 
 Deze commando's zijn lokaal en voeren geen productieactie uit.
 
+`node scripts/final-owner-review-preflight.mjs --check` is een statische finale preflight: het leest release-manifest evidence, vereiste documenten/scripts en package-script guards. Het voert geen git-commando's uit; live branch/worktree-status blijft onderdeel van `node scripts/push-readiness-preflight.mjs --strict`.
+
 ## 3. Resterende eigenaarsbeslissingen
 
 | Beslissing | Status |
