@@ -27,6 +27,9 @@
 		"preflight:owner-acceptance": "node scripts/final-owner-review-preflight.mjs --check && node scripts/owner-decision-menu.mjs",
 		"preflight:push-readiness": "node scripts/push-readiness-preflight.mjs",
 		"preflight:final-owner-review": "node scripts/final-owner-review-preflight.mjs --check",
+		"preflight:approval-intake": "node scripts/owner-approval-intake-validator.mjs",
+		"preflight:post-push": "npm test -- --test-name-pattern \"post push verification\"",
+		"preflight:decision-briefs": "npm test -- --test-name-pattern \"owner decision briefs\"",
 		"audit:final-docs": "node scripts/final-docs-consistency-audit.mjs"
 	},
 	"dependencies": {

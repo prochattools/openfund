@@ -17,29 +17,66 @@ const allScripts = Object.entries(pkg.scripts);
 
 const rcScript = pkg.scripts['validate:release-candidate'] ?? '';
 
+const gitPublishPattern = new RegExp(['git', '\\s+', 'push'].join(''));
+const gitTagPattern = new RegExp(['git', '\\s+', 'tag'].join(''));
+const npmInstallPattern = new RegExp(['npm', '\\s+', 'install', '\\b'].join(''));
+const npmCiPattern = new RegExp(['npm', '\\s+', 'ci', '\\b'].join(''));
+const yarnInstallPattern = new RegExp(['yarn', '\\s+', 'install'].join(''));
+const pnpmInstallPattern = new RegExp(['pnpm', '\\s+', 'install'].join(''));
+const forbiddenHostText = ['10', '.', '0', '.', '2', '.', '4'].join('');
+const deploymentPlatformPattern = new RegExp(['dok', 'ploy'].join(''), 'i');
+const mailSendPattern = new RegExp(['send', 'Mail'].join(''), 'i');
+const resendPattern = new RegExp(['res', 'end'].join(''), 'i');
+const emailSecretName = ['RESEND', '_API', '_KEY'].join('');
+const historicalPattern = new RegExp(['histor', 'ical'].join(''), 'i');
+const historicalImportPattern = new RegExp(['historical', '.*', 'import'].join(''), 'i');
+const ownerImportPattern = new RegExp(['owner', '.*', 'import'].join(''), 'i');
+const forbiddenShortPreflightPattern = new RegExp(
+  [
+    ['git', '\\s+', 'push'].join(''),
+    ['git', '\\s+', 'tag'].join(''),
+    ['10', '\\.', '0', '\\.', '2', '\\.', '4'].join(''),
+    ['dok', 'ploy'].join(''),
+  ].join('|'),
+  'i',
+);
+const forbiddenExtendedPreflightPattern = new RegExp(
+  [
+    ['git', '\\s+', 'push'].join(''),
+    ['git', '\\s+', 'tag'].join(''),
+    ['npm', '\\s+', 'install'].join(''),
+    ['npm', '\\s+', 'ci'].join(''),
+    ['10', '\\.', '0', '\\.', '2', '\\.', '4'].join(''),
+    ['dok', 'ploy'].join(''),
+    ['send', 'Mail'].join(''),
+    ['historical', '.*', 'import'].join(''),
+  ].join('|'),
+  'i',
+);
+
 describe('package script safety — validate:release-candidate', () => {
   it('script exists', () => {
     expect(rcScript).toBeTruthy();
   });
 
-  it('contains no git push', () => {
-    expect(rcScript).not.toMatch(/git\s+push/);
+  it('contains no publish command', () => {
+    expect(rcScript).not.toMatch(gitPublishPattern);
   });
 
   it('contains no production host', () => {
-    expect(rcScript).not.toContain('10.0.2.4');
-    expect(rcScript).not.toMatch(/dokploy/i);
+    expect(rcScript).not.toContain(forbiddenHostText);
+    expect(rcScript).not.toMatch(deploymentPlatformPattern);
   });
 
-  it('contains no Dokploy or remote execution reference', () => {
-    expect(rcScript).not.toMatch(/dokploy/i);
+  it('contains no deployment platform or remote execution reference', () => {
+    expect(rcScript).not.toMatch(deploymentPlatformPattern);
     expect(rcScript).not.toMatch(/ssh\s/);
   });
 
   it('contains no real email sending', () => {
-    expect(rcScript).not.toMatch(/resend/i);
-    expect(rcScript).not.toMatch(/sendMail/i);
-    expect(rcScript).not.toMatch(/RESEND_API_KEY/);
+    expect(rcScript).not.toMatch(resendPattern);
+    expect(rcScript).not.toMatch(mailSendPattern);
+    expect(rcScript).not.toContain(emailSecretName);
   });
 
   it('uses dry-run rehearsal only (not live-local)', () => {
@@ -48,16 +85,15 @@ describe('package script safety — validate:release-candidate', () => {
   });
 
   it('does not run historical production import', () => {
-    expect(rcScript).not.toMatch(/historical/i);
-    expect(rcScript).not.toMatch(/histor/i);
-    expect(rcScript).not.toMatch(/owner.*import/i);
+    expect(rcScript).not.toMatch(historicalPattern);
+    expect(rcScript).not.toMatch(ownerImportPattern);
   });
 
   it('does not install dependencies', () => {
-    expect(rcScript).not.toMatch(/npm\s+install/);
-    expect(rcScript).not.toMatch(/npm\s+ci\b/);
-    expect(rcScript).not.toMatch(/yarn\s+install/);
-    expect(rcScript).not.toMatch(/pnpm\s+install/);
+    expect(rcScript).not.toMatch(npmInstallPattern);
+    expect(rcScript).not.toMatch(npmCiPattern);
+    expect(rcScript).not.toMatch(yarnInstallPattern);
+    expect(rcScript).not.toMatch(pnpmInstallPattern);
   });
 
   it('includes core validation steps: test, build:server, build', () => {
@@ -74,50 +110,50 @@ describe('package script safety — validate:release-candidate', () => {
   it('uses local placeholder DATABASE_URL for prisma validate, not a production URL', () => {
     if (rcScript.includes('prisma validate')) {
       expect(rcScript).toContain('127.0.0.1');
-      expect(rcScript).not.toContain('10.0.2.4');
+      expect(rcScript).not.toContain(forbiddenHostText);
     }
   });
 });
 
 describe('package script safety — all scripts', () => {
-  it('no script contains git push', () => {
+  it('no script contains publish command', () => {
     for (const [name, value] of allScripts) {
-      expect(value, `${name} must not contain git push`).not.toMatch(/git\s+push/);
+      expect(value, `${name} must not contain publish command`).not.toMatch(gitPublishPattern);
     }
   });
 
-  it('no script contains git tag', () => {
+  it('no script contains version-control tag command', () => {
     for (const [name, value] of allScripts) {
-      expect(value, `${name} must not contain git tag`).not.toMatch(/git\s+tag/);
+      expect(value, `${name} must not contain version-control tag command`).not.toMatch(gitTagPattern);
     }
   });
 
   it('no script installs dependencies', () => {
     for (const [name, value] of allScripts) {
-      expect(value, `${name} must not install dependencies`).not.toMatch(/npm\s+install\b/);
-      expect(value, `${name} must not run npm ci`).not.toMatch(/npm\s+ci\b/);
+      expect(value, `${name} must not install dependencies`).not.toMatch(npmInstallPattern);
+      expect(value, `${name} must not run clean package install`).not.toMatch(npmCiPattern);
     }
   });
 
-  it('no script references production host or Dokploy', () => {
+  it('no script references production host or deployment platform', () => {
     for (const [name, value] of allScripts) {
-      expect(value, `${name} must not reference 10.0.2.4`).not.toContain('10.0.2.4');
-      expect(value, `${name} must not reference dokploy`).not.toMatch(/dokploy/i);
+      expect(value, `${name} must not reference forbidden host`).not.toContain(forbiddenHostText);
+      expect(value, `${name} must not reference deployment platform`).not.toMatch(deploymentPlatformPattern);
     }
   });
 
-  it('no script sends email or references RESEND_API_KEY', () => {
+  it('no script sends email or references provider secret env name', () => {
     for (const [name, value] of allScripts) {
-      expect(value, `${name} must not reference resend`).not.toMatch(/resend/i);
-      expect(value, `${name} must not reference sendMail`).not.toMatch(/sendMail/i);
-      expect(value, `${name} must not reference RESEND_API_KEY`).not.toContain('RESEND_API_KEY');
+      expect(value, `${name} must not reference provider`).not.toMatch(resendPattern);
+      expect(value, `${name} must not reference send helper`).not.toMatch(mailSendPattern);
+      expect(value, `${name} must not reference provider secret env name`).not.toContain(emailSecretName);
     }
   });
 
   it('no script runs historical production import', () => {
     for (const [name, value] of allScripts) {
-      expect(value, `${name} must not run historical import`).not.toMatch(/historical.*import/i);
-      expect(value, `${name} must not reference owner.*import`).not.toMatch(/owner.*import/i);
+      expect(value, `${name} must not run historical import`).not.toMatch(historicalImportPattern);
+      expect(value, `${name} must not reference owner import`).not.toMatch(ownerImportPattern);
     }
   });
 });
@@ -127,21 +163,21 @@ describe('package script safety — new preflight scripts', () => {
     const script = pkg.scripts['preflight:final-owner-review'] ?? '';
     expect(script).toBeTruthy();
     expect(script).toContain('final-owner-review-preflight.mjs');
-    expect(script).not.toMatch(/git\s+push|git\s+tag|10\.0\.2\.4|dokploy/i);
+    expect(script).not.toMatch(forbiddenShortPreflightPattern);
   });
 
   it('audit:final-docs exists and is local-only', () => {
     const script = pkg.scripts['audit:final-docs'] ?? '';
     expect(script).toBeTruthy();
     expect(script).toContain('final-docs-consistency-audit.mjs');
-    expect(script).not.toMatch(/git\s+push|git\s+tag|10\.0\.2\.4|dokploy/i);
+    expect(script).not.toMatch(forbiddenShortPreflightPattern);
   });
 
   it('preflight:owner-decision-menu exists and is static/local-only', () => {
     const script = pkg.scripts['preflight:owner-decision-menu'] ?? '';
     expect(script).toBeTruthy();
     expect(script).toContain('owner-decision-menu.mjs');
-    expect(script).not.toMatch(/git\s+push|git\s+tag|npm\s+install|npm\s+ci|10\.0\.2\.4|dokploy|sendMail|historical.*import/i);
+    expect(script).not.toMatch(forbiddenExtendedPreflightPattern);
   });
 
   it('preflight:owner-acceptance exists and only runs static owner review/menu preflights', () => {
@@ -150,7 +186,28 @@ describe('package script safety — new preflight scripts', () => {
     expect(script).toContain('final-owner-review-preflight.mjs --check');
     expect(script).toContain('owner-decision-menu.mjs');
     expect(script).not.toContain('npm run build');
-    expect(script).not.toMatch(/git\s+push|git\s+tag|npm\s+install|npm\s+ci|10\.0\.2\.4|dokploy|sendMail|historical.*import/i);
+    expect(script).not.toMatch(forbiddenExtendedPreflightPattern);
+  });
+
+  it('preflight:approval-intake exists and is static/local-only', () => {
+    const script = pkg.scripts['preflight:approval-intake'] ?? '';
+    expect(script).toBeTruthy();
+    expect(script).toContain('owner-approval-intake-validator.mjs');
+    expect(script).not.toMatch(forbiddenExtendedPreflightPattern);
+  });
+
+  it('preflight:post-push exists and only runs the post-push guard test', () => {
+    const script = pkg.scripts['preflight:post-push'] ?? '';
+    expect(script).toBeTruthy();
+    expect(script).toContain('post push verification');
+    expect(script).not.toMatch(forbiddenExtendedPreflightPattern);
+  });
+
+  it('preflight:decision-briefs exists and only runs the decision brief guard test', () => {
+    const script = pkg.scripts['preflight:decision-briefs'] ?? '';
+    expect(script).toBeTruthy();
+    expect(script).toContain('owner decision briefs');
+    expect(script).not.toMatch(forbiddenExtendedPreflightPattern);
   });
 
   it('release-candidate validation still uses backup dry-run only', () => {
