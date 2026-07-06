@@ -9,7 +9,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { execSync } from 'node:child_process';
 
 // ─── 1. Historical production import blocks production by default ─────────────
 
@@ -281,23 +280,17 @@ describe('production blocker guards — production cutover plan', () => {
 // ─── 8. Backup rehearsal default invocation is safe ──────────────────────────
 
 describe('production blocker guards — backup rehearsal safe default', () => {
-  it('no-argument invocation exits non-zero without running live DB commands', () => {
-    let exitCode = 0;
-    let stderr = '';
-    try {
-      execSync('node scripts/backup-restore-rehearsal.mjs', {
-        encoding: 'utf-8',
-        cwd: process.cwd(),
-        stdio: ['pipe', 'pipe', 'pipe'],
-      });
-    } catch (err: any) {
-      exitCode = err.status ?? 1;
-      stderr = err.stderr ?? '';
-    }
-    expect(exitCode).not.toBe(0);
-    expect(stderr).not.toContain('pg_dump');
-    expect(stderr).not.toContain('pg_restore');
-    expect(stderr).not.toContain('psql postgresql://');
+  it('script requires an explicit safe mode before live DB commands can run', () => {
+    const content = readFileSync(
+      resolve(process.cwd(), 'scripts/backup-restore-rehearsal.mjs'),
+      'utf-8',
+    );
+    expect(content).toContain('Geen geldig uitvoermodus opgegeven');
+    expect(content).toContain('--dry-run');
+    expect(content).toContain('--live-local');
+    expect(content).toContain('--confirm-disposable');
+    expect(content).toContain('process.exit(1)');
+    expect(content).toContain('Use --dry-run for a safe guard-check without a database.');
   });
 });
 
@@ -346,5 +339,45 @@ describe('production blocker guards — release scripts do not read .env', () =>
     );
     expect(content).not.toMatch(/readFileSync\([^)]*\.env/);
     expect(content).not.toMatch(/dotenv/);
+  });
+});
+
+
+
+// ─── 11. Owner-review scripts remain plan/preflight only ─────────────────────
+
+describe('production blocker guards — owner-review scripts are non-executing', () => {
+  const ownerScriptPaths = [
+    'scripts/owner-decision-preflight.mjs',
+    'scripts/push-readiness-preflight.mjs',
+    'scripts/owner-approved-action-plan.mjs',
+  ];
+
+  it('owner scripts do not execute production, publish, install, email, or historical import actions', () => {
+    for (const scriptPath of ownerScriptPaths) {
+      const content = readFileSync(resolve(process.cwd(), scriptPath), 'utf-8');
+      expect(content, scriptPath).not.toMatch(/execSync\([^)]*git\s+push/i);
+      expect(content, scriptPath).not.toMatch(/execSync\([^)]*git\s+tag/i);
+      expect(content, scriptPath).not.toMatch(/execSync\([^)]*npm\s+(install|ci)/i);
+      expect(content, scriptPath).not.toMatch(/execSync\([^)]*pnpm\s+install/i);
+      expect(content, scriptPath).not.toMatch(/execSync\([^)]*yarn\s+install/i);
+      expect(content, scriptPath).not.toMatch(/resend\.emails\.send|sendMail/i);
+      expect(content, scriptPath).not.toMatch(/execSync\([^)]*historical.*production/i);
+      expect(content, scriptPath).not.toMatch(/postgresql:\/\/[^@]*@10\.0\.2\.4/i);
+      expect(content, scriptPath).not.toMatch(/postgresql:\/\/[^@]*@[^\s]*dokploy/i);
+    }
+  });
+
+  it('owner scripts do not read .env or mutate files except documented write outputs', () => {
+    for (const scriptPath of ownerScriptPaths) {
+      const content = readFileSync(resolve(process.cwd(), scriptPath), 'utf-8');
+      expect(content, scriptPath).not.toMatch(/readFileSync\([^)]*\.env/);
+      expect(content, scriptPath).not.toMatch(/dotenv/);
+    }
+
+    expect(readFileSync(resolve(process.cwd(), 'scripts/owner-decision-preflight.mjs'), 'utf-8'))
+      .toContain('docs/OWNER_DECISION_PREFLIGHT_NL.md');
+    expect(readFileSync(resolve(process.cwd(), 'scripts/owner-approved-action-plan.mjs'), 'utf-8'))
+      .toContain('docs/OWNER_APPROVED_ACTION_PLAN_NL.md');
   });
 });

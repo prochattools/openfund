@@ -10,7 +10,9 @@ Doel: één startpunt voor de eigenaar om te bepalen wat klaar is, wat geblokkee
 2. Controleer daarna `docs/RELEASE_MANIFEST_NL.md`.
 3. Lees de beslissingen in `docs/OWNER_DECISION_PACK_NL.md`.
 4. Gebruik `docs/OWNER_DECISION_READINESS_MATRIX_NL.md` om per beslissing te zien wat klaar is.
-5. Gebruik `docs/POST_APPROVAL_PROMPTS_NL.md` pas nadat een beslissing expliciet is goedgekeurd.
+5. Gebruik `docs/OWNER_APPROVAL_INTAKE_NL.md` om goedkeuring buiten Git te registreren vóór uitvoering.
+6. Gebruik `docs/OWNER_REVIEW_FINAL_PACKET_NL.md` als laatste samenvatting voor owner review.
+7. Gebruik `docs/POST_APPROVAL_PROMPTS_NL.md` pas nadat een beslissing expliciet is goedgekeurd.
 
 ## Wat klaar is
 
@@ -50,6 +52,7 @@ Doel: één startpunt voor de eigenaar om te bepalen wat klaar is, wat geblokkee
 ```bash
 node scripts/owner-go-no-go-preflight.mjs --strict
 node scripts/owner-decision-preflight.mjs --decision pdf
+node scripts/owner-approved-action-plan.mjs --decision pdf
 node scripts/push-readiness-preflight.mjs --strict
 npm run validate:release-candidate
 git diff --check
