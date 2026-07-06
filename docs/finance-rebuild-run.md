@@ -23,6 +23,12 @@ Status: Release Candidate 4 — roadmap closeout in progress; local backup/resto
 | Owner go/no-go preflight | `42a6f49` | preflight tests |
 | Push readiness checklist | `43137b5` | (docs) |
 | Release evidence consistency checks | `33d08c4` | consistency tests |
+| Roadmap closeout guards | `d942705` | Phase 3/4 closeout and roadmap status tests |
+| RC4 validated-through evidence refresh | `d07a32f` | manifest evidence refreshed through `d942705` |
+| Owner decision preflight guards | `35688c4` | decision matrix, generated preflight doc, no-mutation script/tests |
+| Post-approval prompt pack | `b3cfc57` | documentation-only prompts for approved future actions |
+| Push readiness preflight | `0a64649` | no-push future publish preflight script/tests |
+| Owner review index | `0a3904e` | Dutch owner landing page and doc alignment |
 
 ### Live backup rehearsal status
 

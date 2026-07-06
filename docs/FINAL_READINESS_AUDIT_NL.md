@@ -20,12 +20,12 @@ Afhankelijkheden: `docs/ROADMAP.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/ADMIN_
 | Phase 6 — Rapporten en distributie | COMPLETE | `a24ef3e`, `9e4dc45`, `d1430c2`, `dbf23e4`, `ba372d6` |
 | Phase 7 — Dutch UX en autorisatiehardening | COMPLETE | `7d58726`, `0d70f51`, `20ff64b` |
 | Phase 8 — Infrastructuur | COMPLETE (lokale gereedheid; productiecutover blijft geblokkeerd) | `13a32a5`, `dce8b9f`, `1cf2402` |
-| Phase 9 — Operationele hardening en overdracht | COMPLETE (local-only RC4) | `d51cfad`, `77ebbbd`, `8d5978c`, `519b69e`, `bb666ae`, `6341be4`, `73d8072`, `0a8c04d`, `fd1a6c2`, `4f9cedf`, `3ac4bfc`, `9b209c7`, `7ce6e6d`, `43bfb90`, `42a6f49`, `43137b5`, `33d08c4` |
+| Phase 9 — Operationele hardening en overdracht | COMPLETE (local-only RC4) | `d51cfad`, `77ebbbd`, `8d5978c`, `519b69e`, `bb666ae`, `6341be4`, `73d8072`, `0a8c04d`, `fd1a6c2`, `4f9cedf`, `3ac4bfc`, `9b209c7`, `7ce6e6d`, `43bfb90`, `42a6f49`, `43137b5`, `33d08c4`, `d942705`, `d07a32f`, `35688c4`, `b3cfc57`, `0a64649`, `0a3904e` |
 
 ### Meest recente commit bij aanvang van deze auditrondes
 
 ```
-33d08c4 test: add release evidence consistency checks
+0a3904e docs: add owner review index
 ```
 
 ---
@@ -39,6 +39,8 @@ Afhankelijkheden: `docs/ROADMAP.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/ADMIN_
 | Historische productie-import (2024/2025/2026) | Operator-gated; vereist eigenaargoedkeuring en dry-run-resultaten | Geblokkeerd |
 | Echte e-mailverzending | `RESEND_API_KEY` niet geconfigureerd; no-op modus actief | Geblokkeerd |
 | PostgreSQL-versie productie bevestigen | Vereist verificatie bij hostingprovider vóór overstap | Geblokkeerd |
+| Push naar remote | Vereist expliciete eigenaargoedkeuring | Geblokkeerd |
+| Geheimen roteren | Vereist productievoorbereiding buiten Git | Geblokkeerd |
 
 ---
 
@@ -61,6 +63,8 @@ npm test
 | `tests/ops/packageScriptSafety.test.ts` (11 tests) | GESLAAGD |
 | `tests/ops/releaseManifest.test.ts` (12 tests) | GESLAAGD |
 | `tests/ops/productionBlockerGuards.test.ts` (24 tests) | GESLAAGD |
+| `tests/ops/ownerDecisionPreflight.test.ts` (15 tests) | GESLAAGD |
+| `tests/ops/pushReadinessPreflight.test.ts` (8 tests) | GESLAAGD |
 | Servicesentest-sets (report, close, review, import) | GESLAAGD |
 
 ### Builds

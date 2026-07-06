@@ -76,10 +76,10 @@ Phase 9 RC2-003 release manifest generator: scripts/generate-release-manifest.mj
 Phase 9 RC2-004 production blocker guard audit: tests/ops/productionBlockerGuards.test.ts (24 tests); committed as 73d8072
 Phase 9 RC2-005 owner handoff bundle: docs/OWNER_HANDOFF_NL.md; committed as 0a8c04d
 Phase 9 RC3 evidence: final readiness counts corrected (`4f9cedf`), live local backup/restore evidence recorded (`3ac4bfc`), API route smoke coverage added (`9b209c7`)
-Phase 9 RC4 evidence: release evidence corrected (`7ce6e6d`), manifest refreshed (`43bfb90`), owner go/no-go preflight added (`42a6f49`), push readiness checklist added (`43137b5`), release evidence consistency checks added (`33d08c4`)
+Phase 9 RC4 evidence: release evidence corrected (`7ce6e6d`), manifest refreshed (`43bfb90`), owner go/no-go preflight added (`42a6f49`), push readiness checklist added (`43137b5`), release evidence consistency checks added (`33d08c4`), roadmap closeout guards added (`d942705`), validated-through evidence refreshed (`d07a32f`), owner decision preflight/matrix added (`35688c4`), post-approval prompt pack added (`b3cfc57`), push readiness preflight added (`0a64649`), owner review index added (`0a3904e`)
 Phase 3 local/sanitized historical loading: complete; production historical import remains owner-gated
 Phase 4 monthly import/review workflow: complete for local/app behavior; future real owner monthly files remain operator-controlled
-Current gate: Release Candidate 4 owner review / roadmap closeout; owner decisions required before production cutover, historical production import, PDF dependency, email provider, push, and production secret rotation
+Current gate: Release Candidate 4 owner review / roadmap closeout and owner decisions; safe preparation docs and preflight guards are complete, and owner decisions remain required before production cutover, historical production import, PDF dependency, email provider, push, production secret rotation, and production PostgreSQL version confirmation
 ```
 
 ## Phase 0 — Governance and discovery
@@ -1317,7 +1317,7 @@ Acceptance:
 
 ## Exact next execution sequence
 
-Phases 0–9 are complete as local-only Release Candidate 4, with Phase 3 production import explicitly owner-gated and Phase 4 complete for local/app workflow. The following owner decisions are required before any production work:
+Phases 0–9 are complete as local-only Release Candidate 4, with Phase 3 production import explicitly owner-gated and Phase 4 complete for local/app workflow. Owner-review preparation is documented in `docs/OWNER_REVIEW_INDEX_NL.md`, `docs/OWNER_DECISION_READINESS_MATRIX_NL.md`, `docs/OWNER_DECISION_PREFLIGHT_NL.md`, `docs/POST_APPROVAL_PROMPTS_NL.md`, and `scripts/push-readiness-preflight.mjs`. The following owner decisions are required before any production work:
 
 1. Approve or defer real PDF renderer dependency (`PDF_BLOCKER` is active).
 2. Approve or defer production cutover (see `docs/PRODUCTION_CUTOVER_PLAN_NL.md`).
