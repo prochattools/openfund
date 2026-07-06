@@ -2,7 +2,7 @@
 
 Status: Release Candidate 4 — final owner handoff polish
 Taal: Nederlands
-Gegenereerd op: 2026-07-05 23:51:25 +0100 (RC4)
+Gegenereerd op: 2026-07-06 00:38:51 +0100 (RC4)
 
 ---
 
@@ -12,10 +12,10 @@ Gegenereerd op: 2026-07-05 23:51:25 +0100 (RC4)
 |------|--------|
 | Applicatieversie | 0.1.0 |
 | Branch | main |
-| Commit (volledig) | 33d08c46de1e5193caf3cbc059bb4ed2b8dcd50e |
-| Commit (kort) | 33d08c4 |
-| Commit bericht | test: add release evidence consistency checks |
-| Commit datum | 2026-07-05 23:51:25 +0100 |
+| Commit (volledig) | d9427059f2b41c5299959696da84b1d0ca72781f |
+| Commit (kort) | d942705 |
+| Commit bericht | test: add roadmap closeout evidence guards |
+| Commit datum | 2026-07-06 00:38:51 +0100 |
 | Prisma versie (dev) | ^6.15.0 |
 | @prisma/client versie | ^6.15.0 |
 
@@ -25,10 +25,10 @@ Gegenereerd op: 2026-07-05 23:51:25 +0100 (RC4)
 
 | Veld | Waarde |
 |------|--------|
-| Manifest generated at commit | 33d08c46de1e5193caf3cbc059bb4ed2b8dcd50e |
-| Manifest generated at short commit | 33d08c4 |
-| Release evidence validated through | 33d08c46de1e5193caf3cbc059bb4ed2b8dcd50e |
-| Release evidence validated through short | 33d08c4 |
+| Manifest generated at commit | d9427059f2b41c5299959696da84b1d0ca72781f |
+| Manifest generated at short commit | d942705 |
+| Release evidence validated through | d9427059f2b41c5299959696da84b1d0ca72781f |
+| Release evidence validated through short | d942705 |
 | RC4 evidence commits | `7ce6e6d`, `43bfb90`, `42a6f49`, `43137b5`, `33d08c4` |
 
 ---
