@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Final owner review packet
 
-Status: final owner-review packet — geen owner-gated actie uitgevoerd
+Status: final owner-review packet — owner acceptance / decision selection ready; geen owner-gated actie uitgevoerd
 Taal: Nederlands
 
 ## 1. Huidige release-status
@@ -15,6 +15,7 @@ Veilige lokale status:
 - Rapporten HTML/XLSX klaar; echte PDF-renderer geblokkeerd.
 - Dispatch-metadata klaar; echte e-mailverzending geblokkeerd.
 - Push is voorbereid maar niet uitgevoerd.
+- Owner acceptance checklist en decision menu zijn beschikbaar voor de volgende expliciete eigenaarskeuze.
 
 ## 2. Veilige commando's voor review
 
@@ -29,6 +30,8 @@ node scripts/owner-decision-preflight.mjs --decision historical-import
 node scripts/owner-decision-preflight.mjs --decision email
 node scripts/push-readiness-preflight.mjs --strict
 node scripts/owner-approved-action-plan.mjs --decision pdf
+node scripts/owner-decision-menu.mjs
+npm run preflight:owner-acceptance
 ```
 
 Deze commando's zijn lokaal en voeren geen productieactie uit.
@@ -46,6 +49,8 @@ Deze commando's zijn lokaal en voeren geen productieactie uit.
 | Push naar remote | Geblokkeerd tot expliciete push-goedkeuring |
 | Secret-rotatie | Geblokkeerd tot aparte beheeractie buiten Git |
 | PostgreSQL-productieversie | Te bevestigen bij hostingprovider vóór cutover |
+
+Gebruik `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md` om het lokale owner-review pakket te accepteren zonder uitvoering. Gebruik `docs/OWNER_DECISION_MENU_NL.md` om daarna exact één volgende owner-gated beslissing te kiezen.
 
 ## 4. Exacte volgende prompts
 
@@ -108,6 +113,8 @@ Zie `docs/BACKUP_RESTORE_REHEARSAL_NL.md` en `docs/FINAL_READINESS_AUDIT_NL.md`.
 - `docs/OWNER_DECISION_PREFLIGHT_NL.md`
 - `docs/OWNER_APPROVAL_INTAKE_NL.md`
 - `docs/OWNER_APPROVED_ACTION_PLAN_NL.md`
+- `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md`
+- `docs/OWNER_DECISION_MENU_NL.md`
 - `docs/POST_APPROVAL_PROMPTS_NL.md`
 - `docs/PUSH_READINESS_CHECKLIST_NL.md`
 - `docs/PRODUCTION_CUTOVER_PLAN_NL.md`
@@ -122,6 +129,8 @@ Zie `docs/BACKUP_RESTORE_REHEARSAL_NL.md` en `docs/FINAL_READINESS_AUDIT_NL.md`.
 - [ ] Eigenaar leest release manifest.
 - [ ] Eigenaar draait of laat draaien: `npm run validate:release-candidate`.
 - [ ] Eigenaar draait of laat draaien: `node scripts/owner-go-no-go-preflight.mjs --strict`.
+- [ ] Eigenaar accepteert het lokale pakket via `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md`.
+- [ ] Eigenaar kiest de volgende beslissing via `docs/OWNER_DECISION_MENU_NL.md`.
 - [ ] Eigenaar kiest exact welke owner-gated beslissing wordt goedgekeurd.
 - [ ] Eigenaar vult `docs/OWNER_APPROVAL_INTAKE_NL.md` buiten Git in of bevestigt schriftelijk buiten Git.
 - [ ] Geen owner-gated actie wordt uitgevoerd zonder aparte prompt.

@@ -20,6 +20,8 @@ const pkg = JSON.parse(readDoc('package.json')) as { scripts: Record<string, str
 const SOURCE_DOCS = [
   'docs/OWNER_REVIEW_INDEX_NL.md',
   'docs/OWNER_REVIEW_FINAL_PACKET_NL.md',
+  'docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md',
+  'docs/OWNER_DECISION_MENU_NL.md',
   'docs/OWNER_HANDOFF_NL.md',
   'docs/OWNER_DECISION_PACK_NL.md',
   'docs/OWNER_DECISION_READINESS_MATRIX_NL.md',

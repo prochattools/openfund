@@ -4,7 +4,7 @@ Date: 2026-07-02
 Run: `agent-f961650b-de17-4282-ab18-7a716cc72958`  
 Source: `yeshuaacademy-finance`  
 Branch: `main`  
-Status: Release Candidate 4 — all safe pre-approval hardening complete (847 tests); final docs consistency audit, repo contamination guard, link integrity guard, safe command inventory, and final owner review preflight added; awaiting owner decisions for production cutover, historical import, PDF dependency, email provider, push, and production secret rotation
+Status: Release Candidate 4 — owner acceptance / decision selection; final docs consistency audit, repo contamination guard, link integrity guard, safe command inventory, final owner review preflight, owner acceptance checklist, and owner decision menu added; awaiting owner decisions for production cutover, historical import, PDF dependency, email provider, push, production secret rotation, and PostgreSQL version confirmation
 
 ## RC2 Hardening Evidence
 
@@ -36,6 +36,8 @@ Status: Release Candidate 4 — all safe pre-approval hardening complete (847 te
 | Safe command inventory | (current) | docs/SAFE_COMMAND_INVENTORY_NL.md |
 | Final owner review preflight | (current) | preflight script/test |
 | Package script safety extended | (current) | 26 package script safety tests |
+| Owner acceptance checklist | (current) | docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md and guard test |
+| Owner decision menu | (current) | static script/test/generated doc |
 
 ### Live backup rehearsal status
 

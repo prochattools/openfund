@@ -13,6 +13,8 @@ Deze checklist is de laatste handmatige controle vóór een toekomstige `git pus
 - [ ] Branch is `main`.
 - [ ] `git status --short` toont alleen toegestane Graphify-artifacts (`.graphifyignore`, `graphify-out/`) of is volledig schoon.
 - [ ] `docs/RELEASE_MANIFEST_NL.md` is gelezen en wijst naar de bedoelde lokale release-evidence commit.
+- [ ] `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md` is gelezen en accepteert geen push.
+- [ ] `docs/OWNER_DECISION_MENU_NL.md` is gelezen en wijst push aan als aparte owner-gated beslissing.
 - [ ] `node scripts/owner-go-no-go-preflight.mjs --strict` slaagt.
 - [ ] `node scripts/push-readiness-preflight.mjs --strict` slaagt.
 - [ ] `node scripts/final-docs-consistency-audit.mjs` slaagt.

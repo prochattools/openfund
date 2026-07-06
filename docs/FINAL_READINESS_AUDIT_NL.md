@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Eindaudit gereedheid
 
-Status: Release Candidate 4 — roadmap closeout lokaal gevalideerd; productie niet aangeraakt
+Status: Release Candidate 4 — owner acceptance / decision selection; productie niet aangeraakt
 Datum: 2026-07-05
 Taal: Nederlands
 Afhankelijkheden: `docs/ROADMAP.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/ADMIN_OPERATING_GUIDE_NL.md`
@@ -69,6 +69,8 @@ npm test
 | `tests/ops/repoContaminationGuard.test.ts` (repo-vervuilingsbeveiliging) | GESLAAGD |
 | `tests/ops/finalDocsLinkIntegrity.test.ts` (link-integriteitsguard) | GESLAAGD |
 | `tests/ops/finalOwnerReviewPreflight.test.ts` (finale eigenaarsbeoordeling preflight) | GESLAAGD |
+| `tests/ops/ownerAcceptanceChecklist.test.ts` (owner acceptance checklist) | GESLAAGD |
+| `tests/ops/ownerDecisionMenu.test.ts` (owner decision menu) | GESLAAGD |
 | Servicesentest-sets (report, close, review, import) | GESLAAGD |
 
 ### Builds
@@ -142,6 +144,8 @@ Resultaten:
 Vóór productiemigratie:
 
 - [ ] Eigenaar heeft alle geïmplementeerde fasen beoordeeld.
+- [ ] Eigenaar heeft `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md` gelezen en het lokale pakket geaccepteerd.
+- [ ] Eigenaar heeft `docs/OWNER_DECISION_MENU_NL.md` gelezen en een volgende beslissing gekozen.
 - [ ] Eigenaar heeft `docs/ADMIN_OPERATING_GUIDE_NL.md` gelezen en akkoord gegeven.
 - [ ] Eigenaar heeft `docs/PRODUCTION_CUTOVER_PLAN_NL.md` gelezen en goedgekeurd.
 - [ ] Eigenaar heeft `docs/BACKUP_RESTORE_REHEARSAL_NL.md` gelezen.

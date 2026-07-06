@@ -2,9 +2,11 @@
 
 Status: Release Candidate 4 — owner-review voorbereiding; geen productieactie uitgevoerd  
 Taal: Nederlands  
-Doel: per owner-gated beslissing tonen wat klaar is, wat geblokkeerd blijft, welke input nodig is, en welk prompt-pad pas na goedkeuring gebruikt mag worden.
+Doel: per owner-gated beslissing tonen wat klaar is, wat geblokkeerd blijft, welke input nodig is, en welk prompt-pad pas na goedkeuring gebruikt mag worden. De huidige gate is owner acceptance / owner decision selection.
 
 Beveiligingsregel: zet geen geheimen, hostnamen, wachtwoorden, owner-bestandspaden, ruwe transactierijen, database-dumps of productieconfiguratie in dit document of in Git.
+
+Gebruik vóór een beslissing ook `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md` en `docs/OWNER_DECISION_MENU_NL.md`.
 
 ## Matrix
 

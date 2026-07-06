@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Eigenaaroverdracht (RC4)
 
-Status: Release Candidate 4 — roadmap closeout lokaal gevalideerd; productie niet aangeraakt
+Status: Release Candidate 4 — owner acceptance / decision selection; productie niet aangeraakt
 Datum: 2026-07-05  
 Taal: Nederlands  
 Doelgroep: eigenaar / beheerder
@@ -27,6 +27,8 @@ De volledige financiële applicatie is gebouwd, getest en lokaal gevalideerd:
 | Productiecutover-documentatieplan | GEREED (documentatie-alleen) |
 | Lokale Docker Compose (PostgreSQL) | GEREED |
 | Historische laadmachinerie | GEREED LOKAAL / productie-import owner-gated |
+| Owner acceptance checklist | GEREED |
+| Owner decision menu | GEREED |
 
 ---
 
@@ -89,6 +91,15 @@ node scripts/generate-release-manifest.mjs --write
 ```
 
 Zie `docs/RELEASE_MANIFEST_NL.md` voor het resultaat.
+
+### Owner acceptance en beslissingmenu
+
+```bash
+npm run preflight:owner-acceptance
+npm run preflight:owner-decision-menu
+```
+
+Lees daarna `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md` en `docs/OWNER_DECISION_MENU_NL.md`.
 
 ### Backup rehearsal dry-run uitvoeren
 
@@ -165,6 +176,8 @@ Leg het resultaat vast in `docs/finance-rebuild-run.md` met datum, uitkomst, en 
 
 - [ ] `npm run validate:release-candidate` succesvol uitgevoerd (exit 0)
 - [ ] Release manifest gelezen: `docs/RELEASE_MANIFEST_NL.md`
+- [ ] Owner acceptance checklist gelezen: `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md`
+- [ ] Owner decision menu gelezen: `docs/OWNER_DECISION_MENU_NL.md`
 - [ ] Backup dry-run uitgevoerd: `node scripts/backup-restore-rehearsal.mjs --dry-run`
 - [ ] Beslissingspakket gelezen: `docs/OWNER_DECISION_PACK_NL.md`
 - [ ] Beheerdershandleiding gelezen: `docs/ADMIN_OPERATING_GUIDE_NL.md`
@@ -186,6 +199,8 @@ Leg het resultaat vast in `docs/finance-rebuild-run.md` met datum, uitkomst, en 
 | `docs/OWNER_REVIEW_INDEX_NL.md` | Eén startpunt voor de eigenaarsbeoordeling |
 | `docs/OWNER_DECISION_READINESS_MATRIX_NL.md` | Per-beslissing readiness, preflight, stopregels en next prompt |
 | `docs/OWNER_DECISION_PREFLIGHT_NL.md` | Gegenereerde preflight-output voor een geselecteerde beslissing |
+| `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md` | Lokale acceptatiechecklist; keurt geen gated actie goed |
+| `docs/OWNER_DECISION_MENU_NL.md` | Static keuzemenu voor de volgende eigenaarsbeslissing |
 | `docs/POST_APPROVAL_PROMPTS_NL.md` | Prompts voor later goedgekeurde acties |
 | `docs/OWNER_GO_NO_GO_PREFLIGHT_NL.md` | Lokale go/no-go preflight vóór eigenaarsbeoordeling |
 | `docs/PUSH_READINESS_CHECKLIST_NL.md` | Checklist vóór een toekomstige push met eigenaargoedkeuring |

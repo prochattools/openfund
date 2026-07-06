@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Owner review index
 
-Status: Release Candidate 4 — klaar voor eigenaarsbeoordeling; owner-gated acties blijven geblokkeerd  
+Status: Release Candidate 4 — owner acceptance / decision selection; owner-gated acties blijven geblokkeerd
 Taal: Nederlands  
 Doel: één startpunt voor de eigenaar om te bepalen wat klaar is, wat geblokkeerd blijft, en welke beslissing als eerste genomen moet worden.
 
@@ -12,7 +12,9 @@ Doel: één startpunt voor de eigenaar om te bepalen wat klaar is, wat geblokkee
 4. Gebruik `docs/OWNER_DECISION_READINESS_MATRIX_NL.md` om per beslissing te zien wat klaar is.
 5. Gebruik `docs/OWNER_APPROVAL_INTAKE_NL.md` om goedkeuring buiten Git te registreren vóór uitvoering.
 6. Gebruik `docs/OWNER_REVIEW_FINAL_PACKET_NL.md` als laatste samenvatting voor owner review.
-7. Gebruik `docs/POST_APPROVAL_PROMPTS_NL.md` pas nadat een beslissing expliciet is goedgekeurd.
+7. Gebruik `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md` om het lokale pakket te accepteren zonder uitvoering.
+8. Gebruik `docs/OWNER_DECISION_MENU_NL.md` om de volgende owner-gated beslissing te kiezen.
+9. Gebruik `docs/POST_APPROVAL_PROMPTS_NL.md` pas nadat een beslissing expliciet is goedgekeurd.
 
 ## Wat klaar is
 
@@ -24,6 +26,7 @@ Doel: één startpunt voor de eigenaar om te bepalen wat klaar is, wat geblokkee
 - Dispatch-metadata zonder echte e-mail.
 - Dutch UX en admin-only mutation guards.
 - Local-only release, backup, owner decision, and push preflights.
+- Owner acceptance checklist en static owner decision menu.
 
 ## Wat geblokkeerd blijft
 
@@ -54,6 +57,8 @@ node scripts/owner-go-no-go-preflight.mjs --strict
 node scripts/owner-decision-preflight.mjs --decision pdf
 node scripts/owner-approved-action-plan.mjs --decision pdf
 node scripts/push-readiness-preflight.mjs --strict
+node scripts/owner-decision-menu.mjs
+npm run preflight:owner-acceptance
 npm run validate:release-candidate
 git diff --check
 ```
@@ -155,6 +160,8 @@ Plaats hier geen geheimen, hostnamen, wachtwoorden, API-keys, owner-bestandspade
 | `docs/OWNER_DECISION_READINESS_MATRIX_NL.md` | Per-beslissing readiness matrix |
 | `docs/OWNER_APPROVAL_INTAKE_NL.md` | Eigenaarsgoedkeuring intake |
 | `docs/OWNER_APPROVED_ACTION_PLAN_NL.md` | Goedgekeurd actieplan |
+| `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md` | Lokale owner acceptance checklist; keurt geen gated actie goed |
+| `docs/OWNER_DECISION_MENU_NL.md` | Static menu voor de volgende eigenaarsbeslissing |
 | `docs/OWNER_REVIEW_FINAL_PACKET_NL.md` | Samenvatting final owner review packet |
 | `docs/OWNER_GO_NO_GO_PREFLIGHT_NL.md` | Repo go/no-go preflight |
 | `docs/OWNER_DECISION_PREFLIGHT_NL.md` | Gegenereerde beslissing-preflight |

@@ -109,6 +109,26 @@ Genereert een actieplan voor goedgekeurde beslissingen. Voert geen actie uit.
 npm run preflight:owner-action-plan
 ```
 
+### Owner decision menu
+
+```bash
+node scripts/owner-decision-menu.mjs
+```
+
+Toont een static Nederlands menu voor de volgende eigenaarsbeslissing. Voert geen owner-gated actie uit.
+
+```bash
+npm run preflight:owner-decision-menu
+```
+
+### Owner acceptance preflight
+
+```bash
+npm run preflight:owner-acceptance
+```
+
+Voert alleen de finale owner-review preflight en het static decision menu uit. Geen build, geen productie, geen push, geen e-mail, geen import.
+
 ### Push readiness preflight
 
 ```bash
@@ -207,6 +227,8 @@ Na eigenaargoedkeuring buiten Git, gebruik de exacte prompts in `docs/POST_APPRO
 | `node scripts/push-readiness-preflight.mjs --strict` | `READY_FOR_OWNER_APPROVED_PUSH`, exit 0 |
 | `node scripts/final-docs-consistency-audit.mjs` | `GESLAAGD`, exit 0 |
 | `node scripts/final-owner-review-preflight.mjs --check` | `GEREED VOOR EIGENAARSBEOORDELING: JA`, exit 0, zonder git-commando's |
+| `node scripts/owner-decision-menu.mjs` | Static owner decision menu, exit 0 |
+| `npm run preflight:owner-acceptance` | Finale owner-review preflight plus decision menu, exit 0 |
 | `node scripts/backup-restore-rehearsal.mjs --dry-run` | Guard-check geslaagd, exit 0 |
 | `node scripts/generate-release-manifest.mjs` | Release manifest met RC4-status |
 

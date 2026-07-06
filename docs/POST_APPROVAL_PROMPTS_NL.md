@@ -7,6 +7,7 @@ Doel: klaarstaande prompts voor toekomstige owner-approved acties. Kopieer pas e
 Algemene regels voor alle prompts:
 - Start vanuit commit: `<STARTING_COMMIT_PLACEHOLDER>`.
 - Werk uitsluitend in `yeshuaacademy-finance`.
+- Gebruik `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md` en `docs/OWNER_DECISION_MENU_NL.md` als pre-approval context.
 - Raak `.graphifyignore` en `graphify-out/` niet aan.
 - Wijzig of commit geen `.env`.
 - Zet geen geheimen, owner-bestanden, ruwe transactierijen, database-dumps of productieconfiguratie in Git.

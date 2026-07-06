@@ -71,6 +71,8 @@ Zie `docs/OWNER_HANDOFF_NL.md` voor het volledige stappenplan.
 | Git diff check | `git diff --check` | GESLAAGD — exit 0 |
 | Finale docs consistentie-audit | `node scripts/final-docs-consistency-audit.mjs` | GESLAAGD |
 | Finale eigenaarsbeoordeling preflight | `node scripts/final-owner-review-preflight.mjs --check` | GESLAAGD |
+| Owner acceptance preflight | `npm run preflight:owner-acceptance` | GEREED |
+| Owner decision menu | `node scripts/owner-decision-menu.mjs` | GEREED |
 | Live rehearsal | `node scripts/backup-restore-rehearsal.mjs --live-local --confirm-disposable` | Handmatig (vereist Docker Compose + pg_dump) |
 
 ---
@@ -80,6 +82,8 @@ Zie `docs/OWNER_HANDOFF_NL.md` voor het volledige stappenplan.
 Zie `docs/OWNER_DECISION_PACK_NL.md` voor de volledige beslissingschecklist.
 Zie `docs/OWNER_REVIEW_INDEX_NL.md` voor het owner-review startpunt.
 Zie `docs/OWNER_DECISION_READINESS_MATRIX_NL.md` voor per-beslissing readiness.
+Zie `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md` voor lokale acceptatie zonder uitvoering.
+Zie `docs/OWNER_DECISION_MENU_NL.md` voor de volgende beslissingskeuze.
 Zie `docs/POST_APPROVAL_PROMPTS_NL.md` voor prompts die pas na goedkeuring gebruikt mogen worden.
 
 | # | Beslissing | Geblokkeerd |
