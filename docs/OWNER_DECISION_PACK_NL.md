@@ -1,9 +1,9 @@
 # Yeshua Academy Finance — Eigenaarsbeslissingsoverzicht
 
-Status: Release Candidate 1 — lokaal gevalideerd  
+Status: Release Candidate 4 — owner-review beslissingen; uitvoering blijft geblokkeerd tot expliciete goedkeuring
 Datum: 2026-07-05  
 Taal: Nederlands  
-Afhankelijkheden: `docs/PRODUCTION_CUTOVER_PLAN_NL.md`, `docs/BACKUP_RESTORE_REHEARSAL_NL.md`, `docs/ADMIN_OPERATING_GUIDE_NL.md`
+Afhankelijkheden: `docs/OWNER_REVIEW_INDEX_NL.md`, `docs/OWNER_DECISION_READINESS_MATRIX_NL.md`, `docs/POST_APPROVAL_PROMPTS_NL.md`, `docs/PRODUCTION_CUTOVER_PLAN_NL.md`, `docs/BACKUP_RESTORE_REHEARSAL_NL.md`, `docs/ADMIN_OPERATING_GUIDE_NL.md`
 
 ---
 

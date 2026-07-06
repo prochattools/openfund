@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Release Candidate Validatiechecklist
 
-Status: Release Candidate 2
+Status: Release Candidate 4
 Datum: 2026-07-05
 Taal: Nederlands
 
@@ -15,7 +15,7 @@ npm run validate:release-candidate
 ```
 
 Dit commando voert uit:
-1. `npm test` — volledig testsuite (89 bestanden, 643 tests inclusief RC-001 en RC-002)
+1. `npm test` — volledig testsuite (aantallen worden door de actuele run bepaald)
 2. `npm run build:server` — TypeScript server-compilatie
 3. `npm run build` — Next.js productiebuild (18 pagina's)
 4. `DATABASE_URL=... npx prisma validate` — schemavalidatie (lokale placeholder)
@@ -58,11 +58,11 @@ Zie `docs/OWNER_HANDOFF_NL.md` voor het volledige stappenplan.
 
 ---
 
-## Validatiestatus RC-002
+## Validatiestatus RC-004
 
 | Stap | Commando | Status |
 |------|---------|--------|
-| Volledig testsuite | `npm test` | GESLAAGD — 643 tests, 89 bestanden |
+| Volledig testsuite | `npm test` | GESLAAGD in laatste lokale RC-validatie |
 | Server TypeScript-build | `npm run build:server` | GESLAAGD |
 | Next.js productiebuild | `npm run build` | GESLAAGD — 18 pagina's |
 | Prisma validate | `DATABASE_URL=... npx prisma validate` | GESLAAGD (in validate:release-candidate) |
@@ -76,6 +76,9 @@ Zie `docs/OWNER_HANDOFF_NL.md` voor het volledige stappenplan.
 ## Openstaande eigenaarsbeslissingen
 
 Zie `docs/OWNER_DECISION_PACK_NL.md` voor de volledige beslissingschecklist.
+Zie `docs/OWNER_REVIEW_INDEX_NL.md` voor het owner-review startpunt.
+Zie `docs/OWNER_DECISION_READINESS_MATRIX_NL.md` voor per-beslissing readiness.
+Zie `docs/POST_APPROVAL_PROMPTS_NL.md` voor prompts die pas na goedkeuring gebruikt mogen worden.
 
 | # | Beslissing | Geblokkeerd |
 |---|-----------|-------------|

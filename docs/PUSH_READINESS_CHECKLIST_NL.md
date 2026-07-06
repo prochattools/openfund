@@ -14,6 +14,7 @@ Deze checklist is de laatste handmatige controle vóór een toekomstige `git pus
 - [ ] `git status --short` toont alleen toegestane Graphify-artifacts (`.graphifyignore`, `graphify-out/`) of is volledig schoon.
 - [ ] `docs/RELEASE_MANIFEST_NL.md` is gelezen en wijst naar de bedoelde lokale release-evidence commit.
 - [ ] `node scripts/owner-go-no-go-preflight.mjs --strict` slaagt.
+- [ ] `node scripts/push-readiness-preflight.mjs --strict` slaagt.
 - [ ] `npm run validate:release-candidate` slaagt.
 - [ ] `git diff --check` slaagt.
 - [ ] Er zijn geen `.env`-wijzigingen.
@@ -43,6 +44,7 @@ Deze checklist is de laatste handmatige controle vóór een toekomstige `git pus
 ```bash
 git status --short --branch
 node scripts/owner-go-no-go-preflight.mjs --strict
+node scripts/push-readiness-preflight.mjs --strict
 npm run validate:release-candidate
 git diff --check
 ```

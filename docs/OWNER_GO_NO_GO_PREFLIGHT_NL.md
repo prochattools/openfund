@@ -33,6 +33,8 @@ node scripts/owner-go-no-go-preflight.mjs --strict
 | Branch | `main` |
 | Release manifest | `Release Candidate 4` |
 | Eigenaarsdocumenten | Alle vereiste overdrachtsdocumenten aanwezig |
+| Beslissing-preflight | `node scripts/owner-decision-preflight.mjs --decision <keuze>` blijft local-only |
+| Push-readiness | `node scripts/push-readiness-preflight.mjs --strict` publiceert niets |
 | Worktree scope | Alleen `.graphifyignore` en `graphify-out/` mogen ongetrackt/dirty zijn |
 | Productieblockers | Productiemigratie, Historische productie-import, PDF, Echte e-mail, PostgreSQL-versie blijven expliciet |
 | Push/productie | Geblokkeerd tot eigenaargoedkeuring; Push en Geheimen blijven expliciete blockers |

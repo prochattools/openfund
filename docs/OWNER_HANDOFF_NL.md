@@ -183,6 +183,10 @@ Leg het resultaat vast in `docs/finance-rebuild-run.md` met datum, uitkomst, en 
 | `docs/ADMIN_OPERATING_GUIDE_NL.md` | Maandelijkse werkstroom voor beheerder |
 | `docs/FINAL_RELEASE_CANDIDATE_CHECKLIST_NL.md` | Geautomatiseerde RC-validatiechecklist |
 | `docs/OWNER_DECISION_PACK_NL.md` | Eigenaarsbeslissingen met achtergrond en instructies |
+| `docs/OWNER_REVIEW_INDEX_NL.md` | Eén startpunt voor de eigenaarsbeoordeling |
+| `docs/OWNER_DECISION_READINESS_MATRIX_NL.md` | Per-beslissing readiness, preflight, stopregels en next prompt |
+| `docs/OWNER_DECISION_PREFLIGHT_NL.md` | Gegenereerde preflight-output voor een geselecteerde beslissing |
+| `docs/POST_APPROVAL_PROMPTS_NL.md` | Prompts voor later goedgekeurde acties |
 | `docs/OWNER_GO_NO_GO_PREFLIGHT_NL.md` | Lokale go/no-go preflight vóór eigenaarsbeoordeling |
 | `docs/PUSH_READINESS_CHECKLIST_NL.md` | Checklist vóór een toekomstige push met eigenaargoedkeuring |
 | `docs/PRODUCTION_CUTOVER_PLAN_NL.md` | Stapsgewijs productieoverstapplan (documentatie-alleen) |
