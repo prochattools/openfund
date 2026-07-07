@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Veilige commando-inventaris
 
-Status: Release Candidate 4 — pre-goedkeuring
+Status: Release Candidate 4 — schema cutover afgerond 2026-07-07
 Taal: Nederlands
 Doel: Overzicht van alle veilige lokale commando's en alle verboden commando-categorieën voor eigenaarsbeoordeling.
 

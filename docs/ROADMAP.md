@@ -26,6 +26,7 @@ Phase 7 — Dutch UX and authorization hardening   COMPLETE
 Phase 8 — Infrastructure and deployment          COMPLETE (local readiness; production gated)
 Phase 9 — Operational hardening and handoff      COMPLETE (published RC4 handoff; owner decisions gated)
 Phase 9 post-push evidence and decision hardening COMPLETE (published at f2f7cbb; next decision selection gated)
+Phase 10 — Production schema cutover             COMPLETE (2026-07-07; finance schema deployed; historical import gated)
 ```
 
 ## Phase 0 — Governance and verified controls

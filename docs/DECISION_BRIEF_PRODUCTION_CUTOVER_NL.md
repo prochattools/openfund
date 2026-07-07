@@ -1,11 +1,11 @@
 # Yeshua Academy Finance — Decision brief: productiecutover
 
-Status: Geblokkeerd tot expliciete eigenaargoedkeuring
+Status: Geblokkeerd voor toekomstige referentie — zie `docs/PRODUCTION_SCHEMA_CUTOVER_EVIDENCE_NL.md` voor bewijs van uitgevoerde cutover (2026-07-07)
 Taal: Nederlands
 
 ## 1. Beslissing
 
-Bereid later productiecutover voor of voer die uit. Deze brief is documentation-only en maakt geen productieverbinding.
+Schema cutover naar productie is afgerond op 2026-07-07. PostgreSQL 15.8, database finance, schema finance, 4 migraties, 30 tabellen. Zie `docs/PRODUCTION_SCHEMA_CUTOVER_EVIDENCE_NL.md` voor sanitized bewijs. Deze brief voert niets uit, verbindt niet met productie en wijzigt geen productieconfiguratie.
 
 ## 2. Vereiste owner approval evidence
 

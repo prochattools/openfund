@@ -1322,13 +1322,15 @@ Acceptance:
 
 ## Exact next execution sequence
 
-Phases 0–9 are complete as a published RC4 owner-decision handoff through `f2f7cbb`, with Phase 3 production import explicitly owner-gated and Phase 4 complete for local/app workflow. Owner-review preparation is documented in `docs/OWNER_REVIEW_INDEX_NL.md`, `docs/OWNER_DECISION_READINESS_MATRIX_NL.md`, `docs/OWNER_DECISION_PREFLIGHT_NL.md`, `docs/POST_APPROVAL_PROMPTS_NL.md`, and `scripts/push-readiness-preflight.mjs`. The recommended next low-risk owner decision is `postgres-version`. The following owner decisions are required before any production work:
+Phases 0–9 are complete as a published RC4 owner-decision handoff through `f2f7cbb`. Phase 10 production schema cutover was completed on 2026-07-07: PostgreSQL 15.8, database finance, schema finance, 4 migrations applied, 30 tables verified. Evidence: `docs/PRODUCTION_SCHEMA_CUTOVER_EVIDENCE_NL.md`.
+
+Remaining owner-gated decisions:
 
 1. Approve or defer real PDF renderer dependency (`PDF_BLOCKER` is active).
-2. Approve or defer production cutover (see `docs/PRODUCTION_CUTOVER_PLAN_NL.md`).
+2. ~~Approve or defer production cutover~~ — DONE 2026-07-07.
 3. Approve or defer historical production import (2024/2025/2026 owner workbooks).
 4. Approve or defer real email sending / Resend provider configuration.
-5. Confirm PostgreSQL production version compatibility (recommended next; evidence must come from owner/provider outside Git).
+5. Rotate finance_user database password (appeared in chat session; required before long-term production use).
 6. Run and confirm live local backup/restore rehearsal with PostgreSQL tools.
 
 See `docs/OWNER_DECISION_PACK_NL.md` for decision checkboxes and next-step prompts.

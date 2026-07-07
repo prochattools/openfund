@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Productieoverstap (Beheerdersgids)
 
-Status: **documentatie-alleen** — geen productiecommando's zijn uitgevoerd  
+Status: schema cutover afgerond 2026-07-07 (documentatie-alleen plan; uitvoering: zie `docs/PRODUCTION_SCHEMA_CUTOVER_EVIDENCE_NL.md`)  
 Taal: Nederlands  
 Doelgroep: systeembeheerder / eigenaar  
 Afhankelijkheden: `docs/INFRASTRUCTURE_READINESS.md`, `docs/ADMIN_OPERATING_GUIDE_NL.md`

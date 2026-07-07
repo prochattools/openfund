@@ -89,7 +89,7 @@ Zie `docs/POST_APPROVAL_PROMPTS_NL.md` voor prompts die pas na goedkeuring gebru
 | # | Beslissing | Geblokkeerd |
 |---|-----------|-------------|
 | 1 | PDF-renderer afhankelijkheid goedkeuren | Echte PDF-export |
-| 2 | Productiemigratie goedkeuren | Productiegebruik |
+| 2 | Productiemigratie goedkeuren | AFGEROND — schema finance gedeployed 2026-07-07 |
 | 3 | Historische import goedkeuren | Historische rapporten |
 | 4 | E-mailverzending goedkeuren | Rapportverzending |
 | 5 | PostgreSQL-productieversie bevestigen | Veilige cutover |

@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Eindaudit gereedheid
 
-Status: Release Candidate 4 — owner acceptance / decision selection; productie niet aangeraakt
+Status: Release Candidate 4 — schema cutover afgerond 2026-07-07; historische import, echte e-mail, PDF en geheimrotatie geblokkeerd
 Datum: 2026-07-05
 Taal: Nederlands
 Afhankelijkheden: `docs/ROADMAP.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/ADMIN_OPERATING_GUIDE_NL.md`

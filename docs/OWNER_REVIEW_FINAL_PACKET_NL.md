@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Final owner review packet
 
-Status: final owner-review packet — owner-decision handoff published; decision selection ready; geen nieuwe owner-gated actie uitgevoerd
+Status: final owner-review packet — schema cutover afgerond 2026-07-07; historische import, echte e-mail, PDF en geheimrotatie geblokkeerd
 Taal: Nederlands
 
 ## 1. Huidige release-status
