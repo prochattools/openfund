@@ -54,10 +54,17 @@ describe('post push verification — static evidence guard', () => {
   });
 
   it('references the pushed commit and branch', () => {
-    expect(doc).toContain('6353546 test: make owner acceptance guards scan-clean');
-    expect(doc).toContain('6353546892b385c8e4c9b8b52de865ad1dc9052b');
+    expect(doc).toContain('f2f7cbb docs: update post push owner decision handoff');
+    expect(doc).toContain('f2f7cbb3d4fa6e2c30f099158d97060e7d780dc6');
     expect(doc).toContain('`main`');
     expect(doc).toContain('origin/main');
+    expect(doc).toContain('geen commits ahead of `origin/main`');
+  });
+
+  it('records that all six post-push owner-decision handoff commits were published', () => {
+    for (const commit of ['e07be8f', 'a5ab4a8', '949823a', '84d13d7', '3866a43', 'f2f7cbb']) {
+      expect(doc).toContain(commit);
+    }
   });
 
   it('states production was not deployed or touched', () => {
@@ -69,6 +76,7 @@ describe('post push verification — static evidence guard', () => {
   it('states no tags and no force push', () => {
     expect(doc).toContain('Geen tags');
     expect(doc).toContain('Geen force push');
+    expect(doc).toContain('geen force push gebruikt');
   });
 
   it('lists all remaining owner-gated blockers', () => {

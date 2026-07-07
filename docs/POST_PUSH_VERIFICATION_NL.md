@@ -8,18 +8,18 @@ Taal: Nederlands
 | Veld | Waarde |
 |------|--------|
 | Branch | `main` |
-| Gepubliceerde commit | `6353546 test: make owner acceptance guards scan-clean` |
-| Commit hash | `6353546892b385c8e4c9b8b52de865ad1dc9052b` |
+| Gepubliceerde commit | `f2f7cbb docs: update post push owner decision handoff` |
+| Commit hash | `f2f7cbb3d4fa6e2c30f099158d97060e7d780dc6` |
 | Remote tracking branch | `origin/main` |
-| Lokale verificatie | `HEAD` en `origin/main` wijzen lokaal naar dezelfde commit |
+| Lokale verificatie | `HEAD` en `origin/main` wijzen lokaal naar dezelfde commit; er zijn geen commits ahead of `origin/main` |
 
 Deze verificatie registreert alleen dat het lokale owner-review / release-candidate pakket naar remote main is gepubliceerd. Dit is geen productie-release en geen deploymentclaim.
 
 ## 2. Wat is gepubliceerd
 
-- De lokale finance applicatiecode en owner-review documentatie tot en met commit `6353546`.
-- De release-candidate validatie- en preflight tooling.
-- De owner acceptance, decision menu, push readiness en post-approval prompt documentatie.
+- De lokale finance applicatiecode en owner-review documentatie tot en met commit `f2f7cbb`.
+- De zes post-push owner-decision handoff commits: `e07be8f`, `a5ab4a8`, `949823a`, `84d13d7`, `3866a43`, en `f2f7cbb`.
+- De post-push evidence, owner decision briefs, approval-intake validator, package preflights, decision menu en handoff documentatie.
 
 ## 3. Wat niet is uitgevoerd
 
@@ -32,6 +32,7 @@ Deze verificatie registreert alleen dat het lokale owner-review / release-candid
 - Geen tags.
 - Geen force push.
 - Geen productieconfiguratie of owner-bronbestand in Git.
+- Geen `.env` wijziging.
 
 ## 4. Veilige post-push validatiecommando's
 
@@ -61,11 +62,12 @@ git diff --check
 - Production PostgreSQL version confirmation.
 
 Deze blockers blijven actief totdat de eigenaar exact één beslissing expliciet goedkeurt via een aparte prompt en de bijbehorende preflight opnieuw slaagt.
+De huidige volgende gate is owner decision selection. De aanbevolen eerste low-risk keuze is `postgres-version`, omdat dit verification-only is en productiecutover pas later kan volgen.
 
 ## 6. Exacte volgende beslissingopties
 
 - `pdf` — kies en implementeer later een echte PDF-renderer.
-- `postgres-version` — bevestig later de productie PostgreSQL-versie buiten Git.
+- `postgres-version` — aanbevolen eerste keuze; bevestig later de productie PostgreSQL-versie buiten Git.
 - `production-cutover` — bereid later productiecutover voor of voer die uit na aparte goedkeuring.
 - `historical-import` — voer later alleen een goedgekeurde dry-run of import uit met owner-bestanden buiten Git.
 - `email` — configureer later provider/no-send of echte verzending na aparte goedkeuring.
@@ -96,3 +98,4 @@ Stop direct wanneer:
 - Geen ruwe transactierijen of databasedumps in dit document.
 - Geen productieclaim, deploymentclaim, real-email claim, real-PDF claim, secret-rotation claim of PostgreSQL-productieversieclaim.
 - Deze post-push verificatie voert niets uit en verandert geen remote state.
+- Geen tags gemaakt en geen force push gebruikt bij de publicatie naar `origin/main`.
