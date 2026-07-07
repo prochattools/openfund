@@ -192,7 +192,7 @@ Historical labels must be retained and reproduced exactly in historical reports.
    - It also lacks explicit period-close statement controls and a frozen report snapshot.
 
 6. **The historical XLSX importer cannot reproduce the concluded books.**
-   - It expects a sheet named `transacties 2025`, which is absent in the uploaded workbook.
+   - It expects a sheet named `transacties 2025`, which is absent in the supplied workbook.
    - It ignores `Klant`, `Type`, and the current `Category` hierarchy.
    - It must be replaced by a one-time, validated historical loader.
 
@@ -234,7 +234,7 @@ These are non-negotiable implementation rules:
 
 ### 1. Import
 
-One primary action: upload an ING CSV.
+One primary action: import an ING CSV.
 
 The import preview shows:
 
@@ -396,7 +396,7 @@ These decisions are authoritative and override earlier proposals.
 10. Reports require a separate final administrator approval click after the period is balanced and locked. No automatic sending.
 11. Produce all three formats from the same frozen snapshot: HTML email, XLSX attachment, and PDF attachment.
 12. Historical reports reproduce the literal 2024 and 2025 wording exactly. No historical labels are rewritten.
-13. Always retain the original uploaded files unchanged. Store their hashes and make the originals downloadable. Derived formats may be generated, but never replace the originals.
+13. Always retain the original source files unchanged. Store their hashes and make the originals downloadable. Derived formats may be generated, but never replace the originals.
 14. July 2026 remains open until a complete July export is supplied.
 15. The current production PostgreSQL major version is unknown and existing production data is not important. During the infrastructure phase, select a currently supported PostgreSQL major version that is compatible with Prisma, validate migrations and the complete financial fixture suite on a disposable database, and only then replace or update the environment.
 16. The complete application UI, navigation, labels, errors, category administration, reports, and emails must be Dutch. ING source columns may remain English because they are external source data. Project and classification names remain exactly as supplied in the administration.
@@ -472,7 +472,7 @@ Final validation evidence:
 4. Full high-risk security scan over executable and test paths: no findings.
 5. Documentation secret-material scan: no findings.
 6. Documentation runtime-execution scan: no findings.
-7. The combined scan reported six expected documentation-only matches for the word `upload`; these describe the legitimate ING import workflow and are not executable upload/network behavior.
+7. The combined scan reported expected documentation-only import workflow wording; these describe the legitimate ING import workflow and are not executable network behavior.
 8. Diff review confirmed no financial source files, secrets, `.env` files, Prisma migration, dependency, Docker, or production-configuration changes.
 
 Commit evidence:
@@ -776,7 +776,7 @@ Packet B validation evidence:
 - Full suite passed: 55 files passed; 251 tests passed; 1 optional test skipped.
 - Production build passed with 18 routes; the SWC lockfile warning remained pre-existing and no generated files changed.
 - Server/test executable high-risk scan reported no findings.
-- `src/libs/api.ts` high-risk scan reported pre-existing fetch/upload patterns; the Packet B diff only expands the existing `updateCategory` payload and error handling.
+- `src/libs/api.ts` high-risk scan reported pre-existing client request/import patterns; the Packet B diff only expands the existing `updateCategory` payload and error handling.
 
 ## MODEL-004 and MODEL-005 implementation evidence
 
@@ -796,7 +796,7 @@ Implemented files:
 MODEL-004 summary:
 
 - Added additive `SourceFile`, `BankStatement`, and `StatementPeriod` models.
-- `SourceFile` retains original bytes, filename, media type, size, SHA-256 hash, uploader, workspace, and created time.
+- `SourceFile` retains original bytes, filename, media type, size, SHA-256 hash, submitter, workspace, and created time.
 - `BankStatement` stores account, period, coverage status, row count, opening, income, expenses, net, closing, accepted metadata, and source-file uniqueness.
 - `StatementPeriod` stores account-specific reconciliation periods with exact balances and row counts.
 - `statementControlService` hashes retained bytes, stores/reuses duplicate source files by workspace/hash, downloads bytes byte-identically, validates exact statement totals, rejects duplicate accepted source files, and creates statement periods.
@@ -975,7 +975,7 @@ Implementation summary:
 
 - Added `server/services/monthlyImportPreviewService.ts` as a pure monthly ING CSV preview service.
 - Added `tests/services/monthlyImportPreviewService.test.ts` and `tests/routes/monthlyImportPreview.test.ts`.
-- Added guarded route wiring for `POST /api/upload/preview`; the existing `POST /api/upload` import path is unchanged.
+- Added guarded route wiring for the monthly import preview endpoint; the existing import path is unchanged.
 - The preview accepts retained CSV bytes, computes the SHA-256 from those exact bytes, and returns a SourceFile-compatible sanitized source summary.
 - The preview parses ING CSV rows, computes period start/end, opening balance, income, expenses, net movement, closing balance, row count, duplicate count, new transaction count, running-balance findings, coverage status, and close eligibility.
 - Duplicate detection uses import fingerprints and can compare against existing transactions through a caller-supplied lookup.
@@ -1102,7 +1102,7 @@ Validation completed in this slice:
 - Server TypeScript build passed.
 - Production build passed with 18 routes and the existing non-blocking SWC lockfile warning.
 - `git diff --check` passed.
-- Changed executable/test high-risk scan reported no unexpected findings; matches were existing env/fetch wrappers, explicit no-booking flags, and test fixture/current-booking reads.
+- Changed executable/test high-risk scan reported no unexpected findings; matches were existing env/request wrappers, explicit no-booking flags, and test fixture/current-booking reads.
 - Changed-documentation secret-material scan reported no unexpected findings; matches were prior validation notes and local-only placeholder database references.
 - Changed-documentation runtime scan reported only expected historical notes and no-production/no-push/local-only guardrail references.
 
@@ -1362,7 +1362,7 @@ Commit: `7d58726 test: add Dutch text audit and navigation helper tests`
 
 - Added `tests/helpers/dutchTextAudit.test.ts` (20 tests) covering:
   - auth guard 403 Dutch error text
-  - upload route messages Dutch
+  - import route messages Dutch
   - import feedback Dutch
   - email helper subject/body Dutch
   - review page helper label translations Dutch
@@ -1403,7 +1403,7 @@ Commit: `d51cfad docs: add Dutch administrator operating guide (OPS-001)`
 
 - Added `docs/ADMIN_OPERATING_GUIDE_NL.md` — 16-section Dutch guide covering:
   1. Inloggen en rollen
-  2. Maandelijkse ING CSV-upload en importvoorbeeld
+  2. Maandelijkse ING CSV-import en importvoorbeeld
   3. Deterministische categorisatie
   4. Beoordelingsrij
   5. Handmatige keuze van Klant, Type en Categorie

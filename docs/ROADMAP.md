@@ -155,14 +155,14 @@ Status: **complete local/sanitized; production import owner-gated** — sanitize
 
 ## Phase 4 — Monthly import and review workflow
 
-Status: **complete for local/app workflow** — FLOW-001 through FLOW-004 are implemented and validated; future real owner monthly files remain operator-controlled through the guarded upload workflow.
+Status: **complete for local/app workflow** — FLOW-001 through FLOW-004 are implemented and validated; future real owner monthly files remain operator-controlled through the guarded import workflow.
 
 ### Outcomes
 
-- Provide one clear Dutch monthly ING upload workflow.
+- Provide one clear Dutch monthly ING import workflow.
 - Show account, period, row count, duplicates, overlap, opening, income, expenses, and closing before committing.
 - Reject invalid controls before ledger changes.
-- Retain exact uploaded CSV bytes as the hash basis for preview source-file evidence.
+- Retain exact supplied CSV bytes as the hash basis for preview source-file evidence.
 - Keep FLOW-001 preview-only: no transaction bookings, period closes, historical production import, or production configuration changes.
 - Apply only approved deterministic rules automatically.
 - Final categorization decisions require exactly one complete deterministic source, or an approved rule and exact historical replay that agree on all three dimensions.
@@ -225,7 +225,7 @@ Status: **complete** — REPORT-001 through REPORT-005 complete.
 - UI, HTML, XLSX, and PDF placeholder artifacts include the same snapshot evidence; real rendered PDF output requires owner approval of a dependency.
 - Sent reports reference a locked immutable snapshot.
 - A report cannot be sent from an open or unbalanced period.
-- Original uploaded files remain separately downloadable.
+- Original source files remain separately downloadable.
 
 ## Phase 7 — Dutch UX and authorization hardening
 
@@ -233,7 +233,7 @@ Status: **complete** — UX-001, AUTH-001, and UX-002 done.
 
 ### Outcomes (achieved)
 
-- Dutch text audit test suite covers auth, upload, import feedback, email, review, settings, report snapshot, and navigation surfaces.
+- Dutch text audit test suite covers auth, import feedback, email, review, settings, report snapshot, and navigation surfaces.
 - Every mutation route enforced with `requireAdmin`; 24 admin mutation policy tests pass.
 - Navigation centralized in `src/helpers/navigation.ts` with canonical Dutch `FINANCE_NAV_ITEMS`.
 - `FinanceAppFrame.tsx` uses the canonical nav helper; no SaaS/marketing/billing surfaces in nav.

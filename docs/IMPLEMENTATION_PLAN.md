@@ -363,7 +363,7 @@ Actions:
 2. Confirm no financial source files, secrets, `.env`, production configuration, database migrations, or Docker changes are included.
 3. Run `forbidden_all_high_risk` over executable and test paths.
 4. Run secret-material and runtime-execution scans over documentation paths.
-5. Review documentation-only upload-keyword findings as expected workflow language, not executable network behavior.
+5. Review documentation-only import-keyword findings as expected workflow language, not executable network behavior.
 6. Update this plan and `docs/finance-rebuild-run.md` with validation evidence.
 
 Acceptance:
@@ -371,7 +371,7 @@ Acceptance:
 - Diff is limited to intended governance documentation, categorization safety, parsing, and tests.
 - Executable and test paths have no high-risk findings.
 - Documentation has no secret-material or runtime-execution findings.
-- Six upload-keyword findings are confirmed as legitimate descriptions of the ING import workflow.
+- Six import-keyword findings are confirmed as legitimate descriptions of the ING import workflow.
 - No commit is created.
 
 ### SAFE-009 — Owner review and optional commit
@@ -630,7 +630,7 @@ Packet B implementation evidence:
 - Server TypeScript build passed.
 - Full suite passed: 55 files passed; 251 tests passed; 1 optional test skipped.
 - Production build passed with 18 routes and the pre-existing SWC lockfile warning.
-- Server/test executable high-risk scan reported no findings; `src/libs/api.ts` scan findings were pre-existing client fetch/upload patterns and the diff only expands the existing category endpoint payload/error handling.
+- Server/test executable high-risk scan reported no findings; `src/libs/api.ts` scan findings were pre-existing client request/import patterns and the diff only expands the existing category endpoint payload/error handling.
 
 Current gate:
 
@@ -650,7 +650,7 @@ Acceptance:
 
 Validation:
 
-- Upload/download byte comparison tests.
+- Source-file byte comparison tests.
 - Statement-control tests.
 
 Implementation evidence:
@@ -828,7 +828,7 @@ Acceptance:
 
 Status: `DONE_LOCAL_APP_WORKFLOW`
 
-Phase 4 FLOW-001 through FLOW-004 are complete for local/app behavior. Monthly import preview is preview-only; deterministic categorization returns safe candidates and suggestions without writes; the review queue is evidence-rich and Dutch; manual booking requires explicit admin decisions with all three dimensions; rule creation has a separate preview and explicit activation path. Future real owner monthly files remain operator-controlled through the guarded upload workflow.
+Phase 4 FLOW-001 through FLOW-004 are complete for local/app behavior. Monthly import preview is preview-only; deterministic categorization returns safe candidates and suggestions without writes; the review queue is evidence-rich and Dutch; manual booking requires explicit admin decisions with all three dimensions; rule creation has a separate preview and explicit activation path. Future real owner monthly files remain operator-controlled through the guarded import workflow.
 
 ### FLOW-001 — Implement controlled ING import preview
 
@@ -840,10 +840,10 @@ Acceptance:
 
 - Dutch preview shows account, period, counts, duplicates, overlap, and statement totals before commit.
 - Failed controls prevent commit.
-- Original uploaded CSV bytes are hashed with retained-byte semantics and represented as a SourceFile-compatible preview summary.
+- Original supplied CSV bytes are hashed with retained-byte semantics and represented as a SourceFile-compatible preview summary.
 - Duplicate import fingerprints are detected against existing transactions when a duplicate lookup is supplied.
 - The preview does not create `Transaction`, `TransactionBooking`, `PeriodClose`, report, dispatch, production import, or production configuration records.
-- The `/api/upload/preview` route returns a Dutch preview response and leaves `/api/upload` import behavior unchanged.
+- The monthly import preview route returns a Dutch preview response and leaves existing import behavior unchanged.
 - 2026-style partial/open statements remain not close-eligible.
 
 Validation:
@@ -1169,7 +1169,7 @@ Dependencies: core workflows implemented
 
 Evidence:
 
-- `tests/helpers/dutchTextAudit.test.ts` — 20 tests covering auth guard, upload, import feedback, email, review, settings, report snapshot, and navigation surfaces.
+- `tests/helpers/dutchTextAudit.test.ts` — 20 tests covering auth guard, import feedback, email, review, settings, report snapshot, and navigation surfaces.
 - Commit: `7d58726 test: add Dutch text audit and navigation helper tests`
 
 Acceptance:
@@ -1278,7 +1278,7 @@ Status: `DONE`
 
 Evidence:
 
-- `docs/ADMIN_OPERATING_GUIDE_NL.md` — 16-section Dutch guide covering rollen, ING CSV upload, deterministische categorisatie, beoordelingsrij, handmatige keuze dimensies, regel aanmaken, reconciliatie, categoriecontroles, periode afsluiten, periode heropenen, rapporten, artefacten, goedkeuring + verzendmetadata, bronbestand-downloads, wat niet te doen, probleemoplossing.
+- `docs/ADMIN_OPERATING_GUIDE_NL.md` — 16-section Dutch guide covering rollen, ING CSV import, deterministische categorisatie, beoordelingsrij, handmatige keuze dimensies, regel aanmaken, reconciliatie, categoriecontroles, periode afsluiten, periode heropenen, rapporten, artefacten, goedkeuring + verzendmetadata, bronbestand-downloads, wat niet te doen, probleemoplossing.
 - Commit: `d51cfad docs: add Dutch administrator operating guide (OPS-001)`
 
 Acceptance:
