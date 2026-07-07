@@ -1328,9 +1328,10 @@ Remaining owner-gated decisions:
 
 1. Approve or defer real PDF renderer dependency (`PDF_BLOCKER` is active).
 2. ~~Approve or defer production cutover~~ — DONE 2026-07-07.
-3. Approve or defer historical production import (2024/2025/2026 owner workbooks).
+3. ~~Historical production import~~ — DONE 2026-07-07. 2024 (268 tx), 2025 (413 tx), 2026 partial open (221 tx) imported. 902 total transactions, 681 bookings, 4 source files. 2026 partial/open, not closed. Evidence: `docs/PRODUCTION_HISTORICAL_IMPORT_EVIDENCE_NL.md`.
 4. Approve or defer real email sending / Resend provider configuration.
-5. Rotate finance_user database password (appeared in chat session; required before long-term production use).
+5. Rotate finance_user database password (appeared in chat session; required before long-term production use). Note: this rotation will also unblock item 3 above.
 6. Run and confirm live local backup/restore rehearsal with PostgreSQL tools.
 
 See `docs/OWNER_DECISION_PACK_NL.md` for decision checkboxes and next-step prompts.
+See `docs/PRODUCTION_HISTORICAL_IMPORT_EVIDENCE_NL.md` for import evidence.

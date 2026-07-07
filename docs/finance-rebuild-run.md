@@ -4,7 +4,7 @@ Date: 2026-07-02
 Run: `agent-f961650b-de17-4282-ab18-7a716cc72958`  
 Source: `yeshuaacademy-finance`  
 Branch: `main`  
-Status: Release Candidate 4 — published post-push owner-decision handoff; `f2f7cbb` verified on `origin/main`; awaiting owner decision selection, with `postgres-version` recommended first; production cutover, historical import, PDF dependency, email provider, any future push, production secret rotation, and PostgreSQL version confirmation remain owner-gated
+Status: Release Candidate 4 — published post-push owner-decision handoff; `f2f7cbb` verified on `origin/main`; production schema cutover complete 2026-07-07; historical production import complete 2026-07-07 (2024/2025 concluded + 2026 partial open; 902 transactions, 681 bookings); secret rotation, PDF dependency, email provider remain owner-gated
 
 ## RC2 Hardening Evidence
 
@@ -45,6 +45,8 @@ Status: Release Candidate 4 — published post-push owner-decision handoff; `f2f
 | Owner approval intake validator | `84d13d7` | static validator script/test/generated doc |
 | Post-push owner preflight scripts | `3866a43` | package scripts and package safety tests |
 | Published owner-decision handoff | `f2f7cbb` | `origin/main` matches local handoff checkpoint; no commits ahead at publication |
+| Production schema cutover evidence | `de37a66` | `docs/PRODUCTION_SCHEMA_CUTOVER_EVIDENCE_NL.md`; 10 cutover tests |
+| Production historical import script + guard tests | (current) | `scripts/production-historical-import.mjs`; 35 guard tests; 25 evidence tests; dry-run verified + production import complete 2026-07-07; 902 transactions, 681 bookings, 4 source files |
 
 ### Live backup rehearsal status
 
