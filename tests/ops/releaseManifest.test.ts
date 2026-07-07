@@ -58,11 +58,21 @@ describe('release manifest — content', () => {
     expect(manifest).toContain('validate:release-candidate');
   });
 
-  it('manifest separates verified remote basis from new local hardening push status', () => {
+  it('manifest records the published handoff checkpoint separately from later local evidence commits', () => {
     const manifest = buildManifest();
-    expect(manifest).toContain('Post-push basiscommit `6353546` staat op origin/main');
-    expect(manifest).toContain('Geen nieuwe push van lokale hardening commits uitgevoerd');
+    expect(manifest).toContain('Published owner-decision handoff on origin/main');
+    expect(manifest).toContain('`f2f7cbb docs: update post push owner decision handoff`');
+    expect(manifest).toContain('f2f7cbb3d4fa6e2c30f099158d97060e7d780dc6');
+    expect(manifest).toContain('Zes post-push owner-decision handoff commits gepubliceerd');
+    expect(manifest).toContain('Geen nieuwe push nodig tenzij een latere lokale commit wordt gemaakt');
     expect(manifest).toContain('BEVESTIGD');
+  });
+
+  it('manifest recommends postgres-version as the next low-risk owner decision without claiming confirmation', () => {
+    const manifest = buildManifest();
+    expect(manifest).toContain('Aanbevolen volgende low-risk beslissing: `postgres-version`');
+    expect(manifest).toContain('verification-only');
+    expect(manifest).not.toMatch(/PostgreSQL.*(?:is )?(?:confirmed|bevestigd)/i);
   });
 
   it('manifest confirms no production touched', () => {

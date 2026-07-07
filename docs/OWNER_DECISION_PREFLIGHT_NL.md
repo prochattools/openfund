@@ -1,7 +1,7 @@
 # Yeshua Academy Finance — Eigenaarsbeslissing preflight
 
 Branch: main
-HEAD: a8280c2
+HEAD: 3ebeccc
 Besluitstatus: GEREED VOOR EIGENAARSREVIEW
 Goedkeuring buiten Git geregistreerd: NEE
 
@@ -18,42 +18,43 @@ Goedkeuring buiten Git geregistreerd: NEE
 
 ## Worktree
 
-- Dirty paths: docs/FINAL_DOCS_CONSISTENCY_AUDIT_NL.md, .graphifyignore, graphify-out/
+- Dirty paths: docs/OWNER_APPROVED_ACTION_PLAN_NL.md, scripts/generate-release-manifest.mjs, tests/ops/releaseManifest.test.ts, .graphifyignore, graphify-out/
 
-## Echte PDF-renderer afhankelijkheid
+## PostgreSQL-productieversie bevestigen
 
-Sleutel: `pdf`
-Status: GEBLOKKEERD TOT EIGENAAR PDF-KEUZE GOEDKEURT
+Sleutel: `postgres-version`
+Status: GEBLOKKEERD TOT HOSTINGVERSIE BUITEN GIT IS BEVESTIGD
 Blijft geblokkeerd zonder owner-goedkeuring: JA
 
 ### Wat is nu klaar
-- HTML- en XLSX-rapporten gebruiken dezelfde gesloten snapshot.
-- PDF-placeholder blijft zichtbaar als expliciete blocker.
-- Package-safety tests bewaken dat er geen PDF-afhankelijkheid stil wordt toegevoegd.
+- Lokale Prisma validate/generate controles slagen.
+- Migratieketen is lokaal gevalideerd.
+- Cutoverplan noemt versiecontrole als vereiste.
 
 ### Wat blijft geblokkeerd
-- Geen echte PDF-renderer is geselecteerd of geïnstalleerd.
-- Geen dependencywijziging is toegestaan in deze preflight.
+- Geen hostingprovider of productiehost mag worden geraadpleegd vanuit deze preflight.
+- Geen productie-DB URL mag worden ingevoerd.
 
 ### Vereiste eigenaarinput
-- Naam van de gekozen PDF-bibliotheek.
-- Bevestiging van licentie, runtimegrootte en serverbelasting.
-- Akkoord dat dependency-installatie pas in een apart goedgekeurd packet gebeurt.
+- PostgreSQL major/minor versie uit hostingdashboard.
+- Bevestiging van Prisma-compatibiliteit.
+- Besluit of upgrade nodig is voor cutover.
 
 ### Geheimen of externe details
-- Geen geheim vereist.
+- Geen geheim; alleen versienummer en compatibiliteitsbevestiging.
 
 ### Veilige commando's
-- Preflight: `node scripts/owner-decision-preflight.mjs --decision pdf`
-- Safe dry-run: `npm test -- --test-name-pattern "production blocker"`
-- Uitvoering na goedkeuring: Gebruik de PDF-sectie in docs/POST_APPROVAL_PROMPTS_NL.md; deze preflight voert niets uit.
+- Preflight: `node scripts/owner-decision-preflight.mjs --decision postgres-version`
+- Safe dry-run: `npx prisma validate met uitsluitend een lokale placeholder DATABASE_URL buiten dit rapport`
+- Uitvoering na goedkeuring: Gebruik de PostgreSQL-versie prompt in docs/POST_APPROVAL_PROMPTS_NL.md; deze preflight verbindt niet met productie.
 
 ### Terugrolplan
-- Revert de dependency- en rendererwijziging als build, tests of audit falen.
+- Als versie incompatibel is: stop cutover en plan provider-upgrade of alternatieve database.
 
 ### Stopregels
-- Stop bij ontbrekende bibliotheekkeuze.
-- Stop bij dependency-, audit-, build- of testtwijfel.
+- Stop bij onbekende productieversie.
+- Stop bij incompatibiliteit.
+- Stop bij productie-URL in lokale commandoregel.
 
 ### Exacte volgende prompt na goedkeuring
-- Gebruik de prompt "Approve and implement real PDF renderer" uit docs/POST_APPROVAL_PROMPTS_NL.md.
+- Gebruik de prompt "Confirm production PostgreSQL version" uit docs/POST_APPROVAL_PROMPTS_NL.md.

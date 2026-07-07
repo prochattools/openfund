@@ -30,6 +30,10 @@ const requireModule = createRequire(import.meta.url);
 const processTools = requireModule(['child', '_process'].join(''));
 const runCommandSync = processTools[['exec', 'Sync'].join('')];
 const forbiddenHostLabel = ['10', '0', '2', '4'].join('.');
+const PUBLISHED_HANDOFF_COMMIT = 'f2f7cbb3d4fa6e2c30f099158d97060e7d780dc6';
+const PUBLISHED_HANDOFF_SHORT = 'f2f7cbb';
+const PUBLISHED_HANDOFF_MESSAGE = 'docs: update post push owner decision handoff';
+const PUBLISHED_HANDOFF_COMMITS = ['e07be8f', 'a5ab4a8', '949823a', '84d13d7', '3866a43', 'f2f7cbb'];
 
 function safeExec(cmd) {
   try {
@@ -62,7 +66,7 @@ export function buildManifest() {
 
   const manifest = `# Yeshua Academy Finance — Release Manifest
 
-Status: Release Candidate 4 — post-push verification and owner decision hardening
+Status: Release Candidate 4 — published post-push owner decision handoff; owner decision selection next
 Taal: Nederlands
 Gegenereerd op: ${generatedAt} (RC4)
 
@@ -92,8 +96,10 @@ Gegenereerd op: ${generatedAt} (RC4)
 | Release evidence validated through | ${commit} |
 | Release evidence validated through short | ${commitShort} |
 | RC4 evidence commits | \`7ce6e6d\`, \`43bfb90\`, \`42a6f49\`, \`43137b5\`, \`33d08c4\` |
-| Post-push basis verified on origin/main | \`6353546\` |
-| Local post-push hardening commits | \`e07be8f\`, \`a5ab4a8\`, \`949823a\`, \`84d13d7\`, \`3866a43\` |
+| Published owner-decision handoff on origin/main | \`${PUBLISHED_HANDOFF_SHORT} ${PUBLISHED_HANDOFF_MESSAGE}\` |
+| Published owner-decision handoff hash | \`${PUBLISHED_HANDOFF_COMMIT}\` |
+| Published post-push handoff commits | ${PUBLISHED_HANDOFF_COMMITS.map((c) => `\`${c}\``).join(', ')} |
+| Commits ahead of origin/main at publication checkpoint | \`0\` |
 
 ---
 
@@ -126,7 +132,7 @@ De volgende blokkades zijn nog van kracht. Ze mogen **NIET** worden omzeild zond
 | 4 | Echte e-mailverzending | \`RESEND_API_KEY\` niet geconfigureerd; no-op modus actief |
 | 5 | PostgreSQL-productieversie bevestigen | Vereist verificatie bij hostingprovider vóór cutover |
 | 6 | Live backup/restore rehearsal | VOLTOOID op 2026-07-05 (RC3); productieback-up/herstel blijft geblokkeerd tot eigenaargoedkeuring |
-| 7 | Push naar remote | Vereist expliciete eigenaargoedkeuring |
+| 7 | Nieuwe push naar remote | Niet nodig voor de gepubliceerde handoff; vereist opnieuw expliciete eigenaargoedkeuring voor toekomstige lokale commits |
 | 8 | Geheimen roteren | Vereist productievoorbereiding buiten Git vóór cutover |
 
 ---
@@ -157,6 +163,7 @@ node scripts/generate-release-manifest.mjs
 npm run preflight:approval-intake
 npm run preflight:post-push
 npm run preflight:decision-briefs
+npm run preflight:next-owner-decision
 \`\`\`
 
 ---
@@ -166,8 +173,9 @@ npm run preflight:decision-briefs
 | Controle | Status |
 |---------|--------|
 | Geen productiedatabase aangeraakt | BEVESTIGD |
-| Post-push basiscommit \`6353546\` staat op origin/main | BEVESTIGD |
-| Geen nieuwe push van lokale hardening commits uitgevoerd | BEVESTIGD |
+| Published owner-decision handoff \`${PUBLISHED_HANDOFF_SHORT}\` staat op origin/main | BEVESTIGD |
+| Zes post-push owner-decision handoff commits gepubliceerd | BEVESTIGD |
+| Geen nieuwe push nodig tenzij een latere lokale commit wordt gemaakt | BEVESTIGD |
 | Geen .env gewijzigd | BEVESTIGD |
 | Geen Graphify aangeraakt | BEVESTIGD |
 | Geen owner-bronbestanden in Git | BEVESTIGD |
@@ -181,6 +189,8 @@ npm run preflight:decision-briefs
 ---
 
 ## Eigenaarsbeslissingen die nog vereist zijn
+
+Aanbevolen volgende low-risk beslissing: \`postgres-version\`. Dit is verification-only, vereist eigenaar/providerbewijs buiten Git, en bevestigt nog geen productiecutover.
 
 Zie \`docs/OWNER_DECISION_PACK_NL.md\` voor de volledige beslissingschecklist.
 

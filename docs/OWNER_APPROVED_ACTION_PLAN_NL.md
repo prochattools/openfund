@@ -2,8 +2,8 @@
 
 DRY-RUN PLAN ONLY — GEEN UITVOERING
 Taal: Nederlands
-Beslissing: `pdf`
-Titel: Echte PDF-renderer implementeren
+Beslissing: `postgres-version`
+Titel: PostgreSQL-productieversie bevestigen
 Status: PLAN GEREED VOOR REVIEW
 Release-status: Release-evidence aanwezig
 
@@ -20,33 +20,31 @@ Release-status: Release-evidence aanwezig
 
 ## Vereiste approval evidence
 
-- Owner kiest PDF-bibliotheek.
-- Licentie/runtime-impact is akkoord.
-- Dependencywijziging is expliciet toegestaan.
+- Hostingprovider bevestigt versie.
+- Prisma-compatibiliteit is opnieuw gecontroleerd.
+- Cutover blijft apart geblokkeerd.
 
 ## Vereiste preflights
 
-- node scripts/owner-decision-preflight.mjs --decision pdf
-- npm test -- --test-name-pattern "production blocker"
+- node scripts/owner-decision-preflight.mjs --decision postgres-version
+- npx prisma validate
 
 ## Exacte toekomstige prompt/uitvoering
 
-- Gebruik de PDF-sectie uit docs/POST_APPROVAL_PROMPTS_NL.md.
+- Gebruik de PostgreSQL-versieprompt uit docs/POST_APPROVAL_PROMPTS_NL.md.
 
 ## Validatiepoorten
 
-- npm test -- --test-name-pattern "report artifact"
-- npm run build:server
-- npm run build
-- git diff --check
+- Prisma validate/generate lokaal.
+- Geen productieconnectie.
 
 ## Rollback
 
-- Revert PDF dependency en renderer commits.
-- Herstel PDF_BLOCKER wanneer validatie faalt.
+- Geen schemawijziging zonder aparte migratie.
+- Documenteer alleen bevestigde versie.
 
 ## Stopregels
 
-- Geen bibliotheekkeuze.
-- Dependency-audit onduidelijk.
-- Build of rapportartifact-tests falen.
+- Versie niet bevestigd.
+- Providerinformatie onzeker.
+- Productieconnectie nodig.
