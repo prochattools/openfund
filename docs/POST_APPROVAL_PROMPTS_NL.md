@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Post-approval prompt pack
 
-Status: Release Candidate 4 — promptvoorbereiding; niets hieronder is nu goedgekeurd of uitgevoerd  
+Status: Release Candidate 5 — productie schema cutover, historische import en geheimrotatie zijn afgerond; resterende functionele blokkers: echte PDF-renderer en echte e-mailverzending  
 Taal: Nederlands  
 Doel: klaarstaande prompts voor toekomstige owner-approved acties. Kopieer pas een prompt nadat de eigenaar de bijbehorende beslissing expliciet heeft goedgekeurd.
 
@@ -15,6 +15,17 @@ Algemene regels voor alle prompts:
 - Gebruik geen productie, verboden productiehosts, MCP bridge, externe providers of owner-data tenzij de prompt dat na expliciete goedkeuring bounded toestaat.
 - Commit alleen coherente, gevalideerde slices.
 - Stop bij onverwachte dirty files, non-local DB in een local-only taak, ontbrekende owner-go, geheim in diff, falende validatie na één bounded repair, of scope buiten de goedgekeurde beslissing.
+
+## Volgende blokkers
+
+| # | Blocker | Beslisbrief | Prompt |
+|---|---------|-------------|--------|
+| 1 | Echte PDF-renderer | `docs/DECISION_BRIEF_PDF_RENDERER_NL.md` | §1 hieronder |
+| 2 | Echte e-mailverzending | `docs/DECISION_BRIEF_EMAIL_PROVIDER_NL.md` | §5 hieronder |
+
+Alle andere production hardening stappen zijn afgerond (2026-07-07).
+
+---
 
 ## 1. Approve and implement real PDF renderer
 
