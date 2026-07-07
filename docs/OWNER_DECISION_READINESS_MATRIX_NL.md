@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Eigenaarsbeslissing readiness matrix
 
-Status: Release Candidate 4 — schema cutover afgerond 2026-07-07; historische import voltooid 2026-07-07 (2024/2025 afgesloten data + 2026 gedeeltelijk open afschrift); echte e-mail, PDF, en geheimrotatie geblokkeerd
+Status: Release Candidate 5 — schema cutover afgerond 2026-07-07; historische import voltooid 2026-07-07; geheimrotatie voltooid 2026-07-07; echte e-mail en PDF geblokkeerd
 Taal: Nederlands  
 Doel: per owner-gated beslissing tonen wat klaar is, wat geblokkeerd blijft, welke input nodig is, en welk prompt-pad pas na goedkeuring gebruikt mag worden. De huidige gate is owner decision selection. Aanbevolen eerste keuze: `postgres-version`.
 
@@ -17,7 +17,7 @@ Gebruik vóór een beslissing ook `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md`, `docs
 | Historische productie-import | Voltooid 2026-07-07 | 902 transacties (268 2024 + 413 2025 + 221 2026), 681 boekingen, 4 bronbestanden, 2026 gedeeltelijk/open en niet afgesloten; zie `docs/PRODUCTION_HISTORICAL_IMPORT_EVIDENCE_NL.md` | Geheimrotatie, echte e-mail, echte PDF blijven geblokkeerd | — | — | `npm test -- --test-name-pattern "historical"` | — (voltooid) |
 | Echte e-mailverzending | Geblokkeerd | Dispatch-metadata zonder provider-call en `docs/DECISION_BRIEF_EMAIL_PROVIDER_NL.md` | Provider-call, echte ontvangers, API-key | Providerkeuze, domein, testontvangers, secret buiten Git | `node scripts/owner-decision-preflight.mjs --decision email` en `node scripts/owner-approval-intake-validator.mjs --decision email` | `npm test -- --test-name-pattern "production blocker"` | Gebruik e-mailprompt in `docs/POST_APPROVAL_PROMPTS_NL.md` |
 | Nieuwe push naar remote | Niet nodig voor gepubliceerde handoff; geblokkeerd voor toekomstige lokale commits | Handoff commit `f2f7cbb` is op `origin/main` geverifieerd; push checklist en post-push evidence bestaan | Nieuwe publicatie naar remote en tags | Expliciete push-go, doelremote/branch buiten dit document | `node scripts/owner-decision-preflight.mjs --decision push` en `node scripts/owner-approval-intake-validator.mjs --decision push` | `node scripts/owner-go-no-go-preflight.mjs --strict` | Gebruik push-prompt in `docs/POST_APPROVAL_PROMPTS_NL.md` alleen bij nieuwe lokale commits |
-| Geheimen roteren | Geblokkeerd | Secret blockers, negatieve secret-output tests en `docs/DECISION_BRIEF_SECRET_ROTATION_NL.md` | Secret-wijziging, `.env`, providersecret | Secretlijst buiten Git, vault-bestemming, cutovervolgorde | `node scripts/owner-decision-preflight.mjs --decision secret-rotation` en `node scripts/owner-approval-intake-validator.mjs --decision secret-rotation` | `git diff --check` | Gebruik secret-rotation prompt in `docs/POST_APPROVAL_PROMPTS_NL.md` |
+| Geheimen roteren | Voltooid 2026-07-07 | finance_user-credential geroteerd; oud credential afgewezen; nieuw credential geverifieerd; historische totalen herbevestigd; zie `docs/PRODUCTION_SECRET_ROTATION_EVIDENCE_NL.md` | Echte e-mail en PDF blijven geblokkeerd | — | — | — | — (voltooid) |
 | PostgreSQL-productieversie | Geblokkeerd | Lokale Prisma-validatie, migratiebewijs, lokale 15.17 rehearsal evidence in `docs/POSTGRES_VERSION_EVIDENCE_NL.md` en `docs/DECISION_BRIEF_POSTGRES_VERSION_NL.md` | Hostingprovider-query vanuit deze repo en productieversieclaim | Versienummer en Prisma-compatibiliteitsbevestiging uit owner/provider evidence buiten Git | `node scripts/owner-decision-preflight.mjs --decision postgres-version` en `node scripts/owner-approval-intake-validator.mjs --decision postgres-version` | `npx prisma validate` met uitsluitend lokale placeholderconfig buiten dit rapport | Gebruik PostgreSQL-versie prompt in `docs/POST_APPROVAL_PROMPTS_NL.md` |
 
 ## Per-beslissing details
@@ -123,22 +123,22 @@ Exacte volgende prompt:
 
 ### Geheimen roteren
 
-Wat klaar is:
-- Release docs benoemen secret rotation als blocker.
-- Tests en scans bewaken dat geheimen niet in output verschijnen.
+**Status: VOLTOOID 2026-07-07**
 
-Wat blijft geblokkeerd:
-- Geen `.env` wijzigen.
-- Geen geheim in Git of docs.
+Wat is gedaan:
+- finance_user-wachtwoord geroteerd via supabase_admin-verbinding.
+- Nieuw wachtwoord gegenereerd in geheugen (crypto.randomBytes), nooit naar schijf of log geschreven.
+- Oud credential afgewezen na rotatie.
+- Nieuw credential connectiviteit geverifieerd (database finance, schema finance, PostgreSQL 15.8).
+- Historische totalen herbevestigd na rotatie (902 transacties, 681 boekingen).
+- Bewijsdocument: `docs/PRODUCTION_SECRET_ROTATION_EVIDENCE_NL.md`.
 
-Rollback:
-- Herroep nieuwe secrets buiten Git en herstel de vorige werkende secretset volgens eigenaarproces.
+Resterende blockers:
+- Echte e-mail (Resend API) — geblokkeerd.
+- Echte PDF-renderer — geblokkeerd.
 
-Stopregels:
-- Stop bij geheim in diff, `.env` wijziging, ontbrekende vault-bestemming of onduidelijke cutovervolgorde.
-
-Exacte volgende prompt:
-- Gebruik de secret-rotation sectie in `docs/POST_APPROVAL_PROMPTS_NL.md`.
+Stopregels (achteraf):
+- Stop bij geheim in diff, `.env` wijziging of credential in commits.
 
 ### PostgreSQL-productieversie
 

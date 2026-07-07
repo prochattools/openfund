@@ -4,7 +4,7 @@ Date: 2026-07-02
 Run: `agent-f961650b-de17-4282-ab18-7a716cc72958`  
 Source: `yeshuaacademy-finance`  
 Branch: `main`  
-Status: Release Candidate 4 — published post-push owner-decision handoff; `f2f7cbb` verified on `origin/main`; production schema cutover complete 2026-07-07; historical production import complete 2026-07-07 (2024/2025 concluded + 2026 partial open; 902 transactions, 681 bookings); secret rotation, PDF dependency, email provider remain owner-gated
+Status: Release Candidate 4 / RC5 hardening complete — production schema cutover complete 2026-07-07; historical import complete 2026-07-07 (902 tx, 681 bookings); secret rotation complete 2026-07-07 (finance_user credential rotated, old rejected, totals re-verified); real email and real renderer remain blocked
 
 ## RC2 Hardening Evidence
 

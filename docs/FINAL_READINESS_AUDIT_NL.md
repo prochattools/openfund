@@ -1,7 +1,7 @@
 # Yeshua Academy Finance — Eindaudit gereedheid
 
-Status: Release Candidate 4 — schema cutover afgerond 2026-07-07; historische import, echte e-mail, PDF en geheimrotatie geblokkeerd
-Datum: 2026-07-05
+Status: Release Candidate 5 — schema cutover afgerond 2026-07-07; historische import voltooid 2026-07-07; geheimrotatie voltooid 2026-07-07; echte e-mail en PDF geblokkeerd
+Datum: 2026-07-07
 Taal: Nederlands
 Afhankelijkheden: `docs/ROADMAP.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/ADMIN_OPERATING_GUIDE_NL.md`
 
@@ -35,12 +35,11 @@ Afhankelijkheden: `docs/ROADMAP.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/ADMIN_
 | Blocker | Reden | Status |
 |---------|-------|--------|
 | Echte PDF-generatie | `PDF_BLOCKER` actief; geen goedgekeurde PDF-bibliotheek | Geblokkeerd |
-| Productiemigratie en overstap | Vereist expliciete eigenaargoedkeuring | Geblokkeerd |
-| Historische productie-import (2024/2025/2026) | Operator-gated; vereist eigenaargoedkeuring en dry-run-resultaten | Geblokkeerd |
+| Productiemigratie en overstap | Schema finance gedeployed op PostgreSQL 15.8 | AFGEROND 2026-07-07 |
+| Historische productie-import (2024/2025/2026) | 902 transacties (268+413+221), 681 boekingen, 2026 gedeeltelijk open | AFGEROND 2026-07-07 |
+| Geheimen roteren | finance_user-credential geroteerd; oud credential afgewezen; historische totalen herbevestigd | AFGEROND 2026-07-07 |
 | Echte e-mailverzending | `RESEND_API_KEY` niet geconfigureerd; no-op modus actief | Geblokkeerd |
-| PostgreSQL-versie productie bevestigen | Vereist verificatie bij hostingprovider vóór overstap | Geblokkeerd |
-| Push naar remote | Vereist expliciete eigenaargoedkeuring | Geblokkeerd |
-| Geheimen roteren | Vereist productievoorbereiding buiten Git | Geblokkeerd |
+| Echte PDF-generatie | `PDF_BLOCKER` actief; geen goedgekeurde PDF-bibliotheek | Geblokkeerd |
 
 ---
 

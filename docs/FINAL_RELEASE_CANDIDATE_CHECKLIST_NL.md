@@ -1,7 +1,7 @@
 # Yeshua Academy Finance — Release Candidate Validatiechecklist
 
-Status: Release Candidate 4
-Datum: 2026-07-05
+Status: Release Candidate 5
+Datum: 2026-07-07
 Taal: Nederlands
 
 ---
@@ -86,16 +86,15 @@ Zie `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md` voor lokale acceptatie zonder uitvoe
 Zie `docs/OWNER_DECISION_MENU_NL.md` voor de volgende beslissingskeuze.
 Zie `docs/POST_APPROVAL_PROMPTS_NL.md` voor prompts die pas na goedkeuring gebruikt mogen worden.
 
-| # | Beslissing | Geblokkeerd |
-|---|-----------|-------------|
-| 1 | PDF-renderer afhankelijkheid goedkeuren | Echte PDF-export |
+| # | Beslissing | Status |
+|---|-----------|--------|
+| 1 | PDF-renderer afhankelijkheid goedkeuren | Geblokkeerd — echte PDF-export |
 | 2 | Productiemigratie goedkeuren | AFGEROND — schema finance gedeployed 2026-07-07 |
-| 3 | Historische import goedkeuren | Historische rapporten |
-| 4 | E-mailverzending goedkeuren | Rapportverzending |
-| 5 | PostgreSQL-productieversie bevestigen | Veilige cutover |
-| 6 | Live backup rehearsal uitvoeren | Bewijs van herstelbaarheid |
-| 7 | Bevestigen: geen push vóór goedkeuring | — |
-| 8 | Geheimen rotatie bevestigen | Productieveiligheid |
+| 3 | Historische import goedkeuren | AFGEROND — 902 transacties, 681 boekingen 2026-07-07 |
+| 4 | E-mailverzending goedkeuren | Geblokkeerd — rapportverzending |
+| 5 | PostgreSQL-productieversie bevestigen | AFGEROND — PostgreSQL 15.8 bevestigd 2026-07-07 |
+| 6 | Live backup rehearsal uitvoeren | AFGEROND — rehearsal 2026-07-05 |
+| 7 | Geheimen rotatie bevestigen | AFGEROND — finance_user geroteerd 2026-07-07 |
 
 ---
 

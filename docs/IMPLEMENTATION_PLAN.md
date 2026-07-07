@@ -82,8 +82,11 @@ Phase 9 owner acceptance hardening: owner acceptance checklist, owner decision m
 Phase 9 post-push owner-decision handoff: post-push verification evidence (`e07be8f`), owner decision briefs (`a5ab4a8`), decision brief guards (`949823a`), approval-intake validator (`84d13d7`), post-push owner preflight package scripts (`3866a43`), and final handoff update (`f2f7cbb`) are published to `origin/main`
 Phase 3 local/sanitized historical loading: complete; production historical import remains owner-gated
 Phase 4 monthly import/review workflow: complete for local/app behavior; future real owner monthly files remain operator-controlled
-Current gate: owner decision selection after published RC4 owner-decision handoff; recommended next decision is `postgres-version`; owner decisions remain required before production cutover, historical production import, PDF dependency, email provider, any future push, production secret rotation, and production PostgreSQL version confirmation
-Local PostgreSQL 15.17 rehearsal evidence is recorded in `docs/POSTGRES_VERSION_EVIDENCE_NL.md`; production PostgreSQL version confirmation remains owner/provider-gated outside Git.
+Production schema cutover: complete 2026-07-07; schema finance deployed on PostgreSQL 15.8; 4 migrations; 30 tables; evidence in docs/PRODUCTION_SCHEMA_CUTOVER_EVIDENCE_NL.md
+Production historical import: complete 2026-07-07; 902 transactions (268 2024 + 413 2025 + 221 2026), 681 bookings, 4 source files, 2026 partial/open and not closed; evidence in docs/PRODUCTION_HISTORICAL_IMPORT_EVIDENCE_NL.md
+Production secret rotation: complete 2026-07-07; finance_user credential rotated; old credential rejected; new credential verified; historical totals re-verified; evidence in docs/PRODUCTION_SECRET_ROTATION_EVIDENCE_NL.md
+Current gate: owner decision selection after published RC4 owner-decision handoff — production schema cutover, historical import, and secret rotation are now complete; real email provider and real PDF renderer remain the only blocked decisions.
+Local PostgreSQL 15.17 rehearsal evidence is recorded in `docs/POSTGRES_VERSION_EVIDENCE_NL.md`.
 ```
 
 ## Phase 0 — Governance and discovery

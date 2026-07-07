@@ -234,11 +234,11 @@ De volgende commando's mogen **NOOIT** worden uitgevoerd zonder expliciete eigen
 | Nieuwe `git push` | Publiceert lokale commits naar remote; vereist eigenaargoedkeuring |
 | `git tag` | Maakt een tag aan; vereist eigenaargoedkeuring |
 | `git push --force` | Destructief; altijd geblokkeerd op main |
-| Productiecutover-script | Vereist eigenaargoedkeuring en voorbereiding |
-| Historische productie-import | Vereist eigenaargoedkeuring en dry-run-acceptatie |
-| Echte e-mail sturen (Resend) | Vereist geconfigureerde API-sleutel + goedkeuring |
-| PDF-bibliotheek installeren | Vereist keuze en goedkeuring eigenaar |
-| Secret rotation | Vereist productievoorbereiding buiten Git |
+| Productiecutover-script | AFGEROND — schema finance gedeployed 2026-07-07 |
+| Historische productie-import | AFGEROND — 902 transacties geïmporteerd 2026-07-07 |
+| Secret rotation | AFGEROND — finance_user geroteerd 2026-07-07 |
+| Echte e-mail sturen (Resend) | Geblokkeerd — vereist geconfigureerde API-sleutel + goedkeuring |
+| PDF-bibliotheek installeren | Geblokkeerd — vereist keuze en goedkeuring eigenaar |
 | `node scripts/backup-restore-rehearsal.mjs --live-local` | Verbindt met lokale database; vereist `--confirm-disposable` én voorbereiding |
 | Productiedatabasecommando's | Altijd geblokkeerd tot na productie-cutovergoedkeuring |
 | Wijzigingen in `.env` | Nooit in Git; geheimen horen in de secret vault |

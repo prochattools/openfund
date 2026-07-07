@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Final owner review packet
 
-Status: final owner-review packet — schema cutover afgerond 2026-07-07; historische import, echte e-mail, PDF en geheimrotatie geblokkeerd
+Status: final owner-review packet — schema cutover afgerond 2026-07-07; historische import voltooid 2026-07-07; geheimrotatie voltooid 2026-07-07; echte e-mail en PDF geblokkeerd
 Taal: Nederlands
 
 ## 1. Huidige release-status
@@ -48,12 +48,11 @@ Deze commando's zijn lokaal en voeren geen productieactie uit.
 | Beslissing | Status |
 |-----------|--------|
 | Echte PDF-renderer | Geblokkeerd tot bibliotheekkeuze en dependency-goedkeuring |
-| Productiecutover | Geblokkeerd tot expliciete cutover-goedkeuring |
-| Historische productie-import | Geblokkeerd tot owner-bestanden buiten Git en dry-run acceptatie |
+| Productiecutover | AFGEROND — schema finance gedeployed op PostgreSQL 15.8 op 2026-07-07 |
+| Historische productie-import | AFGEROND — 902 transacties (268+413+221), 681 boekingen op 2026-07-07 |
+| Secret-rotatie | AFGEROND — finance_user-credential geroteerd op 2026-07-07 |
+| Echte PDF-renderer | Geblokkeerd tot bibliotheekkeuze en dependency-goedkeuring |
 | Echte e-mailverzending | Geblokkeerd tot provider/secret-goedkeuring |
-| Nieuwe push naar remote | Niet nodig voor de gepubliceerde handoff; geblokkeerd voor toekomstige lokale commits |
-| Secret-rotatie | Geblokkeerd tot aparte beheeractie buiten Git |
-| PostgreSQL-productieversie | Aanbevolen volgende beslissing; te bevestigen bij hostingprovider vóór cutover |
 
 Gebruik `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md` om het lokale owner-review pakket te accepteren zonder uitvoering. Gebruik `docs/OWNER_DECISION_MENU_NL.md` om daarna exact één volgende owner-gated beslissing te kiezen. Lees vóór goedkeuring ook de bijbehorende beslisbrief:
 

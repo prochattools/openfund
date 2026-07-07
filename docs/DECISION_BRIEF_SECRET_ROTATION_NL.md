@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Decision brief: secret rotation
 
-Status: Geblokkeerd tot expliciete eigenaargoedkeuring
+Status: Geblokkeerd (was vóór 2026-07-07) — VOLTOOID 2026-07-07; finance_user-credential geroteerd; bewijs in `docs/PRODUCTION_SECRET_ROTATION_EVIDENCE_NL.md`
 Taal: Nederlands
 
 ## 1. Beslissing
