@@ -1,11 +1,11 @@
 # Yeshua Academy Finance — Final owner review packet
 
-Status: final owner-review packet — post-push verification recorded; owner acceptance / decision selection ready; geen nieuwe owner-gated actie uitgevoerd
+Status: final owner-review packet — owner-decision handoff published; decision selection ready; geen nieuwe owner-gated actie uitgevoerd
 Taal: Nederlands
 
 ## 1. Huidige release-status
 
-De applicatie is lokaal release-candidate-ready voor eigenaarsbeoordeling. De eerder goedgekeurde remote publish is lokaal geverifieerd: basiscommit `6353546` staat op `origin/main`. De post-push evidence, decision briefs, approval-intake validator en bijbehorende guards zijn lokale hardening commits; een nieuwe push daarvan blijft owner-gated.
+De applicatie is release-candidate-ready voor eigenaarsbeoordeling. De eerder goedgekeurde owner-decision handoff publish is lokaal geverifieerd: commit `f2f7cbb` staat op `origin/main`. De post-push evidence, decision briefs, approval-intake validator en bijbehorende guards zijn gepubliceerd; de volgende gate is owner decision selection.
 
 Veilige lokale status:
 
@@ -14,7 +14,7 @@ Veilige lokale status:
 - Backup/restore live lokaal gerehearsed; productieback-up/herstel blijft geblokkeerd.
 - Rapporten HTML/XLSX klaar; echte PDF-renderer geblokkeerd.
 - Dispatch-metadata klaar; echte e-mailverzending geblokkeerd.
-- Remote basiscommit `6353546` is post-push geverifieerd; nieuwe lokale hardening commits zijn niet gepusht.
+- Remote handoff commit `f2f7cbb` is post-push geverifieerd; er waren geen commits ahead of `origin/main` bij de publicatiecheck.
 - Owner acceptance checklist en decision menu zijn beschikbaar voor de volgende expliciete eigenaarskeuze.
 - Decision briefs en approval-intake validation zijn beschikbaar voor elke owner-gated beslissing.
 
@@ -51,9 +51,9 @@ Deze commando's zijn lokaal en voeren geen productieactie uit.
 | Productiecutover | Geblokkeerd tot expliciete cutover-goedkeuring |
 | Historische productie-import | Geblokkeerd tot owner-bestanden buiten Git en dry-run acceptatie |
 | Echte e-mailverzending | Geblokkeerd tot provider/secret-goedkeuring |
-| Nieuwe push naar remote | Geblokkeerd tot expliciete push-goedkeuring |
+| Nieuwe push naar remote | Niet nodig voor de gepubliceerde handoff; geblokkeerd voor toekomstige lokale commits |
 | Secret-rotatie | Geblokkeerd tot aparte beheeractie buiten Git |
-| PostgreSQL-productieversie | Te bevestigen bij hostingprovider vóór cutover |
+| PostgreSQL-productieversie | Aanbevolen volgende beslissing; te bevestigen bij hostingprovider vóór cutover |
 
 Gebruik `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md` om het lokale owner-review pakket te accepteren zonder uitvoering. Gebruik `docs/OWNER_DECISION_MENU_NL.md` om daarna exact één volgende owner-gated beslissing te kiezen. Lees vóór goedkeuring ook de bijbehorende beslisbrief:
 
@@ -147,7 +147,7 @@ Zie `docs/BACKUP_RESTORE_REHEARSAL_NL.md` en `docs/FINAL_READINESS_AUDIT_NL.md`.
 ## 8. Ready for owner review
 
 - [ ] Eigenaar leest release manifest.
-- [ ] Eigenaar leest post-push verification evidence voor `6353546`.
+- [ ] Eigenaar leest post-push verification evidence voor `f2f7cbb`.
 - [ ] Eigenaar leest de relevante beslisbrief vóór een gated beslissing.
 - [ ] Eigenaar draait of laat draaien: `npm run validate:release-candidate`.
 - [ ] Eigenaar draait of laat draaien: `node scripts/owner-go-no-go-preflight.mjs --strict`.

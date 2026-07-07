@@ -41,8 +41,8 @@ describe('release evidence consistency — stale RC labels', () => {
   });
 
   it('roadmap and implementation plan identify the current handoff as RC4, not RC2/RC3', () => {
-    expect(roadmap).toContain('COMPLETE (local-only RC4)');
-    expect(implementationPlan).toContain('Current gate: Release Candidate 4 owner review / roadmap closeout');
+    expect(roadmap).toContain('COMPLETE (published RC4 handoff; owner decisions gated)');
+    expect(implementationPlan).toContain('Current gate: owner decision selection after published RC4 owner-decision handoff');
     expect(rebuildRun).toContain('Status: Release Candidate 4');
     expect(implementationPlan).not.toContain('Current gate: Release Candidate 3 owner handoff');
     expect(implementationPlan).not.toContain('Current gate: Release Candidate 2 readiness');

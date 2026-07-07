@@ -4,7 +4,7 @@ Date: 2026-07-02
 Run: `agent-f961650b-de17-4282-ab18-7a716cc72958`  
 Source: `yeshuaacademy-finance`  
 Branch: `main`  
-Status: Release Candidate 4 — post-push verification and owner-decision hardening; basiscommit `6353546` verified on `origin/main`; local post-push hardening commits prepared for owner review; awaiting owner decisions for production cutover, historical import, PDF dependency, email provider, any new push, production secret rotation, and PostgreSQL version confirmation
+Status: Release Candidate 4 — published post-push owner-decision handoff; `f2f7cbb` verified on `origin/main`; awaiting owner decision selection, with `postgres-version` recommended first; production cutover, historical import, PDF dependency, email provider, any future push, production secret rotation, and PostgreSQL version confirmation remain owner-gated
 
 ## RC2 Hardening Evidence
 
@@ -38,12 +38,13 @@ Status: Release Candidate 4 — post-push verification and owner-decision harden
 | Package script safety extended | (current) | 26 package script safety tests |
 | Owner acceptance checklist | (current) | docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md and guard test |
 | Owner decision menu | (current) | static script/test/generated doc |
-| Owner acceptance hardening push basis | `6353546` | verified on `origin/main` before post-push hardening |
+| Owner acceptance hardening push basis | `6353546` | verified on `origin/main` before post-push handoff publication |
 | Post-push verification evidence | `e07be8f` | `docs/POST_PUSH_VERIFICATION_NL.md` and guard test |
 | Owner decision execution briefs | `a5ab4a8` | six decision briefs |
 | Owner decision brief guards | `949823a` | decision brief guard tests |
 | Owner approval intake validator | `84d13d7` | static validator script/test/generated doc |
 | Post-push owner preflight scripts | `3866a43` | package scripts and package safety tests |
+| Published owner-decision handoff | `f2f7cbb` | `origin/main` matches local handoff checkpoint; no commits ahead at publication |
 
 ### Live backup rehearsal status
 
@@ -55,7 +56,7 @@ No database dump committed. No production touched.
 
 ### Post-push verification status
 
-Post-push verification was recorded after the owner-approved publish of the owner acceptance hardening batch. Local checks confirmed `main`, `HEAD`/`origin/main` at `6353546`, remote `origin git@github.com:yeshuaacademy/finance.git`, and only `.graphifyignore` plus `graphify-out/` as untracked Graphify artifacts at the start of post-push hardening.
+Post-push verification was refreshed after the owner-approved publication of the owner-decision handoff batch. Local checks confirmed `main`, `HEAD`/`origin/main` at `f2f7cbb`, remote `origin git@github.com:yeshuaacademy/finance.git`, no commits ahead of `origin/main`, no tags at `HEAD`, and only `.graphifyignore` plus `graphify-out/` as untracked Graphify artifacts.
 
 The follow-up hardening added:
 
@@ -64,7 +65,7 @@ The follow-up hardening added:
 - `scripts/owner-approval-intake-validator.mjs`, `tests/ops/ownerApprovalIntakeValidator.test.ts`, and `docs/OWNER_APPROVAL_INTAKE_VALIDATION_NL.md`.
 - `preflight:approval-intake`, `preflight:post-push`, and `preflight:decision-briefs` package scripts.
 
-These follow-up commits are local until a separate owner-approved push. They do not execute production, import owner files, send e-mail, install a PDF dependency, rotate secrets, edit `.env`, or create tags.
+These six follow-up commits are now published through `f2f7cbb`. They did not execute production, import owner files, send e-mail, install a PDF dependency, rotate secrets, edit `.env`, or create tags. The next gate is owner decision selection; `postgres-version` is recommended first because it is verification-only and required before cutover.
 
 ## Authoritative document hierarchy
 

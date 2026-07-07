@@ -1,14 +1,14 @@
 # Yeshua Academy Finance — Owner review index
 
-Status: Release Candidate 4 — post-push verificatie vastgelegd; owner acceptance / decision selection blijft de huidige gate
+Status: Release Candidate 4 — owner-decision handoff gepubliceerd; decision selection blijft de huidige gate
 Taal: Nederlands  
 Doel: één startpunt voor de eigenaar om te bepalen wat klaar is, wat geblokkeerd blijft, en welke beslissing als eerste genomen moet worden.
 
 ## Start hier
 
 1. Lees eerst `docs/OWNER_HANDOFF_NL.md`.
-2. Controleer daarna `docs/POST_PUSH_VERIFICATION_NL.md`: commit `6353546` is lokaal tegen `origin/main` geverifieerd.
-3. Controleer `docs/RELEASE_MANIFEST_NL.md` voor de huidige lokale hardening commit.
+2. Controleer daarna `docs/POST_PUSH_VERIFICATION_NL.md`: commit `f2f7cbb` is lokaal tegen `origin/main` geverifieerd.
+3. Controleer `docs/RELEASE_MANIFEST_NL.md` voor de huidige release evidence en de gepubliceerde handoff checkpoint.
 4. Lees de beslissingen in `docs/OWNER_DECISION_PACK_NL.md`.
 5. Gebruik `docs/OWNER_DECISION_READINESS_MATRIX_NL.md` om per beslissing te zien wat klaar is.
 6. Lees de relevante beslisbrief voordat je een owner-gated beslissing goedkeurt.
@@ -29,7 +29,7 @@ Doel: één startpunt voor de eigenaar om te bepalen wat klaar is, wat geblokkee
 - Dutch UX en admin-only mutation guards.
 - Local-only release, backup, owner decision, and push preflights.
 - Owner acceptance checklist en static owner decision menu.
-- Post-push verification evidence voor remote basiscommit `6353546`.
+- Post-push verification evidence voor gepubliceerde handoff commit `f2f7cbb`.
 - Owner-decision brief docs voor PDF, PostgreSQL-versie, productiecutover, historische import, e-mailprovider en secret rotation.
 - Approval-intake validator plus package preflight scripts voor post-push evidence, decision briefs en approval intake.
 
@@ -39,7 +39,7 @@ Doel: één startpunt voor de eigenaar om te bepalen wat klaar is, wat geblokkee
 - Productiemigratie/cutover.
 - Historische productie-import.
 - Echte e-mailverzending.
-- Nieuwe push van de lokale post-push hardening commits.
+- Nieuwe push voor toekomstige lokale commits.
 - Secret rotation.
 - Productie PostgreSQL-versie bevestiging.
 
@@ -53,7 +53,7 @@ Doel: één startpunt voor de eigenaar om te bepalen wat klaar is, wat geblokkee
 | E-mail | `docs/DECISION_BRIEF_EMAIL_PROVIDER_NL.md` | `node scripts/owner-decision-preflight.mjs --decision email` |
 | Push | `docs/PUSH_READINESS_CHECKLIST_NL.md` | `node scripts/push-readiness-preflight.mjs --strict` |
 | Geheimen | `docs/DECISION_BRIEF_SECRET_ROTATION_NL.md` | `node scripts/owner-decision-preflight.mjs --decision secret-rotation` |
-| PostgreSQL-versie | `docs/DECISION_BRIEF_POSTGRES_VERSION_NL.md` | `node scripts/owner-decision-preflight.mjs --decision postgres-version` |
+| PostgreSQL-versie (aanbevolen eerst) | `docs/DECISION_BRIEF_POSTGRES_VERSION_NL.md` | `node scripts/owner-decision-preflight.mjs --decision postgres-version` |
 
 ## Validation commands
 
@@ -175,7 +175,7 @@ Plaats hier geen geheimen, hostnamen, wachtwoorden, API-keys, owner-bestandspade
 | `docs/OWNER_REVIEW_FINAL_PACKET_NL.md` | Samenvatting final owner review packet |
 | `docs/OWNER_GO_NO_GO_PREFLIGHT_NL.md` | Repo go/no-go preflight |
 | `docs/OWNER_DECISION_PREFLIGHT_NL.md` | Gegenereerde beslissing-preflight |
-| `docs/POST_PUSH_VERIFICATION_NL.md` | Post-push verificatie van basiscommit `6353546` |
+| `docs/POST_PUSH_VERIFICATION_NL.md` | Post-push verificatie van gepubliceerde handoff commit `f2f7cbb` |
 | `docs/DECISION_BRIEF_PDF_RENDERER_NL.md` | Beslisbrief PDF-renderer |
 | `docs/DECISION_BRIEF_POSTGRES_VERSION_NL.md` | Beslisbrief PostgreSQL-versie |
 | `docs/DECISION_BRIEF_PRODUCTION_CUTOVER_NL.md` | Beslisbrief productiecutover |

@@ -144,7 +144,7 @@ Controleert statisch welke owner approval velden, stopregels en evidence per bes
 npm run preflight:post-push
 ```
 
-Voert alleen de post-push verification guard tests uit. Dit bevestigt de gedocumenteerde basis: commit `6353546` is op `origin/main` geverifieerd; het voert geen nieuwe push uit.
+Voert alleen de post-push verification guard tests uit. Dit bevestigt de gedocumenteerde gepubliceerde handoff: commit `f2f7cbb` is op `origin/main` geverifieerd; het voert geen nieuwe push uit.
 
 ### Decision brief guards
 

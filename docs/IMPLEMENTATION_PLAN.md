@@ -78,11 +78,11 @@ Phase 9 RC2-005 owner handoff bundle: docs/OWNER_HANDOFF_NL.md; committed as 0a8
 Phase 9 RC3 evidence: final readiness counts corrected (`4f9cedf`), live local backup/restore evidence recorded (`3ac4bfc`), API route smoke coverage added (`9b209c7`)
 Phase 9 RC4 evidence: release evidence corrected (`7ce6e6d`), manifest refreshed (`43bfb90`), owner go/no-go preflight added (`42a6f49`), push readiness checklist added (`43137b5`), release evidence consistency checks added (`33d08c4`), roadmap closeout guards added (`d942705`), validated-through evidence refreshed (`d07a32f`), owner decision preflight/matrix added (`35688c4`), post-approval prompt pack added (`b3cfc57`), push readiness preflight added (`0a64649`), owner review index added (`0a3904e`)
 Phase 9 RC4 final hardening: final docs consistency audit added (`scripts/final-docs-consistency-audit.mjs`, `tests/ops/finalDocsConsistencyAudit.test.ts`, `docs/FINAL_DOCS_CONSISTENCY_AUDIT_NL.md`), repo contamination guard added (`tests/ops/repoContaminationGuard.test.ts`), final docs link integrity guard added (`tests/ops/finalDocsLinkIntegrity.test.ts`), safe command inventory added (`docs/SAFE_COMMAND_INVENTORY_NL.md`), final owner review preflight added (`scripts/final-owner-review-preflight.mjs`, `tests/ops/finalOwnerReviewPreflight.test.ts`), package scripts extended (`preflight:final-owner-review`, `audit:final-docs`), package script safety tests extended to 26
-Phase 9 owner acceptance hardening: owner acceptance checklist, owner decision menu, static package preflight scripts, generated menu doc, and final doc links added; published basiscommit `6353546` was later verified on `origin/main`; all remaining owner actions remain gated
-Phase 9 post-push hardening: post-push verification evidence (`e07be8f`), owner decision briefs (`a5ab4a8`), decision brief guards (`949823a`), approval-intake validator (`84d13d7`), and post-push owner preflight package scripts (`3866a43`) added locally after the verified push; these local hardening commits require separate owner-approved push
+Phase 9 owner acceptance hardening: owner acceptance checklist, owner decision menu, static package preflight scripts, generated menu doc, and final doc links added; published basiscommit `6353546` was verified on `origin/main`; all remaining owner actions remain gated
+Phase 9 post-push owner-decision handoff: post-push verification evidence (`e07be8f`), owner decision briefs (`a5ab4a8`), decision brief guards (`949823a`), approval-intake validator (`84d13d7`), post-push owner preflight package scripts (`3866a43`), and final handoff update (`f2f7cbb`) are published to `origin/main`
 Phase 3 local/sanitized historical loading: complete; production historical import remains owner-gated
 Phase 4 monthly import/review workflow: complete for local/app behavior; future real owner monthly files remain operator-controlled
-Current gate: Release Candidate 4 owner review / roadmap closeout and owner decision selection; post-push evidence and approval-intake hardening are local and safe, and owner decisions remain required before production cutover, historical production import, PDF dependency, email provider, any new push, production secret rotation, and production PostgreSQL version confirmation
+Current gate: owner decision selection after published RC4 owner-decision handoff; recommended next decision is `postgres-version`; owner decisions remain required before production cutover, historical production import, PDF dependency, email provider, any future push, production secret rotation, and production PostgreSQL version confirmation
 ```
 
 ## Phase 0 — Governance and discovery
@@ -1320,13 +1320,13 @@ Acceptance:
 
 ## Exact next execution sequence
 
-Phases 0–9 are complete as local-only Release Candidate 4, with Phase 3 production import explicitly owner-gated and Phase 4 complete for local/app workflow. Owner-review preparation is documented in `docs/OWNER_REVIEW_INDEX_NL.md`, `docs/OWNER_DECISION_READINESS_MATRIX_NL.md`, `docs/OWNER_DECISION_PREFLIGHT_NL.md`, `docs/POST_APPROVAL_PROMPTS_NL.md`, and `scripts/push-readiness-preflight.mjs`. The following owner decisions are required before any production work:
+Phases 0–9 are complete as a published RC4 owner-decision handoff through `f2f7cbb`, with Phase 3 production import explicitly owner-gated and Phase 4 complete for local/app workflow. Owner-review preparation is documented in `docs/OWNER_REVIEW_INDEX_NL.md`, `docs/OWNER_DECISION_READINESS_MATRIX_NL.md`, `docs/OWNER_DECISION_PREFLIGHT_NL.md`, `docs/POST_APPROVAL_PROMPTS_NL.md`, and `scripts/push-readiness-preflight.mjs`. The recommended next low-risk owner decision is `postgres-version`. The following owner decisions are required before any production work:
 
 1. Approve or defer real PDF renderer dependency (`PDF_BLOCKER` is active).
 2. Approve or defer production cutover (see `docs/PRODUCTION_CUTOVER_PLAN_NL.md`).
 3. Approve or defer historical production import (2024/2025/2026 owner workbooks).
 4. Approve or defer real email sending / Resend provider configuration.
-5. Confirm PostgreSQL production version compatibility.
+5. Confirm PostgreSQL production version compatibility (recommended next; evidence must come from owner/provider outside Git).
 6. Run and confirm live local backup/restore rehearsal with PostgreSQL tools.
 
 See `docs/OWNER_DECISION_PACK_NL.md` for decision checkboxes and next-step prompts.

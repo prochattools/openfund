@@ -6,7 +6,7 @@ Afhankelijkheden: `docs/OWNER_REVIEW_FINAL_PACKET_NL.md`, `docs/OWNER_APPROVAL_I
 
 ## 1. Huidige release-status
 
-De repository staat klaar voor de volgende expliciete eigenaarsbeslissing. De remote basiscommit `6353546` is post-push geverifieerd op `origin/main`; de huidige lokale hardening commits met post-push evidence, decision briefs, approval-intake validator en doc guards blijven ongepusht tot aparte owner-goedkeuring.
+De repository staat klaar voor de volgende expliciete eigenaarsbeslissing. De owner-decision handoff commit `f2f7cbb` is post-push geverifieerd op `origin/main`; de post-push evidence, decision briefs, approval-intake validator en doc guards zijn gepubliceerd. De aanbevolen volgende beslissing is `postgres-version`.
 
 Deze checklist registreert alleen acceptatie van het lokale pakket. Deze checklist keurt geen productieactie, push, PDF-renderer, historische import, echte e-mail, secret rotation of PostgreSQL-productieversieclaim goed.
 
@@ -26,7 +26,7 @@ Deze checklist registreert alleen acceptatie van het lokale pakket. Deze checkli
 - Productiecutover of productiemigratie.
 - Historische productie-import.
 - Echte e-mailverzending.
-- Push naar remote voor nieuwe lokale hardening commits.
+- Push naar remote voor toekomstige lokale commits.
 - Secret rotation.
 - Productie PostgreSQL-versie bevestigen.
 
@@ -57,11 +57,11 @@ node scripts/owner-decision-menu.mjs
 - [ ] Lokale workflow geaccepteerd.
 - [ ] Documentatiepakket geaccepteerd.
 - [ ] Backup rehearsal evidence geaccepteerd.
-- [ ] Post-push verification evidence voor `6353546` geaccepteerd.
+- [ ] Post-push verification evidence voor `f2f7cbb` geaccepteerd.
 - [ ] Decision briefs en approval-intake validation geaccepteerd als pre-approval hulpmiddelen.
 - [ ] Resterende blockers begrepen.
 - [ ] Bevestigd: productie is niet aangeraakt.
-- [ ] Bevestigd: de eerder goedgekeurde basispush is geverifieerd, maar de huidige lokale hardening commits zijn nog niet opnieuw gepusht.
+- [ ] Bevestigd: de eerder goedgekeurde owner-decision handoff publish is geverifieerd op `origin/main`.
 
 ## 6. Niet goedgekeurd door deze checklist
 
@@ -71,7 +71,7 @@ Deze checklist geeft expliciet geen toestemming voor:
 - Productiecutover of productiemigratie uitvoeren.
 - Historische productie-import uitvoeren.
 - Echte e-mail verzenden of een provider-call doen.
-- Push naar remote voor nieuwe lokale hardening commits of tags maken.
+- Push naar remote voor toekomstige lokale commits of tags maken.
 - Secret rotation uitvoeren.
 - Productie PostgreSQL-versie als bevestigd registreren zonder owner-evidence buiten Git.
 
@@ -106,4 +106,4 @@ Stop direct wanneer:
 - Plaats geen geheimen, hostnamen, wachtwoorden, API-keys, owner-bestandspaden, ruwe transactierijen of databasedumps in dit document.
 - Kopieer geen owner Excel/CSV/PDF-bestanden naar Git.
 - Claim geen productiecutover, historische productie-import, echte e-mail, echte PDF, push, tags, secret rotation of productie PostgreSQL-versiebevestiging zolang daar geen aparte owner-goedkeuring en evidence buiten Git voor is.
-- Claim geen nieuwe remote publish van lokale hardening commits zolang die niet met aparte owner-goedkeuring is uitgevoerd.
+- Claim geen nieuwe remote publish voor toekomstige lokale commits zolang die niet met aparte owner-goedkeuring is uitgevoerd.

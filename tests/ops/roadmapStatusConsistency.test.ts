@@ -25,7 +25,7 @@ const allDocs = Object.entries(docs);
 
 describe('roadmap status consistency — RC4 gate', () => {
   it('implementation plan and handoff docs identify RC4 owner review, not RC3', () => {
-    expect(docs.implementationPlan).toContain('Current gate: Release Candidate 4 owner review / roadmap closeout');
+    expect(docs.implementationPlan).toContain('Current gate: owner decision selection after published RC4 owner-decision handoff');
     expect(docs.ownerHandoff).toContain('Eigenaaroverdracht (RC4)');
     expect(docs.ownerHandoff).toContain('### RC4-validatie in één stap');
     expect(docs.implementationPlan).not.toContain('Current gate: Release Candidate 3 owner handoff');
@@ -62,7 +62,7 @@ describe('roadmap status consistency — phase status agreement', () => {
 
   it('Phase 8 and Phase 9 remain locally complete and production gated', () => {
     expect(docs.roadmap).toContain('Phase 8 — Infrastructure and deployment          COMPLETE (local readiness; production gated)');
-    expect(docs.roadmap).toContain('Phase 9 — Operational hardening and handoff      COMPLETE (local-only RC4)');
+    expect(docs.roadmap).toContain('Phase 9 — Operational hardening and handoff      COMPLETE (published RC4 handoff; owner decisions gated)');
     expect(docs.finalAudit).toContain('Phase 8 — Infrastructuur | COMPLETE');
     expect(docs.finalAudit).toContain('Phase 9 — Operationele hardening en overdracht | COMPLETE (local-only RC4)');
   });

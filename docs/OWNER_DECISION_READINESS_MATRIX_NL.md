@@ -1,8 +1,8 @@
 # Yeshua Academy Finance — Eigenaarsbeslissing readiness matrix
 
-Status: Release Candidate 4 — post-push evidence en owner-decision hardening voorbereid; geen productieactie uitgevoerd
+Status: Release Candidate 4 — owner-decision handoff gepubliceerd; geen productieactie uitgevoerd
 Taal: Nederlands  
-Doel: per owner-gated beslissing tonen wat klaar is, wat geblokkeerd blijft, welke input nodig is, en welk prompt-pad pas na goedkeuring gebruikt mag worden. De huidige gate is owner acceptance / owner decision selection.
+Doel: per owner-gated beslissing tonen wat klaar is, wat geblokkeerd blijft, welke input nodig is, en welk prompt-pad pas na goedkeuring gebruikt mag worden. De huidige gate is owner decision selection. Aanbevolen eerste keuze: `postgres-version`.
 
 Beveiligingsregel: zet geen geheimen, hostnamen, wachtwoorden, owner-bestandspaden, ruwe transactierijen, database-dumps of productieconfiguratie in dit document of in Git.
 
@@ -16,7 +16,7 @@ Gebruik vóór een beslissing ook `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md`, `docs
 | Productiemigratie/cutover | Geblokkeerd | Documentatie-only cutoverplan, lokale validaties en `docs/DECISION_BRIEF_PRODUCTION_CUTOVER_NL.md` | Productiehost, productie-DB, productieconfig | Expliciete cutover-go, back-upvenster, rollback-eigenaar | `node scripts/owner-decision-preflight.mjs --decision production-cutover` en `node scripts/owner-approval-intake-validator.mjs --decision production-cutover` | `npm run validate:release-candidate` | Gebruik cutover-prompt in `docs/POST_APPROVAL_PROMPTS_NL.md` |
 | Historische productie-import | Geblokkeerd | Local/sanitized loader, owner-local rehearsal adapter en `docs/DECISION_BRIEF_HISTORICAL_IMPORT_NL.md` | Productie-import en owner-bestanden in Git | Owner-bestanden buiten Git, hashes, dry-run acceptatie | `node scripts/owner-decision-preflight.mjs --decision historical-import` en `node scripts/owner-approval-intake-validator.mjs --decision historical-import` | `npm test -- --test-name-pattern "Phase 3 historical loading closeout"` | Gebruik historische-import prompt in `docs/POST_APPROVAL_PROMPTS_NL.md` |
 | Echte e-mailverzending | Geblokkeerd | Dispatch-metadata zonder provider-call en `docs/DECISION_BRIEF_EMAIL_PROVIDER_NL.md` | Provider-call, echte ontvangers, API-key | Providerkeuze, domein, testontvangers, secret buiten Git | `node scripts/owner-decision-preflight.mjs --decision email` en `node scripts/owner-approval-intake-validator.mjs --decision email` | `npm test -- --test-name-pattern "production blocker"` | Gebruik e-mailprompt in `docs/POST_APPROVAL_PROMPTS_NL.md` |
-| Nieuwe push naar remote | Geblokkeerd | Basiscommit `6353546` is op `origin/main` geverifieerd; push checklist en post-push evidence bestaan | Nieuwe publicatie naar remote en tags | Expliciete push-go, doelremote/branch buiten dit document | `node scripts/owner-decision-preflight.mjs --decision push` en `node scripts/owner-approval-intake-validator.mjs --decision push` | `node scripts/owner-go-no-go-preflight.mjs --strict` | Gebruik push-prompt in `docs/POST_APPROVAL_PROMPTS_NL.md` |
+| Nieuwe push naar remote | Niet nodig voor gepubliceerde handoff; geblokkeerd voor toekomstige lokale commits | Handoff commit `f2f7cbb` is op `origin/main` geverifieerd; push checklist en post-push evidence bestaan | Nieuwe publicatie naar remote en tags | Expliciete push-go, doelremote/branch buiten dit document | `node scripts/owner-decision-preflight.mjs --decision push` en `node scripts/owner-approval-intake-validator.mjs --decision push` | `node scripts/owner-go-no-go-preflight.mjs --strict` | Gebruik push-prompt in `docs/POST_APPROVAL_PROMPTS_NL.md` alleen bij nieuwe lokale commits |
 | Geheimen roteren | Geblokkeerd | Secret blockers, negatieve secret-output tests en `docs/DECISION_BRIEF_SECRET_ROTATION_NL.md` | Secret-wijziging, `.env`, providersecret | Secretlijst buiten Git, vault-bestemming, cutovervolgorde | `node scripts/owner-decision-preflight.mjs --decision secret-rotation` en `node scripts/owner-approval-intake-validator.mjs --decision secret-rotation` | `git diff --check` | Gebruik secret-rotation prompt in `docs/POST_APPROVAL_PROMPTS_NL.md` |
 | PostgreSQL-productieversie | Geblokkeerd | Lokale Prisma-validatie, migratiebewijs en `docs/DECISION_BRIEF_POSTGRES_VERSION_NL.md` | Hostingprovider-query vanuit deze repo | Versienummer en Prisma-compatibiliteitsbevestiging | `node scripts/owner-decision-preflight.mjs --decision postgres-version` en `node scripts/owner-approval-intake-validator.mjs --decision postgres-version` | `npx prisma validate` met uitsluitend lokale placeholderconfig buiten dit rapport | Gebruik PostgreSQL-versie prompt in `docs/POST_APPROVAL_PROMPTS_NL.md` |
 
@@ -104,12 +104,12 @@ Exacte volgende prompt:
 ### Push naar remote
 
 Wat klaar is:
-- Post-push evidence bevestigt dat basiscommit `6353546` op `origin/main` staat.
+- Post-push evidence bevestigt dat handoff commit `f2f7cbb` op `origin/main` staat.
 - Push checklist, approval-intake validator en owner go/no-go preflight bestaan.
 - Alleen `.graphifyignore` en `graphify-out/` zijn verwachte untracked paden wanneer er geen lokale hardening-diff openstaat.
 
 Wat blijft geblokkeerd:
-- Geen nieuwe remote publicatie.
+- Geen nieuwe remote publicatie zonder nieuwe expliciete owner-go.
 - Geen tags.
 
 Rollback:
