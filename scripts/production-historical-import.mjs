@@ -34,24 +34,13 @@ const repoRoot = path.resolve(__dirname, '..');
 
 // ─── Load DATABASE_URL ────────────────────────────────────────────────────────
 
-const loadDatabaseUrl = () => {
-  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
-  const envFile = path.join(repoRoot, '.env.production');
-  if (!fs.existsSync(envFile)) return null;
-  const content = fs.readFileSync(envFile, 'utf-8');
-  for (const line of content.split('\n')) {
-    if (line.startsWith('DATABASE_URL=')) {
-      return line.slice('DATABASE_URL='.length).trim();
-    }
-  }
-  return null;
-};
+const loadDatabaseUrl = () => process.env.DATABASE_URL ?? null;
 
 // ─── Assert production target (no credentials printed) ───────────────────────
 
 const assertProductionTarget = (databaseUrl) => {
   if (!databaseUrl) {
-    console.error('STOP: DATABASE_URL is missing. Set it in the environment or .env.production.');
+    console.error('STOP: DATABASE_URL is missing. Set it in the environment only.');
     process.exit(1);
   }
   let parsed;

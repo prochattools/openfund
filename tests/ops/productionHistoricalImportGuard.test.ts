@@ -86,6 +86,12 @@ describe('productionHistoricalImportGuard — database target', () => {
     expect(scriptContent).toContain('DATABASE_URL is missing');
   });
 
+  it('uses only process.env.DATABASE_URL and never reads env files', () => {
+    expect(scriptContent).toContain('process.env.DATABASE_URL ?? null');
+    expect(scriptContent).not.toContain('.env.production');
+    expect(scriptContent).not.toContain('readFileSync(envFile');
+  });
+
   it('does not print credentials on failure', () => {
     expect(scriptContent).toContain('Credential not printed.');
   });
