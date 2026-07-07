@@ -38,6 +38,7 @@ Afhankelijkheden: `docs/ROADMAP.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/ADMIN_
 | Productiemigratie en overstap | Schema finance gedeployed op PostgreSQL 15.8 | AFGEROND 2026-07-07 |
 | Historische productie-import (2024/2025/2026) | 902 transacties (268+413+221), 681 boekingen, 2026 gedeeltelijk open | AFGEROND 2026-07-07 |
 | Geheimen roteren | finance_user-credential geroteerd; oud credential afgewezen; historische totalen herbevestigd | AFGEROND 2026-07-07 |
+| Runtime database credential update | Finaal credential aangemaakt; Dokploy env bijgewerkt; app herstart; health check geslaagd | AFGEROND 2026-07-07 |
 | Echte e-mailverzending | `RESEND_API_KEY` niet geconfigureerd; no-op modus actief | Geblokkeerd |
 | Echte PDF-generatie | `PDF_BLOCKER` actief; geen goedgekeurde PDF-bibliotheek | Geblokkeerd |
 

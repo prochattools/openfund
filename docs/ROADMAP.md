@@ -29,6 +29,7 @@ Phase 9 post-push evidence and decision hardening COMPLETE (published at f2f7cbb
 Phase 10 — Production schema cutover             COMPLETE (2026-07-07; finance schema deployed; historical import gated)
 Phase 11 — Production historical import          COMPLETE (2026-07-07; 2024/2025 concluded data imported; 2026 partial open statement imported and not closed; 902 transactions, 681 bookings)
 Phase 12 — Production secret rotation            COMPLETE (2026-07-07; finance_user credential rotated; old credential rejected; new credential verified; historical totals re-verified)
+Phase 13 — Production runtime credential update  COMPLETE (2026-07-07; final retained credential applied; Dokploy env updated; redeploy triggered; app health verified)
 ```
 
 ## Phase 0 — Governance and verified controls

@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Eigenaarsbeslissing readiness matrix
 
-Status: Release Candidate 5 — schema cutover afgerond 2026-07-07; historische import voltooid 2026-07-07; geheimrotatie voltooid 2026-07-07; echte e-mail en PDF geblokkeerd
+Status: Release Candidate 5 — schema cutover, historische import, geheimrotatie, en runtime credential update alle afgerond 2026-07-07; app health geverifieerd; echte e-mail en PDF geblokkeerd
 Taal: Nederlands  
 Doel: per owner-gated beslissing tonen wat klaar is, wat geblokkeerd blijft, welke input nodig is, en welk prompt-pad pas na goedkeuring gebruikt mag worden. De huidige gate is owner decision selection. Aanbevolen eerste keuze: `postgres-version`.
 

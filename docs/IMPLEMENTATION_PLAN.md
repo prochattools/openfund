@@ -85,7 +85,8 @@ Phase 4 monthly import/review workflow: complete for local/app behavior; future 
 Production schema cutover: complete 2026-07-07; schema finance deployed on PostgreSQL 15.8; 4 migrations; 30 tables; evidence in docs/PRODUCTION_SCHEMA_CUTOVER_EVIDENCE_NL.md
 Production historical import: complete 2026-07-07; 902 transactions (268 2024 + 413 2025 + 221 2026), 681 bookings, 4 source files, 2026 partial/open and not closed; evidence in docs/PRODUCTION_HISTORICAL_IMPORT_EVIDENCE_NL.md
 Production secret rotation: complete 2026-07-07; finance_user credential rotated; old credential rejected; new credential verified; historical totals re-verified; evidence in docs/PRODUCTION_SECRET_ROTATION_EVIDENCE_NL.md
-Current gate: owner decision selection after published RC4 owner-decision handoff — production schema cutover, historical import, and secret rotation are now complete; real email provider and real PDF renderer remain the only blocked decisions.
+Production runtime credential update: complete 2026-07-07; final retained credential applied; Dokploy env updated; app redeployed; health check passed; evidence in docs/PRODUCTION_RUNTIME_DATABASE_CREDENTIAL_EVIDENCE_NL.md
+Current gate: owner decision selection after published RC4 owner-decision handoff — production schema cutover, historical import, secret rotation, and runtime credential update are now complete; real email provider and real PDF renderer remain the only blocked decisions.
 Local PostgreSQL 15.17 rehearsal evidence is recorded in `docs/POSTGRES_VERSION_EVIDENCE_NL.md`.
 ```
 
