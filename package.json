@@ -31,7 +31,8 @@
 		"preflight:next-owner-decision": "npm test -- --test-name-pattern \"next owner decision recommendation\" && node scripts/owner-approval-intake-validator.mjs --decision postgres-version && node scripts/owner-decision-preflight.mjs --decision postgres-version",
 		"preflight:post-push": "npm test -- --test-name-pattern \"post push verification\"",
 		"preflight:decision-briefs": "npm test -- --test-name-pattern \"owner decision briefs\"",
-		"audit:final-docs": "node scripts/final-docs-consistency-audit.mjs"
+		"audit:final-docs": "node scripts/final-docs-consistency-audit.mjs",
+		"preflight:production-readiness": "node scripts/production-readiness-verify.mjs"
 	},
 	"dependencies": {
 		"@clerk/nextjs": "^5.7.1",
