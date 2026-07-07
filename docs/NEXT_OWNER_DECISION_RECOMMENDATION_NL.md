@@ -8,6 +8,7 @@ Taal: Nederlands
 - `origin/main` is gepubliceerd door de owner-decision handoff commit `f2f7cbb docs: update post push owner decision handoff`.
 - De lokale applicatie, release evidence en owner-decision handoff zijn klaar voor de volgende eigenaarskeuze.
 - Deze notitie voert niets uit, bevestigt geen productieversie en wijzigt geen configuratie.
+- Lokale rehearsal evidence voor versie 15.17 is vastgelegd in `docs/POSTGRES_VERSION_EVIDENCE_NL.md`; dit is geen productieversieclaim.
 
 ## Aanbevolen volgende beslissing
 
@@ -72,4 +73,3 @@ Stop direct wanneer:
 - een stap productie, externe provider, echte e-mail, echte PDF, historische import, secret rotation, push of tags vereist;
 - een lokale validatie faalt en één bounded repair attempt faalt;
 - de scope wijzigt van verification-only naar cutover of migratie.
-

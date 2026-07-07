@@ -54,6 +54,10 @@ PostgreSQL client tools available: pg_dump 15.17 (Homebrew), psql 15.17, pg_rest
 
 No database dump committed. No production touched.
 
+### Local PostgreSQL version evidence status
+
+`docs/POSTGRES_VERSION_EVIDENCE_NL.md` records the local PostgreSQL 15.17 rehearsal evidence above with scope limited to local backup/restore rehearsal. This does not establish the production PostgreSQL version, does not connect to production, and does not approve cutover.
+
 ### Post-push verification status
 
 Post-push verification was refreshed after the owner-approved publication of the owner-decision handoff batch. Local checks confirmed `main`, `HEAD`/`origin/main` at `f2f7cbb`, remote `origin git@github.com:yeshuaacademy/finance.git`, no commits ahead of `origin/main`, no tags at `HEAD`, and only `.graphifyignore` plus `graphify-out/` as untracked Graphify artifacts.

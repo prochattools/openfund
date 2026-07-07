@@ -18,7 +18,7 @@ Gebruik vóór een beslissing ook `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md`, `docs
 | Echte e-mailverzending | Geblokkeerd | Dispatch-metadata zonder provider-call en `docs/DECISION_BRIEF_EMAIL_PROVIDER_NL.md` | Provider-call, echte ontvangers, API-key | Providerkeuze, domein, testontvangers, secret buiten Git | `node scripts/owner-decision-preflight.mjs --decision email` en `node scripts/owner-approval-intake-validator.mjs --decision email` | `npm test -- --test-name-pattern "production blocker"` | Gebruik e-mailprompt in `docs/POST_APPROVAL_PROMPTS_NL.md` |
 | Nieuwe push naar remote | Niet nodig voor gepubliceerde handoff; geblokkeerd voor toekomstige lokale commits | Handoff commit `f2f7cbb` is op `origin/main` geverifieerd; push checklist en post-push evidence bestaan | Nieuwe publicatie naar remote en tags | Expliciete push-go, doelremote/branch buiten dit document | `node scripts/owner-decision-preflight.mjs --decision push` en `node scripts/owner-approval-intake-validator.mjs --decision push` | `node scripts/owner-go-no-go-preflight.mjs --strict` | Gebruik push-prompt in `docs/POST_APPROVAL_PROMPTS_NL.md` alleen bij nieuwe lokale commits |
 | Geheimen roteren | Geblokkeerd | Secret blockers, negatieve secret-output tests en `docs/DECISION_BRIEF_SECRET_ROTATION_NL.md` | Secret-wijziging, `.env`, providersecret | Secretlijst buiten Git, vault-bestemming, cutovervolgorde | `node scripts/owner-decision-preflight.mjs --decision secret-rotation` en `node scripts/owner-approval-intake-validator.mjs --decision secret-rotation` | `git diff --check` | Gebruik secret-rotation prompt in `docs/POST_APPROVAL_PROMPTS_NL.md` |
-| PostgreSQL-productieversie | Geblokkeerd | Lokale Prisma-validatie, migratiebewijs en `docs/DECISION_BRIEF_POSTGRES_VERSION_NL.md` | Hostingprovider-query vanuit deze repo | Versienummer en Prisma-compatibiliteitsbevestiging | `node scripts/owner-decision-preflight.mjs --decision postgres-version` en `node scripts/owner-approval-intake-validator.mjs --decision postgres-version` | `npx prisma validate` met uitsluitend lokale placeholderconfig buiten dit rapport | Gebruik PostgreSQL-versie prompt in `docs/POST_APPROVAL_PROMPTS_NL.md` |
+| PostgreSQL-productieversie | Geblokkeerd | Lokale Prisma-validatie, migratiebewijs, lokale 15.17 rehearsal evidence in `docs/POSTGRES_VERSION_EVIDENCE_NL.md` en `docs/DECISION_BRIEF_POSTGRES_VERSION_NL.md` | Hostingprovider-query vanuit deze repo en productieversieclaim | Versienummer en Prisma-compatibiliteitsbevestiging uit owner/provider evidence buiten Git | `node scripts/owner-decision-preflight.mjs --decision postgres-version` en `node scripts/owner-approval-intake-validator.mjs --decision postgres-version` | `npx prisma validate` met uitsluitend lokale placeholderconfig buiten dit rapport | Gebruik PostgreSQL-versie prompt in `docs/POST_APPROVAL_PROMPTS_NL.md` |
 
 ## Per-beslissing details
 
@@ -145,10 +145,12 @@ Exacte volgende prompt:
 Wat klaar is:
 - Prisma validate/generate slagen lokaal.
 - Migratieketen is lokaal/disposable gevalideerd.
+- Lokale PostgreSQL 15.17 rehearsal evidence is vastgelegd in `docs/POSTGRES_VERSION_EVIDENCE_NL.md`.
 
 Wat blijft geblokkeerd:
 - Geen hostingprovider-query vanuit deze repo.
 - Geen productie-DB URL invoeren.
+- Productie PostgreSQL-versie blijft niet vastgesteld.
 
 Rollback:
 - Als versie incompatibel is: stop cutover en plan provider-upgrade of alternatieve database.

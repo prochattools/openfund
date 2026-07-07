@@ -83,6 +83,7 @@ Phase 9 post-push owner-decision handoff: post-push verification evidence (`e07b
 Phase 3 local/sanitized historical loading: complete; production historical import remains owner-gated
 Phase 4 monthly import/review workflow: complete for local/app behavior; future real owner monthly files remain operator-controlled
 Current gate: owner decision selection after published RC4 owner-decision handoff; recommended next decision is `postgres-version`; owner decisions remain required before production cutover, historical production import, PDF dependency, email provider, any future push, production secret rotation, and production PostgreSQL version confirmation
+Local PostgreSQL 15.17 rehearsal evidence is recorded in `docs/POSTGRES_VERSION_EVIDENCE_NL.md`; production PostgreSQL version confirmation remains owner/provider-gated outside Git.
 ```
 
 ## Phase 0 — Governance and discovery
@@ -1222,6 +1223,7 @@ Evidence:
 - `docs/INFRASTRUCTURE_READINESS.md` — documents Prisma 6.x version, active migration chain (4 migrations),
   local validation conventions, PostgreSQL version recommendation criteria, and requirement to confirm
   production version before cutover.
+- `docs/POSTGRES_VERSION_EVIDENCE_NL.md` — records local PostgreSQL 15.17 backup/restore rehearsal evidence only; production PostgreSQL version remains not confirmed.
 
 Dependencies: financial workflow stable
 

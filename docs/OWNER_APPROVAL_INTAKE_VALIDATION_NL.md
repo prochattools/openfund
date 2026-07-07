@@ -16,6 +16,10 @@ Taal: Nederlands
 
 Sleutel: `postgres-version`
 
+Lokale evidence:
+- `docs/POSTGRES_VERSION_EVIDENCE_NL.md` registreert lokale PostgreSQL 15.17 rehearsal evidence.
+- Productieversie en productiecompatibiliteit blijven afhankelijk van owner/provider evidence buiten Git.
+
 Minimum required approval fields:
 - Provider/eigenaar bevestigt major/minor versie buiten Git.
 - Bronsoort en datum zijn bekend.

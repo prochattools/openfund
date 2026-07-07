@@ -277,6 +277,7 @@ Remaining blockers before production:
 - Real email sending requires configured Resend provider and owner approval.
 - Post-push verification confirms owner-decision handoff commit `f2f7cbb` on `origin/main`; no new push is needed for the published handoff.
 - Push for future local commits, secret rotation, and PostgreSQL production version confirmation are represented in the owner decision matrix, decision briefs, and approval-intake validator; they remain owner-gated.
+- Local PostgreSQL 15.17 rehearsal evidence is recorded in `docs/POSTGRES_VERSION_EVIDENCE_NL.md`; it does not resolve the production PostgreSQL version blocker.
 - PostgreSQL production version must be confirmed before cutover and is the recommended next low-risk owner decision.
 - Owner acceptance checklist, owner decision menu, decision briefs, approval-intake validation, and post-push evidence are prepared; they do not approve any gated action.
 

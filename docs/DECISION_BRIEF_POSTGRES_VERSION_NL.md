@@ -7,6 +7,12 @@ Taal: Nederlands
 
 Bevestig later de productie PostgreSQL-versie op basis van eigenaar/providerbewijs buiten Git. Deze brief maakt geen productieverbinding.
 
+## 1a. Lokale evidence die al beschikbaar is
+
+- `docs/POSTGRES_VERSION_EVIDENCE_NL.md` legt lokale rehearsal evidence vast voor versie 15.17.
+- Die evidence komt uit `docs/finance-rebuild-run.md` en heeft scope: local rehearsal only.
+- Dit is geen productieversieclaim en geen cutover-goedkeuring.
+
 ## 2. Vereiste owner approval evidence
 
 - Eigenaar bevestigt de bron van de versie-informatie.

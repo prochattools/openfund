@@ -146,6 +146,14 @@ npm run preflight:next-owner-decision
 
 Voert alleen de aanbevelingsdoc-test en statische PostgreSQL-versie approval/preflight checks uit. Dit bevestigt geen productieversie en voert geen productieactie uit.
 
+### Local PostgreSQL version evidence guard
+
+```bash
+npm test -- --test-name-pattern "postgres version evidence"
+```
+
+Controleert `docs/POSTGRES_VERSION_EVIDENCE_NL.md`. Dit bewaakt alleen lokale PostgreSQL 15.17 rehearsal evidence en bevestigt geen productieversie.
+
 ### Post-push verification guard
 
 ```bash
