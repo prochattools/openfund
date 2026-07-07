@@ -57,6 +57,7 @@ describe('final docs consistency — required docs exist', () => {
     'docs/OWNER_REVIEW_INDEX_NL.md',
     'docs/OWNER_REVIEW_FINAL_PACKET_NL.md',
     'docs/OWNER_DECISION_MENU_NL.md',
+    'docs/NEXT_OWNER_DECISION_RECOMMENDATION_NL.md',
     'docs/POST_PUSH_VERIFICATION_NL.md',
     'docs/POST_APPROVAL_PROMPTS_NL.md',
     'docs/PUSH_READINESS_CHECKLIST_NL.md',

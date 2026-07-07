@@ -16,7 +16,8 @@ Doel: één startpunt voor de eigenaar om te bepalen wat klaar is, wat geblokkee
 8. Gebruik `docs/OWNER_REVIEW_FINAL_PACKET_NL.md` als laatste samenvatting voor owner review.
 9. Gebruik `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md` om het lokale pakket te accepteren zonder uitvoering.
 10. Gebruik `docs/OWNER_DECISION_MENU_NL.md` om de volgende owner-gated beslissing te kiezen.
-11. Gebruik `docs/POST_APPROVAL_PROMPTS_NL.md` pas nadat een beslissing expliciet is goedgekeurd.
+11. Lees `docs/NEXT_OWNER_DECISION_RECOMMENDATION_NL.md` voor de aanbevolen eerste keuze: `postgres-version`.
+12. Gebruik `docs/POST_APPROVAL_PROMPTS_NL.md` pas nadat een beslissing expliciet is goedgekeurd.
 
 ## Wat klaar is
 
@@ -172,6 +173,7 @@ Plaats hier geen geheimen, hostnamen, wachtwoorden, API-keys, owner-bestandspade
 | `docs/OWNER_APPROVED_ACTION_PLAN_NL.md` | Goedgekeurd actieplan |
 | `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md` | Lokale owner acceptance checklist; keurt geen gated actie goed |
 | `docs/OWNER_DECISION_MENU_NL.md` | Static menu voor de volgende eigenaarsbeslissing |
+| `docs/NEXT_OWNER_DECISION_RECOMMENDATION_NL.md` | Aanbevolen volgende keuze: PostgreSQL-versie bevestigen |
 | `docs/OWNER_REVIEW_FINAL_PACKET_NL.md` | Samenvatting final owner review packet |
 | `docs/OWNER_GO_NO_GO_PREFLIGHT_NL.md` | Repo go/no-go preflight |
 | `docs/OWNER_DECISION_PREFLIGHT_NL.md` | Gegenereerde beslissing-preflight |

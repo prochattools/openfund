@@ -64,6 +64,8 @@ Gebruik `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md` om het lokale owner-review pakke
 - `docs/DECISION_BRIEF_EMAIL_PROVIDER_NL.md`
 - `docs/DECISION_BRIEF_SECRET_ROTATION_NL.md`
 
+Aanbevolen eerste keuze: `docs/NEXT_OWNER_DECISION_RECOMMENDATION_NL.md` (`postgres-version`).
+
 ## 4. Exacte volgende prompts
 
 Gebruik pas na expliciete eigenaargoedkeuring:
@@ -128,6 +130,7 @@ Zie `docs/BACKUP_RESTORE_REHEARSAL_NL.md` en `docs/FINAL_READINESS_AUDIT_NL.md`.
 - `docs/OWNER_APPROVED_ACTION_PLAN_NL.md`
 - `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md`
 - `docs/OWNER_DECISION_MENU_NL.md`
+- `docs/NEXT_OWNER_DECISION_RECOMMENDATION_NL.md`
 - `docs/POST_PUSH_VERIFICATION_NL.md`
 - `docs/DECISION_BRIEF_PDF_RENDERER_NL.md`
 - `docs/DECISION_BRIEF_POSTGRES_VERSION_NL.md`
