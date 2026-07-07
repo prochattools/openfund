@@ -138,6 +138,14 @@ npm run preflight:approval-intake
 
 Controleert statisch welke owner approval velden, stopregels en evidence per beslissing nodig zijn. Voert geen owner-gated actie uit en schrijft alleen `docs/OWNER_APPROVAL_INTAKE_VALIDATION_NL.md` met `--write`.
 
+### Next owner decision preflight
+
+```bash
+npm run preflight:next-owner-decision
+```
+
+Voert alleen de aanbevelingsdoc-test en statische PostgreSQL-versie approval/preflight checks uit. Dit bevestigt geen productieversie en voert geen productieactie uit.
+
 ### Post-push verification guard
 
 ```bash

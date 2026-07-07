@@ -196,6 +196,16 @@ describe('package script safety — new preflight scripts', () => {
     expect(script).not.toMatch(forbiddenExtendedPreflightPattern);
   });
 
+  it('preflight:next-owner-decision exists and is static/local-only', () => {
+    const script = pkg.scripts['preflight:next-owner-decision'] ?? '';
+    expect(script).toBeTruthy();
+    expect(script).toContain('next owner decision recommendation');
+    expect(script).toContain('owner-approval-intake-validator.mjs --decision postgres-version');
+    expect(script).toContain('owner-decision-preflight.mjs --decision postgres-version');
+    expect(script).not.toContain('npm run build');
+    expect(script).not.toMatch(forbiddenExtendedPreflightPattern);
+  });
+
   it('preflight:post-push exists and only runs the post-push guard test', () => {
     const script = pkg.scripts['preflight:post-push'] ?? '';
     expect(script).toBeTruthy();

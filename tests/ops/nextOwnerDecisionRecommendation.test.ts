@@ -62,7 +62,7 @@ describe('next owner decision recommendation', () => {
     expect(doc).toContain('geen secrets, connection strings of productiecredentials');
   });
 
-  it('contains no secrets, production targets, owner files, raw rows, dumps, or scanner-hostile literals', () => {
+  it('contains no sensitive material or scanner-hostile literals', () => {
     for (const forbidden of forbiddenLiteralFragments) {
       expect(doc).not.toContain(forbidden);
       expect(testSource).not.toContain(forbidden);
