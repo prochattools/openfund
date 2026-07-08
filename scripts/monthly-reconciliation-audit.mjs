@@ -24,8 +24,8 @@ const parseMinorFromRawRow = (rawRow) => {
   ].find((v) => v != null && String(v).trim().length > 0);
 
   if (alreadyMinor != null) {
-    const parsed = BigInt(alreadyMinor);
-    return parsed;
+    const asNum = Number(alreadyMinor);
+    return BigInt(Math.round(asNum));
   }
 
   // Fall back to euro decimal fields (scale by 100)
@@ -35,7 +35,26 @@ const parseMinorFromRawRow = (rawRow) => {
   ].filter((value) => value != null && String(value).trim().length > 0);
 
   if (!euroCandidates.length) return null;
-  const raw = String(euroCandidates[0]).replace(/\./g, '').replace(',', '.');
+  let raw = String(euroCandidates[0]).trim();
+
+  // Normalize euro formats: "1.581,86" or "1,581.86" to "1581.86"
+  // If there's both a dot and comma, the last one is the decimal separator
+  const lastDot = raw.lastIndexOf('.');
+  const lastComma = raw.lastIndexOf(',');
+  if (lastDot > lastComma) {
+    // Decimal is dot: remove commas, keep dot: "1,000.86" -> "1000.86"
+    raw = raw.replace(/,/g, '');
+  } else if (lastComma > lastDot) {
+    // Decimal is comma: remove dots, replace comma with dot: "1.000,86" -> "1000.86"
+    raw = raw.replace(/\./g, '').replace(',', '.');
+  } else if (lastDot >= 0) {
+    // Only dots (no commas): it's the decimal: "1581.86" -> "1581.86"
+    // no change needed
+  } else if (lastComma >= 0) {
+    // Only commas (no dots): it's the decimal: "1581,86" -> "1581.86"
+    raw = raw.replace(',', '.');
+  }
+
   const parsed = Number(raw);
   if (Number.isNaN(parsed)) return null;
   return BigInt(Math.round(parsed * 100));
