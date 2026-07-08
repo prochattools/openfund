@@ -10,7 +10,10 @@ describe('monthly reconciliation audit script', () => {
 
     expect(content).toContain("mode === 'dry-run'");
     expect(content).toContain('DATABASE_URL');
+    expect(content).toContain('statementPeriod.findMany');
     expect(content).toContain('audit passed');
+    expect(content).not.toContain('statementsByMonth');
+    expect(content).not.toContain('bankStatement.findMany');
     expect(content).not.toContain('console.log(rawRow');
     expect(content).not.toContain('raw transaction rows');
     expect(content).not.toContain('postgresql://');

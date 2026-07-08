@@ -4,7 +4,7 @@ Date: 2026-07-02
 Run: `agent-f961650b-de17-4282-ab18-7a716cc72958`  
 Source: `yeshuaacademy-finance`  
 Branch: `main`  
-Status: Release Candidate 7 — production schema cutover, historical import, database credential finalization, all provider secret rotations, real PDF renderer, and real email sending complete 2026-07-08; all functional blockers resolved
+Status: Release Candidate 7 — production schema cutover, historical import, database credential finalization, all provider secret rotations, real PDF renderer, and real email sending complete 2026-07-08; Phase 17 monthly reconciliation remains open pending read-only production verification
 
 ## RC2 Hardening Evidence
 

@@ -67,9 +67,9 @@ describe('roadmap status consistency — phase status agreement', () => {
     expect(docs.finalAudit).toContain('Phase 9 — Operationele hardening en overdracht | COMPLETE (local-only RC4)');
   });
 
-  it('Phase 17 is explicitly open in the expanded roadmap', () => {
-    expect(docs.roadmap).toContain('Phase 17 — Month-by-month accounting reconciliation and administrator reporting IMPLEMENTATION REQUIRED');
-    expect(docs.implementationPlan).toContain('Phase 17 — Month-by-month accounting reconciliation and administrator reporting: IMPLEMENTATION REQUIRED');
+  it('Phase 17 remains open with local implementation complete and production verification pending', () => {
+    expect(docs.roadmap).toContain('Phase 17 — Month-by-month accounting reconciliation and administrator reporting OPEN');
+    expect(docs.implementationPlan).toContain('Phase 17 — Month-by-month accounting reconciliation and administrator reporting: OPEN');
     expect(docs.finalAudit).toContain('Phase 17 open');
   });
 });

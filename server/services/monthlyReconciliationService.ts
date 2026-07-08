@@ -10,6 +10,7 @@ export type MonthlyReconciliationTransactionInput = {
   amountMinor: BigIntLike;
   direction: MonthlyReconciliationDirection;
   resultingBalanceMinor?: BigIntLike | null;
+  rawRow?: Record<string, unknown> | null;
   importFingerprint?: string | null;
   duplicateFingerprint?: string | null;
   projectId?: string | null;
@@ -92,6 +93,63 @@ export type MonthlyReconciliationInput = {
 const DEFAULT_VALIDATOR_VERSION = 'monthly-reconciliation-v1';
 
 const toMinor = (value: BigIntLike | null | undefined): bigint => BigInt(value ?? 0);
+
+const parseMinorAmount = (value: unknown): bigint | null => {
+  if (value == null) return null;
+  if (typeof value === 'bigint') return value;
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return BigInt(Math.round(value * 100));
+  }
+  if (typeof value !== 'string') return null;
+
+  const normalized = value.trim();
+  if (!normalized) return null;
+
+  if (/^\d+(?:\.\d{3})*(?:,\d{1,2})?$/.test(normalized)) {
+    const compact = normalized.replace(/\./g, '').replace(',', '.');
+    const parsed = Number(compact);
+    return Number.isFinite(parsed) ? BigInt(Math.round(parsed * 100)) : null;
+  }
+
+  if (/^\d+(?:,\d{1,2})?$/.test(normalized)) {
+    const compact = normalized.replace(',', '.');
+    const parsed = Number(compact);
+    return Number.isFinite(parsed) ? BigInt(Math.round(parsed * 100)) : null;
+  }
+
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? BigInt(Math.round(parsed * 100)) : null;
+};
+
+const extractRunningBalanceMinor = (rawRow: Record<string, unknown> | null | undefined): bigint | null => {
+  if (!rawRow || typeof rawRow !== 'object' || Array.isArray(rawRow)) {
+    return null;
+  }
+
+  const columns = rawRow.columns && typeof rawRow.columns === 'object' && !Array.isArray(rawRow.columns)
+    ? (rawRow.columns as Record<string, unknown>)
+    : null;
+
+  const candidates = [
+    rawRow['Resulting balance'],
+    columns?.['Resulting balance'],
+    rawRow['resulting balance'],
+    columns?.['resulting balance'],
+    rawRow['Saldo'],
+    columns?.Saldo,
+    rawRow['Balance'],
+    columns?.Balance,
+  ];
+
+  for (const candidate of candidates) {
+    const minor = parseMinorAmount(candidate);
+    if (minor != null) {
+      return minor;
+    }
+  }
+
+  return null;
+};
 
 const toDate = (value: Date | string): Date => (value instanceof Date ? value : new Date(value));
 
@@ -257,7 +315,7 @@ export const buildMonthlyReconciliation = (
     const amountMinor = toMinor(transaction.amountMinor);
     const delta = transaction.direction === 'credit' ? amountMinor : -amountMinor;
     const actualBalanceMinor = transaction.resultingBalanceMinor == null
-      ? null
+      ? extractRunningBalanceMinor(transaction.rawRow)
       : toMinor(transaction.resultingBalanceMinor);
 
     if (index === 0) {

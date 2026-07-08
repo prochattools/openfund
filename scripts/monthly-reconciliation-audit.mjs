@@ -30,18 +30,53 @@ const parseMinorFromRawRow = (rawRow) => {
   return BigInt(Math.round(parsed * 100));
 };
 
-const extractSourceHash = (statement) => statement?.sourceFile?.sha256 ?? null;
+const getMonthKey = (date) => {
+  const value = new Date(date);
+  return `${value.getUTCFullYear()}-${String(value.getUTCMonth() + 1).padStart(2, '0')}`;
+};
 
 const groupTransactionsByMonth = (transactions) => {
   const grouped = new Map();
   for (const tx of transactions) {
-    const date = new Date(tx.date);
-    const key = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+    const key = getMonthKey(tx.date);
     const existing = grouped.get(key) ?? [];
     existing.push(tx);
     grouped.set(key, existing);
   }
   return grouped;
+};
+
+const buildCoverageByYear = (statementPeriods) => {
+  const coverageByYear = new Map();
+  for (const period of statementPeriods) {
+    const year = period.periodStart.getUTCFullYear();
+    const partialMonth = period.coverageStatus === 'PARTIAL'
+      ? period.periodEnd.getUTCMonth() + 1
+      : null;
+    coverageByYear.set(year, {
+      coverageStatus: period.coverageStatus,
+      partialMonth,
+      periodEnd: period.periodEnd,
+    });
+  }
+  return coverageByYear;
+};
+
+const deriveCoverageStatus = (year, month, coverageByYear) => {
+  const coverage = coverageByYear.get(year);
+  if (!coverage || coverage.coverageStatus === 'COMPLETE') {
+    return 'COMPLETE';
+  }
+
+  return coverage.partialMonth === month ? 'PARTIAL' : 'COMPLETE';
+};
+
+const derivePeriodEnd = (year, month, coverageByYear) => {
+  const coverage = coverageByYear.get(year);
+  if (coverage?.coverageStatus === 'PARTIAL' && coverage.partialMonth === month) {
+    return coverage.periodEnd;
+  }
+  return new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
 };
 
 const buildExpectedCoverage = () => ({
@@ -50,7 +85,7 @@ const buildExpectedCoverage = () => ({
   2026: Array.from({ length: 7 }, (_, index) => index + 1),
 });
 
-const buildMonthlyReconciliationInput = (year, month, txs, statement) => ({
+const buildMonthlyReconciliationInput = (year, month, txs, coverageByYear) => ({
   workspaceId: 'finance-workspace',
   accountId: 'finance-account',
   year,
@@ -70,15 +105,15 @@ const buildMonthlyReconciliationInput = (year, month, txs, statement) => ({
     literalTypeLabel: tx.transactionBooking?.literalTypeLabel ?? null,
     literalCategoryLabel: tx.transactionBooking?.literalCategoryLabel ?? null,
     unresolved: !(tx.transactionBooking?.projectId && tx.transactionBooking?.transactionTypeId && tx.transactionBooking?.categoryId),
-    sourceFileHash: extractSourceHash(statement),
+    sourceFileHash: tx.sourceFileHash ?? null,
   })),
   statementEvidence: {
-    coverageStatus: statement?.coverageStatus ?? 'PARTIAL',
-    openingBalanceMinor: statement?.openingBalanceMinor ?? null,
-    closingBalanceMinor: statement?.closingBalanceMinor ?? null,
-    sourceFileHashes: statement ? [extractSourceHash(statement)].filter(Boolean) : [],
-    periodStart: statement?.periodStart ?? new Date(Date.UTC(year, month - 1, 1)),
-    periodEnd: statement?.periodEnd ?? new Date(Date.UTC(year, month, 0, 23, 59, 59, 999)),
+    coverageStatus: deriveCoverageStatus(year, month, coverageByYear),
+    openingBalanceMinor: null,
+    closingBalanceMinor: null,
+    sourceFileHashes: Array.from(new Set(txs.map((tx) => tx.sourceFileHash).filter(Boolean))),
+    periodStart: new Date(Date.UTC(year, month - 1, 1)),
+    periodEnd: derivePeriodEnd(year, month, coverageByYear),
   },
 });
 
@@ -131,34 +166,25 @@ async function main() {
       },
     });
 
-    const statements = await prisma.bankStatement.findMany({
+    const statementPeriods = await prisma.statementPeriod.findMany({
       orderBy: [{ periodStart: 'asc' }],
       select: {
         periodStart: true,
         periodEnd: true,
         coverageStatus: true,
-        openingBalanceMinor: true,
-        closingBalanceMinor: true,
-        sourceFile: { select: { sha256: true } },
       },
     });
 
     const groupedTransactions = groupTransactionsByMonth(transactions);
-    const statementsByMonth = new Map(
-      statements.map((statement) => [
-        `${statement.periodStart.getUTCFullYear()}-${String(statement.periodStart.getUTCMonth() + 1).padStart(2, '0')}`,
-        statement,
-      ]),
-    );
+    const coverageByYear = buildCoverageByYear(statementPeriods);
 
     const monthlyResults = [];
     for (const [monthKey, monthTransactions] of groupedTransactions.entries()) {
       const [yearPart, monthPart] = monthKey.split('-');
       const year = Number(yearPart);
       const month = Number(monthPart);
-      const statement = statementsByMonth.get(monthKey) ?? null;
       monthlyResults.push(
-        buildMonthlyReconciliationInput(year, month, monthTransactions, statement),
+        buildMonthlyReconciliationInput(year, month, monthTransactions, coverageByYear),
       );
     }
 

@@ -54,7 +54,8 @@ export const auditMonthlyReconciliations = (
     if (!expectedMonths?.includes(month.month)) {
       addIssue(issues, month.year, month.month, 'Maand valt buiten de verwachte scope.');
     }
-    if (month.status !== 'BALANCED' || !month.closeEligible) {
+    const partialCoverage = month.coverageStatus !== 'COMPLETE';
+    if (!partialCoverage && (month.status !== 'BALANCED' || !month.closeEligible)) {
       addIssue(issues, month.year, month.month, 'Maand is niet balancerend en afsluitbaar.');
     }
     if (month.duplicateFingerprintCount !== 0) {

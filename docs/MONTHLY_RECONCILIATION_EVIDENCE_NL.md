@@ -1,6 +1,6 @@
 # Maandelijkse Reconciliatie Bewijs
 
-**Status:** PARTIALLY COMPLETED
+**Status:** IMPLEMENTED (local code and tests complete; read-only production verification pending)
 
 ## Identificatie
 
@@ -13,11 +13,11 @@
 
 ## Samenvatting
 
-- Phase 17 is toegevoegd als open fase.
+- Phase 17 is lokaal geïmplementeerd als transaction-derived maandcontrole.
 - Maandniveau reconciliatie- en exportlogica is toegevoegd als pure service-laag.
+- Maandaudit gebruikt transactie-evidence per maand en behandelt de bekende open juli 2026-maand als partial/incomplete zonder full-month failure.
 - Maandaudit heeft een read-only CLI wrapper en een pure audit service.
-- Documentatie is bijgewerkt om de uitbreiding van de roadmap zichtbaar open te houden.
-- Geen productie-mutatie is uitgevoerd in deze stap.
+- Tests en build-validatie zijn uitgevoerd; geen productie-mutatie is uitgevoerd in deze stap.
 
 ## Formules en controles
 
@@ -41,10 +41,11 @@
 - Nieuwe service-laag toegevoegd voor maandelijkse reconciliatie.
 - Nieuwe export-laag toegevoegd voor monthly balance artifacts.
 - Nieuwe audit-laag toegevoegd voor maandketencontrole.
-- Tests en build-validatie moeten nog worden gedraaid.
+- Transactie-gedreven raw-row balansafleiding is bevestigd met tests.
+- Reactieve fout voor de bekende partial juli 2026-maand is nu expliciet toegestaan in de auditlaag.
+- Tests en build-validatie zijn uitgevoerd en geslaagd.
 
 ## Resterende blockers
 
-- Validatie van de nieuwe maandservices
-- Finale bewijsupdate na test- en build-run
-- Eventuele vervolgafstemming over productie-audituitvoering
+- Read-only productie-verificatie met expliciet veilige runtime `DATABASE_URL`
+- Eventuele vervolgafstemming over live productie-audituitvoering

@@ -105,4 +105,54 @@ describe('monthly reconciliation audit', () => {
       'Maandketen is gebroken tussen opeenvolgende maanden.',
     ]));
   });
+
+  it('allows the known trailing partial month without treating it as a hard failure', () => {
+    const january = makeMonth({
+      year: 2026,
+      month: 1,
+      openingBalanceMinor: '200000',
+      incomeMinor: '4000',
+      expenseMinor: '1000',
+      closingBalanceMinor: '203000',
+    });
+    const february = makeMonth({
+      year: 2026,
+      month: 2,
+      openingBalanceMinor: '203000',
+      incomeMinor: '3000',
+      expenseMinor: '500',
+      closingBalanceMinor: '205500',
+    });
+    const marchPartial = makeMonth({
+      year: 2026,
+      month: 3,
+      openingBalanceMinor: '205500',
+      incomeMinor: '2000',
+      expenseMinor: '750',
+      closingBalanceMinor: '206750',
+      coverageStatus: 'PARTIAL',
+      status: 'INCOMPLETE',
+      closeEligible: false,
+      reasons: ['Gedeeltelijke of open afschriften kunnen niet worden gesloten.'],
+    });
+
+    const result = auditMonthlyReconciliations({
+      months: [marchPartial, february, january],
+      expectedCoverage: { 2026: [1, 2, 3] },
+    });
+
+    expect(result.status).toBe('PASSED');
+    expect(result.issues).toEqual([]);
+    expect(result.yearSummaries).toEqual([
+      expect.objectContaining({
+        year: 2026,
+        monthCount: 3,
+        transactionCount: 6,
+        openingBalanceMinor: '200000',
+        incomeMinor: '9000',
+        expenseMinor: '2250',
+        closingBalanceMinor: '206750',
+      }),
+    ]);
+  });
 });
