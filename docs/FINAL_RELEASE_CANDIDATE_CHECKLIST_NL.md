@@ -25,7 +25,7 @@ Dit commando voert uit:
 
 Verwacht resultaat: alle stappen slagen, exit 0.
 
-**Dit commando raakt géén productiedatabase, stuurt geen e-mail, installeert geen PDF-bibliotheek en maakt geen push.**
+**Dit commando raakt géén productiedatabase, stuurt geen e-mail, wijzigt geen runtimeconfiguratie en maakt geen push.**
 
 ---
 
@@ -88,7 +88,7 @@ Zie `docs/POST_APPROVAL_PROMPTS_NL.md` voor prompts die pas na goedkeuring gebru
 
 | # | Beslissing | Status |
 |---|-----------|--------|
-| 1 | PDF-renderer afhankelijkheid goedkeuren | Geblokkeerd — echte PDF-export |
+| 1 | PDF-renderer afhankelijkheid goedkeuren | AFGEROND — `pdfkit` renderer 2026-07-08 |
 | 2 | Productiemigratie goedkeuren | AFGEROND — schema finance gedeployed 2026-07-07 |
 | 3 | Historische import goedkeuren | AFGEROND — 902 transacties, 681 boekingen 2026-07-07 |
 | 4 | E-mailverzending goedkeuren | Geblokkeerd — rapportverzending |
@@ -104,7 +104,7 @@ Zie `docs/POST_APPROVAL_PROMPTS_NL.md` voor prompts die pas na goedkeuring gebru
 - Niet pushen naar remote (`git push`)
 - Geen productiedatabase aanraken
 - Geen `.env` wijzigen of secrets committen
-- Geen PDF-bibliotheek installeren
+- Geen nieuwe dependency installeren zonder aparte goedkeuring
 - Geen echte e-mail versturen
 - Geen historische owner-bestanden in Git kopiëren
 - Geen ruwe transactiedumps committen

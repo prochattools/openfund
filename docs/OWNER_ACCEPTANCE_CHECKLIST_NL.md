@@ -8,12 +8,12 @@ Afhankelijkheden: `docs/OWNER_REVIEW_FINAL_PACKET_NL.md`, `docs/OWNER_APPROVAL_I
 
 De repository staat klaar voor de volgende expliciete eigenaarsbeslissing. De owner-decision handoff commit `f2f7cbb` is post-push geverifieerd op `origin/main`; de post-push evidence, decision briefs, approval-intake validator en doc guards zijn gepubliceerd. De aanbevolen volgende beslissing is `postgres-version`.
 
-Deze checklist registreert alleen acceptatie van het lokale pakket. Deze checklist keurt geen productieactie, push, PDF-renderer, historische import, echte e-mail, secret rotation of PostgreSQL-productieversieclaim goed.
+Deze checklist registreert alleen acceptatie van het lokale pakket. Deze checklist keurt geen productieactie, push, historische import, echte e-mail, nieuwe dependency buiten de goedgekeurde PDF-renderer, secret rotation of PostgreSQL-productieversieclaim goed.
 
 ## 2. Wat lokaal klaar is
 
 - Financiële workflow voor import, review, reconciliatie, close en rapportage is lokaal/app klaar.
-- HTML- en XLSX-rapporten komen uit gesloten snapshots; PDF blijft een placeholder.
+- HTML-, XLSX- en PDF-rapporten komen uit gesloten snapshots; PDF gebruikt de goedgekeurde `pdfkit` renderer.
 - Dispatch-metadata bestaat; echte e-mail wordt niet verzonden.
 - Backup/restore rehearsal evidence is lokaal vastgelegd; productieback-up/herstel blijft owner-gated.
 - Owner review documenten, beslissingsoverzicht, approval intake, action plan, final packet en decision menu zijn aanwezig.
@@ -22,7 +22,6 @@ Deze checklist registreert alleen acceptatie van het lokale pakket. Deze checkli
 
 ## 3. Wat owner-gated blijft
 
-- Echte PDF-renderer dependency en echte PDF-output.
 - Productiecutover of productiemigratie.
 - Historische productie-import.
 - Echte e-mailverzending.
@@ -67,7 +66,7 @@ node scripts/owner-decision-menu.mjs
 
 Deze checklist geeft expliciet geen toestemming voor:
 
-- PDF-renderer installeren of echte PDF-output activeren.
+- Nieuwe dependency buiten de goedgekeurde PDF-renderer toevoegen.
 - Productiecutover of productiemigratie uitvoeren.
 - Historische productie-import uitvoeren.
 - Echte e-mail verzenden of een provider-call doen.
@@ -96,7 +95,7 @@ Owner acceptance completed and explicit owner approval received for decision <de
 Stop direct wanneer:
 
 - `git status --short` andere paden toont dan toegestane Graphify-artifacts of de expliciet bedoelde docs/tests/scripts/package-wijzigingen.
-- Een stap productie, verboden productiehost, MCP bridge, externe provider, echte e-mail, PDF dependency, owner-bestanden, secret rotation, historische productie-import, push of tags vereist.
+- Een stap productie, verboden productiehost, MCP bridge, externe provider, echte e-mail, nieuwe dependency, owner-bestanden, secret rotation, historische productie-import, push of tags vereist.
 - Een database-URL niet lokaal is voor een local-only rehearsal.
 - `.env`, owner source files, raw transaction rows, database dumps, secrets or production configuration would enter Git.
 - Een validatie faalt en één bounded repair attempt faalt.
@@ -105,5 +104,5 @@ Stop direct wanneer:
 
 - Plaats geen geheimen, hostnamen, wachtwoorden, API-keys, owner-bestandspaden, ruwe transactierijen of databasedumps in dit document.
 - Kopieer geen owner Excel/CSV/PDF-bestanden naar Git.
-- Claim geen productiecutover, historische productie-import, echte e-mail, echte PDF, push, tags, secret rotation of productie PostgreSQL-versiebevestiging zolang daar geen aparte owner-goedkeuring en evidence buiten Git voor is.
+- Claim geen productiecutover, historische productie-import, echte e-mail, push, tags, secret rotation of productie PostgreSQL-versiebevestiging zolang daar geen aparte owner-goedkeuring en evidence buiten Git voor is.
 - Claim geen nieuwe remote publish voor toekomstige lokale commits zolang die niet met aparte owner-goedkeuring is uitgevoerd.

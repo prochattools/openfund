@@ -49,13 +49,13 @@ GUARDS:
 
 const DECISION_PLANS = {
   pdf: {
-    title: 'Echte PDF-renderer implementeren',
-    approvalEvidence: ['Owner kiest PDF-bibliotheek.', 'Licentie/runtime-impact is akkoord.', 'Dependencywijziging is expliciet toegestaan.'],
+    title: 'Echte PDF-renderer afgerond',
+    approvalEvidence: ['Owner koos pdfkit.', 'Dependencywijziging is uitgevoerd binnen goedgekeurde scope.', 'Evidence is vastgelegd.'],
     preflight: ['node scripts/owner-decision-preflight.mjs --decision pdf', 'npm test -- --test-name-pattern "production blocker"'],
-    futurePrompt: 'Gebruik de PDF-sectie uit docs/POST_APPROVAL_PROMPTS_NL.md.',
+    futurePrompt: 'Geen PDF-prompt meer nodig; zie docs/REAL_PDF_RENDERER_EVIDENCE_NL.md.',
     validation: ['npm test -- --test-name-pattern "report artifact"', 'npm run build:server', 'npm run build', 'git diff --check'],
-    rollback: ['Revert PDF dependency en renderer commits.', 'Herstel PDF_BLOCKER wanneer validatie faalt.'],
-    stopRules: ['Geen bibliotheekkeuze.', 'Dependency-audit onduidelijk.', 'Build of rapportartifact-tests falen.'],
+    rollback: ['Revert PDF dependency en renderer commits.', 'Laat report snapshots ongemoeid.'],
+    stopRules: ['Build of rapportartifact-tests falen.', 'Scope raakt echte e-mail of productie.'],
   },
   'production-cutover': {
     title: 'Productiecutover voorbereiden of uitvoeren',

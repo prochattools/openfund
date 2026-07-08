@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Final owner review packet
 
-Status: final owner-review packet — schema cutover afgerond 2026-07-07; historische import voltooid 2026-07-07; database credential finalisatie voltooid; alle provider secrets geroteerd 2026-07-08; echte e-mail en PDF geblokkeerd
+Status: final owner-review packet — schema cutover afgerond 2026-07-07; historische import voltooid 2026-07-07; database credential finalisatie voltooid; alle provider secrets geroteerd 2026-07-08; echte PDF-renderer voltooid; echte e-mail geblokkeerd
 Taal: Nederlands
 
 ## 1. Huidige release-status
@@ -12,7 +12,7 @@ Veilige lokale status:
 - Financiële workflow lokaal/app klaar.
 - Historische loading lokaal/sanitized klaar; productie-import geblokkeerd.
 - Backup/restore live lokaal gerehearsed; productieback-up/herstel blijft geblokkeerd.
-- Rapporten HTML/XLSX klaar; echte PDF-renderer geblokkeerd.
+- Rapporten HTML/XLSX/PDF klaar; PDF-renderer gebruikt `pdfkit` voor report artifacts.
 - Dispatch-metadata klaar; echte e-mailverzending geblokkeerd.
 - Alle provider secrets geroteerd en toegepast op Dokploy runtime 2026-07-08: Clerk Secret Key, Resend API Key, New Relic License Key, en Request Access Secret.
 - Remote handoff commit `f2f7cbb` is post-push geverifieerd; er waren geen commits ahead of `origin/main` bij de publicatiecheck.
@@ -48,17 +48,17 @@ Deze commando's zijn lokaal en voeren geen productieactie uit.
 
 | Beslissing | Status |
 |-----------|--------|
-| Echte PDF-renderer | Geblokkeerd tot bibliotheekkeuze en dependency-goedkeuring |
+| Echte PDF-renderer | AFGEROND — `pdfkit` renderer 2026-07-08 |
 | Productiecutover | AFGEROND — schema finance gedeployed op PostgreSQL 15.8 op 2026-07-07 |
 | Historische productie-import | AFGEROND — 902 transacties (268+413+221), 681 boekingen op 2026-07-07 |
 | Secret-rotatie | AFGEROND — finance_user-credential geroteerd op 2026-07-07 |
 | App/provider geheimremediatie | AFGEROND — alle provider secrets geroteerd en toegepast 2026-07-08 |
-| Echte PDF-renderer | Geblokkeerd tot bibliotheekkeuze en dependency-goedkeuring |
 | Echte e-mailverzending | Geblokkeerd tot provider/secret-goedkeuring |
 
 Gebruik `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md` om het lokale owner-review pakket te accepteren zonder uitvoering. Gebruik `docs/OWNER_DECISION_MENU_NL.md` om daarna exact één volgende owner-gated beslissing te kiezen. Lees vóór goedkeuring ook de bijbehorende beslisbrief:
 
 - `docs/DECISION_BRIEF_PDF_RENDERER_NL.md`
+- `docs/REAL_PDF_RENDERER_EVIDENCE_NL.md`
 - `docs/DECISION_BRIEF_POSTGRES_VERSION_NL.md`
 - `docs/DECISION_BRIEF_PRODUCTION_CUTOVER_NL.md`
 - `docs/DECISION_BRIEF_HISTORICAL_IMPORT_NL.md`
@@ -73,9 +73,7 @@ Gebruik pas na expliciete eigenaargoedkeuring:
 
 ### PDF
 
-```text
-Owner approval received for PDF renderer decision. Use docs/OWNER_APPROVAL_INTAKE_NL.md and docs/POST_APPROVAL_PROMPTS_NL.md. Implement only the approved PDF renderer path, keep no-production/no-email/no-push constraints, validate report artifact tests and builds, and report exact commit evidence.
-```
+PDF-renderer is afgerond. Zie `docs/REAL_PDF_RENDERER_EVIDENCE_NL.md`.
 
 ### Productiecutover
 
@@ -109,7 +107,7 @@ Owner approval received for remote publish. Run push readiness preflight and rel
 - Geen ruwe transactiedumps of databasedumps in Git.
 - Geen historische productie-import.
 - Geen echte e-mailverzending.
-- Geen PDF-dependency installeren.
+- Geen nieuwe dependency installeren zonder aparte goedkeuring.
 - Geen nieuwe push of tags.
 - Geen secret-rotatie via Git.
 

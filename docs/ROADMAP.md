@@ -31,6 +31,7 @@ Phase 11 — Production historical import          COMPLETE (2026-07-07; 2024/20
 Phase 12 — Production secret rotation            COMPLETE (2026-07-07; finance_user credential rotated; old credential rejected; new credential verified; historical totals re-verified)
 Phase 13 — Production runtime credential update  COMPLETE (2026-07-07; final retained credential applied; Dokploy env updated; redeploy triggered; app health verified)
 Phase 14 — App/provider secret remediation       COMPLETE (2026-07-08; Clerk, Resend, and New Relic provider keys rotated and applied to Dokploy runtime; app redeployed; health/readiness verified)
+Phase 15 — Real PDF renderer                     COMPLETE (2026-07-08; pdfkit report artifact renderer; HTML/XLSX preserved; real email still blocked)
 ```
 
 ## Phase 0 — Governance and verified controls
@@ -221,13 +222,13 @@ Status: **complete** — REPORT-001 through REPORT-005 complete.
 - Show totals by `Klant`, `Type`, and `Category` using literal historical wording.
 - Separate transfers, savings, deposits, refunds, reversals, and restricted-purpose movements from ordinary operating subtotals while preserving every euro.
 - Add month trends and transaction drill-down.
-- Generate HTML email and XLSX from the same snapshot; keep PDF as a placeholder until a PDF renderer is owner-approved.
+- Generate HTML, XLSX, and PDF artifacts from the same immutable snapshot.
 - Require a separate final administrator approval click before sending.
 - Store report and dispatch hashes, recipients, sender, time, and metadata-only result; real e-mail sending remains blocked.
 
 ### Exit criteria
 
-- UI, HTML, XLSX, and PDF placeholder artifacts include the same snapshot evidence; real rendered PDF output requires owner approval of a dependency.
+- UI, HTML, XLSX, and PDF artifacts include the same snapshot evidence.
 - Sent reports reference a locked immutable snapshot.
 - A report cannot be sent from an open or unbalanced period.
 - Original source files remain separately downloadable.

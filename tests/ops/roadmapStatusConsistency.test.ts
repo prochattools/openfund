@@ -25,7 +25,7 @@ const allDocs = Object.entries(docs);
 
 describe('roadmap status consistency — RC4 gate', () => {
   it('implementation plan and handoff docs identify RC4 owner review, not RC3', () => {
-    expect(docs.implementationPlan).toContain('Current gate: owner decision selection after published RC4 owner-decision handoff');
+    expect(docs.implementationPlan).toContain('Current gate: owner decision selection after real PDF renderer completion');
     expect(docs.ownerHandoff).toContain('Eigenaaroverdracht (RC4)');
     expect(docs.ownerHandoff).toContain('### RC4-validatie in één stap');
     expect(docs.implementationPlan).not.toContain('Current gate: Release Candidate 3 owner handoff');
@@ -69,12 +69,12 @@ describe('roadmap status consistency — phase status agreement', () => {
 });
 
 describe('roadmap status consistency — blockers are explicit', () => {
-  it('real PDF remains blocked and docs do not imply rendered PDF is complete', () => {
-    expect(docs.roadmap).toContain('Generate HTML email and XLSX from the same snapshot; keep PDF as a placeholder until a PDF renderer is owner-approved.');
-    expect(docs.roadmap).toContain('PDF placeholder artifacts include the same snapshot evidence; real rendered PDF output requires owner approval');
-    expect(docs.releaseManifest).toContain('Echte PDF-renderer afhankelijkheid');
-    expect(docs.releaseManifest).toContain('PDF_BLOCKER');
-    expect(docs.roadmap).not.toContain('Generate HTML email, XLSX, and PDF from the same snapshot.');
+  it('real PDF renderer is complete and docs keep email blocked', () => {
+    expect(docs.roadmap).toContain('Generate HTML, XLSX, and PDF artifacts from the same immutable snapshot.');
+    expect(docs.roadmap).toContain('UI, HTML, XLSX, and PDF artifacts include the same snapshot evidence.');
+    expect(docs.releaseManifest).toContain('Echte PDF-renderer');
+    expect(docs.releaseManifest).toContain('pdfkit');
+    expect(docs.releaseManifest).toContain('Echte e-mailverzending');
   });
 
   it('real email remains blocked and dispatch is metadata-only', () => {
@@ -88,7 +88,6 @@ describe('roadmap status consistency — blockers are explicit', () => {
       'Productiemigratie',
       'Historische productie-import',
       'Echte e-mail',
-      'PDF',
       'PostgreSQL',
       'Push',
       'Geheimen',
@@ -106,7 +105,6 @@ describe('roadmap status consistency — blockers are explicit', () => {
       expect(content, name).not.toMatch(/productie(?:migratie|overstap|cutover).*voltooid/i);
       expect(content, name).not.toMatch(/historische productie-import (?:is )?(?:voltooid|succesvol uitgevoerd)/i);
       expect(content, name).not.toMatch(/echte e-mail(?:verzending)? is (?:verzonden|geactiveerd)/i);
-      expect(content, name).not.toMatch(/echte PDF (?:is )?(?:gegenereerd|geactiveerd)/i);
       expect(content, name).not.toMatch(/git push (?:is )?(?:uitgevoerd|voltooid)/i);
       expect(content, name).not.toMatch(/owner.*(?:Excel|CSV|PDF).*is in Git geplaatst/i);
     }

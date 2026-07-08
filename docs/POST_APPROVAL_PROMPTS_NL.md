@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Post-approval prompt pack
 
-Status: Release Candidate 6 — productie schema cutover, historische import, database credential finalisatie, en alle provider secrets (inclusief Clerk/Resend/New Relic) zijn afgerond 2026-07-08; resterende functionele blokkers: echte PDF-renderer en echte e-mailverzending
+Status: Release Candidate 6 — productie schema cutover, historische import, database credential finalisatie, alle provider secrets (inclusief Clerk/Resend/New Relic), en echte PDF-renderer zijn afgerond 2026-07-08; resterende functionele blocker: echte e-mailverzending
 Taal: Nederlands  
 Doel: klaarstaande prompts voor toekomstige owner-approved acties. Kopieer pas een prompt nadat de eigenaar de bijbehorende beslissing expliciet heeft goedgekeurd.
 
@@ -20,7 +20,7 @@ Algemene regels voor alle prompts:
 
 | # | Blocker | Beslisbrief | Prompt |
 |---|---------|-------------|--------|
-| 1 | Echte PDF-renderer | `docs/DECISION_BRIEF_PDF_RENDERER_NL.md` | §1 hieronder |
+| 1 | Echte PDF-renderer | `docs/REAL_PDF_RENDERER_EVIDENCE_NL.md` | Afgerond |
 | 2 | Echte e-mailverzending | `docs/DECISION_BRIEF_EMAIL_PROVIDER_NL.md` | §5 hieronder |
 
 Alle andere production hardening stappen zijn afgerond (2026-07-07).
@@ -28,46 +28,12 @@ Providerrotaties voor Clerk, Resend en New Relic zijn afgerond op 2026-07-08.
 
 ---
 
-## 1. Approve and implement real PDF renderer
+## 1. Real PDF renderer completed
 
 ```text
-You are working in yeshuaacademy-finance from <STARTING_COMMIT_PLACEHOLDER>.
-
-Owner approval received:
-- Real PDF renderer approved: <PDF_LIBRARY_NAME>
-
-Hard constraints:
-- Do not touch .graphifyignore or graphify-out/.
-- Do not edit .env.
-- Do not use production, external providers, email, owner files, or database dumps.
-- Do not push or tag.
-- Keep HTML/XLSX snapshot totals unchanged.
-- Add only the approved PDF dependency.
-
-Task:
-0. Lees `docs/DECISION_BRIEF_PDF_RENDERER_NL.md` en valideer de intake met `node scripts/owner-approval-intake-validator.mjs --decision pdf`.
-1. Install and wire <PDF_LIBRARY_NAME> as the real report PDF renderer.
-2. Replace the placeholder only where PDF_BLOCKER currently blocks real output.
-3. Add tests proving PDF output is generated from the same immutable snapshot totals as HTML and XLSX.
-4. Keep safe fallback/error behavior explicit.
-
-Validation:
-- npm test -- --test-name-pattern "production blocker"
-- npm test -- --test-name-pattern "report artifact"
-- npm test
-- npm run build:server
-- npm run build
-- git diff --check
-
-Commit policy:
-- Commit only PDF dependency, renderer, tests, and docs.
-
-Final report:
-- Dependency added
-- PDF artifact evidence
-- Tests/builds
-- Remaining blockers
-- Final git status
+Real PDF renderer is complete.
+Evidence: docs/REAL_PDF_RENDERER_EVIDENCE_NL.md.
+Remaining functional blocker: real email sending.
 ```
 
 ## 2. Confirm production PostgreSQL version

@@ -24,7 +24,7 @@ Deze checklist is de laatste handmatige controle vóór een toekomstige `git pus
 - [ ] Er zijn geen `.env`-wijzigingen.
 - [ ] Er zijn geen owner Excel/CSV/PDF-bronbestanden in Git geplaatst.
 - [ ] Er zijn geen ruwe transactiedumps of databasedumps in Git geplaatst.
-- [ ] PDF-rendererkeuze is niet geïnstalleerd zonder eigenaar; PDF blijft geblokkeerd.
+- [ ] Er zijn geen nieuwe dependencies buiten de goedgekeurde PDF-renderer toegevoegd.
 - [ ] Er is geen historische productie-import uitgevoerd.
 - [ ] Er is geen echte e-mail verzonden.
 - [ ] Er is geen productie, Dokploy, MCP bridge of `10.0.2.4` gebruikt.

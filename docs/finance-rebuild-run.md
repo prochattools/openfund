@@ -4,7 +4,7 @@ Date: 2026-07-02
 Run: `agent-f961650b-de17-4282-ab18-7a716cc72958`  
 Source: `yeshuaacademy-finance`  
 Branch: `main`  
-Status: Release Candidate 4 — RC5 hardening complete 2026-07-07; production schema cutover, historical import, database credential finalization, and Request Access Secret remediation complete; app health verified; RC6 update: all provider secret rotations (Clerk, Resend, New Relic) complete 2026-07-08; real email and real PDF remain blocked
+Status: Release Candidate 6 — production schema cutover, historical import, database credential finalization, all provider secret rotations, and real PDF renderer complete 2026-07-08; real email sending remains blocked
 
 ## RC2 Hardening Evidence
 
@@ -1323,11 +1323,11 @@ Phase 6 implementation is complete: REPORT-001 through REPORT-005 all implemente
 
 ### REPORT-004 — HTML, XLSX, PDF artifacts
 
-- `server/services/reportArtifactService.ts` — `generateHtmlArtifact`, `generateXlsxArtifact`, `generatePdfPlaceholder`, `generateAndStoreReportArtifacts`.
+- `server/services/reportArtifactService.ts` — `generateHtmlArtifact`, `generateXlsxArtifact`, `generatePdfArtifact`, `generateAndStoreReportArtifacts`.
 - All formats derive from one immutable snapshot; sha256 stored per artifact.
-- PDF blocked: no PDF library in package.json; `PDF_BLOCKER` constant documents the requirement.
-- `npm test -- --test-name-pattern "report artifact"`: 16 tests pass.
-- No new dependencies introduced; uses existing `xlsx` v0.18.5.
+- PDF renderer completed with owner-approved `pdfkit`; PDF artifacts store `application/pdf` bytes and return `pdfBlocker: null`.
+- `npm test -- --test-name-pattern "report artifact"`: report artifact tests pass.
+- No production, e-mail, runtime secret, owner-file, raw-row, or database dump changes introduced.
 
 ### REPORT-005 — Approval and dispatch metadata
 
@@ -1415,7 +1415,7 @@ Commit: `d51cfad docs: add Dutch administrator operating guide (OPS-001)`
   9. Periode afsluiten
   10. Periode heropenen
   11. Maand- en jaarrapporten
-  12. Rapportartefacten (incl. PDF_BLOCKER notice)
+  12. Rapportartefacten (historisch eerst met PDF-blocker; nu afgerond met `pdfkit`)
   13. Rapportgoedkeuring en verzendmetadata
   14. Bronbestand-downloads
   15. Wat niet te doen
@@ -1491,9 +1491,9 @@ Commit: `d51cfad docs: add Dutch administrator operating guide (OPS-001)`
 - No production, Dokploy, MCP bridge, `10.0.2.4`, `.env`, `.graphifyignore`, `graphify-out/`,
   owner-file copy, raw row dump, or push occurred.
 
-## Current gate: Phase 9 OPS-003 documentation alignment in progress
+## Current gate: real e-mail sending remains blocked
 
-Real PDF generation remains blocked: no PDF library is in package.json. The `PDF_BLOCKER` constant in `server/services/reportArtifactService.ts` documents the requirement. Real PDF requires explicit owner approval of the dependency before implementation.
+Real PDF generation is complete for report artifacts using owner-approved `pdfkit`. Evidence: `docs/REAL_PDF_RENDERER_EVIDENCE_NL.md`.
 
 Historical production import remains operator-gated and blocked through `server/services/historicalOwnerImportCommandService.ts`. The production path returns `production-blocked` and requires a separate explicit production option, reviewed dry-run acceptance, operator confirmation, and source-bound confirmation token before any real import can run.
 
@@ -1506,7 +1506,6 @@ The following remain prohibited without separate explicit approval:
 - No .env edit.
 - No production configuration change.
 - No new dependency installation without documented justification.
-- No real PDF generation (PDF_BLOCKER active; no PDF library approved).
 
 ## Phase 14 — App/provider secret remediation
 
@@ -1519,3 +1518,16 @@ Date: 2026-07-07
 - The app was redeployed and health verification passed.
 - Production readiness verification passed with unchanged aggregate totals: 1 workspace, 4 source files, 3 bank statements, 3 statement periods, 902 transactions, 681 bookings, 1 open/partial period, and 0 duplicate fingerprints.
 - No secret values, connection strings, hostnames, provider payloads, owner files, raw rows, or database dumps were written to Git.
+
+## Phase 15 — Real PDF renderer
+
+Date: 2026-07-08
+
+- Owner-approved `pdfkit` was added for server-side report artifact PDF rendering.
+- `generatePdfArtifact` now returns retained PDF bytes beginning with `%PDF`.
+- PDF report artifacts are stored with media type `application/pdf`.
+- `generateAndStoreReportArtifacts` returns `pdfBlocker: null`.
+- HTML and XLSX generation paths remain unchanged.
+- The PDF artifact uses the same immutable snapshot id, snapshot hash, generated timestamp, totals, transaction count, and aggregate report lines as HTML and XLSX.
+- No production access, real e-mail, runtime secret change, owner files, raw rows, database dumps, tags, or force push occurred in the implementation.
+- Remaining functional blocker: real e-mail sending.

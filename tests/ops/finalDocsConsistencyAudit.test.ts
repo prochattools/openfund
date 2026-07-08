@@ -71,6 +71,7 @@ describe('final docs consistency — required docs exist', () => {
     'docs/FINAL_READINESS_AUDIT_NL.md',
     'docs/FINAL_RELEASE_CANDIDATE_CHECKLIST_NL.md',
     'docs/RELEASE_MANIFEST_NL.md',
+    'docs/REAL_PDF_RENDERER_EVIDENCE_NL.md',
     'docs/ROADMAP.md',
   ];
 
@@ -106,7 +107,6 @@ describe('final docs consistency — no false production claims', () => {
     { pattern: /productie(?:migratie|overstap|cutover).*voltooid/i, label: 'productiecutover voltooid' },
     { pattern: /historische productie-import (?:is )?(?:voltooid|succesvol uitgevoerd)/i, label: 'historische import voltooid' },
     { pattern: /echte e-mail(?:verzending)? is (?:verzonden|geactiveerd)/i, label: 'echte e-mail verzonden' },
-    { pattern: /echte PDF (?:is )?(?:gegenereerd|geactiveerd)/i, label: 'echte PDF gegenereerd' },
     { pattern: new RegExp(`${publishCommandText} (?:is )?(?:uitgevoerd|voltooid)`, 'i'), label: `${publishCommandText} uitgevoerd` },
   ];
 

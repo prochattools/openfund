@@ -15,16 +15,16 @@ export const DECISION_MENU = [
   {
     key: 'pdf',
     label: 'Echte PDF-renderer',
-    status: 'GEBLOKKEERD TOT EXPLICIETE PDF-GOEDKEURING',
-    requiredApproval: 'Owner kiest de PDF-bibliotheek en keurt dependency, licentie en runtime-impact goed.',
+    status: 'AFGEROND 2026-07-08',
+    requiredApproval: 'Geen nieuwe approval nodig; pdfkit is goedgekeurd en evidence is vastgelegd.',
     safePreflightCommand: 'node scripts/owner-decision-preflight.mjs --decision pdf',
-    nextPromptDoc: 'docs/POST_APPROVAL_PROMPTS_NL.md',
+    nextPromptDoc: 'docs/REAL_PDF_RENDERER_EVIDENCE_NL.md',
     decisionBriefDoc: 'docs/DECISION_BRIEF_PDF_RENDERER_NL.md',
     approvalIntakeCommand: 'node scripts/owner-approval-intake-validator.mjs --decision pdf',
     stopRules: [
-      'Stop bij ontbrekende bibliotheekkeuze.',
-      'Stop bij dependency- of licentietwijfel.',
-      'Stop als echte PDF-output wordt gevraagd zonder aparte approval.',
+      'Stop bij verzoek om andere PDF-dependency zonder aparte approval.',
+      'Stop bij scope buiten report artifact PDF output.',
+      'Stop als echte e-mail wordt gevraagd zonder aparte approval.',
     ],
   },
   {
@@ -193,7 +193,7 @@ export function renderOwnerDecisionMenu(menu) {
   lines.push('');
   lines.push('## Stopregels voor alle keuzes');
   lines.push('');
-  lines.push(`- Stop bij productie, verboden productiehost, ${internalBridgeLabel}, externe provider, echte e-mail, PDF dependency, owner-bestanden, historische productie-import, push, tags, \`.env\` wijziging of geheim in output.`);
+  lines.push(`- Stop bij productie, verboden productiehost, ${internalBridgeLabel}, externe provider, echte e-mail, nieuwe dependency, owner-bestanden, historische productie-import, push, tags, \`.env\` wijziging of geheim in output.`);
   lines.push('- Stop bij falende validatie na één bounded repair attempt.');
   lines.push('- Gebruik `docs/OWNER_APPROVAL_INTAKE_NL.md` vóór elke goedgekeurde uitvoering.');
   lines.push('- Gebruik `docs/OWNER_APPROVAL_INTAKE_VALIDATION_NL.md` om goedkeuringsinput statisch te controleren vóór uitvoering.');

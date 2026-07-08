@@ -222,11 +222,10 @@ Alle euro's zijn zichtbaar; alleen OPERATING telt mee in de operationele subtota
 
 ## 12. Rapportartefacten
 
-Genereer HTML, XLSX en PDF-plaatshouder via `POST /api/reports/:snapshotId/artifacts`.
+Genereer HTML-, XLSX- en PDF-artefacten via `POST /api/reports/:snapshotId/artifacts`.
 
-- HTML en XLSX worden gegenereerd uit het immutable snapshot.
-- **PDF is een plaatshouder.** Echte PDF-generatie vereist een door de eigenaar goedgekeurde afhankelijkheid.
-  De constante `PDF_BLOCKER` in `server/services/reportArtifactService.ts` documenteert de vereiste.
+- HTML, XLSX en PDF worden gegenereerd uit hetzelfde immutable snapshot.
+- PDF wordt server-side gegenereerd met de goedgekeurde `pdfkit` renderer en opgeslagen als `application/pdf`.
 - Alle artefacten zijn SHA-256 gehasht en gekoppeld aan het snapshot-ID.
 
 ---
@@ -276,7 +275,7 @@ Het systeem stuurt het originele bestand terug met de originele bestandsnaam en 
 | Productie-import zonder goedkeuring van de eigenaar | Historische import is operator-gecontroleerd en geblokkeerd in de productie-codepath |
 | Eigenaar-bestanden (XLSX, CSV, PDF) in Git opslaan | Privacybescherming en veiligheidsvereiste; bestanden zijn al intern bewaard |
 | E-mail verzenden zonder geconfigureerde provider | Het systeem heeft geen verzendprovider geconfigureerd; verzending is intentioneel geblokkeerd |
-| Echte PDF genereren vóór goedkeuring van afhankelijkheid | `PDF_BLOCKER` is actief; voeg geen PDF-bibliotheek toe zonder eigenaargoedkeuring |
+| Nieuwe dependencies toevoegen zonder goedkeuring | Alleen `pdfkit` is goedgekeurd voor PDF-artefacten; andere dependencies vereisen aparte goedkeuring |
 | Productieconfiguratie wijzigen | Geen wijzigingen in productieconfiguratie zonder afzonderlijk goedgekeurd plan |
 | Prisma-migraties aanmaken zonder noodzaak | Migraties vereisen validatie op een disposable lokale database |
 | Secrets of inloggegevens committen | Gebruik `.env` voor lokale inloggegevens; nooit committen |
@@ -329,16 +328,16 @@ Het systeem stuurt het originele bestand terug met de originele bestandsnaam en 
 3. Genereer een nieuw snapshot.
 4. Keur het nieuwe snapshot opnieuw goed.
 
-### PDF-plaatshouderblokkering
+### PDF-artefact controleren
 
-**Symptoom**: `POST /api/reports/:snapshotId/artifacts` geeft een `pdfBlocker`-veld terug in het antwoord.
+**Symptoom**: `POST /api/reports/:snapshotId/artifacts` geeft geen PDF-artefact of geen `application/pdf` media type terug.
 
-**Verklaring**: echte PDF-generatie is intentioneel geblokkeerd totdat een PDF-bibliotheek is goedgekeurd door de eigenaar. De constante `PDF_BLOCKER` in `server/services/reportArtifactService.ts` documenteert de vereiste.
+**Verklaring**: PDF-generatie hoort server-side via `pdfkit` te gebeuren vanuit hetzelfde immutable snapshot als HTML en XLSX.
 
 **Actie**:
-1. Gebruik de HTML- en XLSX-artefacten in de tussentijd.
-2. Vraag de eigenaar om een PDF-bibliotheek goed te keuren voordat PDF-generatie wordt geïmplementeerd.
-3. Voeg **geen** PDF-bibliotheek toe zonder expliciete goedkeuring.
+1. Controleer of het snapshot bestaat en de verwachte snapshot-hash is meegegeven.
+2. Draai `npm test -- --test-name-pattern "report artifact"`.
+3. Voeg geen andere PDF-bibliotheek toe zonder expliciete goedkeuring.
 
 ---
 

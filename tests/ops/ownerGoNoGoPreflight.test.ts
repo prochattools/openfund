@@ -38,10 +38,10 @@ Status: Release Candidate 4 — final owner handoff polish
 
 | Release evidence validated through | 0123456789abcdef0123456789abcdef01234567 |
 
-| 1 | Echte PDF-renderer afhankelijkheid | PDF_BLOCKER actief |
+| 1 | Echte PDF-renderer | AFGEROND met pdfkit |
 | 2 | Productiemigratie en cutover | Vereist eigenaargoedkeuring |
 | 3 | Historische productie-import (2024/2025/2026) | Operator-gated |
-| 4 | Echte e-mailverzending | RESEND_API_KEY niet geconfigureerd |
+| 4 | Echte e-mailverzending | Provider-call geblokkeerd |
 | 5 | PostgreSQL-productieversie bevestigen | Vereist verificatie |
 | 6 | Push naar remote | Vereist expliciete eigenaargoedkeuring |
 | 7 | Geheimen roteren | Vereist productievoorbereiding buiten Git |

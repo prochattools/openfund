@@ -38,13 +38,13 @@ const REQUIRED_FINAL_DOCS = [
   'docs/FINAL_READINESS_AUDIT_NL.md',
   'docs/FINAL_RELEASE_CANDIDATE_CHECKLIST_NL.md',
   'docs/RELEASE_MANIFEST_NL.md',
+  'docs/REAL_PDF_RENDERER_EVIDENCE_NL.md',
   'docs/ROADMAP.md',
   'docs/IMPLEMENTATION_PLAN.md',
   'docs/ADMIN_OPERATING_GUIDE_NL.md',
 ];
 
 const REQUIRED_BLOCKER_PHRASES = [
-  { label: 'PDF-renderer geblokkeerd', phrases: ['PDF', 'pdf'] },
   { label: 'Productiecutover geblokkeerd', phrases: ['Productiemigratie', 'productiecutover', 'Productiecutover', 'cutover'] },
   { label: 'Historische import geblokkeerd', phrases: ['Historische productie-import', 'historische productie', 'historische import'] },
   { label: 'E-mailverzending geblokkeerd', phrases: ['e-mail', 'E-mail', 'echte e-mail'] },
@@ -61,7 +61,6 @@ const FORBIDDEN_EXECUTED_CLAIMS = [
   { pattern: /^(?!- \[ \]).*productie(?:migratie|overstap|cutover).*(?:is )?voltooid/im, label: 'productiecutover voltooid' },
   { pattern: /^(?!- \[ \]).*historische productie-import (?:is )?(?:voltooid|succesvol uitgevoerd)/im, label: 'historische import voltooid' },
   { pattern: /echte e-mail(?:verzending)? is (?:verzonden|geactiveerd)/i, label: 'echte e-mail verzonden' },
-  { pattern: /echte PDF (?:is )?(?:gegenereerd|geactiveerd)/i, label: 'echte PDF gegenereerd' },
   { pattern: new RegExp(`${publishCommandText} (?:is )?(?:uitgevoerd|voltooid)`, 'i'), label: `${publishCommandText} uitgevoerd` },
   { pattern: /owner.*(?:Excel|CSV|PDF).*is in Git geplaatst/i, label: 'owner-bestanden in Git' },
   { pattern: /secrets? rota(?:tion|tie).*(?:voltooid|completed|uitgevoerd)/i, label: 'secret rotation voltooid' },
@@ -129,6 +128,7 @@ const NEW_FINAL_OWNER_DOCS = [
   'docs/FINAL_READINESS_AUDIT_NL.md',
   'docs/FINAL_RELEASE_CANDIDATE_CHECKLIST_NL.md',
   'docs/RELEASE_MANIFEST_NL.md',
+  'docs/REAL_PDF_RENDERER_EVIDENCE_NL.md',
 ];
 
 function readDoc(repoRoot, path) {

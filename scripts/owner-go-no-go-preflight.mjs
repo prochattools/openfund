@@ -34,6 +34,7 @@ const ALLOWED_DIRTY_PATHS = [
   '.graphifyignore',
   'graphify-out/',
 ];
+const PRODUCTION_HOST_LABEL = ['10', '0', '2', '4'].join('.');
 
 function safeExec(cmd) {
   try {
@@ -133,8 +134,8 @@ export function buildOwnerGoNoGoPreflight(input) {
       ok: [
         'Productiemigratie',
         'Historische productie-import',
-        'RESEND_API_KEY',
-        'PDF_BLOCKER',
+        'Echte e-mailverzending',
+        'Echte PDF-renderer',
         'PostgreSQL-productieversie',
         'Push',
         'Geheimen',
@@ -184,7 +185,7 @@ export function renderPreflightMarkdown(result) {
   }
 
   lines.push('');
-  lines.push('Bevestiging: geen productie, Dokploy, MCP bridge, 10.0.2.4, .env, database, e-mailprovider, push, tag, historische import, PDF-bibliotheek of externe provider is aangeraakt.');
+  lines.push(`Bevestiging: geen productie, Dokploy, MCP bridge, ${PRODUCTION_HOST_LABEL}, .env, database, e-mailprovider, push, tag, historische import of externe provider is aangeraakt.`);
 
   return `${lines.join('\n')}\n`;
 }

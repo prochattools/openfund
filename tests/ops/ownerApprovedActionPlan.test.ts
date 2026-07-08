@@ -83,7 +83,7 @@ describe('owner approved action plan — main entrypoint', () => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
     expect(main([])).toBe(0);
     const output = String(log.mock.calls[0]?.[0] ?? '');
-    expect(output).toContain('Echte PDF-renderer implementeren');
+    expect(output).toContain('Echte PDF-renderer afgerond');
     expect(output).toContain('DRY-RUN PLAN ONLY — GEEN UITVOERING');
     const after = existsSync(outputPath) ? readFileSync(outputPath, 'utf-8') : null;
     expect(after).toBe(before);
@@ -106,7 +106,7 @@ describe('owner approved action plan — main entrypoint', () => {
       expect(main(['--decision', 'pdf', '--write'])).toBe(0);
       const after = readFileSync(outputPath, 'utf-8');
       expect(after).toContain('DRY-RUN PLAN ONLY — GEEN UITVOERING');
-      expect(after).toContain('Echte PDF-renderer implementeren');
+      expect(after).toContain('Echte PDF-renderer afgerond');
       expect(String(log.mock.calls[0]?.[0] ?? '')).toContain('PLAN GEREED VOOR REVIEW');
     } finally {
       if (before === null) {

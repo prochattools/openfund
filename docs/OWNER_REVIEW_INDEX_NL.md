@@ -152,7 +152,7 @@ node scripts/owner-decision-preflight.mjs --decision secret-rotation
 
 Stop direct wanneer:
 - `git status --short` meer toont dan `.graphifyignore` of `graphify-out/`.
-- Een opdracht productie, forbidden hosts, MCP bridge, externe provider, echte e-mail, PDF dependency, owner-bestanden, secret rotation, historische productie-import, of push vereist.
+- Een opdracht productie, forbidden hosts, MCP bridge, externe provider, echte e-mail, nieuwe dependency, owner-bestanden, secret rotation, historische productie-import, of push vereist.
 - Een DB URL niet lokaal is voor een local-only rehearsal.
 - `.env`, owner source files, raw rows, database dumps, or production config would enter Git.
 - Een validatie faalt en één bounded repair attempt faalt.

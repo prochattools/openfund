@@ -17,35 +17,29 @@ Dit document bevat de beslissingen die de eigenaar moet nemen voordat de applica
 
 ### Wat dit mogelijk maakt
 
-Een echte PDF-versie van maandelijkse en jaarlijkse rapporten, naast de al werkende HTML- en XLSX-versies. Momenteel wordt een placeholder gegenereerd (`PDF_BLOCKER` actief).
+Een echte PDF-versie van maandelijkse en jaarlijkse rapporten, naast de al werkende HTML- en XLSX-versies. Dit is afgerond met `pdfkit`; zie `docs/REAL_PDF_RENDERER_EVIDENCE_NL.md`.
 
-### Wat geblokkeerd blijft zonder goedkeuring
+### Status
 
-Rapporten kunnen niet als PDF worden gedownload of verzonden. HTML en XLSX werken volledig.
+PDF-artefacten worden server-side gegenereerd en opgeslagen als `application/pdf`. Echte e-mailverzending blijft apart geblokkeerd.
 
 ### Veiligheidschecks vóór uitvoering
 
-- [ ] Controleer of de gekozen bibliotheek (bijv. `puppeteer`, `pdfmake`, `@react-pdf/renderer`) in de afhankelijkheden van dit project past (licentietype, grootte, serverbelasting).
-- [ ] Voer `npm audit` uit na installatie.
-- [ ] Verifieer dat de server TypeScript-build slaagt na toevoeging.
-- [ ] Verifieer dat bestaande tests slagen.
+- [x] `pdfkit` gekozen en toegevoegd.
+- [x] Report artifact tests bijgewerkt.
+- [x] Geen productie, e-mail, secrets, owner-bestanden, raw rows of dumps gebruikt.
 
 ### Terugrolregel
 
-Als de build of tests mislukken na installatie van de PDF-bibliotheek: `git revert` de afhankelijkheidswijziging en verwijder de bibliotheek.
+Als een latere PDF-regressie optreedt: revert de dependency- en rendererwijziging en laat report snapshots ongemoeid.
 
 ### Beslissing
 
-- [ ] **Goedgekeurd** — installeer `____________` (naam bibliotheek invullen)
-- [ ] **Uitgesteld** — HTML en XLSX zijn voldoende voor nu
+- [x] **Afgerond** — `pdfkit`
 
 ### Volgende prompt na goedkeuring
 
-```
-Installeer [naam bibliotheek] als PDF-renderer voor reportArtifactService.ts.
-Vervang generatePdfPlaceholder door een echte renderer.
-Verifieer: npm test, npm run build:server, npm run build, git diff --check.
-```
+Geen PDF-prompt meer nodig. Remaining functional prompt: e-mailprovider zonder echte verzending totdat apart goedgekeurd.
 
 ---
 

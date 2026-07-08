@@ -120,20 +120,20 @@ Gegenereerd op: ${generatedAt} (RC4)
 
 ---
 
-## Openstaande blockers vóór productie
+## Beslissingsstatus vóór productie
 
-De volgende blokkades zijn nog van kracht. Ze mogen **NIET** worden omzeild zonder expliciete eigenaargoedkeuring:
+De volgende statusregels tonen wat afgerond is en welke blokkades nog van kracht zijn. Openstaande blokkades mogen **NIET** worden omzeild zonder expliciete eigenaargoedkeuring:
 
 | # | Blocker | Reden |
 |---|---------|-------|
-| 1 | Echte PDF-renderer afhankelijkheid | \`PDF_BLOCKER\` actief; geen goedgekeurde bibliotheek |
-| 2 | Productiemigratie en cutover | Vereist expliciete eigenaargoedkeuring |
-| 3 | Historische productie-import (2024/2025/2026) | Operator-gated; vereist eigenaargoedkeuring en dry-run |
-| 4 | Echte e-mailverzending | \`RESEND_API_KEY\` niet geconfigureerd; no-op modus actief |
-| 5 | PostgreSQL-productieversie bevestigen | Vereist verificatie bij hostingprovider vóór cutover |
-| 6 | Live backup/restore rehearsal | VOLTOOID op 2026-07-05 (RC3); productieback-up/herstel blijft geblokkeerd tot eigenaargoedkeuring |
-| 7 | Nieuwe push naar remote | Niet nodig voor de gepubliceerde handoff; vereist opnieuw expliciete eigenaargoedkeuring voor toekomstige lokale commits |
-| 8 | Geheimen roteren | Vereist productievoorbereiding buiten Git vóór cutover |
+| 1 | Productiemigratie en cutover | AFGEROND 2026-07-07 |
+| 2 | Historische productie-import (2024/2025/2026) | AFGEROND 2026-07-07 |
+| 3 | Echte e-mailverzending | Provider-call en echte verzending blijven geblokkeerd |
+| 4 | PostgreSQL-productieversie bevestigen | AFGEROND 2026-07-07 |
+| 5 | Live backup/restore rehearsal | VOLTOOID op 2026-07-05 (RC3); productieback-up/herstel blijft geblokkeerd tot eigenaargoedkeuring |
+| 6 | Nieuwe push naar remote | Niet nodig voor de gepubliceerde handoff; vereist opnieuw expliciete eigenaargoedkeuring voor toekomstige lokale commits |
+| 7 | Geheimen roteren | AFGEROND 2026-07-07 |
+| 8 | Echte PDF-renderer | AFGEROND 2026-07-08 met \`pdfkit\`; zie \`docs/REAL_PDF_RENDERER_EVIDENCE_NL.md\` |
 
 ---
 
@@ -183,7 +183,7 @@ npm run preflight:next-owner-decision
 | Geen databasedumps in Git | BEVESTIGD |
 | Geen historische productie-import uitgevoerd | BEVESTIGD |
 | Geen echte e-mail verzonden | BEVESTIGD |
-| Geen PDF-bibliotheek geïnstalleerd | BEVESTIGD |
+| PDF-bibliotheek alleen voor goedgekeurde renderer geïnstalleerd | BEVESTIGD — \`pdfkit\` |
 | Geen Dokploy of ${forbiddenHostLabel} gebruikt | BEVESTIGD |
 
 ---

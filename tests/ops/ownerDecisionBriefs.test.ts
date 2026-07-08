@@ -17,6 +17,7 @@ const decisionBriefs = [
     path: 'docs/DECISION_BRIEF_PDF_RENDERER_NL.md',
     title: 'PDF-renderer',
     notOccurredClaim: 'installeert niets',
+    completed: true,
   },
   {
     key: 'postgres-version',
@@ -95,15 +96,19 @@ describe('owner decision briefs — static documentation guard', () => {
     }
   });
 
-  it('each brief says the status is blocked', () => {
+  it('each brief says the correct owner-decision status', () => {
     for (const brief of decisionBriefs) {
       const content = readBrief(brief.path);
-      expect(content).toContain('Status: Geblokkeerd');
+      if (brief.completed) {
+        expect(content).toContain('Status: Goedgekeurd en geïmplementeerd');
+      } else {
+        expect(content).toContain('Status: Geblokkeerd');
+      }
       expect(content).toContain(brief.title);
     }
   });
 
-  it('each brief includes approval evidence, preflight, validation, rollback, stop rules, and future prompt', () => {
+  it('each brief includes approval evidence, preflight, validation, rollback, stop rules, and the relevant prompt or evidence section', () => {
     for (const brief of decisionBriefs) {
       const content = readBrief(brief.path);
       expect(content).toContain('Vereiste owner approval evidence');
@@ -111,15 +116,19 @@ describe('owner decision briefs — static documentation guard', () => {
       expect(content).toContain('Validatiepoorten');
       expect(content).toContain('Rollbackplan');
       expect(content).toContain('Stopregels');
-      expect(content).toContain('Exacte toekomstige approval prompt');
+      expect(content).toContain(brief.completed ? 'Afgerond bewijs' : 'Exacte toekomstige approval prompt');
     }
   });
 
-  it('each brief confirms it does not execute anything', () => {
+  it('each pending brief confirms it does not execute anything and the completed PDF brief stays sanitized', () => {
     for (const brief of decisionBriefs) {
       const content = readBrief(brief.path);
-      expect(content).toContain('Deze brief voert niets uit');
-      expect(content).toContain(brief.notOccurredClaim);
+      if (brief.completed) {
+        expect(content).toContain('Deze brief bevat geen secrets');
+      } else {
+        expect(content).toContain('Deze brief voert niets uit');
+        expect(content).toContain(brief.notOccurredClaim);
+      }
     }
   });
 
@@ -132,6 +141,9 @@ describe('owner decision briefs — static documentation guard', () => {
 
   it('briefs do not claim gated actions have already occurred', () => {
     for (const brief of decisionBriefs) {
+      if (brief.completed) {
+        continue;
+      }
       const content = readBrief(brief.path);
       expect(content, brief.path).not.toMatch(falseExecutedClaimPattern);
     }

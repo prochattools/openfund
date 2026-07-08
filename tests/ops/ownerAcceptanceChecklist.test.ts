@@ -14,7 +14,6 @@ const checklistPath = resolve(repoRoot, 'docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md')
 const checklist = existsSync(checklistPath) ? readFileSync(checklistPath, 'utf-8') : '';
 
 const ownerGatedBlockers = [
-  'Echte PDF-renderer',
   'Productiecutover',
   'Historische productie-import',
   'Echte e-mailverzending',
@@ -67,7 +66,7 @@ describe('owner acceptance checklist — static owner packet guard', () => {
   it('says acceptance does not approve gated execution', () => {
     for (const phrase of [
       'geen toestemming',
-      'PDF-renderer installeren',
+      'Nieuwe dependency buiten de goedgekeurde PDF-renderer',
       'Productiecutover',
       'Historische productie-import',
       'Echte e-mail',

@@ -14,7 +14,7 @@ Taal: Nederlands
 
 | Sleutel | Beslissing | Status | Veilige preflight | Beslisbrief | Promptdocument |
 |---------|------------|--------|-------------------|-------------|----------------|
-| `pdf` | Echte PDF-renderer | GEBLOKKEERD TOT EXPLICIETE PDF-GOEDKEURING | `node scripts/owner-decision-preflight.mjs --decision pdf` | `docs/DECISION_BRIEF_PDF_RENDERER_NL.md` | `docs/POST_APPROVAL_PROMPTS_NL.md` |
+| `pdf` | Echte PDF-renderer | AFGEROND 2026-07-08 | `node scripts/owner-decision-preflight.mjs --decision pdf` | `docs/DECISION_BRIEF_PDF_RENDERER_NL.md` | `docs/REAL_PDF_RENDERER_EVIDENCE_NL.md` |
 | `production-cutover` | Productiecutover | GEBLOKKEERD TOT EXPLICIETE CUTOVER-GOEDKEURING | `node scripts/owner-decision-preflight.mjs --decision production-cutover` | `docs/DECISION_BRIEF_PRODUCTION_CUTOVER_NL.md` | `docs/POST_APPROVAL_PROMPTS_NL.md` |
 | `historical-import` | Historische productie-import | GEBLOKKEERD TOT OWNER-FILES EN DRY-RUN ACCEPTATIE ZIJN GOEDGEKEURD | `node scripts/owner-decision-preflight.mjs --decision historical-import` | `docs/DECISION_BRIEF_HISTORICAL_IMPORT_NL.md` | `docs/POST_APPROVAL_PROMPTS_NL.md` |
 | `email` | Echte e-mailverzending | GEBLOKKEERD TOT PROVIDER, SECRET EN SEND-GOEDKEURING ZIJN GOEDGEKEURD | `node scripts/owner-decision-preflight.mjs --decision email` | `docs/DECISION_BRIEF_EMAIL_PROVIDER_NL.md` | `docs/POST_APPROVAL_PROMPTS_NL.md` |
@@ -25,17 +25,17 @@ Taal: Nederlands
 ## Echte PDF-renderer
 
 Sleutel: `pdf`
-Status: GEBLOKKEERD TOT EXPLICIETE PDF-GOEDKEURING
-Vereiste approval: Owner kiest de PDF-bibliotheek en keurt dependency, licentie en runtime-impact goed.
+Status: AFGEROND 2026-07-08
+Vereiste approval: Geen nieuwe approval nodig; pdfkit is goedgekeurd en evidence is vastgelegd.
 Veilige preflight: `node scripts/owner-decision-preflight.mjs --decision pdf`
 Beslisbrief: `docs/DECISION_BRIEF_PDF_RENDERER_NL.md`
 Approval intake validator: `node scripts/owner-approval-intake-validator.mjs --decision pdf`
-Volgende prompt doc: `docs/POST_APPROVAL_PROMPTS_NL.md`
+Volgende prompt doc: `docs/REAL_PDF_RENDERER_EVIDENCE_NL.md`
 
 Stopregels:
-- Stop bij ontbrekende bibliotheekkeuze.
-- Stop bij dependency- of licentietwijfel.
-- Stop als echte PDF-output wordt gevraagd zonder aparte approval.
+- Stop bij verzoek om andere PDF-dependency zonder aparte approval.
+- Stop bij scope buiten report artifact PDF output.
+- Stop als echte e-mail wordt gevraagd zonder aparte approval.
 
 ## Productiecutover
 
@@ -129,7 +129,7 @@ Stopregels:
 
 ## Stopregels voor alle keuzes
 
-- Stop bij productie, verboden productiehost, MCP bridge, externe provider, echte e-mail, PDF dependency, owner-bestanden, historische productie-import, push, tags, `.env` wijziging of geheim in output.
+- Stop bij productie, verboden productiehost, MCP bridge, externe provider, echte e-mail, nieuwe dependency, owner-bestanden, historische productie-import, push, tags, `.env` wijziging of geheim in output.
 - Stop bij falende validatie na één bounded repair attempt.
 - Gebruik `docs/OWNER_APPROVAL_INTAKE_NL.md` vóór elke goedgekeurde uitvoering.
 - Gebruik `docs/OWNER_APPROVAL_INTAKE_VALIDATION_NL.md` om goedkeuringsinput statisch te controleren vóór uitvoering.

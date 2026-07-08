@@ -86,7 +86,7 @@ Gebruik voor de volgende stap:
 Stop direct wanneer:
 
 - De worktree andere paden bevat dan toegestane lokale Graphify-artifacts of expliciet bedoelde docs/tests/scripts-wijzigingen.
-- Een stap productie, verboden productiehost, interne bridge, externe provider, echte e-mail, PDF dependency, historische import, secret rotation of tag creation vereist.
+- Een stap productie, verboden productiehost, interne bridge, externe provider, echte e-mail, nieuwe dependency, historische import, secret rotation of tag creation vereist.
 - Een owner Excel/CSV/PDF-bronbestand, ruwe transactierij, databasedump, productiecredential of `.env` in Git zou komen.
 - Een non-local database-URL nodig is voor een local-only stap.
 - Validatie of high-risk scan faalt en een bounded repair attempt faalt.

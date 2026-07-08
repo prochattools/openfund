@@ -1,25 +1,23 @@
 # Yeshua Academy Finance — Decision brief: PDF-renderer
 
-Status: Geblokkeerd tot expliciete eigenaargoedkeuring
+Status: Goedgekeurd en geïmplementeerd op 2026-07-08
 Taal: Nederlands
 
 ## 1. Beslissing
 
-Kies of en welke echte PDF-renderer later wordt geïmplementeerd. Deze brief vergelijkt keuzecriteria; er wordt geen dependency geïnstalleerd.
+De eigenaar heeft `pdfkit` goedgekeurd als server-side PDF-renderer voor report artifact PDF output. De implementatie is afgerond en vastgelegd in `docs/REAL_PDF_RENDERER_EVIDENCE_NL.md`.
 
 ## 2. Vereiste owner approval evidence
 
-- Naam van de gekozen PDF-bibliotheek.
-- Licentie en runtime-impact zijn beoordeeld.
-- Eigenaar keurt dependencywijziging expliciet goed.
-- Scope bevestigt dat alleen PDF-rendering wordt aangepakt.
+- Gekozen bibliotheek: `pdfkit`.
+- Dependencywijziging expliciet toegestaan.
+- Scope bevestigd: alleen report artifact PDF output.
+- Real email sending blijft buiten scope.
 
 ## 3. Vereiste inputs buiten Git
 
-- Bibliotheekkeuze en rationale.
-- Licentiebeoordeling.
-- Performance- en hostingimpact.
-- Rollback-eigenaar.
+- Geen inputs meer nodig voor PDF-rendererimplementatie.
+- Real email sending vereist nog aparte goedkeuring.
 
 ## 4. Veilige preflight commands
 
@@ -36,23 +34,23 @@ npm test -- --test-name-pattern "report artifact"
 npm run build:server
 ```
 
-## 6. Verboden acties vóór approval
+## 6. Veiligheidsgrenzen
 
-- Geen PDF dependency installeren.
-- Geen echte PDF-output claimen.
 - Geen productie of externe provider gebruiken.
 - Geen geheimen of owner-bestanden toevoegen.
+- Geen echte e-mail verzenden.
 
-## 7. Uitvoeringsoutline na approval
+## 7. Uitgevoerde outline na approval
 
-1. Herhaal preflight en release-candidate validatie.
-2. Installeer alleen de goedgekeurde bibliotheek.
-3. Implementeer renderer achter bestaande rapportartifact-grens.
-4. Behoud HTML/XLSX snapshotconsistentie.
-5. Voeg gerichte tests toe en commit alleen de goedgekeurde scope.
+1. Preflight en gerichte report artifact tests uitgevoerd.
+2. Alleen `pdfkit` toegevoegd.
+3. Renderer achter bestaande report artifact-grens geïmplementeerd.
+4. HTML/XLSX snapshotconsistentie behouden.
+5. Gerichte tests en sanitized evidence toegevoegd.
 
 ## 8. Validatiepoorten
 
+- Real PDF renderer evidence tests.
 - Report artifact tests.
 - Production blocker tests.
 - Full test suite.
@@ -64,27 +62,19 @@ npm run build:server
 ## 9. Rollbackplan
 
 - Revert dependency- en renderercommits.
-- Herstel PDF placeholder en blocker.
 - Laat rapport snapshots ongemoeid.
 
 ## 10. Stopregels
 
-- Stop bij ontbrekende bibliotheekkeuze.
-- Stop bij licentie- of runtime-onzekerheid.
 - Stop bij build/test/audit failure na bounded repair.
 - Stop wanneer de scope productie, e-mail, import of secret rotation raakt.
 
-## 11. Exacte toekomstige approval prompt
+## 11. Afgerond bewijs
 
-```text
-Owner approval received for decision pdf.
-Use docs/DECISION_BRIEF_PDF_RENDERER_NL.md and docs/OWNER_APPROVAL_INTAKE_NL.md.
-Implement only the approved PDF renderer scope.
-Do not execute production cutover, historical import, real email, secret rotation, tags, or force push.
-Validate report artifact tests, full suite, builds, and high-risk scan.
-Report commit hash and final git status.
-```
+- Evidence: `docs/REAL_PDF_RENDERER_EVIDENCE_NL.md`.
+- Test: `tests/ops/realPdfRendererEvidence.test.ts`.
+- Remaining blocker: real email sending.
 
 ## 12. Bevestiging
 
-Deze brief voert niets uit, installeert niets en wijzigt geen runtimeconfiguratie.
+Deze brief bevat geen secrets, hostnamen, runtimeconfiguratie, owner-bestanden, transactie-detailregels of DB-exportbestanden.

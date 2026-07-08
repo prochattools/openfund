@@ -31,7 +31,7 @@ describe('release manifest — content', () => {
     expect(manifest).toContain('Release Candidate 4');
     expect(manifest).toContain('## Versie-informatie');
     expect(manifest).toContain('## Release-evidence');
-    expect(manifest).toContain('## Openstaande blockers');
+    expect(manifest).toContain('## Beslissingsstatus vóór productie');
     expect(manifest).toContain('## Validatiecommando');
     expect(manifest).toContain('## Veiligheidsstatus');
   });
@@ -42,12 +42,13 @@ describe('release manifest — content', () => {
     expect(manifest).toContain(pkg.version);
   });
 
-  it('manifest includes all required blockers', () => {
+  it('manifest includes current decision status and remaining blockers', () => {
     const manifest = buildManifest();
-    expect(manifest).toContain('PDF_BLOCKER');
+    expect(manifest).toContain('Echte PDF-renderer');
+    expect(manifest).toContain('pdfkit');
     expect(manifest).toContain('Productiemigratie');
     expect(manifest).toContain('Historische productie-import');
-    expect(manifest).toContain('RESEND_API_KEY');
+    expect(manifest).toContain('Echte e-mailverzending');
     expect(manifest).toContain('PostgreSQL');
     expect(manifest).toContain('Live backup/restore rehearsal');
     expect(manifest).toContain('VOLTOOID op 2026-07-05');
