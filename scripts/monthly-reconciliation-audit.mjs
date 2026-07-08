@@ -115,6 +115,30 @@ const buildExpectedCoverage = () => ({
   2026: Array.from({ length: 7 }, (_, index) => index + 1),
 });
 
+const buildBaselineControls = () => ({
+  2024: {
+    transactionCount: 268,
+    openingMinor: '172186',
+    incomeMinor: '3226719',
+    expenseMinor: '2180490',
+    closingMinor: '1218415',
+  },
+  2025: {
+    transactionCount: 413,
+    openingMinor: '1218415',
+    incomeMinor: '9164244',
+    expenseMinor: '9347573',
+    closingMinor: '1035086',
+  },
+  2026: {
+    transactionCount: 221,
+    openingMinor: '1035086',
+    incomeMinor: '5878408',
+    expenseMinor: '6129769',
+    closingMinor: '783725',
+  },
+});
+
 const buildMonthlyReconciliationInput = (year, month, txs, coverageByYear) => ({
   workspaceId: 'finance-workspace',
   accountId: 'finance-account',
@@ -222,6 +246,7 @@ async function main() {
     const audit = auditMonthlyReconciliations({
       months: reconciliations,
       expectedCoverage: buildExpectedCoverage(),
+      baselineControls: buildBaselineControls(),
       validatorVersion: 'monthly-reconciliation-audit-cli-v1',
     });
 

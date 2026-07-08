@@ -1,5 +1,13 @@
 import type { MonthlyReconciliationResult } from './monthlyReconciliationService';
 
+export type YearlyBaselineControl = {
+  transactionCount: number;
+  openingMinor: string;
+  incomeMinor: string;
+  expenseMinor: string;
+  closingMinor: string;
+};
+
 export type MonthlyAuditExpectedCoverage = Record<number, number[]>;
 
 export type MonthlyAuditIssue = {
@@ -22,6 +30,7 @@ export type MonthlyReconciliationAuditInput = {
   months: MonthlyReconciliationResult[];
   expectedCoverage: MonthlyAuditExpectedCoverage;
   validatorVersion?: string;
+  baselineControls?: Record<number, YearlyBaselineControl>;
 };
 
 export type MonthlyReconciliationAuditResult = {
@@ -136,6 +145,51 @@ export const auditMonthlyReconciliations = (
         0,
         'Jaarlijkse maanddekking wijkt af van de verwachte scope.',
       );
+    }
+
+    // Enforce baseline controls if provided
+    const baseline = input.baselineControls?.[summary.year];
+    if (baseline) {
+      if (summary.transactionCount !== baseline.transactionCount) {
+        addIssue(
+          issues,
+          summary.year,
+          0,
+          `Jaarlijkse transactietellingen wijken af: verwacht ${baseline.transactionCount}, aangetroffen ${summary.transactionCount}.`,
+        );
+      }
+      if (summary.openingBalanceMinor !== baseline.openingMinor) {
+        addIssue(
+          issues,
+          summary.year,
+          0,
+          `Jaarlijkse openingssaldo wijkt af: verwacht ${baseline.openingMinor}, aangetroffen ${summary.openingBalanceMinor}.`,
+        );
+      }
+      if (summary.incomeMinor !== baseline.incomeMinor) {
+        addIssue(
+          issues,
+          summary.year,
+          0,
+          `Jaarlijkse inkomsten wijken af: verwacht ${baseline.incomeMinor}, aangetroffen ${summary.incomeMinor}.`,
+        );
+      }
+      if (summary.expenseMinor !== baseline.expenseMinor) {
+        addIssue(
+          issues,
+          summary.year,
+          0,
+          `Jaarlijkse uitgaven wijken af: verwacht ${baseline.expenseMinor}, aangetroffen ${summary.expenseMinor}.`,
+        );
+      }
+      if (summary.closingBalanceMinor !== baseline.closingMinor) {
+        addIssue(
+          issues,
+          summary.year,
+          0,
+          `Jaarlijkse sluitingssaldo wijkt af: verwacht ${baseline.closingMinor}, aangetroffen ${summary.closingBalanceMinor}.`,
+        );
+      }
     }
   }
 
