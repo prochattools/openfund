@@ -239,7 +239,7 @@ De volgende commando's mogen **NOOIT** worden uitgevoerd zonder expliciete eigen
 | Secret rotation | AFGEROND — finance_user geroteerd 2026-07-07 |
 | Echte e-mail sturen (Resend) | Geblokkeerd — vereist finale providerconfiguratie + aparte goedkeuring |
 | PDF-bibliotheek installeren | Geblokkeerd — vereist keuze en goedkeuring eigenaar |
-| Clerk/Resend/New Relic providerrotaties afronden | Geblokkeerd — vereist finale vervangingssleutels buiten Git |
+| Clerk/Resend/New Relic providerrotaties afronden | AFGEROND 2026-07-08 — alle provider secrets geroteerd en toegepast op Dokploy runtime |
 | `node scripts/backup-restore-rehearsal.mjs --live-local` | Verbindt met lokale database; vereist `--confirm-disposable` én voorbereiding |
 | Productiedatabasecommando's | Altijd geblokkeerd tot na productie-cutovergoedkeuring |
 | Wijzigingen in `.env` | Nooit in Git; geheimen horen in de secret vault |

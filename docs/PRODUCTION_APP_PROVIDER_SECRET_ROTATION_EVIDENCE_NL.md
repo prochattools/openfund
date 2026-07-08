@@ -1,25 +1,25 @@
 # Yeshua Academy Finance — Productiebewijs app/provider geheimremediatie
 
-Status: App/provider geheimremediatie gedeeltelijk voltooid
+Status: App/provider geheimremediatie voltooid
 Branch: main
-Startcommit: 7816c0c
-Datum: 2026-07-07
+Startcommit: abd8ddd
+Datum: 2026-07-08
 Taal: Nederlands
 
 ---
 
 ## 1. Aanleiding
 
-Niet-database applicatiegeheimen verschenen eerder in Dokploy-omgevingsoutput. De eigenaar heeft goedgekeurd om deze categorieen te roteren of, als geen nieuw providergeheim is aangeleverd, expliciet als handmatig openstaand vast te leggen.
+Niet-database applicatiegeheimen verschenen eerder in Dokploy-omgevingsoutput. De eigenaar heeft goedgekeurd om deze categorieën te roteren en toe te passen op de Dokploy runtime.
 
 ## 2. Categoriestatus
 
 | Categorie | Status |
 |-----------|--------|
-| Clerk Secret Key | Handmatig openstaand — geen finale vervangende providersleutel aangeleverd |
-| Resend API Key | Handmatig openstaand — geen finale vervangende providersleutel aangeleverd |
-| New Relic License Key | Handmatig openstaand — geen finale vervangende providersleutel aangeleverd |
-| Request Access Secret | Gegenereerd en toegepast in Dokploy runtime |
+| Clerk Secret Key | Geroteerd en toegepast op Dokploy runtime |
+| Resend API Key | Geroteerd en toegepast op Dokploy runtime |
+| New Relic License Key | Geroteerd en toegepast op Dokploy runtime |
+| Request Access Secret | Gegenereerd en toegepast in commit abd8ddd |
 | Shadow database runtime credential | Al afgedekt door database credential finalisatie; aanwezigheid en doelvorm opnieuw gecontroleerd |
 
 ## 3. Runtime en verificatie
@@ -28,7 +28,7 @@ Niet-database applicatiegeheimen verschenen eerder in Dokploy-omgevingsoutput. D
 |----------|--------|
 | Dokploy runtime-omgeving bijgewerkt | BEVESTIGD |
 | Applicatie redeploy getriggerd | BEVESTIGD |
-| App health gecontroleerd | BEVESTIGD |
+| App health gecontroleerd | BEVESTIGD — status ok |
 | Productie readiness totalen gecontroleerd | BEVESTIGD |
 | Productie database | finance |
 | Productie schema | finance |
@@ -79,6 +79,3 @@ Niet-database applicatiegeheimen verschenen eerder in Dokploy-omgevingsoutput. D
 |---------|--------|
 | Echte PDF-renderer | Geblokkeerd — niet uitgevoerd in deze run |
 | Echte e-mailverzending | Geblokkeerd — niet uitgevoerd in deze run |
-| Clerk Secret Key rotatie | Handmatig openstaand |
-| Resend API Key rotatie | Handmatig openstaand |
-| New Relic License Key rotatie | Handmatig openstaand |

@@ -29,19 +29,19 @@ describe('productionAppProviderSecretRotationEvidence — required statuses', ()
 
   it('references branch and starting commit', () => {
     expect(evidenceContent).toContain('main');
-    expect(evidenceContent).toContain('7816c0c');
+    expect(evidenceContent).toContain('abd8ddd');
   });
 
   it('states Clerk status without a value', () => {
-    expect(evidenceContent).toMatch(/Clerk Secret Key.*Handmatig openstaand/i);
+    expect(evidenceContent).toMatch(/Clerk Secret Key.*Geroteerd en toegepast/i);
   });
 
   it('states Resend status without a value', () => {
-    expect(evidenceContent).toMatch(/Resend API Key.*Handmatig openstaand/i);
+    expect(evidenceContent).toMatch(/Resend API Key.*Geroteerd en toegepast/i);
   });
 
   it('states New Relic status without a value', () => {
-    expect(evidenceContent).toMatch(/New Relic License Key.*Handmatig openstaand/i);
+    expect(evidenceContent).toMatch(/New Relic License Key.*Geroteerd en toegepast/i);
   });
 
   it('states Request Access Secret was generated and applied', () => {

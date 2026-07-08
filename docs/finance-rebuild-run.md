@@ -4,7 +4,7 @@ Date: 2026-07-02
 Run: `agent-f961650b-de17-4282-ab18-7a716cc72958`  
 Source: `yeshuaacademy-finance`  
 Branch: `main`  
-Status: Release Candidate 4 — RC5 hardening complete 2026-07-07; production schema cutover, historical import, database credential finalization, and Request Access Secret remediation complete; app health verified; Clerk/Resend/New Relic rotations manual pending; real email and real PDF remain blocked
+Status: Release Candidate 4 — RC5 hardening complete 2026-07-07; production schema cutover, historical import, database credential finalization, and Request Access Secret remediation complete; app health verified; RC6 update: all provider secret rotations (Clerk, Resend, New Relic) complete 2026-07-08; real email and real PDF remain blocked
 
 ## RC2 Hardening Evidence
 
@@ -1514,7 +1514,7 @@ Date: 2026-07-07
 
 - Dokploy runtime variable names were identified without printing values.
 - Request Access Secret was generated and applied in Dokploy runtime.
-- Clerk Secret Key, Resend API Key, and New Relic License Key remain manual pending because no final replacement provider keys were supplied to this session.
+- Clerk Secret Key, Resend API Key, and New Relic License Key were rotated and applied to Dokploy runtime on 2026-07-08 after owner-approved final replacement keys were supplied.
 - Database runtime credentials were rechecked by target shape and remained covered by the prior database credential finalization evidence.
 - The app was redeployed and health verification passed.
 - Production readiness verification passed with unchanged aggregate totals: 1 workspace, 4 source files, 3 bank statements, 3 statement periods, 902 transactions, 681 bookings, 1 open/partial period, and 0 duplicate fingerprints.

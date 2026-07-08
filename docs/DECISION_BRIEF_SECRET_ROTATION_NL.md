@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Decision brief: secret rotation
 
-Status: Geblokkeerd (was vóór 2026-07-07) — GEDEELTELIJK VOLTOOID 2026-07-07; databasecredential en Request Access Secret afgerond; Clerk/Resend/New Relic providerrotaties handmatig openstaand; bewijs in `docs/PRODUCTION_SECRET_ROTATION_EVIDENCE_NL.md` en `docs/PRODUCTION_APP_PROVIDER_SECRET_ROTATION_EVIDENCE_NL.md`
+Status: Geblokkeerd (was vóór 2026-07-07) — VOLTOOID 2026-07-08; alle provider secrets afgerond; bewijs in `docs/PRODUCTION_SECRET_ROTATION_EVIDENCE_NL.md` en `docs/PRODUCTION_APP_PROVIDER_SECRET_ROTATION_EVIDENCE_NL.md`
 Taal: Nederlands
 
 ## 1. Beslissing
@@ -90,4 +90,4 @@ Deze brief voert niets uit, wijzigt geen `.env` en roteert geen secrets.
 - Request Access Secret is gegenereerd en toegepast in de runtime-omgeving.
 - App redeploy en health-check zijn geslaagd.
 - Productie-readiness totalen zijn onveranderd geverifieerd.
-- Clerk Secret Key, Resend API Key en New Relic License Key blijven handmatig openstaand tot finale vervangingssleutels buiten Git zijn aangeleverd.
+- Clerk Secret Key, Resend API Key en New Relic License Key zijn geroteerd en toegepast op de productie-runtime op 2026-07-08.

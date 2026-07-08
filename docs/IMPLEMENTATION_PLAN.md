@@ -86,8 +86,8 @@ Production schema cutover: complete 2026-07-07; schema finance deployed on Postg
 Production historical import: complete 2026-07-07; 902 transactions (268 2024 + 413 2025 + 221 2026), 681 bookings, 4 source files, 2026 partial/open and not closed; evidence in docs/PRODUCTION_HISTORICAL_IMPORT_EVIDENCE_NL.md
 Production secret rotation: complete 2026-07-07; finance_user credential rotated; old credential rejected; new credential verified; historical totals re-verified; evidence in docs/PRODUCTION_SECRET_ROTATION_EVIDENCE_NL.md
 Production runtime credential update: complete 2026-07-07; final retained credential applied; Dokploy env updated; app redeployed; health check passed; evidence in docs/PRODUCTION_RUNTIME_DATABASE_CREDENTIAL_EVIDENCE_NL.md
-App/provider secret remediation: partially complete 2026-07-07; Request Access Secret generated/applied in Dokploy runtime; app redeployed; health and production readiness verified; Clerk, Resend, and New Relic provider rotations remain manual pending; evidence in docs/PRODUCTION_APP_PROVIDER_SECRET_ROTATION_EVIDENCE_NL.md
-Current gate: owner decision selection after published RC4 owner-decision handoff — production schema cutover, historical import, database credential finalization, and Request Access Secret remediation are complete; real email provider, real PDF renderer, and remaining provider secret rotations are blocked decisions.
+App/provider secret remediation: complete 2026-07-08; all provider secrets (Clerk, Resend, New Relic, Request Access Secret) rotated and applied to Dokploy runtime; app redeployed; health and production readiness verified; evidence in docs/PRODUCTION_APP_PROVIDER_SECRET_ROTATION_EVIDENCE_NL.md
+Current gate: owner decision selection after published RC4 owner-decision handoff — production schema cutover, historical import, database credential finalization, and all provider secret rotations (Clerk, Resend, New Relic) are complete 2026-07-08; real email provider and real PDF renderer are the remaining blocked decisions.
 Local PostgreSQL 15.17 rehearsal evidence is recorded in `docs/POSTGRES_VERSION_EVIDENCE_NL.md`.
 ```
 
@@ -1335,7 +1335,7 @@ Remaining owner-gated decisions:
 2. ~~Approve or defer production cutover~~ — DONE 2026-07-07.
 3. ~~Historical production import~~ — DONE 2026-07-07. 2024 (268 tx), 2025 (413 tx), 2026 partial open (221 tx) imported. 902 total transactions, 681 bookings, 4 source files. 2026 partial/open, not closed. Evidence: `docs/PRODUCTION_HISTORICAL_IMPORT_EVIDENCE_NL.md`.
 4. Approve or defer real email sending / Resend provider configuration.
-5. Supply and apply final Clerk, Resend, and New Relic provider replacement keys outside Git.
+5. ~~Supply and apply final Clerk, Resend, and New Relic provider replacement keys outside Git~~ — DONE 2026-07-08.
 5. Rotate finance_user database password (appeared in chat session; required before long-term production use). Note: this rotation will also unblock item 3 above.
 6. Run and confirm live local backup/restore rehearsal with PostgreSQL tools.
 

@@ -30,7 +30,7 @@ Phase 10 — Production schema cutover             COMPLETE (2026-07-07; finance
 Phase 11 — Production historical import          COMPLETE (2026-07-07; 2024/2025 concluded data imported; 2026 partial open statement imported and not closed; 902 transactions, 681 bookings)
 Phase 12 — Production secret rotation            COMPLETE (2026-07-07; finance_user credential rotated; old credential rejected; new credential verified; historical totals re-verified)
 Phase 13 — Production runtime credential update  COMPLETE (2026-07-07; final retained credential applied; Dokploy env updated; redeploy triggered; app health verified)
-Phase 14 — App/provider secret remediation       PARTIAL (2026-07-07; Request Access Secret generated/applied; app redeployed; health/readiness verified; Clerk, Resend, and New Relic provider rotations manual pending)
+Phase 14 — App/provider secret remediation       COMPLETE (2026-07-08; Clerk, Resend, and New Relic provider keys rotated and applied to Dokploy runtime; app redeployed; health/readiness verified)
 ```
 
 ## Phase 0 — Governance and verified controls
