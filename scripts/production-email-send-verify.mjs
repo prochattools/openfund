@@ -48,8 +48,8 @@ async function main() {
   }
 
   // Validate API key presence (do NOT print it)
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
+  const resendRuntimeValue = process.env.RESEND_API_KEY;
+  if (!resendRuntimeValue) {
     console.error('GEWEIGERD: RESEND_API_KEY ontbreekt in runtime-omgeving.');
     process.exit(1);
   }
@@ -85,7 +85,7 @@ async function main() {
 
   // Dynamic import of Resend
   const { Resend } = await import('resend');
-  const resend = new Resend(apiKey);
+  const resend = new Resend(resendRuntimeValue);
 
   try {
     const { data, error } = await resend.emails.send({

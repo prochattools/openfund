@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Eindaudit gereedheid
 
-Status: Release Candidate 7 — schema cutover afgerond 2026-07-07; historische import voltooid 2026-07-07; database credential finalisatie voltooid; alle provider secrets geroteerd 2026-07-08; echte PDF-renderer voltooid; echte e-mailverzending code-complete (productie-verzendverificatie in afwachting)
+Status: Release Candidate 7 — roadmap 99%; schema cutover afgerond 2026-07-07; historische import voltooid 2026-07-07; database credential finalisatie voltooid; alle provider secrets geroteerd 2026-07-08; echte PDF-renderer voltooid; echte e-mailverzending code-complete (productie-verzendverificatie in afwachting van test-recipient runtime input)
 Datum: 2026-07-08
 Taal: Nederlands
 Afhankelijkheden: `docs/ROADMAP.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/ADMIN_OPERATING_GUIDE_NL.md`
@@ -39,7 +39,7 @@ Afhankelijkheden: `docs/ROADMAP.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/ADMIN_
 | Geheimen roteren | finance_user-credential geroteerd; oud credential afgewezen; historische totalen herbevestigd | AFGEROND 2026-07-07 |
 | Runtime database credential update | Finaal credential aangemaakt; Dokploy env bijgewerkt; app herstart; health check geslaagd | AFGEROND 2026-07-07 |
 | App/provider geheimremediatie | Alle provider secrets geroteerd en toegepast; app redeployed; health en readiness geslaagd | AFGEROND 2026-07-08 |
-| Echte e-mailverzending | Resend provider-abstractie en executeDispatch geïmplementeerd; productie-verzendverificatie in afwachting van runtime-uitvoering | CODE-COMPLETE 2026-07-08 |
+| Echte e-mailverzending | Resend provider-abstractie en executeDispatch geïmplementeerd; productie-runtime preflight stopte zonder send omdat test-recipient runtime input ontbrak en de app-image het verificatiescript nog niet bevatte | CODE-COMPLETE 2026-07-08 / VERIFICATIE PENDING |
 | Echte PDF-generatie | `pdfkit` report artifact renderer; media type `application/pdf`; zie `docs/REAL_PDF_RENDERER_EVIDENCE_NL.md` | AFGEROND 2026-07-08 |
 
 ---

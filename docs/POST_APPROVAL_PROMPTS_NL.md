@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Post-approval prompt pack
 
-Status: Release Candidate 7 — productie schema cutover, historische import, database credential finalisatie, alle provider secrets (inclusief Clerk/Resend/New Relic), echte PDF-renderer, en echte e-mailverzending (code-complete) zijn afgerond 2026-07-08; productie-verzendverificatie in afwachting van runtime-uitvoering
+Status: Release Candidate 7 — roadmap 99%; productie schema cutover, historische import, database credential finalisatie, alle provider secrets (inclusief Clerk/Resend/New Relic), echte PDF-renderer, en echte e-mailverzending (code-complete) zijn afgerond 2026-07-08; productie-verzendverificatie in afwachting van test-recipient runtime input
 Taal: Nederlands  
 Doel: klaarstaande prompts voor toekomstige owner-approved acties. Kopieer pas een prompt nadat de eigenaar de bijbehorende beslissing expliciet heeft goedgekeurd.
 
@@ -154,41 +154,50 @@ Final report:
 - Final git status
 ```
 
-## 5. Configure real email provider, no sending until dry-run approved
+## 5. Complete bounded real email production verification
 
 ```text
 You are working in yeshuaacademy-finance from <STARTING_COMMIT_PLACEHOLDER>.
 
 Owner approval received:
-- Email provider configuration preparation approved.
-- Real sending is NOT approved until a later dry-run acceptance.
+- Bounded production email verification is approved.
+- The test-recipient runtime input has been configured outside Git.
+- Redeploying the app image that contains the verification script is approved if needed.
 
 Hard constraints:
 - Do not place API keys in Git.
 - Do not edit .env.
-- Do not call the email provider.
-- Do not send real email.
+- Send at most one real provider email.
+- Do not send bulk email.
+- Do not send to stored recipient batches.
+- Do not print the recipient if sensitive.
+- Do not print provider payloads.
 - Do not push or tag.
 
 Task:
 0. Lees `docs/DECISION_BRIEF_EMAIL_PROVIDER_NL.md` en valideer de intake met `node scripts/owner-approval-intake-validator.mjs --decision email`.
-1. Add provider integration behind an explicit disabled-by-default guard.
-2. Keep current metadata-only dispatch behavior unless a separate approved send flag is present.
-3. Add tests proving no provider call happens by default and secrets are never logged.
+1. Verify the deployed runtime has the provider key and test-recipient runtime input without printing values.
+2. Redeploy the app image if the verification script is not present.
+3. Run exactly one bounded production verification send with `node scripts/production-email-send-verify.mjs --send-one-test-email --confirm-send YESHUA_FINANCE_SEND_ONE_TEST_EMAIL`.
+4. Verify app health after the send without printing hostnames.
+5. Update `docs/REAL_EMAIL_SENDING_EVIDENCE_NL.md`, `docs/ROADMAP.md`, and `docs/IMPLEMENTATION_PLAN.md` to 100% only if the send succeeds.
 
 Validation:
 - npm test -- --test-name-pattern "production blocker"
+- npm test -- --test-name-pattern "realEmailSendingEvidence"
+- npm test -- --test-name-pattern "production email send verify"
 - npm test -- --test-name-pattern "report dispatch"
 - npm run build:server
 - git diff --check
 
 Commit policy:
-- Commit guarded code/tests/docs only.
+- Commit verification evidence/docs/tests only.
 
 Final report:
-- Guard behavior
+- Runtime preflight result
 - Tests/builds
-- Confirmation no email sent and no secrets committed
+- Confirmation whether exactly one email was sent
+- Confirmation no secrets, recipients, or provider payloads were committed
 - Final git status
 ```
 

@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Release Candidate Validatiechecklist
 
-Status: Release Candidate 6
+Status: Release Candidate 7 — roadmap 99%; Phase 16 real e-mail is code-complete and production send verification is pending
 Datum: 2026-07-08
 Taal: Nederlands
 
@@ -91,7 +91,7 @@ Zie `docs/POST_APPROVAL_PROMPTS_NL.md` voor prompts die pas na goedkeuring gebru
 | 1 | PDF-renderer afhankelijkheid goedkeuren | AFGEROND — `pdfkit` renderer 2026-07-08 |
 | 2 | Productiemigratie goedkeuren | AFGEROND — schema finance gedeployed 2026-07-07 |
 | 3 | Historische import goedkeuren | AFGEROND — 902 transacties, 681 boekingen 2026-07-07 |
-| 4 | E-mailverzending goedkeuren | Geblokkeerd — rapportverzending |
+| 4 | E-mailverzending goedkeuren | Code-complete — productie-verzendverificatie pending test-recipient runtime input |
 | 5 | PostgreSQL-productieversie bevestigen | AFGEROND — PostgreSQL 15.8 bevestigd 2026-07-07 |
 | 6 | Live backup rehearsal uitvoeren | AFGEROND — rehearsal 2026-07-05 |
 | 7 | Geheimen rotatie bevestigen | AFGEROND — finance_user geroteerd 2026-07-07 |
@@ -105,7 +105,8 @@ Zie `docs/POST_APPROVAL_PROMPTS_NL.md` voor prompts die pas na goedkeuring gebru
 - Geen productiedatabase aanraken
 - Geen `.env` wijzigen of secrets committen
 - Geen nieuwe dependency installeren zonder aparte goedkeuring
-- Geen echte e-mail versturen
+- Geen bulk e-mail versturen
+- Geen stored-recipient batch verzenden
 - Geen historische owner-bestanden in Git kopiëren
 - Geen ruwe transactiedumps committen
 - Geen databasedumps committen

@@ -2,7 +2,7 @@
 
 Status: code-complete / productie-verzendverificatie in afwachting
 Branch: main
-Startcommit: 67a95e5
+Startcommit: 84ef8d0
 Datum: 2026-07-08
 Taal: Nederlands
 
@@ -40,12 +40,13 @@ De eigenaar heeft goedgekeurd om echte e-mailverzending te implementeren via Res
 
 | Controle | Status |
 |----------|--------|
-| Resend API key in lokale runtime | NIET BESCHIKBAAR — alleen in Dokploy productie |
-| EMAIL_TEST_RECIPIENT in lokale runtime | NIET BESCHIKBAAR |
-| Begrensde productie test-email | IN AFWACHTING — runtime-inputs niet lokaal beschikbaar |
+| Resend provider key in productie-runtime | AANWEZIG — waarde niet geprint of vastgelegd |
+| Test-recipient runtime input | ONTBREEKT — waarde niet beschikbaar in productie-runtime |
+| Verificatiescript in huidige productie-image | ONTBREEKT — app-image moet na code-update opnieuw worden uitgerold |
+| Begrensde productie test-email | NIET UITGEVOERD — vereiste runtime-input ontbreekt |
 | Verificatiescript klaar voor productie-uitvoering | BEVESTIGD |
 
-De productie-verzendverificatie kan worden uitgevoerd in de Dokploy runtime waar `RESEND_API_KEY` en `EMAIL_TEST_RECIPIENT` beschikbaar zijn.
+Productie-runtime preflight op 2026-07-08 heeft geen e-mail verzonden. De provider key was aanwezig, maar de vereiste test-recipient runtime input ontbrak en de gedeployde image bevatte het verificatiescript nog niet. De verificatie blijft daardoor in afwachting totdat de runtime-input aanwezig is en de app met het script is uitgerold.
 
 ## 4. Schema-compatibiliteit
 
@@ -72,6 +73,8 @@ De productie-verzendverificatie kan worden uitgevoerd in de Dokploy runtime waar
 | Geen .env gewijzigd | BEVESTIGD |
 | Geen bulk e-mail verzonden | BEVESTIGD |
 | Geen stored-recipient batch send | BEVESTIGD |
+| Geen test-email verzonden | BEVESTIGD — runtime-preflight stopte vóór provider-call |
+| Geen attachments verzonden | BEVESTIGD |
 | Geen productiedata gemuteerd | BEVESTIGD |
 | Geen migraties uitgevoerd | BEVESTIGD |
 | Geen tags aangemaakt | BEVESTIGD |
@@ -82,4 +85,4 @@ De productie-verzendverificatie kan worden uitgevoerd in de Dokploy runtime waar
 
 | Blocker | Status |
 |---------|--------|
-| Productie e-mail verzendverificatie | IN AFWACHTING — uitvoeren in Dokploy runtime met RESEND_API_KEY en EMAIL_TEST_RECIPIENT |
+| Productie e-mail verzendverificatie | IN AFWACHTING — test-recipient runtime input ontbreekt; bounded send is niet uitgevoerd |

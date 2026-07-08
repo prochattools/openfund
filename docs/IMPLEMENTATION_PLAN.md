@@ -87,8 +87,32 @@ Production historical import: complete 2026-07-07; 902 transactions (268 2024 + 
 Production secret rotation: complete 2026-07-07; finance_user credential rotated; old credential rejected; new credential verified; historical totals re-verified; evidence in docs/PRODUCTION_SECRET_ROTATION_EVIDENCE_NL.md
 Production runtime credential update: complete 2026-07-07; final retained credential applied; Dokploy env updated; app redeployed; health check passed; evidence in docs/PRODUCTION_RUNTIME_DATABASE_CREDENTIAL_EVIDENCE_NL.md
 App/provider secret remediation: complete 2026-07-08; all provider secrets (Clerk, Resend, New Relic, Request Access Secret) rotated and applied to Dokploy runtime; app redeployed; health and production readiness verified; evidence in docs/PRODUCTION_APP_PROVIDER_SECRET_ROTATION_EVIDENCE_NL.md
-Current gate: owner decision selection after real email sending completion — production schema cutover, historical import, database credential finalization, all provider secret rotations (Clerk, Resend, New Relic), real PDF report artifact generation, and real email sending (code-complete) are complete 2026-07-08; production send verification pending runtime execution.
+Current gate: owner decision selection after real email sending completion — production schema cutover, historical import, database credential finalization, all provider secret rotations (Clerk, Resend, New Relic), real PDF report artifact generation, and real email sending (code-complete) are complete 2026-07-08; production send verification remains pending because the test-recipient runtime input was absent during the production preflight.
 Local PostgreSQL 15.17 rehearsal evidence is recorded in `docs/POSTGRES_VERSION_EVIDENCE_NL.md`.
+```
+
+## Authoritative Progress
+
+```text
+Total roadmap progress: 99%
+Phase 0 — Governance and verified controls: 100%
+Phase 1 — Safe categorization foundation: 100%
+Phase 2 — Financial domain and historical model: 100%
+Phase 3 — Historical loading and truth fixtures: 100%
+Phase 4 — Monthly import and review workflow: 100%
+Phase 5 — Reconciliation, close, and snapshots: 100%
+Phase 6 — Visual reports and distribution: 100%
+Phase 7 — Dutch UX and authorization hardening: 100%
+Phase 8 — Infrastructure and deployment: 100%
+Phase 9 — Operational hardening and handoff: 100%
+Phase 10 — Production schema cutover: 100%
+Phase 11 — Production historical import: 100%
+Phase 12 — Production secret rotation: 100%
+Phase 13 — Production runtime credential update: 100%
+Phase 14 — App/provider secret remediation: 100%
+Phase 15 — Real PDF renderer: 100%
+Phase 16 — Real email sending: 90% — code complete, production send verification pending
+Remaining blocker: production email send verification
 ```
 
 ## Phase 0 — Governance and discovery
@@ -1334,7 +1358,7 @@ Remaining owner-gated decisions:
 1. ~~Approve and implement real PDF renderer dependency~~ — DONE 2026-07-08 with `pdfkit`. Evidence: `docs/REAL_PDF_RENDERER_EVIDENCE_NL.md`.
 2. ~~Approve or defer production cutover~~ — DONE 2026-07-07.
 3. ~~Historical production import~~ — DONE 2026-07-07. 2024 (268 tx), 2025 (413 tx), 2026 partial open (221 tx) imported. 902 total transactions, 681 bookings, 4 source files. 2026 partial/open, not closed. Evidence: `docs/PRODUCTION_HISTORICAL_IMPORT_EVIDENCE_NL.md`.
-4. Approve or defer real email sending / provider configuration.
+4. Complete bounded real email production verification after runtime test-recipient input is present.
 5. ~~Supply and apply final Clerk, Resend, and New Relic provider replacement keys outside Git~~ — DONE 2026-07-08.
 5. Rotate finance_user database password (appeared in chat session; required before long-term production use). Note: this rotation will also unblock item 3 above.
 6. Run and confirm live local backup/restore rehearsal with PostgreSQL tools.

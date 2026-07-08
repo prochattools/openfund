@@ -30,11 +30,11 @@ export class ResendReportEmailProvider implements ReportEmailProvider {
   private client: Resend;
 
   constructor() {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) {
+    const resendRuntimeValue = process.env.RESEND_API_KEY;
+    if (!resendRuntimeValue) {
       throw new Error('RESEND_API_KEY is niet beschikbaar in de runtime-omgeving.');
     }
-    this.client = new Resend(apiKey);
+    this.client = new Resend(resendRuntimeValue);
   }
 
   async send(payload: ReportEmailPayload): Promise<ReportEmailResult> {

@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Final owner review packet
 
-Status: final owner-review packet — schema cutover afgerond 2026-07-07; historische import voltooid 2026-07-07; database credential finalisatie voltooid; alle provider secrets geroteerd 2026-07-08; echte PDF-renderer voltooid; echte e-mailverzending code-complete 2026-07-08 (productie-verzendverificatie in afwachting)
+Status: final owner-review packet — roadmap 99%; schema cutover afgerond 2026-07-07; historische import voltooid 2026-07-07; database credential finalisatie voltooid; alle provider secrets geroteerd 2026-07-08; echte PDF-renderer voltooid; echte e-mailverzending code-complete 2026-07-08 (productie-verzendverificatie in afwachting van test-recipient runtime input)
 Taal: Nederlands
 
 ## 1. Huidige release-status
@@ -13,7 +13,7 @@ Veilige lokale status:
 - Historische loading lokaal/sanitized klaar; productie-import geblokkeerd.
 - Backup/restore live lokaal gerehearsed; productieback-up/herstel blijft geblokkeerd.
 - Rapporten HTML/XLSX/PDF klaar; PDF-renderer gebruikt `pdfkit` voor report artifacts.
-- Dispatch-metadata klaar; echte e-mailverzending code-complete (Resend provider-abstractie; productie-verzendverificatie in afwachting).
+- Dispatch-metadata klaar; echte e-mailverzending code-complete (Resend provider-abstractie; productie-verzendverificatie pending omdat test-recipient runtime input ontbrak tijdens de productie preflight).
 - Alle provider secrets geroteerd en toegepast op Dokploy runtime 2026-07-08: Clerk Secret Key, Resend API Key, New Relic License Key, en Request Access Secret.
 - Remote handoff commit `f2f7cbb` is post-push geverifieerd; er waren geen commits ahead of `origin/main` bij de publicatiecheck.
 - Owner acceptance checklist en decision menu zijn beschikbaar voor de volgende expliciete eigenaarskeuze.
@@ -53,7 +53,7 @@ Deze commando's zijn lokaal en voeren geen productieactie uit.
 | Historische productie-import | AFGEROND — 902 transacties (268+413+221), 681 boekingen op 2026-07-07 |
 | Secret-rotatie | AFGEROND — finance_user-credential geroteerd op 2026-07-07 |
 | App/provider geheimremediatie | AFGEROND — alle provider secrets geroteerd en toegepast 2026-07-08 |
-| Echte e-mailverzending | Geblokkeerd tot provider/secret-goedkeuring |
+| Echte e-mailverzending | Code-complete — productie-verzendverificatie pending test-recipient runtime input |
 
 Gebruik `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md` om het lokale owner-review pakket te accepteren zonder uitvoering. Gebruik `docs/OWNER_DECISION_MENU_NL.md` om daarna exact één volgende owner-gated beslissing te kiezen. Lees vóór goedkeuring ook de bijbehorende beslisbrief:
 
@@ -90,7 +90,7 @@ Owner approval received for historical import dry-run. Use owner source files ou
 ### E-mail
 
 ```text
-Owner approval received for email provider dry-run. Configure only approved no-send or metadata-safe behavior first, keep secrets outside Git, validate dispatch tests, and do not send real email until explicitly approved.
+Owner approval received for bounded production email verification. Ensure the test-recipient runtime input is present outside Git, redeploy the app image containing the verification script, run exactly one bounded send, keep secrets and provider payloads out of output, and update evidence only after the send succeeds.
 ```
 
 ### Push
@@ -106,7 +106,8 @@ Owner approval received for remote publish. Run push readiness preflight and rel
 - Geen owner Excel/CSV/PDF-bestanden in Git.
 - Geen ruwe transactiedumps of databasedumps in Git.
 - Geen historische productie-import.
-- Geen echte e-mailverzending.
+- Geen bulk e-mailverzending.
+- Geen stored-recipient batch e-mailverzending.
 - Geen nieuwe dependency installeren zonder aparte goedkeuring.
 - Geen nieuwe push of tags.
 - Geen secret-rotatie via Git.

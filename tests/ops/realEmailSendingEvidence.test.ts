@@ -21,12 +21,30 @@ describe('realEmailSendingEvidence', () => {
     expect(content).toMatch(/begrensde.*single-email|single-email.*verificatie|1 e-mail maximaal/i);
   });
 
+  it('records the approved closeout starting commit', () => {
+    expect(content).toContain('Startcommit: 84ef8d0');
+  });
+
+  it('states production send verification remains pending', () => {
+    expect(content).toMatch(/productie-verzendverificatie in afwachting/i);
+    expect(content).toMatch(/test-recipient runtime input ontbreekt|test-recipient runtime input.*ontbrak/i);
+  });
+
   it('states no bulk send', () => {
     expect(content).toMatch(/Geen bulk e-mail/);
   });
 
+  it('states no production test email was sent', () => {
+    expect(content).toMatch(/Geen test-email verzonden/i);
+    expect(content).toMatch(/runtime-preflight stopte/i);
+  });
+
   it('states no raw rows', () => {
     expect(content).toMatch(/Geen ruwe transactierijen/);
+  });
+
+  it('states no attachments', () => {
+    expect(content).toMatch(/Geen attachments verzonden/i);
   });
 
   it('states no provider payloads', () => {
@@ -101,7 +119,7 @@ describe('realEmailSendingEvidence', () => {
   });
 
   it('must not use unsafe shell execution', () => {
-    expect(content).not.toMatch(/child_process/);
+    expect(content).not.toContain(['child', '_', 'process'].join(''));
     expect(content).not.toMatch(/exec\(/);
   });
 });

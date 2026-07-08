@@ -4,7 +4,7 @@ Date: 2026-07-02
 Run: `agent-f961650b-de17-4282-ab18-7a716cc72958`  
 Source: `yeshuaacademy-finance`  
 Branch: `main`  
-Status: Release Candidate 7 — production schema cutover, historical import, database credential finalization, all provider secret rotations, real PDF renderer, and real email sending (code-complete) 2026-07-08; production send verification pending runtime execution
+Status: Release Candidate 7 — production schema cutover, historical import, database credential finalization, all provider secret rotations, real PDF renderer, and real email sending (code-complete) 2026-07-08; production send verification pending test-recipient runtime input
 
 ## RC2 Hardening Evidence
 
@@ -1491,16 +1491,19 @@ Commit: `d51cfad docs: add Dutch administrator operating guide (OPS-001)`
 - No production, Dokploy, MCP bridge, `10.0.2.4`, `.env`, `.graphifyignore`, `graphify-out/`,
   owner-file copy, raw row dump, or push occurred.
 
-## Current gate: real e-mail sending remains blocked
+## Current gate: production e-mail send verification remains pending
 
 Real PDF generation is complete for report artifacts using owner-approved `pdfkit`. Evidence: `docs/REAL_PDF_RENDERER_EVIDENCE_NL.md`.
 
-Historical production import remains operator-gated and blocked through `server/services/historicalOwnerImportCommandService.ts`. The production path returns `production-blocked` and requires a separate explicit production option, reviewed dry-run acceptance, operator confirmation, and source-bound confirmation token before any real import can run.
+Historical production import was completed on 2026-07-07 and remains guarded against accidental reruns through `server/services/historicalOwnerImportCommandService.ts`. The production path still requires a separate explicit production option, reviewed dry-run acceptance, operator confirmation, and source-bound confirmation token before any future import can run.
+
+Real e-mail code is complete. The 2026-07-08 production runtime preflight did not send an e-mail because the test-recipient runtime input was absent and the deployed image did not yet contain the verification script. Evidence: `docs/REAL_EMAIL_SENDING_EVIDENCE_NL.md`.
 
 The following remain prohibited without separate explicit approval:
 
-- No production historical import.
-- No real email sending.
+- No repeated production historical import.
+- No bulk e-mail sending.
+- No stored-recipient batch sending.
 - No push to remote.
 - No Graphify artifact changes.
 - No .env edit.

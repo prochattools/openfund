@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Eigenaarsbeslissing readiness matrix
 
-Status: Release Candidate 7 — schema cutover, historische import, database credential finalisatie, alle provider secrets, echte PDF-renderer, en echte e-mailverzending (code-complete) afgerond; productie-verzendverificatie in afwachting
+Status: Release Candidate 7 — schema cutover, historische import, database credential finalisatie, alle provider secrets, echte PDF-renderer, en echte e-mailverzending (code-complete) afgerond; productie-verzendverificatie in afwachting van test-recipient runtime input
 Taal: Nederlands  
 Doel: per owner-gated beslissing tonen wat klaar is, wat geblokkeerd blijft, welke input nodig is, en welk prompt-pad pas na goedkeuring gebruikt mag worden. De huidige gate is owner decision selection. Aanbevolen eerste keuze: `postgres-version`.
 
@@ -12,13 +12,13 @@ Gebruik vóór een beslissing ook `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md`, `docs
 
 | Beslissing | Status | Klaar nu | Blijft geblokkeerd | Vereiste eigenaarinput | Preflight | Safe dry-run | Uitvoering pas na goedkeuring |
 |------------|--------|----------|--------------------|------------------------|-----------|--------------|-------------------------------|
-| Echte PDF-renderer | Voltooid 2026-07-08 | `pdfkit` renderer toegevoegd; PDF artifact media type `application/pdf`; HTML/XLSX behouden; zie `docs/REAL_PDF_RENDERER_EVIDENCE_NL.md` | Echte e-mail code-complete | — | — | `npm test -- --test-name-pattern "report artifact"` | — (voltooid) |
+| Echte PDF-renderer | Voltooid 2026-07-08 | `pdfkit` renderer toegevoegd; PDF artifact media type `application/pdf`; HTML/XLSX behouden; zie `docs/REAL_PDF_RENDERER_EVIDENCE_NL.md` | Echte e-mail productie-verificatie pending | — | — | `npm test -- --test-name-pattern "report artifact"` | — (voltooid) |
 | Productiemigratie/cutover | Schema afgerond 2026-07-07 | Schema finance gedeployed op PostgreSQL 15.8; 4 migraties; 30 tabellen geverifieerd; zie `docs/PRODUCTION_SCHEMA_CUTOVER_EVIDENCE_NL.md` | Echte e-mail code-complete | — | — | — | — |
 | Historische productie-import | Voltooid 2026-07-07 | 902 transacties (268 2024 + 413 2025 + 221 2026), 681 boekingen, 4 bronbestanden, 2026 gedeeltelijk/open en niet afgesloten; zie `docs/PRODUCTION_HISTORICAL_IMPORT_EVIDENCE_NL.md` | Echte e-mail code-complete | — | — | `npm test -- --test-name-pattern "historical"` | — (voltooid) |
-| Echte e-mailverzending | Code-complete 2026-07-08 | Resend provider-abstractie; `executeDispatch` met guards; productie-verzendverificatie in afwachting; zie `docs/REAL_EMAIL_SENDING_EVIDENCE_NL.md` | Productie-runtime uitvoering met `RESEND_API_KEY` en `EMAIL_TEST_RECIPIENT` | — | `node scripts/production-email-send-verify.mjs --send-one-test-email --confirm-send YESHUA_FINANCE_SEND_ONE_TEST_EMAIL` | `npm test -- --test-name-pattern "report dispatch"` | Uitvoeren in Dokploy runtime |
+| Echte e-mailverzending | Code-complete 2026-07-08 | Resend provider-abstractie; `executeDispatch` met guards; productie-verzendverificatie in afwachting; zie `docs/REAL_EMAIL_SENDING_EVIDENCE_NL.md` | Productie-runtime uitvoering na test-recipient runtime input en heruitrol van de app-image | Test-recipient runtime input buiten Git | `node scripts/production-email-send-verify.mjs --send-one-test-email --confirm-send YESHUA_FINANCE_SEND_ONE_TEST_EMAIL` | `npm test -- --test-name-pattern "report dispatch"` | Uitvoeren in Dokploy runtime |
 | Nieuwe push naar remote | Niet nodig voor gepubliceerde handoff; geblokkeerd voor toekomstige lokale commits | Handoff commit `f2f7cbb` is op `origin/main` geverifieerd; push checklist en post-push evidence bestaan | Nieuwe publicatie naar remote en tags | Expliciete push-go, doelremote/branch buiten dit document | `node scripts/owner-decision-preflight.mjs --decision push` en `node scripts/owner-approval-intake-validator.mjs --decision push` | `node scripts/owner-go-no-go-preflight.mjs --strict` | Gebruik push-prompt in `docs/POST_APPROVAL_PROMPTS_NL.md` alleen bij nieuwe lokale commits |
-| Geheimen roteren | Voltooid 2026-07-07 | finance_user-credential geroteerd; oud credential afgewezen; nieuw credential geverifieerd; historische totalen herbevestigd; zie `docs/PRODUCTION_SECRET_ROTATION_EVIDENCE_NL.md` | Echte e-mail code-complete | — | — | — | — (voltooid) |
-| App/provider geheimremediatie | Voltooid 2026-07-08 | Alle provider secrets geroteerd en toegepast; app redeployed; health en readiness geverifieerd; zie `docs/PRODUCTION_APP_PROVIDER_SECRET_ROTATION_EVIDENCE_NL.md` | Echte e-mail code-complete | — | — | — | — (voltooid) |
+| Geheimen roteren | Voltooid 2026-07-07 | finance_user-credential geroteerd; oud credential afgewezen; nieuw credential geverifieerd; historische totalen herbevestigd; zie `docs/PRODUCTION_SECRET_ROTATION_EVIDENCE_NL.md` | Echte e-mail productie-verificatie pending | — | — | — | — (voltooid) |
+| App/provider geheimremediatie | Voltooid 2026-07-08 | Alle provider secrets geroteerd en toegepast; app redeployed; health en readiness geverifieerd; zie `docs/PRODUCTION_APP_PROVIDER_SECRET_ROTATION_EVIDENCE_NL.md` | Echte e-mail productie-verificatie pending | — | — | — | — (voltooid) |
 | PostgreSQL-productieversie | Geblokkeerd | Lokale Prisma-validatie, migratiebewijs, lokale 15.17 rehearsal evidence in `docs/POSTGRES_VERSION_EVIDENCE_NL.md` en `docs/DECISION_BRIEF_POSTGRES_VERSION_NL.md` | Hostingprovider-query vanuit deze repo en productieversieclaim | Versienummer en Prisma-compatibiliteitsbevestiging uit owner/provider evidence buiten Git | `node scripts/owner-decision-preflight.mjs --decision postgres-version` en `node scripts/owner-approval-intake-validator.mjs --decision postgres-version` | `npx prisma validate` met uitsluitend lokale placeholderconfig buiten dit rapport | Gebruik PostgreSQL-versie prompt in `docs/POST_APPROVAL_PROMPTS_NL.md` |
 
 ## Per-beslissing details
@@ -91,7 +91,7 @@ Wat klaar is:
 - Productie-verificatiescript klaar (`scripts/production-email-send-verify.mjs`).
 
 Wat in afwachting is:
-- Productie-verzendverificatie: uitvoeren in Dokploy runtime met `RESEND_API_KEY` en `EMAIL_TEST_RECIPIENT`.
+- Productie-verzendverificatie: uitvoeren in Dokploy runtime nadat de test-recipient runtime input aanwezig is en de app-image het verificatiescript bevat.
 
 Rollback:
 - Deactiveer provider-key buiten Git en herstel metadata-only modus.

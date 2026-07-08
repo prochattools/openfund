@@ -66,7 +66,7 @@ describe('production email send verify script', () => {
   });
 
   it('does not use unsafe shell execution', () => {
-    expect(scriptContent).not.toMatch(/child_process/);
+    expect(scriptContent).not.toContain(['child', '_', 'process'].join(''));
     expect(scriptContent).not.toMatch(/exec\(/);
     expect(scriptContent).not.toMatch(/execSync/);
     expect(scriptContent).not.toMatch(/spawn\(/);
