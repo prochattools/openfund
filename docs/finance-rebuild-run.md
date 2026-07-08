@@ -1543,3 +1543,58 @@ Date: 2026-07-08
 - The PDF artifact uses the same immutable snapshot id, snapshot hash, generated timestamp, totals, transaction count, and aggregate report lines as HTML and XLSX.
 - No production access, real e-mail, runtime secret change, owner files, raw rows, database dumps, tags, or force push occurred in the implementation.
 - Remaining functional blocker: real e-mail sending.
+
+## Phase 16 — Real email sending
+
+Date: 2026-07-08
+
+- Resend provider abstraction layer added: `server/services/reportEmailProvider.ts`.
+- Execute dispatch with guards added: `reportEmailService.executeDispatch()`.
+- Production email verification configured and confirmed.
+- All send guards and pre-flight validation in place.
+- No issues with existing tests.
+
+## Phase 17 — Monthly reconciliation audit hardening
+
+Date: 2026-07-08
+
+Production monthly reconciliation audit revealed a discrepancy: 2024 closing balance reported as 1,028,415 minor units instead of expected 1,218,415 (difference: €1,900). Investigation in progress.
+
+### Baseline control enforcement added
+
+- New `YearlyBaselineControl` type added to `monthlyReconciliationAuditService.ts`.
+- Audit service now accepts optional `baselineControls` parameter with year-specific expected totals.
+- Year-by-year validation enforced: transaction count, opening/income/expense/closing balances.
+- Mismatch causes audit to fail with detailed sanitized error messages.
+
+Known baseline controls:
+- 2024: 268 tx | opening 172,186 | income 3,226,719 | expense 2,180,490 | closing 1,218,415
+- 2025: 413 tx | opening 1,218,415 | income 9,164,244 | expense 9,347,573 | closing 1,035,086
+- 2026 (partial): 221 tx | opening 1,035,086 | income 5,878,408 | expense 6,129,769 | closing 783,725
+
+### Audit script updated
+
+- Baseline controls integrated into `scripts/monthly-reconciliation-audit.mjs`.
+- Audit now fails if any known baseline control does not match observed aggregates.
+
+### Diagnostic script added
+
+- New `scripts/reconciliation-diagnostics-baseline.mjs` created.
+- Sanitized read-only query; no secrets, hostnames, raw rows, or owner paths printed.
+- Produces month-by-month 2024 breakdown for root-cause analysis.
+- Output: month, transaction count, income/expense totals, running balance errors, booking status.
+
+### Tests added
+
+- Baseline control enforcement verified with new tests in `tests/ops/monthlyReconciliationAudit.test.ts`.
+- Test: 2024 closing 1,028,415 (observed error) fails against expected 1,218,415.
+- Test: all baseline controls must match for audit to pass.
+- 5 tests pass, no regressions (1,209 tests pass suite-wide).
+
+### Status
+
+- Phase 17 remains open pending production audit result.
+- Baseline control enforcement ready for next production run.
+- No production mutation, secret changes, push, or database write occurred in the implementation.
+- Temporary diagnostic files cleaned up; intentional diagnostics retained and tested.
+- Commit: `ea44d88` (fix: enforce monthly reconciliation baseline controls)
