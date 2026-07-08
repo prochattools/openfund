@@ -25,10 +25,9 @@ import {
 import {
   generateHtmlArtifact,
   generateXlsxArtifact,
-  generatePdfPlaceholder,
+  generatePdfArtifact,
   generateAndStoreReportArtifacts,
   sha256OfBuffer,
-  PDF_BLOCKER,
   ReportArtifactError,
   type ArtifactSnapshotInput,
 } from '../../server/services/reportArtifactService';
@@ -43,6 +42,9 @@ import {
   executeAuditedReopen,
   AuditedReopenError,
 } from '../../server/services/auditedPeriodReopenService';
+
+const pdfContainsAsciiHex = (content: string, value: string): boolean =>
+  content.toLowerCase().replace(/\s+/g, '').includes(Buffer.from(value, 'utf-8').toString('hex'));
 
 import {
   buildStatementReconciliationPreview,
@@ -556,17 +558,16 @@ describe('release candidate workflow', () => {
     expect(result.xlsxArtifactId).toBeTruthy();
   });
 
-  // Contract 10: PDF remains blocker/placeholder
-  it('10 — PDF is a placeholder, not a real rendered PDF', () => {
-    const pdfBuf = generatePdfPlaceholder(baseArtifactSnapshot);
+  // Contract 10: PDF is generated from the same immutable snapshot
+  it('10 — PDF is a real artifact generated from the same snapshot', async () => {
+    const pdfBuf = await generatePdfArtifact(baseArtifactSnapshot);
     const content = pdfBuf.toString('utf-8');
 
-    expect(content).toContain('PDF_PLACEHOLDER');
+    expect(pdfBuf.subarray(0, 4).toString('utf-8')).toBe('%PDF');
     expect(content).toContain(SNAPSHOT_ID);
-    expect(PDF_BLOCKER).toContain('package.json');
-
-    // Not a valid PDF file (no %PDF- header)
-    expect(content).not.toMatch(/^%PDF-/);
+    expect(pdfContainsAsciiHex(content, SNAPSHOT_HASH)).toBe(true);
+    expect(content).not.toContain('PDF_PLACEHOLDER');
+    expect(content).not.toContain('PDF_BLOCKER');
   });
 
   // Contract 11: Report approval requires admin and matching snapshot hash

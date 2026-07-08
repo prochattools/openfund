@@ -134,11 +134,10 @@ describe('production blocker guards — report dispatch', () => {
   });
 });
 
-// ─── 3. PDF generation is a placeholder, not a real renderer ─────────────────
+// ─── 3. PDF generation is local report-artifact only ─────────────────────────
 
 import {
-  generatePdfPlaceholder,
-  PDF_BLOCKER,
+  generatePdfArtifact,
 } from '../../server/services/reportArtifactService';
 
 import { ReportLineKind } from '@prisma/client';
@@ -160,20 +159,17 @@ const dummySnapshot = {
   lines: [],
 };
 
-describe('production blocker guards — PDF placeholder', () => {
-  it('PDF_BLOCKER references package.json (no real library)', () => {
-    expect(PDF_BLOCKER).toContain('package.json');
-  });
-
-  it('PDF placeholder is not a real PDF (no %PDF- header)', () => {
-    const buf = generatePdfPlaceholder(dummySnapshot);
+describe('production blocker guards — PDF artifact renderer', () => {
+  it('PDF artifact is generated locally as real PDF bytes', async () => {
+    const buf = await generatePdfArtifact(dummySnapshot);
     const content = buf.toString('utf-8');
-    expect(content).not.toMatch(/^%PDF-/);
-    expect(content).toContain('PDF_PLACEHOLDER');
+    expect(buf.subarray(0, 4).toString('utf-8')).toBe('%PDF');
+    expect(content).not.toContain('PDF_PLACEHOLDER');
+    expect(content).not.toContain('PDF_BLOCKER');
   });
 
-  it('PDF placeholder contains the snapshot id', () => {
-    const buf = generatePdfPlaceholder(dummySnapshot);
+  it('PDF artifact contains the snapshot id without production access', async () => {
+    const buf = await generatePdfArtifact(dummySnapshot);
     const content = buf.toString('utf-8');
     expect(content).toContain('snap-guard-1');
   });

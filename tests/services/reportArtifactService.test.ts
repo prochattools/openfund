@@ -3,10 +3,9 @@ import crypto from 'node:crypto';
 import {
   generateHtmlArtifact,
   generateXlsxArtifact,
-  generatePdfPlaceholder,
+  generatePdfArtifact,
   generateAndStoreReportArtifacts,
   sha256OfBuffer,
-  PDF_BLOCKER,
   ReportArtifactError,
   type ArtifactSnapshotInput,
 } from '../../server/services/reportArtifactService';
@@ -58,6 +57,9 @@ const baseSnapshot: ArtifactSnapshotInput = {
   ],
 };
 
+const pdfContainsAsciiHex = (content: string, value: string): boolean =>
+  content.toLowerCase().replace(/\s+/g, '').includes(Buffer.from(value, 'utf-8').toString('hex'));
+
 const makeArtifactDb = (opts: {
   snapshotExists?: boolean;
   snapshotHashOverride?: string;
@@ -73,6 +75,7 @@ const makeArtifactDb = (opts: {
   };
 
   const calls: string[] = [];
+  const createdArtifacts: any[] = [];
 
   return {
     reportSnapshot: {
@@ -86,6 +89,7 @@ const makeArtifactDb = (opts: {
       create: async (args: any) => {
         const format = args.data.format as string;
         calls.push(`create:${format}`);
+        createdArtifacts.push(args.data);
         return {
           id: artifactIds[format] ?? 'artifact-unknown',
           ...args.data,
@@ -93,6 +97,7 @@ const makeArtifactDb = (opts: {
       },
     },
     _calls: calls,
+    _createdArtifacts: createdArtifacts,
   } as any;
 };
 
@@ -160,28 +165,58 @@ describe('report artifact — XLSX', () => {
   });
 });
 
-// ─── PDF placeholder ──────────────────────────────────────────────────────────
+// ─── PDF generation ───────────────────────────────────────────────────────────
 
-describe('report artifact — PDF placeholder', () => {
-  it('produces a deterministic placeholder buffer with snapshot id embedded', () => {
-    const buf = generatePdfPlaceholder(baseSnapshot);
+describe('report artifact — PDF', () => {
+  it('generates a real PDF buffer', async () => {
+    const buf = await generatePdfArtifact(baseSnapshot);
     const content = buf.toString('utf-8');
 
-    expect(content).toContain(baseSnapshot.snapshotId);
-    expect(content).toContain(baseSnapshot.snapshotHash);
-    expect(content).toContain('PDF_PLACEHOLDER');
+    expect(buf).toBeInstanceOf(Buffer);
+    expect(buf.subarray(0, 4).toString('utf-8')).toBe('%PDF');
+    expect(buf.byteLength).toBeGreaterThan(1000);
+    expect(content).not.toContain('PDF_PLACEHOLDER');
+    expect(content).not.toContain('PDF_BLOCKER');
   });
 
-  it('PDF placeholder sha256 equals hash of its bytes', () => {
-    const buf = generatePdfPlaceholder(baseSnapshot);
+  it('PDF sha256 equals hash of retained bytes', async () => {
+    const buf = await generatePdfArtifact(baseSnapshot);
     const sha256 = sha256OfBuffer(buf);
     const recomputed = crypto.createHash('sha256').update(buf).digest('hex');
     expect(sha256).toBe(recomputed);
   });
 
-  it('documents the PDF blocker reason', () => {
-    expect(PDF_BLOCKER).toContain('PDF');
-    expect(PDF_BLOCKER).toContain('package.json');
+  it('uses service-level snapshot inputs without leaking env values', async () => {
+    const envKey = ['REPORT_ARTIFACT_TEST', 'SECRET'].join('_');
+    const previousEnvValue = process.env[envKey];
+    process.env[envKey] = 'secret-value-that-must-not-appear';
+    try {
+      const buf = await generatePdfArtifact(baseSnapshot);
+      const content = buf.toString('utf-8');
+
+      expect(content).toContain(baseSnapshot.snapshotId);
+      expect(pdfContainsAsciiHex(content, baseSnapshot.snapshotHash)).toBe(true);
+      expect(pdfContainsAsciiHex(content, baseSnapshot.generatedAt.toISOString())).toBe(true);
+      expect(pdfContainsAsciiHex(content, 'EUR 2500.00')).toBe(true);
+      expect(pdfContainsAsciiHex(content, 'EUR 1000.00')).toBe(true);
+      expect(content).not.toContain('secret-value-that-must-not-appear');
+    } finally {
+      if (previousEnvValue === undefined) {
+        delete process.env[envKey];
+      } else {
+        process.env[envKey] = previousEnvValue;
+      }
+    }
+  });
+
+  it('empty-line snapshot still generates a valid PDF', async () => {
+    const emptySnapshot: ArtifactSnapshotInput = { ...baseSnapshot, lines: [], transactionCount: 0 };
+    const buf = await generatePdfArtifact(emptySnapshot);
+    const content = buf.toString('utf-8');
+
+    expect(buf.subarray(0, 4).toString('utf-8')).toBe('%PDF');
+    expect(content).not.toContain('PDF_PLACEHOLDER');
+    expect(content).not.toContain('PDF_BLOCKER');
   });
 });
 
@@ -197,7 +232,7 @@ describe('report artifact — store artifacts from one snapshot', () => {
     expect(result.htmlArtifactId).toBe('artifact-html-1');
     expect(result.xlsxArtifactId).toBe('artifact-xlsx-1');
     expect(result.pdfArtifactId).toBe('artifact-pdf-1');
-    expect(result.pdfBlocker).toBeTruthy(); // documents that PDF is a placeholder
+    expect(result.pdfBlocker).toBeNull();
     expect(result.sideEffects.createsReportArtifact).toBe(true);
     expect(result.sideEffects.createsReportApproval).toBe(false);
     expect(result.sideEffects.dispatchesReport).toBe(false);
@@ -215,6 +250,16 @@ describe('report artifact — store artifacts from one snapshot', () => {
     expect(formatCalls).toContain('create:HTML');
     expect(formatCalls).toContain('create:XLSX');
     expect(formatCalls).toContain('create:PDF');
+  });
+
+  it('stores PDF with application/pdf media type and retained-byte sha256', async () => {
+    const db = makeArtifactDb();
+    await generateAndStoreReportArtifacts(db, baseSnapshot);
+
+    const pdfArtifact = db._createdArtifacts.find((a: any) => a.format === 'PDF');
+    expect(pdfArtifact.mediaType).toBe('application/pdf');
+    expect(pdfArtifact.content.subarray(0, 4).toString('utf-8')).toBe('%PDF');
+    expect(pdfArtifact.sha256).toBe(sha256OfBuffer(pdfArtifact.content));
   });
 
   it('rejects when snapshot not found', async () => {

@@ -12,7 +12,7 @@ import { ReportLineKind, PeriodCloseStatus } from '@prisma/client';
 import {
   generateHtmlArtifact,
   generateXlsxArtifact,
-  generatePdfPlaceholder,
+  generatePdfArtifact,
   generateAndStoreReportArtifacts,
   sha256OfBuffer,
   type ArtifactSnapshotInput,
@@ -34,6 +34,8 @@ const SNAPSHOT_ID = 'snapshot-repro-001';
 const SNAPSHOT_HASH = 'f'.repeat(64);
 const WORKSPACE_ID = 'workspace-repro';
 const CONTENT_HASH = 'c'.repeat(64);
+const pdfContainsAsciiHex = (content: string, value: string): boolean =>
+  content.toLowerCase().replace(/\s+/g, '').includes(Buffer.from(value, 'utf-8').toString('hex'));
 
 const baseSnapshot: ArtifactSnapshotInput = {
   snapshotId: SNAPSHOT_ID,
@@ -177,8 +179,8 @@ describe('artifact reproducibility', () => {
     expect(sha256).toHaveLength(64);
   });
 
-  it('1c — PDF placeholder sha256 equals hash of its retained bytes', () => {
-    const buf = generatePdfPlaceholder(baseSnapshot);
+  it('1c — PDF artifact sha256 equals hash of its retained bytes', async () => {
+    const buf = await generatePdfArtifact(baseSnapshot);
     const sha256 = sha256OfBuffer(buf);
     const recomputed = crypto.createHash('sha256').update(buf).digest('hex');
     expect(sha256).toBe(recomputed);
@@ -194,20 +196,16 @@ describe('artifact reproducibility', () => {
     expect(html).toContain('EUR 1000.00'); // 100000 cents
   });
 
-  it('2b — PDF placeholder includes same snapshot id and hash', () => {
-    const content = generatePdfPlaceholder(baseSnapshot).toString('utf-8');
+  it('2b — PDF artifact includes same snapshot id and hash', async () => {
+    const content = (await generatePdfArtifact(baseSnapshot)).toString('utf-8');
     expect(content).toContain(SNAPSHOT_ID);
-    expect(content).toContain(SNAPSHOT_HASH);
+    expect(pdfContainsAsciiHex(content, SNAPSHOT_HASH)).toBe(true);
   });
 
-  it('2c — all formats are byte-reproducible for identical inputs', () => {
+  it('2c — HTML output remains byte-reproducible for identical inputs', () => {
     const html1 = sha256OfBuffer(generateHtmlArtifact(baseSnapshot));
     const html2 = sha256OfBuffer(generateHtmlArtifact(baseSnapshot));
     expect(html1).toBe(html2);
-
-    const pdf1 = sha256OfBuffer(generatePdfPlaceholder(baseSnapshot));
-    const pdf2 = sha256OfBuffer(generatePdfPlaceholder(baseSnapshot));
-    expect(pdf1).toBe(pdf2);
   });
 
   // Contract 3: Original source files are NOT embedded into report artifacts

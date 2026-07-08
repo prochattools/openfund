@@ -9,17 +9,13 @@
  * Artifacts are stored in ReportArtifact with sha256 of retained bytes.
  * Original source bank files remain separate SourceFile downloads — never mixed here.
  *
- * PDF NOTE: No PDF library exists in package.json. Generating a real PDF requires
- * either `puppeteer` (large), `pdfmake`, or similar. Rather than install a new
- * dependency, PDF artifact generation produces a placeholder byte payload
- * that makes the sha256 deterministic and the artifact storable, while documenting
- * the exact blocker. A real PDF renderer must be added in a future task with
- * explicit owner approval for the dependency.
+ * PDF generation uses pdfkit server-side and stores the retained PDF bytes.
  *
  * No email sending is done here.
  */
 
 import crypto from 'node:crypto';
+import PDFDocument from 'pdfkit';
 import * as XLSX from 'xlsx';
 import type { Prisma, ReportSnapshotLine, ReportArtifactFormat } from '@prisma/client';
 import { hashEvidence } from './reviewDecisionService';
@@ -243,40 +239,110 @@ export const generateXlsxArtifact = (snapshot: ArtifactSnapshotInput): Buffer =>
 
 // ─── PDF generation ───────────────────────────────────────────────────────────
 
-/**
- * PDF BLOCKER:
- *
- * No PDF rendering library is present in package.json. Available options are:
- *   - puppeteer / playwright: Chromium-based, ~300 MB, renders HTML to PDF
- *   - pdfmake: Pure JS PDF generation
- *   - jsPDF: Browser-oriented, limited server support
- *   - @react-pdf/renderer: React-based PDF
- *
- * None of these are currently installed. Installing a new dependency requires
- * explicit owner approval per the project constraints.
- *
- * This function generates a deterministic placeholder PDF-like buffer that:
- *   1. Contains the snapshot id and hash as a recognizable marker
- *   2. Has a deterministic sha256 based on snapshot content
- *   3. Is NOT a valid PDF file
- *
- * A real PDF renderer must be added in a future task after owner approval.
- */
-export const PDF_BLOCKER = 'PDF-artifact vereist een PDF-bibliotheek die nog niet aanwezig is in package.json. ' +
-  'Installatie vereist expliciete eigenaargoedkeuring. ' +
-  'Vervang de placeholder door een echte PDF-renderer zodra een geschikte bibliotheek is goedgekeurd.';
+const formatDirection = (direction: ReportLineInput['direction']): string =>
+  direction === 'credit' ? 'Inkomsten' : 'Uitgaven';
 
-export const generatePdfPlaceholder = (snapshot: ArtifactSnapshotInput): Buffer => {
-  const marker = JSON.stringify({
-    type: 'PDF_PLACEHOLDER',
-    snapshotId: snapshot.snapshotId,
-    snapshotHash: snapshot.snapshotHash,
-    period: periodLabel(snapshot.kind, snapshot.year, snapshot.month),
-    generatedAt: snapshot.generatedAt.toISOString(),
-    blocker: PDF_BLOCKER,
+const writePdfKeyValueRows = (
+  doc: PDFKit.PDFDocument,
+  rows: Array<[string, string | number]>,
+) => {
+  rows.forEach(([label, value]) => {
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(10)
+      .text(`${label}: `, { continued: true })
+      .font('Helvetica')
+      .text(String(value));
   });
-  return Buffer.from(marker, 'utf-8');
 };
+
+const writePdfSectionTitle = (doc: PDFKit.PDFDocument, title: string) => {
+  doc
+    .moveDown(0.9)
+    .font('Helvetica-Bold')
+    .fontSize(13)
+    .text(title)
+    .moveDown(0.35);
+};
+
+const writePdfLines = (doc: PDFKit.PDFDocument, lines: ReportLineInput[]) => {
+  if (!lines.length) {
+    doc.font('Helvetica').fontSize(10).text('Geen rapportregels in deze snapshot.');
+    return;
+  }
+
+  lines.forEach((line, index) => {
+    if (doc.y > doc.page.height - 120) {
+      doc.addPage();
+    }
+
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(10)
+      .text(`${index + 1}. ${line.literalProjectLabel ?? ''} / ${line.literalTypeLabel ?? ''} / ${line.literalCategoryLabel ?? ''}`);
+    doc
+      .font('Helvetica')
+      .fontSize(10)
+      .text(`Richting: ${formatDirection(line.direction)} | Bedrag: ${centsToEuro(line.amountMinor)} | Transacties: ${line.transactionCount}`);
+    doc.moveDown(0.45);
+  });
+};
+
+export const generatePdfArtifact = (snapshot: ArtifactSnapshotInput): Promise<Buffer> =>
+  new Promise((resolve, reject) => {
+    const period = periodLabel(snapshot.kind, snapshot.year, snapshot.month);
+    const generatedAt = snapshot.generatedAt.toISOString();
+    const chunks: Buffer[] = [];
+
+    const doc = new PDFDocument({
+      size: 'A4',
+      margin: 48,
+      compress: false,
+      info: {
+        Title: `Financieel Rapport - ${period}`,
+        Author: 'Yeshua Academy Finance',
+        Subject: `Snapshot ${snapshot.snapshotId}`,
+        CreationDate: snapshot.generatedAt,
+        ModDate: snapshot.generatedAt,
+      },
+    });
+
+    doc.on('data', (chunk: Buffer) => chunks.push(Buffer.from(chunk)));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(20)
+      .text('Yeshua Academy - Financieel Rapport');
+    doc.font('Helvetica').fontSize(12).text(period).moveDown(0.8);
+
+    writePdfSectionTitle(doc, 'Overzicht');
+    writePdfKeyValueRows(doc, [
+      ['Periode', period],
+      ['Snapshot-ID', snapshot.snapshotId],
+      ['Snapshot-hash', snapshot.snapshotHash],
+      ['Aangemaakt op', generatedAt],
+      ['Openingsaldo', centsToEuro(snapshot.openingBalanceMinor)],
+      ['Inkomsten', centsToEuro(snapshot.incomeMinor)],
+      ['Uitgaven', centsToEuro(snapshot.expenseMinor)],
+      ['Netto', centsToEuro(snapshot.netMinor)],
+      ['Eindsaldo', centsToEuro(snapshot.closingBalanceMinor)],
+      ['Transacties', snapshot.transactionCount],
+    ]);
+
+    writePdfSectionTitle(doc, 'Rapportregels');
+    writePdfLines(doc, snapshot.lines);
+
+    doc
+      .moveDown(0.8)
+      .font('Helvetica')
+      .fontSize(8)
+      .fillColor('#555555')
+      .text('Dit PDF-artefact is server-side gegenereerd uit dezelfde immutable snapshotdata als HTML en XLSX.');
+
+    doc.end();
+  });
 
 // ─── Artifact sha256 ──────────────────────────────────────────────────────────
 
@@ -310,7 +376,7 @@ const storeArtifact = async (
 };
 
 /**
- * Generate and store HTML, XLSX, and PDF placeholder artifacts from one snapshot.
+ * Generate and store HTML, XLSX, and PDF artifacts from one snapshot.
  *
  * All artifacts share the same snapshotId, snapshotHash, totals, and period.
  * The sha256 of each artifact equals the sha256 of the retained content bytes.
@@ -360,14 +426,14 @@ export const generateAndStoreReportArtifacts = async (
     xlsxContent,
   );
 
-  // PDF: placeholder only — no real PDF library available
-  const pdfContent = generatePdfPlaceholder(snapshot);
+  // Generate PDF
+  const pdfContent = await generatePdfArtifact(snapshot);
   const pdfArtifact = await storeArtifact(
     db,
     snapshot.snapshotId,
     'PDF',
     `rapport_${safePeriod}.pdf`,
-    'application/octet-stream',
+    'application/pdf',
     pdfContent,
   );
 
@@ -377,7 +443,7 @@ export const generateAndStoreReportArtifacts = async (
     htmlArtifactId: htmlArtifact.id,
     xlsxArtifactId: xlsxArtifact.id,
     pdfArtifactId: pdfArtifact.id,
-    pdfBlocker: PDF_BLOCKER,
+    pdfBlocker: null,
     sideEffects: {
       createsReportArtifact: true,
       createsReportApproval: false,
