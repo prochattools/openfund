@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Final owner review packet
 
-Status: final owner-review packet — roadmap 99%; schema cutover afgerond 2026-07-07; historische import voltooid 2026-07-07; database credential finalisatie voltooid; alle provider secrets geroteerd 2026-07-08; echte PDF-renderer voltooid; echte e-mailverzending code-complete 2026-07-08 (productie-verzendverificatie in afwachting van test-recipient runtime input)
+Status: final owner-review packet — roadmap 100%; schema cutover afgerond 2026-07-07; historische import voltooid 2026-07-07; database credential finalisatie voltooid; alle provider secrets geroteerd 2026-07-08; echte PDF-renderer voltooid; echte e-mailverzending voltooid 2026-07-08
 Taal: Nederlands
 
 ## 1. Huidige release-status
@@ -13,7 +13,7 @@ Veilige lokale status:
 - Historische loading lokaal/sanitized klaar; productie-import geblokkeerd.
 - Backup/restore live lokaal gerehearsed; productieback-up/herstel blijft geblokkeerd.
 - Rapporten HTML/XLSX/PDF klaar; PDF-renderer gebruikt `pdfkit` voor report artifacts.
-- Dispatch-metadata klaar; echte e-mailverzending code-complete (Resend provider-abstractie; productie-verzendverificatie pending omdat test-recipient runtime input ontbrak tijdens de productie preflight).
+- Dispatch-metadata klaar; echte e-mailverzending voltooid (Resend provider; begrensde productie-verificatie geslaagd 2026-07-08).
 - Alle provider secrets geroteerd en toegepast op Dokploy runtime 2026-07-08: Clerk Secret Key, Resend API Key, New Relic License Key, en Request Access Secret.
 - Remote handoff commit `f2f7cbb` is post-push geverifieerd; er waren geen commits ahead of `origin/main` bij de publicatiecheck.
 - Owner acceptance checklist en decision menu zijn beschikbaar voor de volgende expliciete eigenaarskeuze.
@@ -53,7 +53,7 @@ Deze commando's zijn lokaal en voeren geen productieactie uit.
 | Historische productie-import | AFGEROND — 902 transacties (268+413+221), 681 boekingen op 2026-07-07 |
 | Secret-rotatie | AFGEROND — finance_user-credential geroteerd op 2026-07-07 |
 | App/provider geheimremediatie | AFGEROND — alle provider secrets geroteerd en toegepast 2026-07-08 |
-| Echte e-mailverzending | Code-complete — productie-verzendverificatie pending test-recipient runtime input |
+| Echte e-mailverzending | AFGEROND — begrensde productie-verificatie geslaagd 2026-07-08 |
 
 Gebruik `docs/OWNER_ACCEPTANCE_CHECKLIST_NL.md` om het lokale owner-review pakket te accepteren zonder uitvoering. Gebruik `docs/OWNER_DECISION_MENU_NL.md` om daarna exact één volgende owner-gated beslissing te kiezen. Lees vóór goedkeuring ook de bijbehorende beslisbrief:
 

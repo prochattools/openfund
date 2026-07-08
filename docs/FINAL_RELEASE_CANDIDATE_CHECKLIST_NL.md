@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Release Candidate Validatiechecklist
 
-Status: Release Candidate 7 — roadmap 99%; Phase 16 real e-mail is code-complete and production send verification is pending
+Status: Release Candidate 7 — roadmap 100%; all functional blockers resolved; real email sending verified 2026-07-08
 Datum: 2026-07-08
 Taal: Nederlands
 

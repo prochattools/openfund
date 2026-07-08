@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Veilige commando-inventaris
 
-Status: Release Candidate 7 — roadmap 99%; schema cutover, historische import, database credential finalisatie, provider secret remediation, en echte PDF zijn afgerond; echte e-mail productie-verificatie is pending
+Status: Release Candidate 7 — roadmap 100%; schema cutover, historische import, database credential finalisatie, provider secret remediation, echte PDF, en echte e-mailverzending zijn volledig afgerond 2026-07-08
 Taal: Nederlands
 Doel: Overzicht van alle veilige lokale commando's en alle verboden commando-categorieën voor eigenaarsbeoordeling.
 
@@ -237,7 +237,7 @@ De volgende commando's mogen **NOOIT** worden uitgevoerd zonder expliciete eigen
 | Productiecutover-script | AFGEROND — schema finance gedeployed 2026-07-07 |
 | Historische productie-import | AFGEROND — 902 transacties geïmporteerd 2026-07-07 |
 | Secret rotation | AFGEROND — finance_user geroteerd 2026-07-07 |
-| Echte e-mail sturen (Resend) | CODE-COMPLETE 2026-07-08 — provider-abstractie en executeDispatch geïmplementeerd; productie-verzendverificatie in afwachting |
+| Echte e-mail sturen (Resend) | AFGEROND 2026-07-08 — begrensde productie-verificatie geslaagd via apps-saas-open-fund-vdymfu |
 | Nieuwe dependency installeren | Geblokkeerd — vereist keuze en goedkeuring eigenaar; `pdfkit` was apart goedgekeurd en afgerond |
 | Clerk/Resend/New Relic providerrotaties afronden | AFGEROND 2026-07-08 — alle provider secrets geroteerd en toegepast op Dokploy runtime |
 | `node scripts/backup-restore-rehearsal.mjs --live-local` | Verbindt met lokale database; vereist `--confirm-disposable` én voorbereiding |

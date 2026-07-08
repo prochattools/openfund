@@ -25,18 +25,18 @@ describe('realEmailSendingEvidence', () => {
     expect(content).toContain('Startcommit: 84ef8d0');
   });
 
-  it('states production send verification remains pending', () => {
-    expect(content).toMatch(/productie-verzendverificatie in afwachting/i);
-    expect(content).toMatch(/test-recipient runtime input ontbreekt|test-recipient runtime input.*ontbrak/i);
+  it('states production send verification completed', () => {
+    expect(content).toMatch(/real email sending completed/i);
+    expect(content).toMatch(/GESLAAGD.*precies 1 e-mail verzonden/i);
   });
 
   it('states no bulk send', () => {
     expect(content).toMatch(/Geen bulk e-mail/);
   });
 
-  it('states no production test email was sent', () => {
-    expect(content).toMatch(/Geen test-email verzonden/i);
-    expect(content).toMatch(/runtime-preflight stopte/i);
+  it('states exactly one bounded production email was sent', () => {
+    expect(content).toMatch(/precies 1 e-mail verzonden/i);
+    expect(content).toMatch(/Geen bulk e-mail/);
   });
 
   it('states no raw rows', () => {

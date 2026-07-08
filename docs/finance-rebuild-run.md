@@ -4,7 +4,7 @@ Date: 2026-07-02
 Run: `agent-f961650b-de17-4282-ab18-7a716cc72958`  
 Source: `yeshuaacademy-finance`  
 Branch: `main`  
-Status: Release Candidate 7 — production schema cutover, historical import, database credential finalization, all provider secret rotations, real PDF renderer, and real email sending (code-complete) 2026-07-08; production send verification pending test-recipient runtime input
+Status: Release Candidate 7 — production schema cutover, historical import, database credential finalization, all provider secret rotations, real PDF renderer, and real email sending complete 2026-07-08; all functional blockers resolved
 
 ## RC2 Hardening Evidence
 
@@ -1491,7 +1491,7 @@ Commit: `d51cfad docs: add Dutch administrator operating guide (OPS-001)`
 - No production, Dokploy, MCP bridge, `10.0.2.4`, `.env`, `.graphifyignore`, `graphify-out/`,
   owner-file copy, raw row dump, or push occurred.
 
-## Current gate: production e-mail send verification remains pending
+## Current gate: all functional blockers resolved
 
 Real PDF generation is complete for report artifacts using owner-approved `pdfkit`. Evidence: `docs/REAL_PDF_RENDERER_EVIDENCE_NL.md`.
 

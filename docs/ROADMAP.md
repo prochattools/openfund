@@ -32,13 +32,13 @@ Phase 12 — Production secret rotation            COMPLETE (2026-07-07; finance
 Phase 13 — Production runtime credential update  COMPLETE (2026-07-07; final retained credential applied; Dokploy env updated; redeploy triggered; app health verified)
 Phase 14 — App/provider secret remediation       COMPLETE (2026-07-08; Clerk, Resend, and New Relic provider keys rotated and applied to Dokploy runtime; app redeployed; health/readiness verified)
 Phase 15 — Real PDF renderer                     COMPLETE (2026-07-08; pdfkit report artifact renderer; HTML/XLSX preserved; real email still blocked)
-Phase 16 — Real email sending                    CODE-COMPLETE (2026-07-08; Resend provider abstraction; executeDispatch with guards; production send verification pending runtime input)
+Phase 16 — Real email sending                    COMPLETE (2026-07-08; Resend provider abstraction; executeDispatch with guards; bounded production send verified)
 ```
 
 ## Authoritative Progress
 
 ```text
-Total roadmap progress: 99%
+Total roadmap progress: 100%
 Phase 0 — Governance and verified controls: 100%
 Phase 1 — Safe categorization foundation: 100%
 Phase 2 — Financial domain and historical model: 100%
@@ -55,8 +55,8 @@ Phase 12 — Production secret rotation: 100%
 Phase 13 — Production runtime credential update: 100%
 Phase 14 — App/provider secret remediation: 100%
 Phase 15 — Real PDF renderer: 100%
-Phase 16 — Real email sending: 90% — code complete, production send verification pending
-Remaining blocker: production email send verification
+Phase 16 — Real email sending: 100% — bounded production send verified
+Remaining blockers: none
 ```
 
 ## Phase 0 — Governance and verified controls
@@ -305,7 +305,7 @@ Remaining blockers before production:
 - Live local backup/restore rehearsal is complete for RC3; production backup/restore remains gated by owner approval.
 - Production cutover requires explicit owner approval (see `docs/PRODUCTION_CUTOVER_PLAN_NL.md`).
 - Historical production import (2024/2025/2026) requires owner approval and dry-run acceptance.
-- Real email sending: code-complete; production send verification pending runtime execution because the test-recipient runtime input was absent during the 2026-07-08 production preflight.
+- Real email sending: complete; bounded production verification email sent via Resend on 2026-07-08.
 - Post-push verification confirms owner-decision handoff commit `f2f7cbb` on `origin/main`; no new push is needed for the published handoff.
 - Push for future local commits, provider secret completion, and any production-provider changes are represented in the owner decision matrix, decision briefs, and approval-intake validator; they remain owner-gated.
 - Local PostgreSQL 15.17 rehearsal evidence is recorded in `docs/POSTGRES_VERSION_EVIDENCE_NL.md`; it does not resolve the production PostgreSQL version blocker.

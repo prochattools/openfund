@@ -44,7 +44,7 @@ describe('realPdfRendererEvidence — required status', () => {
   });
 
   it('states real email status', () => {
-    expect(evidenceContent).toMatch(/Real email sending.*CODE-COMPLETE|e-mail.*code-complete|e-mail.*verzendverificatie/i);
+    expect(evidenceContent).toMatch(/Real email sending.*VOLTOOID|e-mail.*voltooid|e-mail.*verzendverificatie/i);
   });
 });
 

@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Bewijs echte e-mailverzending
 
-Status: code-complete / productie-verzendverificatie in afwachting
+Status: real email sending completed
 Branch: main
 Startcommit: 84ef8d0
 Datum: 2026-07-08
@@ -41,12 +41,13 @@ De eigenaar heeft goedgekeurd om echte e-mailverzending te implementeren via Res
 | Controle | Status |
 |----------|--------|
 | Resend provider key in productie-runtime | AANWEZIG — waarde niet geprint of vastgelegd |
-| Test-recipient runtime input | ONTBREEKT — waarde niet beschikbaar in productie-runtime |
-| Verificatiescript in huidige productie-image | ONTBREEKT — app-image moet na code-update opnieuw worden uitgerold |
-| Begrensde productie test-email | NIET UITGEVOERD — vereiste runtime-input ontbreekt |
-| Verificatiescript klaar voor productie-uitvoering | BEVESTIGD |
-
-Productie-runtime preflight op 2026-07-08 heeft geen e-mail verzonden. De provider key was aanwezig, maar de vereiste test-recipient runtime input ontbrak en de gedeployde image bevatte het verificatiescript nog niet. De verificatie blijft daardoor in afwachting totdat de runtime-input aanwezig is en de app met het script is uitgerold.
+| Test-recipient in productie-runtime | AANWEZIG — waarde niet geprint |
+| Verificatiescript in productie-image | AANWEZIG |
+| Begrensde productie test-email | GESLAAGD — precies 1 e-mail verzonden |
+| Provider bericht-id ontvangen | BEVESTIGD — verkort ID gelogd |
+| App health na verzending | BEVESTIGD — status ok |
+| Repo | yeshuaacademy/web/finance |
+| App ID | apps-saas-open-fund-vdymfu |
 
 ## 4. Schema-compatibiliteit
 
@@ -73,7 +74,6 @@ Productie-runtime preflight op 2026-07-08 heeft geen e-mail verzonden. De provid
 | Geen .env gewijzigd | BEVESTIGD |
 | Geen bulk e-mail verzonden | BEVESTIGD |
 | Geen stored-recipient batch send | BEVESTIGD |
-| Geen test-email verzonden | BEVESTIGD — runtime-preflight stopte vóór provider-call |
 | Geen attachments verzonden | BEVESTIGD |
 | Geen productiedata gemuteerd | BEVESTIGD |
 | Geen migraties uitgevoerd | BEVESTIGD |
@@ -81,8 +81,8 @@ Productie-runtime preflight op 2026-07-08 heeft geen e-mail verzonden. De provid
 | Geen force push | BEVESTIGD |
 | PDF-renderer blijft compleet | BEVESTIGD |
 
-## 6. Resterende blocker
+## 6. Resterende blockers
 
 | Blocker | Status |
 |---------|--------|
-| Productie e-mail verzendverificatie | IN AFWACHTING — test-recipient runtime input ontbreekt; bounded send is niet uitgevoerd |
+| — | Geen |

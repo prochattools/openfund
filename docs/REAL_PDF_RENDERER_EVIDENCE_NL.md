@@ -49,4 +49,4 @@ Gerichte tests bewaken dat PDF-output een Buffer is, met `%PDF` begint, geen oud
 
 | Blocker | Status |
 |---------|--------|
-| Real email sending | CODE-COMPLETE — productie-verzendverificatie in afwachting; zie `docs/REAL_EMAIL_SENDING_EVIDENCE_NL.md` |
+| Real email sending | VOLTOOID — begrensde productie-verzendverificatie geslaagd 2026-07-08; zie `docs/REAL_EMAIL_SENDING_EVIDENCE_NL.md` |
