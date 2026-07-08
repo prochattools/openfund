@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Post-approval prompt pack
 
-Status: Release Candidate 5 — productie schema cutover, historische import en geheimrotatie zijn afgerond; resterende functionele blokkers: echte PDF-renderer en echte e-mailverzending  
+Status: Release Candidate 5 — productie schema cutover, historische import, database credential finalisatie, en Request Access Secret-remediatie zijn afgerond; Clerk/Resend/New Relic providerrotaties zijn handmatig openstaand; resterende functionele blokkers: echte PDF-renderer en echte e-mailverzending
 Taal: Nederlands  
 Doel: klaarstaande prompts voor toekomstige owner-approved acties. Kopieer pas een prompt nadat de eigenaar de bijbehorende beslissing expliciet heeft goedgekeurd.
 
@@ -24,6 +24,7 @@ Algemene regels voor alle prompts:
 | 2 | Echte e-mailverzending | `docs/DECISION_BRIEF_EMAIL_PROVIDER_NL.md` | §5 hieronder |
 
 Alle andere production hardening stappen zijn afgerond (2026-07-07).
+Providerrotaties voor Clerk, Resend en New Relic blijven open tot finale vervangingssleutels buiten Git beschikbaar zijn.
 
 ---
 

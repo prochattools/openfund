@@ -95,6 +95,7 @@ Zie `docs/POST_APPROVAL_PROMPTS_NL.md` voor prompts die pas na goedkeuring gebru
 | 5 | PostgreSQL-productieversie bevestigen | AFGEROND — PostgreSQL 15.8 bevestigd 2026-07-07 |
 | 6 | Live backup rehearsal uitvoeren | AFGEROND — rehearsal 2026-07-05 |
 | 7 | Geheimen rotatie bevestigen | AFGEROND — finance_user geroteerd 2026-07-07 |
+| 8 | App/provider geheimremediatie afronden | GEDEELTELIJK — Request Access Secret toegepast; Clerk/Resend/New Relic handmatig openstaand |
 
 ---
 

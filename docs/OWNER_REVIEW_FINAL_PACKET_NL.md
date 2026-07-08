@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Final owner review packet
 
-Status: final owner-review packet — schema cutover afgerond 2026-07-07; historische import voltooid 2026-07-07; geheimrotatie voltooid 2026-07-07; echte e-mail en PDF geblokkeerd
+Status: final owner-review packet — schema cutover afgerond 2026-07-07; historische import voltooid 2026-07-07; database credential finalisatie voltooid; Request Access Secret-remediatie voltooid; Clerk/Resend/New Relic handmatig openstaand; echte e-mail en PDF geblokkeerd
 Taal: Nederlands
 
 ## 1. Huidige release-status
@@ -14,6 +14,7 @@ Veilige lokale status:
 - Backup/restore live lokaal gerehearsed; productieback-up/herstel blijft geblokkeerd.
 - Rapporten HTML/XLSX klaar; echte PDF-renderer geblokkeerd.
 - Dispatch-metadata klaar; echte e-mailverzending geblokkeerd.
+- Request Access Secret is in Dokploy runtime vernieuwd; Clerk, Resend en New Relic providerrotaties blijven handmatig openstaand tot finale vervangingssleutels buiten Git zijn aangeleverd.
 - Remote handoff commit `f2f7cbb` is post-push geverifieerd; er waren geen commits ahead of `origin/main` bij de publicatiecheck.
 - Owner acceptance checklist en decision menu zijn beschikbaar voor de volgende expliciete eigenaarskeuze.
 - Decision briefs en approval-intake validation zijn beschikbaar voor elke owner-gated beslissing.
@@ -51,6 +52,7 @@ Deze commando's zijn lokaal en voeren geen productieactie uit.
 | Productiecutover | AFGEROND — schema finance gedeployed op PostgreSQL 15.8 op 2026-07-07 |
 | Historische productie-import | AFGEROND — 902 transacties (268+413+221), 681 boekingen op 2026-07-07 |
 | Secret-rotatie | AFGEROND — finance_user-credential geroteerd op 2026-07-07 |
+| App/provider geheimremediatie | GEDEELTELIJK — Request Access Secret toegepast; Clerk/Resend/New Relic handmatig openstaand |
 | Echte PDF-renderer | Geblokkeerd tot bibliotheekkeuze en dependency-goedkeuring |
 | Echte e-mailverzending | Geblokkeerd tot provider/secret-goedkeuring |
 

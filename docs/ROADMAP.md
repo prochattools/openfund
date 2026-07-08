@@ -30,6 +30,7 @@ Phase 10 — Production schema cutover             COMPLETE (2026-07-07; finance
 Phase 11 — Production historical import          COMPLETE (2026-07-07; 2024/2025 concluded data imported; 2026 partial open statement imported and not closed; 902 transactions, 681 bookings)
 Phase 12 — Production secret rotation            COMPLETE (2026-07-07; finance_user credential rotated; old credential rejected; new credential verified; historical totals re-verified)
 Phase 13 — Production runtime credential update  COMPLETE (2026-07-07; final retained credential applied; Dokploy env updated; redeploy triggered; app health verified)
+Phase 14 — App/provider secret remediation       PARTIAL (2026-07-07; Request Access Secret generated/applied; app redeployed; health/readiness verified; Clerk, Resend, and New Relic provider rotations manual pending)
 ```
 
 ## Phase 0 — Governance and verified controls
@@ -280,7 +281,7 @@ Remaining blockers before production:
 - Historical production import (2024/2025/2026) requires owner approval and dry-run acceptance.
 - Real email sending requires configured Resend provider and owner approval.
 - Post-push verification confirms owner-decision handoff commit `f2f7cbb` on `origin/main`; no new push is needed for the published handoff.
-- Push for future local commits, secret rotation, and PostgreSQL production version confirmation are represented in the owner decision matrix, decision briefs, and approval-intake validator; they remain owner-gated.
+- Push for future local commits, provider secret completion, and any production-provider changes are represented in the owner decision matrix, decision briefs, and approval-intake validator; they remain owner-gated.
 - Local PostgreSQL 15.17 rehearsal evidence is recorded in `docs/POSTGRES_VERSION_EVIDENCE_NL.md`; it does not resolve the production PostgreSQL version blocker.
 - PostgreSQL production version must be confirmed before cutover and is the recommended next low-risk owner decision.
 - Owner acceptance checklist, owner decision menu, decision briefs, approval-intake validation, and post-push evidence are prepared; they do not approve any gated action.
