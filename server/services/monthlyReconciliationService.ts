@@ -213,9 +213,10 @@ const buildLines = (
     const direction = transaction.direction;
     const key = lineKey(lineKind, transaction, direction);
     const amountMinor = toMinor(transaction.amountMinor);
+    const absAmount = amountMinor < 0n ? -amountMinor : amountMinor;
     const existing = groups.get(key);
     if (existing) {
-      existing.amountMinor = moneyToString(BigInt(existing.amountMinor) + amountMinor);
+      existing.amountMinor = moneyToString(BigInt(existing.amountMinor) + absAmount);
       existing.transactionCount += 1;
       continue;
     }
@@ -226,7 +227,7 @@ const buildLines = (
       groupKey: key,
       direction,
       ...labels,
-      amountMinor: moneyToString(amountMinor),
+      amountMinor: moneyToString(absAmount),
       transactionCount: 1,
       sortOrder: 0,
     });
@@ -254,10 +255,17 @@ const buildLines = (
 const sumByDirection = (
   transactions: MonthlyReconciliationTransactionInput[],
   direction: MonthlyReconciliationDirection,
-): bigint =>
-  transactions
-    .filter((transaction) => transaction.direction === direction)
-    .reduce((total, transaction) => total + toMinor(transaction.amountMinor), 0n);
+): bigint => {
+  let total = 0n;
+  for (const transaction of transactions) {
+    if (transaction.direction === direction) {
+      const amount = toMinor(transaction.amountMinor);
+      const absAmount = amount < 0n ? -amount : amount;
+      total += absAmount;
+    }
+  }
+  return total;
+};
 
 const addReason = (reasons: string[], reason: string) => {
   if (!reasons.includes(reason)) {
@@ -313,7 +321,8 @@ export const buildMonthlyReconciliation = (
 
   for (const [index, transaction] of transactions.entries()) {
     const amountMinor = toMinor(transaction.amountMinor);
-    const delta = transaction.direction === 'credit' ? amountMinor : -amountMinor;
+    const absAmount = amountMinor < 0n ? -amountMinor : amountMinor;
+    const delta = transaction.direction === 'credit' ? absAmount : -absAmount;
     const actualBalanceMinor = transaction.resultingBalanceMinor == null
       ? extractRunningBalanceMinor(transaction.rawRow)
       : toMinor(transaction.resultingBalanceMinor);

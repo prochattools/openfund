@@ -16,15 +16,26 @@ const loadBuiltModule = async (relativePath) => import(path.join(distRoot, relat
 
 const parseMinorFromRawRow = (rawRow) => {
   if (!rawRow || typeof rawRow !== 'object') return null;
-  const candidates = [
-    rawRow['Resulting balance'],
-    rawRow['Resulting Balance'],
+
+  // Check for already-minor-unit fields first (no scaling needed)
+  const alreadyMinor = [
     rawRow.resultingBalanceMinor,
     rawRow.resulting_balance_minor,
+  ].find((v) => v != null && String(v).trim().length > 0);
+
+  if (alreadyMinor != null) {
+    const parsed = BigInt(alreadyMinor);
+    return parsed;
+  }
+
+  // Fall back to euro decimal fields (scale by 100)
+  const euroCandidates = [
+    rawRow['Resulting balance'],
+    rawRow['Resulting Balance'],
   ].filter((value) => value != null && String(value).trim().length > 0);
 
-  if (!candidates.length) return null;
-  const raw = String(candidates[0]).replace(/\./g, '').replace(',', '.');
+  if (!euroCandidates.length) return null;
+  const raw = String(euroCandidates[0]).replace(/\./g, '').replace(',', '.');
   const parsed = Number(raw);
   if (Number.isNaN(parsed)) return null;
   return BigInt(Math.round(parsed * 100));
