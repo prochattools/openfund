@@ -42,6 +42,7 @@ const decisionBriefs = [
     path: 'docs/DECISION_BRIEF_EMAIL_PROVIDER_NL.md',
     title: 'e-mailprovider',
     notOccurredClaim: 'verzendt niets',
+    completed: true,
   },
   {
     key: 'secret-rotation',

@@ -40,10 +40,10 @@ describe('release evidence consistency — stale RC labels', () => {
     expect(ownerHandoff).not.toContain('### RC2-validatie in één stap');
   });
 
-  it('roadmap and implementation plan identify the current handoff after real PDF completion, not RC2/RC3', () => {
+  it('roadmap and implementation plan identify the current handoff after real email completion, not RC2/RC3', () => {
     expect(roadmap).toContain('COMPLETE (published RC4 handoff; owner decisions gated)');
-    expect(implementationPlan).toContain('Current gate: owner decision selection after real PDF renderer completion');
-    expect(rebuildRun).toContain('Status: Release Candidate 6');
+    expect(implementationPlan).toContain('Current gate: owner decision selection after real email sending completion');
+    expect(rebuildRun).toContain('Status: Release Candidate 7');
     expect(implementationPlan).not.toContain('Current gate: Release Candidate 3 owner handoff');
     expect(implementationPlan).not.toContain('Current gate: Release Candidate 2 readiness');
   });

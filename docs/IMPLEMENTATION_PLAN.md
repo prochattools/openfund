@@ -87,7 +87,7 @@ Production historical import: complete 2026-07-07; 902 transactions (268 2024 + 
 Production secret rotation: complete 2026-07-07; finance_user credential rotated; old credential rejected; new credential verified; historical totals re-verified; evidence in docs/PRODUCTION_SECRET_ROTATION_EVIDENCE_NL.md
 Production runtime credential update: complete 2026-07-07; final retained credential applied; Dokploy env updated; app redeployed; health check passed; evidence in docs/PRODUCTION_RUNTIME_DATABASE_CREDENTIAL_EVIDENCE_NL.md
 App/provider secret remediation: complete 2026-07-08; all provider secrets (Clerk, Resend, New Relic, Request Access Secret) rotated and applied to Dokploy runtime; app redeployed; health and production readiness verified; evidence in docs/PRODUCTION_APP_PROVIDER_SECRET_ROTATION_EVIDENCE_NL.md
-Current gate: owner decision selection after real PDF renderer completion — production schema cutover, historical import, database credential finalization, all provider secret rotations (Clerk, Resend, New Relic), and real PDF report artifact generation are complete 2026-07-08; real email provider sending remains blocked.
+Current gate: owner decision selection after real email sending completion — production schema cutover, historical import, database credential finalization, all provider secret rotations (Clerk, Resend, New Relic), real PDF report artifact generation, and real email sending (code-complete) are complete 2026-07-08; production send verification pending runtime execution.
 Local PostgreSQL 15.17 rehearsal evidence is recorded in `docs/POSTGRES_VERSION_EVIDENCE_NL.md`.
 ```
 

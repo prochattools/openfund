@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Final owner review packet
 
-Status: final owner-review packet — schema cutover afgerond 2026-07-07; historische import voltooid 2026-07-07; database credential finalisatie voltooid; alle provider secrets geroteerd 2026-07-08; echte PDF-renderer voltooid; echte e-mail geblokkeerd
+Status: final owner-review packet — schema cutover afgerond 2026-07-07; historische import voltooid 2026-07-07; database credential finalisatie voltooid; alle provider secrets geroteerd 2026-07-08; echte PDF-renderer voltooid; echte e-mailverzending code-complete 2026-07-08 (productie-verzendverificatie in afwachting)
 Taal: Nederlands
 
 ## 1. Huidige release-status
@@ -13,7 +13,7 @@ Veilige lokale status:
 - Historische loading lokaal/sanitized klaar; productie-import geblokkeerd.
 - Backup/restore live lokaal gerehearsed; productieback-up/herstel blijft geblokkeerd.
 - Rapporten HTML/XLSX/PDF klaar; PDF-renderer gebruikt `pdfkit` voor report artifacts.
-- Dispatch-metadata klaar; echte e-mailverzending geblokkeerd.
+- Dispatch-metadata klaar; echte e-mailverzending code-complete (Resend provider-abstractie; productie-verzendverificatie in afwachting).
 - Alle provider secrets geroteerd en toegepast op Dokploy runtime 2026-07-08: Clerk Secret Key, Resend API Key, New Relic License Key, en Request Access Secret.
 - Remote handoff commit `f2f7cbb` is post-push geverifieerd; er waren geen commits ahead of `origin/main` bij de publicatiecheck.
 - Owner acceptance checklist en decision menu zijn beschikbaar voor de volgende expliciete eigenaarskeuze.

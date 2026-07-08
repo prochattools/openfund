@@ -25,7 +25,7 @@ const allDocs = Object.entries(docs);
 
 describe('roadmap status consistency — RC4 gate', () => {
   it('implementation plan and handoff docs identify RC4 owner review, not RC3', () => {
-    expect(docs.implementationPlan).toContain('Current gate: owner decision selection after real PDF renderer completion');
+    expect(docs.implementationPlan).toContain('Current gate: owner decision selection after real email sending completion');
     expect(docs.ownerHandoff).toContain('Eigenaaroverdracht (RC4)');
     expect(docs.ownerHandoff).toContain('### RC4-validatie in één stap');
     expect(docs.implementationPlan).not.toContain('Current gate: Release Candidate 3 owner handoff');

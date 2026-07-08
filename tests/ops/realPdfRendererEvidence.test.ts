@@ -43,8 +43,8 @@ describe('realPdfRendererEvidence — required status', () => {
     expect(evidenceContent).toMatch(/Geen secrets of runtimeconfig gewijzigd.*BEVESTIGD/i);
   });
 
-  it('states real email remains blocked', () => {
-    expect(evidenceContent).toMatch(/Real email sending.*BLOCKED|e-mail.*BLOCKED/i);
+  it('states real email status', () => {
+    expect(evidenceContent).toMatch(/Real email sending.*CODE-COMPLETE|e-mail.*code-complete|e-mail.*verzendverificatie/i);
   });
 });
 

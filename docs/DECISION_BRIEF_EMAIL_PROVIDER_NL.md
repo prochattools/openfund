@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Decision brief: e-mailprovider
 
-Status: Geblokkeerd tot expliciete eigenaargoedkeuring
+Status: Goedgekeurd en geïmplementeerd — provider Resend; productie-verzendverificatie in afwachting
 Taal: Nederlands
 
 ## 1. Beslissing
@@ -76,17 +76,16 @@ Dry-run/no-send configuratie moet metadata-only blijven totdat echte verzending 
 - Stop bij ontbrekende send-scope.
 - Stop bij echte ontvanger zonder expliciete send-goedkeuring.
 
-## 11. Exacte toekomstige approval prompt
+## 11. Afgerond bewijs
 
-```text
-Owner approval received for decision email.
-Use docs/DECISION_BRIEF_EMAIL_PROVIDER_NL.md and docs/OWNER_APPROVAL_INTAKE_NL.md.
-Configure only the approved no-send or send scope.
-Keep secrets outside Git and do not send real email unless the prompt explicitly approves sending.
-Do not run production cutover, historical import, PDF dependency installation, secret rotation, tags, or force push.
-Validate dispatch tests, full suite, builds, and high-risk scan.
-```
+- Provider: Resend
+- Provider-abstractie: `server/services/reportEmailProvider.ts`
+- Execute dispatch: `server/services/reportApprovalDispatchService.ts` (`executeDispatch`)
+- Schema: DispatchStatus SENT/FAILED, providerMessageId, sentAt, errorMessage — geen migratie nodig
+- Verificatiescript: `scripts/production-email-send-verify.mjs`
+- Bewijs: `docs/REAL_EMAIL_SENDING_EVIDENCE_NL.md`
+- Productie-verzendverificatie: in afwachting van runtime-uitvoering in productieomgeving
 
 ## 12. Bevestiging
 
-Deze brief voert niets uit, verzendt niets en gebruikt geen externe provider.
+Deze brief bevat geen secrets, hostnamen, runtimeconfiguratie, owner-bestanden, of providerpayloads.

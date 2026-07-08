@@ -32,6 +32,7 @@ Phase 12 — Production secret rotation            COMPLETE (2026-07-07; finance
 Phase 13 — Production runtime credential update  COMPLETE (2026-07-07; final retained credential applied; Dokploy env updated; redeploy triggered; app health verified)
 Phase 14 — App/provider secret remediation       COMPLETE (2026-07-08; Clerk, Resend, and New Relic provider keys rotated and applied to Dokploy runtime; app redeployed; health/readiness verified)
 Phase 15 — Real PDF renderer                     COMPLETE (2026-07-08; pdfkit report artifact renderer; HTML/XLSX preserved; real email still blocked)
+Phase 16 — Real email sending                    CODE-COMPLETE (2026-07-08; Resend provider abstraction; executeDispatch with guards; production send verification pending runtime env)
 ```
 
 ## Phase 0 — Governance and verified controls
@@ -280,7 +281,7 @@ Remaining blockers before production:
 - Live local backup/restore rehearsal is complete for RC3; production backup/restore remains gated by owner approval.
 - Production cutover requires explicit owner approval (see `docs/PRODUCTION_CUTOVER_PLAN_NL.md`).
 - Historical production import (2024/2025/2026) requires owner approval and dry-run acceptance.
-- Real email sending requires configured Resend provider and owner approval.
+- Real email sending: code-complete; production send verification pending runtime execution in Dokploy with `RESEND_API_KEY` and `EMAIL_TEST_RECIPIENT`.
 - Post-push verification confirms owner-decision handoff commit `f2f7cbb` on `origin/main`; no new push is needed for the published handoff.
 - Push for future local commits, provider secret completion, and any production-provider changes are represented in the owner decision matrix, decision briefs, and approval-intake validator; they remain owner-gated.
 - Local PostgreSQL 15.17 rehearsal evidence is recorded in `docs/POSTGRES_VERSION_EVIDENCE_NL.md`; it does not resolve the production PostgreSQL version blocker.

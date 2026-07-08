@@ -49,4 +49,4 @@ Gerichte tests bewaken dat PDF-output een Buffer is, met `%PDF` begint, geen oud
 
 | Blocker | Status |
 |---------|--------|
-| Real email sending | BLOCKED — vereist aparte eigenaargoedkeuring |
+| Real email sending | CODE-COMPLETE — productie-verzendverificatie in afwachting; zie `docs/REAL_EMAIL_SENDING_EVIDENCE_NL.md` |
