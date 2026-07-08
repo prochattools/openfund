@@ -42,7 +42,9 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/scripts/production-email-send-verify.mjs ./scripts/production-email-send-verify.mjs
 COPY --from=newrelic-deps /nr/node_modules ./node_modules
+COPY --from=builder /app/node_modules/resend ./node_modules/resend
 
 EXPOSE 3000
 
