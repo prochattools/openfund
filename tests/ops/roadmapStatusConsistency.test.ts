@@ -25,7 +25,7 @@ const allDocs = Object.entries(docs);
 
 describe('roadmap status consistency — RC4 gate', () => {
   it('implementation plan and handoff docs identify RC4 owner review, not RC3', () => {
-    expect(docs.implementationPlan).toContain('Current gate: all functional blockers resolved');
+    expect(docs.implementationPlan).toContain('Current gate: Phase 17 open');
     expect(docs.ownerHandoff).toContain('Eigenaaroverdracht (RC4)');
     expect(docs.ownerHandoff).toContain('### RC4-validatie in één stap');
     expect(docs.implementationPlan).not.toContain('Current gate: Release Candidate 3 owner handoff');
@@ -65,6 +65,12 @@ describe('roadmap status consistency — phase status agreement', () => {
     expect(docs.roadmap).toContain('Phase 9 — Operational hardening and handoff      COMPLETE (published RC4 handoff; owner decisions gated)');
     expect(docs.finalAudit).toContain('Phase 8 — Infrastructuur | COMPLETE');
     expect(docs.finalAudit).toContain('Phase 9 — Operationele hardening en overdracht | COMPLETE (local-only RC4)');
+  });
+
+  it('Phase 17 is explicitly open in the expanded roadmap', () => {
+    expect(docs.roadmap).toContain('Phase 17 — Month-by-month accounting reconciliation and administrator reporting IMPLEMENTATION REQUIRED');
+    expect(docs.implementationPlan).toContain('Phase 17 — Month-by-month accounting reconciliation and administrator reporting: IMPLEMENTATION REQUIRED');
+    expect(docs.finalAudit).toContain('Phase 17 open');
   });
 });
 

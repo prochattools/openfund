@@ -72,6 +72,8 @@ describe('final docs consistency — required docs exist', () => {
     'docs/FINAL_RELEASE_CANDIDATE_CHECKLIST_NL.md',
     'docs/RELEASE_MANIFEST_NL.md',
     'docs/REAL_PDF_RENDERER_EVIDENCE_NL.md',
+    'docs/MONTHLY_RECONCILIATION_REQUIREMENTS_NL.md',
+    'docs/MONTHLY_RECONCILIATION_EVIDENCE_NL.md',
     'docs/ROADMAP.md',
   ];
 

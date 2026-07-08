@@ -87,14 +87,17 @@ Production historical import: complete 2026-07-07; 902 transactions (268 2024 + 
 Production secret rotation: complete 2026-07-07; finance_user credential rotated; old credential rejected; new credential verified; historical totals re-verified; evidence in docs/PRODUCTION_SECRET_ROTATION_EVIDENCE_NL.md
 Production runtime credential update: complete 2026-07-07; final retained credential applied; Dokploy env updated; app redeployed; health check passed; evidence in docs/PRODUCTION_RUNTIME_DATABASE_CREDENTIAL_EVIDENCE_NL.md
 App/provider secret remediation: complete 2026-07-08; all provider secrets (Clerk, Resend, New Relic, Request Access Secret) rotated and applied to Dokploy runtime; app redeployed; health and production readiness verified; evidence in docs/PRODUCTION_APP_PROVIDER_SECRET_ROTATION_EVIDENCE_NL.md
-Current gate: all functional blockers resolved — production schema cutover, historical import, database credential finalization, all provider secret rotations (Clerk, Resend, New Relic), real PDF report artifact generation, and real email sending are complete 2026-07-08; bounded production email verification succeeded.
+Phase 17 — Month-by-month accounting reconciliation and administrator reporting: IMPLEMENTATION REQUIRED (2026-07-08; month-level audit/export hardening in progress)
+Current gate: Phase 17 open — month-by-month accounting reconciliation and administrator reporting remain to be validated; production schema cutover, historical import, database credential finalization, provider secret rotations, real PDF report artifact generation, and real email sending are complete 2026-07-08; bounded production email verification succeeded.
 Local PostgreSQL 15.17 rehearsal evidence is recorded in `docs/POSTGRES_VERSION_EVIDENCE_NL.md`.
 ```
 
 ## Authoritative Progress
 
 ```text
-Total roadmap progress: 100%
+Expanded roadmap progress: not complete
+Previous roadmap through Phase 16: 100%
+Phase 17: 0%
 Phase 0 — Governance and verified controls: 100%
 Phase 1 — Safe categorization foundation: 100%
 Phase 2 — Financial domain and historical model: 100%
@@ -112,7 +115,8 @@ Phase 13 — Production runtime credential update: 100%
 Phase 14 — App/provider secret remediation: 100%
 Phase 15 — Real PDF renderer: 100%
 Phase 16 — Real email sending: 100% — bounded production send verified
-Remaining blockers: none
+Phase 17 — Month-by-month accounting reconciliation and administrator reporting: 0%
+Remaining blockers: Phase 17
 ```
 
 ## Phase 0 — Governance and discovery

@@ -41,6 +41,7 @@ export type ArtifactSnapshotInput = {
   kind: 'MONTHLY' | 'YEARLY';
   year: number;
   month: number | null;
+  statusLabel?: string | null;
   openingBalanceMinor: string | bigint;
   incomeMinor: string | bigint;
   expenseMinor: string | bigint;
@@ -89,6 +90,8 @@ const periodLabel = (kind: 'MONTHLY' | 'YEARLY', year: number, month: number | n
   return `Jaar ${year}`;
 };
 
+const statusLabel = (snapshot: ArtifactSnapshotInput): string | null => snapshot.statusLabel ?? null;
+
 // ─── HTML generation ──────────────────────────────────────────────────────────
 
 const escapeHtml = (s: string): string =>
@@ -96,6 +99,7 @@ const escapeHtml = (s: string): string =>
 
 export const generateHtmlArtifact = (snapshot: ArtifactSnapshotInput): Buffer => {
   const period = periodLabel(snapshot.kind, snapshot.year, snapshot.month);
+  const snapshotStatus = statusLabel(snapshot);
   const generatedAt = snapshot.generatedAt.toISOString();
 
   const incomeLines = snapshot.lines.filter((l) => l.direction === 'credit');
@@ -132,6 +136,7 @@ export const generateHtmlArtifact = (snapshot: ArtifactSnapshotInput): Buffer =>
 </head>
 <body>
   <h1>Financieel Rapport — ${escapeHtml(period)}</h1>
+  ${snapshotStatus ? `<p><strong>Status:</strong> ${escapeHtml(snapshotStatus)}</p>` : ''}
 
   <table class="totals">
     <tr><th>Openingsaldo</th><td>${centsToEuro(snapshot.openingBalanceMinor)}</td></tr>
@@ -178,11 +183,13 @@ export const generateHtmlArtifact = (snapshot: ArtifactSnapshotInput): Buffer =>
 
 export const generateXlsxArtifact = (snapshot: ArtifactSnapshotInput): Buffer => {
   const period = periodLabel(snapshot.kind, snapshot.year, snapshot.month);
+  const snapshotStatus = statusLabel(snapshot);
 
   // Summary sheet
   const summaryData: (string | number)[][] = [
     ['Yeshua Academy — Financieel Rapport'],
     ['Periode', period],
+    ...(snapshotStatus ? [['Status', snapshotStatus]] : []),
     [],
     ['Openingsaldo', centsToEuro(snapshot.openingBalanceMinor)],
     ['Inkomsten', centsToEuro(snapshot.incomeMinor)],
@@ -291,6 +298,7 @@ const writePdfLines = (doc: PDFKit.PDFDocument, lines: ReportLineInput[]) => {
 export const generatePdfArtifact = (snapshot: ArtifactSnapshotInput): Promise<Buffer> =>
   new Promise((resolve, reject) => {
     const period = periodLabel(snapshot.kind, snapshot.year, snapshot.month);
+    const snapshotStatus = statusLabel(snapshot);
     const generatedAt = snapshot.generatedAt.toISOString();
     const chunks: Buffer[] = [];
 
@@ -316,9 +324,12 @@ export const generatePdfArtifact = (snapshot: ArtifactSnapshotInput): Promise<Bu
       .fontSize(20)
       .text('Yeshua Academy - Financieel Rapport');
     doc.font('Helvetica').fontSize(12).text(period).moveDown(0.8);
+    if (snapshotStatus) {
+      doc.font('Helvetica-Bold').fontSize(11).text(`Status: ${snapshotStatus}`).moveDown(0.4);
+    }
 
     writePdfSectionTitle(doc, 'Overzicht');
-    writePdfKeyValueRows(doc, [
+    const overviewRows: Array<[string, string | number]> = [
       ['Periode', period],
       ['Snapshot-ID', snapshot.snapshotId],
       ['Snapshot-hash', snapshot.snapshotHash],
@@ -329,7 +340,11 @@ export const generatePdfArtifact = (snapshot: ArtifactSnapshotInput): Promise<Bu
       ['Netto', centsToEuro(snapshot.netMinor)],
       ['Eindsaldo', centsToEuro(snapshot.closingBalanceMinor)],
       ['Transacties', snapshot.transactionCount],
-    ]);
+    ];
+    if (snapshotStatus) {
+      overviewRows.splice(1, 0, ['Status', snapshotStatus]);
+    }
+    writePdfKeyValueRows(doc, overviewRows);
 
     writePdfSectionTitle(doc, 'Rapportregels');
     writePdfLines(doc, snapshot.lines);

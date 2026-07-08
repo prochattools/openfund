@@ -402,6 +402,7 @@ These decisions are authoritative and override earlier proposals.
 14. July 2026 remains open until a complete July export is supplied.
 15. The current production PostgreSQL major version is unknown and existing production data is not important. During the infrastructure phase, select a currently supported PostgreSQL major version that is compatible with Prisma, validate migrations and the complete financial fixture suite on a disposable database, and only then replace or update the environment.
 16. The complete application UI, navigation, labels, errors, category administration, reports, and emails must be Dutch. ING source columns may remain English because they are external source data. Project and classification names remain exactly as supplied in the administration.
+17. The expanded accounting roadmap now includes a month-by-month reconciliation and administrator reporting phase. Do not mark the overall roadmap complete until that phase is validated.
 
 ## Phased implementation roadmap
 
@@ -439,6 +440,14 @@ These decisions are authoritative and override earlier proposals.
 - Replace the obsolete Compose file according to the approved local PostgreSQL plan.
 - Validate on a disposable local database.
 - Plan production migration/cutover separately.
+
+### Phase 6 - month-by-month accounting reconciliation and administrator reporting
+
+- Add month-level reconciliation controls and auditor summaries.
+- Keep all monetary values in integer minor units only.
+- Export closed balanced months with clear final status; open or unbalanced months remain draft-only.
+- Require administrator approval before monthly dispatch.
+- Keep month-chain continuity and unresolved transaction gates explicit.
 
 ## Validation strategy
 

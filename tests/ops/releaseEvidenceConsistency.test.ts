@@ -42,7 +42,7 @@ describe('release evidence consistency — stale RC labels', () => {
 
   it('roadmap and implementation plan identify the current handoff after real email completion, not RC2/RC3', () => {
     expect(roadmap).toContain('COMPLETE (published RC4 handoff; owner decisions gated)');
-    expect(implementationPlan).toContain('Current gate: all functional blockers resolved');
+    expect(implementationPlan).toContain('Current gate: Phase 17 open');
     expect(rebuildRun).toContain('Status: Release Candidate 7');
     expect(implementationPlan).not.toContain('Current gate: Release Candidate 3 owner handoff');
     expect(implementationPlan).not.toContain('Current gate: Release Candidate 2 readiness');

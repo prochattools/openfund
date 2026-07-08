@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Eindaudit gereedheid
 
-Status: Release Candidate 7 — roadmap 100%; schema cutover afgerond 2026-07-07; historische import voltooid 2026-07-07; database credential finalisatie voltooid; alle provider secrets geroteerd 2026-07-08; echte PDF-renderer voltooid; echte e-mailverzending voltooid 2026-07-08
+Status: Release Candidate 7 — roadmap 100% through Phase 16; Phase 17 open; schema cutover afgerond 2026-07-07; historische import voltooid 2026-07-07; database credential finalisatie voltooid; alle provider secrets geroteerd 2026-07-08; echte PDF-renderer voltooid; echte e-mailverzending voltooid 2026-07-08
 Datum: 2026-07-08
 Taal: Nederlands
 Afhankelijkheden: `docs/ROADMAP.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/ADMIN_OPERATING_GUIDE_NL.md`

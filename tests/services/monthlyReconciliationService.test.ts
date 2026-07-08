@@ -1,0 +1,162 @@
+import { describe, expect, it } from 'vitest';
+import { StatementCoverageStatus } from '@prisma/client';
+import { buildMonthlyReconciliation } from '../../server/services/monthlyReconciliationService';
+
+const balancedTransactions = [
+  {
+    transactionId: 'tx-1',
+    date: '2026-01-01T00:00:00.000Z',
+    amountMinor: 5000n,
+    direction: 'credit' as const,
+    resultingBalanceMinor: 105000n,
+    importFingerprint: 'fp-1',
+    projectId: 'project-1',
+    transactionTypeId: 'type-1',
+    categoryId: 'cat-1',
+    literalProjectLabel: 'Klant A',
+    literalTypeLabel: 'Inkomsten',
+    literalCategoryLabel: 'Donaties',
+    sourceFileHash: 'source-hash-1',
+  },
+  {
+    transactionId: 'tx-2',
+    date: '2026-01-02T00:00:00.000Z',
+    amountMinor: 2000n,
+    direction: 'debit' as const,
+    resultingBalanceMinor: 103000n,
+    importFingerprint: 'fp-2',
+    projectId: 'project-1',
+    transactionTypeId: 'type-2',
+    categoryId: 'cat-2',
+    literalProjectLabel: 'Klant A',
+    literalTypeLabel: 'Uitgaven',
+    literalCategoryLabel: 'Huur',
+    sourceFileHash: 'source-hash-1',
+  },
+  {
+    transactionId: 'tx-3',
+    date: '2026-01-03T00:00:00.000Z',
+    amountMinor: 3000n,
+    direction: 'debit' as const,
+    resultingBalanceMinor: 100000n,
+    importFingerprint: 'fp-3',
+    projectId: 'project-2',
+    transactionTypeId: 'type-3',
+    categoryId: 'cat-3',
+    literalProjectLabel: 'Klant B',
+    literalTypeLabel: 'Uitgaven',
+    literalCategoryLabel: 'Materialen',
+    sourceFileHash: 'source-hash-2',
+  },
+];
+
+describe('monthlyReconciliationService', () => {
+  it('produces a balanced month summary with exact cent formulas', () => {
+    const result = buildMonthlyReconciliation({
+      workspaceId: 'workspace-1',
+      accountId: 'account-1',
+      year: 2026,
+      month: 1,
+      importedTransactions: balancedTransactions,
+      statementEvidence: {
+        coverageStatus: StatementCoverageStatus.COMPLETE,
+        openingBalanceMinor: 100000n,
+        closingBalanceMinor: 100000n,
+        sourceFileHashes: ['source-hash-1', 'source-hash-2'],
+      },
+      previousMonthClosingBalanceMinor: 100000n,
+      nextMonthOpeningBalanceMinor: 100000n,
+    });
+
+    expect(result).toMatchObject({
+      workspaceId: 'workspace-1',
+      accountId: 'account-1',
+      year: 2026,
+      month: 1,
+      coverageStatus: StatementCoverageStatus.COMPLETE,
+      openingBalanceMinor: '100000',
+      incomeMinor: '5000',
+      expenseMinor: '5000',
+      netMinor: '0',
+      closingBalanceMinor: '100000',
+      transactionCount: 3,
+      bookedTransactionCount: 3,
+      unresolvedTransactionCount: 0,
+      duplicateFingerprintCount: 0,
+      runningBalanceErrorCount: 0,
+      categoryIncomeDifferenceMinor: '0',
+      categoryExpenseDifferenceMinor: '0',
+      balanceDifferenceMinor: '0',
+      status: 'BALANCED',
+      closeEligible: true,
+      reasons: [],
+      validatorVersion: 'monthly-reconciliation-v1',
+      monthChainErrorCount: 0,
+    });
+    expect(result.categoryLines).toHaveLength(3);
+    expect(result.subcategoryLines).toHaveLength(3);
+    expect(result.sourceFileHashes).toEqual(['source-hash-1', 'source-hash-2']);
+  });
+
+  it('marks partial months as incomplete and blocks close eligibility', () => {
+    const result = buildMonthlyReconciliation({
+      workspaceId: 'workspace-1',
+      accountId: 'account-1',
+      year: 2026,
+      month: 2,
+      importedTransactions: balancedTransactions,
+      statementEvidence: {
+        coverageStatus: StatementCoverageStatus.PARTIAL,
+        openingBalanceMinor: 100000n,
+        closingBalanceMinor: 100000n,
+      },
+    });
+
+    expect(result.status).toBe('INCOMPLETE');
+    expect(result.closeEligible).toBe(false);
+    expect(result.reasons).toContain('Gedeeltelijke of open afschriften kunnen niet worden gesloten.');
+  });
+
+  it('flags unresolved, duplicate, and chain errors', () => {
+    const result = buildMonthlyReconciliation({
+      workspaceId: 'workspace-1',
+      accountId: 'account-1',
+      year: 2026,
+      month: 3,
+      importedTransactions: [
+        {
+          ...balancedTransactions[0],
+          resultingBalanceMinor: 105000n,
+          importFingerprint: 'dup-fp',
+          projectId: null,
+          transactionTypeId: null,
+          categoryId: null,
+          unresolved: true,
+        },
+        {
+          ...balancedTransactions[1],
+          importFingerprint: 'dup-fp',
+          resultingBalanceMinor: 104000n,
+        },
+      ],
+      statementEvidence: {
+        coverageStatus: StatementCoverageStatus.COMPLETE,
+        openingBalanceMinor: 100000n,
+        closingBalanceMinor: 104000n,
+      },
+      previousMonthClosingBalanceMinor: 99000n,
+      nextMonthOpeningBalanceMinor: 105000n,
+    });
+
+    expect(result.status).toBe('INCOMPLETE');
+    expect(result.closeEligible).toBe(false);
+    expect(result.unresolvedTransactionCount).toBe(1);
+    expect(result.duplicateFingerprintCount).toBe(1);
+    expect(result.monthChainErrorCount).toBe(2);
+    expect(result.reasons).toEqual(expect.arrayContaining([
+      'Er zijn nog handmatige reviewtransacties open.',
+      'Dubbele importvingerafdrukken zijn aanwezig.',
+      'Maandketen is niet continu.',
+    ]));
+  });
+});
