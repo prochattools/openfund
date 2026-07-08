@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { PeriodCloseStatus } from '@prisma/client';
+import { DispatchStatus, PeriodCloseStatus } from '@prisma/client';
 import {
   approveSnapshot,
   prepareDispatch,
+  executeDispatch,
   ReportApprovalError,
   type ApprovalActor,
 } from '../../server/services/reportApprovalDispatchService';
+import { NoSendProvider } from '../../server/services/reportEmailProvider';
+import type { ReportEmailProvider, ReportEmailResult } from '../../server/services/reportEmailProvider';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -316,5 +319,195 @@ describe('report dispatch', () => {
     // Side effects must explicitly state no email
     expect(result.sideEffects.sendsEmail).toBe(false);
     expect(result.sideEffects.callsExternalProvider).toBe(false);
+  });
+});
+
+// ─── REPORT-005: Execute dispatch (real send) ────────────────────────────────
+
+const makeExecuteDb = (opts: {
+  snapshotExists?: boolean;
+  approvalActive?: boolean;
+  dispatchPending?: boolean;
+  updatedStatus?: string | null;
+} = {}) => {
+  let lastUpdate: any = null;
+
+  return {
+    reportSnapshot: {
+      findFirst: async () =>
+        (opts.snapshotExists ?? true) ? { id: SNAPSHOT_ID } : null,
+    },
+    reportApproval: {
+      findFirst: async () =>
+        (opts.approvalActive ?? true)
+          ? { id: 'approval-1', reportSnapshotId: SNAPSHOT_ID, revokedAt: null }
+          : null,
+    },
+    reportDispatch: {
+      findFirst: async () =>
+        (opts.dispatchPending ?? true)
+          ? { id: 'dispatch-1', status: 'PENDING' }
+          : null,
+      update: async (args: any) => {
+        lastUpdate = args;
+        return { id: 'dispatch-1', ...args.data };
+      },
+    },
+    get _lastUpdate() { return lastUpdate; },
+  } as any;
+};
+
+describe('report dispatch execute (real send)', () => {
+  const baseExecuteInput = {
+    actor: adminActor,
+    workspaceId: WORKSPACE_ID,
+    reportSnapshotId: SNAPSHOT_ID,
+    reportApprovalId: 'approval-1',
+    dispatchId: 'dispatch-1',
+    fromAddress: 'Yeshua Academy Finance <info@yeshua.academy>',
+    subject: 'Financieel rapport januari 2026',
+    recipients: [{ email: 'admin@example.test', name: 'Administrator' }],
+    contentHash: 'content-hash-' + 'c'.repeat(51),
+    html: '<p>Rapport</p>',
+    provider: new NoSendProvider(),
+  };
+
+  it('calls injected provider once and returns SENT on success', async () => {
+    const db = makeExecuteDb();
+    const provider = new NoSendProvider();
+    const result = await executeDispatch(db, { ...baseExecuteInput, provider });
+
+    expect(result.status).toBe('SENT');
+    expect(result.sideEffects.sendsEmail).toBe(true);
+    expect(result.sideEffects.callsExternalProvider).toBe(true);
+    expect(provider.calls).toHaveLength(1);
+    expect(provider.calls[0].to).toEqual(['admin@example.test']);
+  });
+
+  it('sets sendsEmail true and callsExternalProvider true on success', async () => {
+    const db = makeExecuteDb();
+    const result = await executeDispatch(db, baseExecuteInput);
+
+    expect(result.sideEffects.sendsEmail).toBe(true);
+    expect(result.sideEffects.callsExternalProvider).toBe(true);
+  });
+
+  it('returns FAILED with sanitized error when provider fails', async () => {
+    const failProvider: ReportEmailProvider = {
+      send: async (): Promise<ReportEmailResult> => ({
+        success: false,
+        providerMessageId: null,
+        errorMessage: 'Rate limit exceeded',
+      }),
+    };
+
+    const db = makeExecuteDb();
+    const result = await executeDispatch(db, { ...baseExecuteInput, provider: failProvider });
+
+    expect(result.status).toBe('FAILED');
+    expect(result.sideEffects.sendsEmail).toBe(false);
+    expect(result.sideEffects.callsExternalProvider).toBe(true);
+    expect(result.errorMessage).toBe('Rate limit exceeded');
+    expect(result.errorMessage).not.toContain('re_');
+  });
+
+  it('rejects when recipients list is empty', async () => {
+    const db = makeExecuteDb();
+
+    await expect(
+      executeDispatch(db, { ...baseExecuteInput, recipients: [] }),
+    ).rejects.toThrow(ReportApprovalError);
+  });
+
+  it('rejects malformed recipients', async () => {
+    const db = makeExecuteDb();
+
+    await expect(
+      executeDispatch(db, {
+        ...baseExecuteInput,
+        recipients: [{ email: 'not-an-email' }],
+      }),
+    ).rejects.toThrow(/geldige e-mailadressen/);
+  });
+
+  it('rejects when approval is revoked', async () => {
+    const db = makeExecuteDb({ approvalActive: false });
+
+    await expect(
+      executeDispatch(db, baseExecuteInput),
+    ).rejects.toThrow(/goedkeuring/);
+  });
+
+  it('rejects when dispatch is not in PENDING status', async () => {
+    const db = makeExecuteDb({ dispatchPending: false });
+
+    await expect(
+      executeDispatch(db, baseExecuteInput),
+    ).rejects.toThrow(/PENDING/);
+  });
+
+  it('rejects when snapshot not found in workspace', async () => {
+    const db = makeExecuteDb({ snapshotExists: false });
+
+    await expect(
+      executeDispatch(db, baseExecuteInput),
+    ).rejects.toThrow(ReportApprovalError);
+  });
+
+  it('viewer cannot execute dispatch', async () => {
+    const db = makeExecuteDb();
+
+    await expect(
+      executeDispatch(db, { ...baseExecuteInput, actor: viewerActor }),
+    ).rejects.toThrow(/beheerders/);
+  });
+
+  it('metadata-only prepareDispatch still reports sendsEmail false', async () => {
+    const db = makeApprovalDb();
+    const result = await prepareDispatch(db, {
+      actor: adminActor,
+      workspaceId: WORKSPACE_ID,
+      reportSnapshotId: SNAPSHOT_ID,
+      reportApprovalId: 'approval-1',
+      fromAddress: 'finance@example.test',
+      subject: 'Test',
+      recipients: [{ email: 'admin@example.test' }],
+      contentHash: 'hash-1',
+    });
+
+    expect(result.sideEffects.sendsEmail).toBe(false);
+    expect(result.sideEffects.callsExternalProvider).toBe(false);
+  });
+
+  it('no raw rows or secrets are included in provider calls', async () => {
+    const provider = new NoSendProvider();
+    const db = makeExecuteDb();
+    await executeDispatch(db, { ...baseExecuteInput, provider });
+
+    const callJson = JSON.stringify(provider.calls);
+    expect(callJson).not.toContain('re_');
+    expect(callJson).not.toContain('RESEND_API_KEY');
+    expect(callJson).not.toContain('postgresql://');
+    expect(callJson).not.toContain('DATABASE_URL');
+  });
+
+  it('recipient hash/content hash behavior remains deterministic', async () => {
+    const db1 = makeApprovalDb();
+    const db2 = makeApprovalDb();
+    const input = {
+      actor: adminActor,
+      workspaceId: WORKSPACE_ID,
+      reportSnapshotId: SNAPSHOT_ID,
+      reportApprovalId: 'approval-1',
+      fromAddress: 'finance@example.test',
+      subject: 'Test',
+      recipients: [{ email: 'admin@example.test', name: 'Admin' }],
+      contentHash: 'deterministic-content-hash',
+    };
+
+    const r1 = await prepareDispatch(db1, input);
+    const r2 = await prepareDispatch(db2, input);
+    expect(r1.recipientHash).toBe(r2.recipientHash);
+    expect(r1.contentHash).toBe(r2.contentHash);
   });
 });

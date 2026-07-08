@@ -1,5 +1,5 @@
 /**
- * REPORT-005: Report approval and dispatch metadata.
+ * REPORT-005: Report approval and dispatch.
  *
  * Approval:
  *   - Requires administrator action after snapshot and artifact generation.
@@ -9,19 +9,17 @@
  *   - Dispatch preparation requires an active (non-revoked) approval.
  *
  * Dispatch:
- *   - Stores metadata only: status PENDING, fromAddress, subject, recipientHash,
- *     contentHash, sentBy, recipients.
- *   - Does NOT call any external email provider.
- *   - Does NOT send real email.
+ *   - prepareDispatch: metadata-only mode (no provider call). Status PENDING.
+ *   - executeDispatch: sends via injected provider after all guards pass.
+ *     Updates status to SENT or FAILED.
  *   - Blocked when approval is revoked (e.g. after period reopen via CLOSE-004).
- *
- * No email sending occurs in this service.
  */
 
 import type { Prisma } from '@prisma/client';
-import { PeriodCloseStatus } from '@prisma/client';
+import { DispatchStatus, PeriodCloseStatus } from '@prisma/client';
 import { hashEvidence } from './reviewDecisionService';
 import { approveReportSnapshot, createReportDispatch } from './periodCloseService';
+import type { ReportEmailProvider } from './reportEmailProvider';
 
 export class ReportApprovalError extends Error {
   statusCode: number;
@@ -87,6 +85,31 @@ export type PrepareDispatchResult = {
     createsReportDispatch: true;
     sendsEmail: false;
     callsExternalProvider: false;
+  };
+};
+
+export type ExecuteDispatchInput = {
+  actor: ApprovalActor;
+  workspaceId: string;
+  reportSnapshotId: string;
+  reportApprovalId: string;
+  dispatchId: string;
+  fromAddress: string;
+  subject: string;
+  recipients: Array<{ email: string; name?: string | null }>;
+  contentHash: string;
+  html: string;
+  provider: ReportEmailProvider;
+};
+
+export type ExecuteDispatchResult = {
+  dispatchId: string;
+  status: 'SENT' | 'FAILED';
+  providerMessageId: string | null;
+  errorMessage: string | null;
+  sideEffects: {
+    sendsEmail: boolean;
+    callsExternalProvider: boolean;
   };
 };
 
@@ -286,6 +309,133 @@ export const prepareDispatch = async (
       createsReportDispatch: true,
       sendsEmail: false,
       callsExternalProvider: false,
+    },
+  };
+};
+
+// ─── REPORT-005: Execute dispatch (real send) ───────────────────────────────
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const normalizeRecipientEmails = (
+  recipients: Array<{ email: string; name?: string | null }>,
+): string[] => {
+  return recipients
+    .map((r) => r.email.trim().toLowerCase())
+    .filter((e) => EMAIL_REGEX.test(e));
+};
+
+/**
+ * Execute a real email dispatch via the injected provider.
+ *
+ * Guards:
+ *   - Admin actor required.
+ *   - Snapshot must exist in workspace.
+ *   - Approval must be active (not revoked).
+ *   - Dispatch must exist and be in PENDING status.
+ *   - Recipients must be non-empty and valid.
+ *   - fromAddress and subject required.
+ *   - contentHash required.
+ *
+ * On success: updates dispatch status to SENT.
+ * On failure: updates dispatch status to FAILED with sanitized error.
+ */
+export const executeDispatch = async (
+  db: TxClient,
+  input: ExecuteDispatchInput,
+): Promise<ExecuteDispatchResult> => {
+  assertAdminActor(input.actor, 'rapporten verzenden');
+
+  if (!input.fromAddress) {
+    throw new ReportApprovalError('Afzenderadres is verplicht.', 400);
+  }
+  if (!input.subject) {
+    throw new ReportApprovalError('Onderwerp is verplicht.', 400);
+  }
+  if (!input.contentHash) {
+    throw new ReportApprovalError('Content-hash is verplicht.', 400);
+  }
+  if (!input.recipients.length) {
+    throw new ReportApprovalError('Rapportverzending vereist minimaal één ontvanger.', 400);
+  }
+
+  const normalizedEmails = normalizeRecipientEmails(input.recipients);
+  if (!normalizedEmails.length) {
+    throw new ReportApprovalError('Geen geldige e-mailadressen opgegeven.', 400);
+  }
+
+  // Verify snapshot belongs to workspace
+  const snapshot = await db.reportSnapshot.findFirst({
+    where: {
+      id: input.reportSnapshotId,
+      workspaceId: input.workspaceId,
+    },
+    select: { id: true },
+  });
+  if (!snapshot) {
+    throw new ReportApprovalError('Rapportage-snapshot niet gevonden in werkruimte.', 404);
+  }
+
+  // Verify approval is active (not revoked)
+  const approval = await db.reportApproval.findFirst({
+    where: {
+      id: input.reportApprovalId,
+      reportSnapshotId: input.reportSnapshotId,
+      revokedAt: null,
+    },
+  });
+  if (!approval) {
+    throw new ReportApprovalError(
+      'Een actieve goedkeuring is vereist voordat het rapport kan worden verzonden. ' +
+      'De goedkeuring is niet gevonden of is ingetrokken.',
+      409,
+    );
+  }
+
+  // Verify dispatch exists and is PENDING
+  const dispatch = await db.reportDispatch.findFirst({
+    where: {
+      id: input.dispatchId,
+      reportSnapshotId: input.reportSnapshotId,
+      reportApprovalId: input.reportApprovalId,
+      status: DispatchStatus.PENDING,
+    },
+  });
+  if (!dispatch) {
+    throw new ReportApprovalError(
+      'Dispatch niet gevonden of niet in PENDING-status.',
+      409,
+    );
+  }
+
+  // Execute provider call
+  const result = await input.provider.send({
+    from: input.fromAddress,
+    to: normalizedEmails,
+    subject: input.subject,
+    html: input.html,
+  });
+
+  // Update dispatch status
+  const newStatus = result.success ? DispatchStatus.SENT : DispatchStatus.FAILED;
+  await db.reportDispatch.update({
+    where: { id: input.dispatchId },
+    data: {
+      status: newStatus,
+      providerMessageId: result.providerMessageId,
+      sentAt: result.success ? new Date() : null,
+      errorMessage: result.errorMessage,
+    },
+  });
+
+  return {
+    dispatchId: input.dispatchId,
+    status: newStatus as 'SENT' | 'FAILED',
+    providerMessageId: result.providerMessageId,
+    errorMessage: result.errorMessage,
+    sideEffects: {
+      sendsEmail: result.success,
+      callsExternalProvider: true,
     },
   };
 };
