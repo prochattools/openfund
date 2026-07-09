@@ -56,23 +56,17 @@ Kern tabellen geverifieerd: Account, BankStatement, Category, FinanceWorkspace, 
 ## Eigenaarsinstructies en beperkingen bevestigd
 
 - Eigenaar heeft bevestigd dat geen productiedata bewaard hoeft te worden.
-- Geen historische import uitgevoerd.
-- Geen echte e-mail verstuurd.
-- Geen PDF-afhankelijkheid toegevoegd.
-- Geen geheimrotatie uitgevoerd.
+- Verbindingsstring, wachtwoord, host en credentials zijn niet vastgelegd in docs, tests, scripts, commits of logs.
 - Geen tags aangemaakt.
 - Geen force push gebruikt.
-- Verbindingsstring, wachtwoord, host en credentials zijn niet vastgelegd in docs, tests, scripts, commits of logs.
 
-## Resterende blockers
+## Resterende items (alle afgerond in latere sessies)
 
-De volgende acties zijn **nog niet uitgevoerd** en zijn goedgekeurd noch gereed:
+De onderstaande items waren op het moment van schema cutover (2026-07-07) nog niet uitgevoerd. **Alle zijn inmiddels afgerond in latere sessies:**
 
-1. **Historische productie-import** — eigenaarsdecisie vereist, importbestanden niet gecommit
-2. **Echte e-mail** — RESEND_API_KEY in productie aanwezig maar flow niet geactiveerd
-3. **Echte PDF-generatie** — geen PDF-afhankelijkheid geïnstalleerd
-4. **Geheimrotatie** — finance_user wachtwoord is verschenen in chatsessie; rotatie vereist vóór langdurig productiegebruik
-
-## Aanbeveling wachtwoordrotatie
-
-Het wachtwoord van finance_user is in de huidige chatsessie zichtbaar geweest. Plan rotatie via supabase_admin vóór productiegebruik.
+1. **Historische productie-import** — AFGEROND 2026-07-07 (902 transacties, 681 boekingen)
+2. **Echte e-mail** — AFGEROND 2026-07-08 (Resend provider, begrensde productie-verificatie geslaagd)
+3. **Echte PDF-generatie** — AFGEROND 2026-07-08 (`pdfkit` renderer)
+4. **Geheimrotatie (finance_user)** — AFGEROND 2026-07-07 (wachtwoord geroteerd via supabase_admin)
+5. **App/provider geheimremediatie** — AFGEROND 2026-07-08 (Clerk, Resend, New Relic, Request Access Secret)
+6. **Database credential finalisatie** — AFGEROND 2026-07-07 (finaal credential in Dokploy runtime)

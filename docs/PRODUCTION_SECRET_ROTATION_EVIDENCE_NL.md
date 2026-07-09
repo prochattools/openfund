@@ -90,14 +90,14 @@ Eigenaar heeft expliciete goedkeuring verleend voor de rotatie van het blootgest
 | App health na redeploy | BEVESTIGD — gezond |
 | Operator weet dat handmatige API key rotatie via web UI nodig is | BEVESTIGD |
 
-## 7. Resterende functionele blokkers
+## 7. Functionele status (bijgewerkt 2026-07-09)
 
-| Blocker | Status |
-|---------|--------|
-| Echte e-mail (e-mailprovider API) | Geblokkeerd — niet goedgekeurd in deze run |
-| Echte PDF-renderer | Geblokkeerd — niet goedgekeurd in deze run |
+| Item | Status |
+|------|--------|
+| Echte e-mail (e-mailprovider API) | Voltooid 2026-07-08 |
+| Echte PDF-renderer | Voltooid 2026-07-08 |
 
-## 7. Vereiste runtime-actie buiten Git
+## 8. Vereiste runtime-actie buiten Git
 
 De operator moet de database-verbindings-URL buiten Git bijwerken naar het nieuw gegenereerde finance_user-wachtwoord.
 Dit geldt voor alle omgevingen die de productiedatabase gebruiken (applicatieserver, omgevingsvariabelen).

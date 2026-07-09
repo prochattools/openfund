@@ -16,15 +16,19 @@ Algemene regels voor alle prompts:
 - Commit alleen coherente, gevalideerde slices.
 - Stop bij onverwachte dirty files, non-local DB in een local-only taak, ontbrekende owner-go, geheim in diff, falende validatie na één bounded repair, of scope buiten de goedgekeurde beslissing.
 
-## Volgende blokkers
+## Overzicht afgeronde productiehardeningsstappen
 
-| # | Blocker | Beslisbrief | Prompt |
-|---|---------|-------------|--------|
-| 1 | Echte PDF-renderer | `docs/REAL_PDF_RENDERER_EVIDENCE_NL.md` | Afgerond |
-| 2 | Echte e-mailverzending | `docs/DECISION_BRIEF_EMAIL_PROVIDER_NL.md` | §5 hieronder |
+| Stap | Status |
+|------|--------|
+| Echte PDF-renderer | Afgerond 2026-07-08 |
+| Echte e-mailverzending | Afgerond 2026-07-08 |
+| Schema cutover | Afgerond 2026-07-07 |
+| Historische productie-import | Afgerond 2026-07-07 |
+| Database credential finalisatie | Afgerond 2026-07-07 |
+| Providerrotaties (Clerk, Resend, New Relic) | Afgerond 2026-07-08 |
+| Read-only productie-audit | Geslaagd 2026-07-09 |
 
-Alle andere production hardening stappen zijn afgerond (2026-07-07).
-Providerrotaties voor Clerk, Resend en New Relic zijn afgerond op 2026-07-08.
+Alle productiehardeningsstappen zijn afgerond.
 
 ---
 
@@ -33,7 +37,8 @@ Providerrotaties voor Clerk, Resend en New Relic zijn afgerond op 2026-07-08.
 ```text
 Real PDF renderer is complete.
 Evidence: docs/REAL_PDF_RENDERER_EVIDENCE_NL.md.
-Remaining functional blocker: real email sending.
+Real email sending is complete.
+Evidence: docs/REAL_EMAIL_SENDING_EVIDENCE_NL.md.
 ```
 
 ## 2. Confirm production PostgreSQL version

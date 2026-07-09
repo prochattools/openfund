@@ -99,12 +99,12 @@ describe('productionAppProviderSecretRotationEvidence — forbidden content abse
   });
 });
 
-describe('productionAppProviderSecretRotationEvidence — blockers remain', () => {
-  it('states real PDF remains blocked', () => {
-    expect(evidenceContent).toMatch(/Echte PDF.*Geblokkeerd/i);
+describe('productionAppProviderSecretRotationEvidence — functional status (updated 2026-07-09)', () => {
+  it('states real PDF is complete', () => {
+    expect(evidenceContent).toMatch(/Echte PDF.*Voltooid/i);
   });
 
-  it('states real email remains blocked', () => {
-    expect(evidenceContent).toMatch(/Echte e-mail.*Geblokkeerd/i);
+  it('states real email is complete', () => {
+    expect(evidenceContent).toMatch(/Echte e-mail.*Voltooid/i);
   });
 });

@@ -1,7 +1,7 @@
 # Yeshua Academy Finance — Owner go/no-go preflight
 
-Status: Release Candidate 4 — lokale eigenaarsbeoordeling
-Datum: 2026-07-05
+Status: Release Candidate 7 — alle productiehardeningsstappen afgerond 2026-07-08
+Datum: 2026-07-05 (bijgewerkt 2026-07-09)
 Taal: Nederlands
 
 ## Doel
@@ -36,8 +36,8 @@ node scripts/owner-go-no-go-preflight.mjs --strict
 | Beslissing-preflight | `node scripts/owner-decision-preflight.mjs --decision <keuze>` blijft local-only |
 | Push-readiness | `node scripts/push-readiness-preflight.mjs --strict` publiceert niets |
 | Worktree scope | Alleen `.graphifyignore` en `graphify-out/` mogen ongetrackt/dirty zijn |
-| Productieblockers | Productiemigratie, Historische productie-import, PDF, Echte e-mail, PostgreSQL-versie blijven expliciet |
-| Push/productie | Geblokkeerd tot eigenaargoedkeuring; Push en Geheimen blijven expliciete blockers |
+| Productieblockers | Alle productiehardeningsstappen zijn AFGEROND (schema cutover, import, PDF, e-mail, secrets) |
+| Push/productie | Geblokkeerd tot eigenaargoedkeuring; Push blijft expliciete blocker |
 
 ## Interpreteer de uitkomst
 

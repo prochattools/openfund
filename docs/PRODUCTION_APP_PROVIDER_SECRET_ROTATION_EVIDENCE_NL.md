@@ -73,9 +73,9 @@ Niet-database applicatiegeheimen verschenen eerder in Dokploy-omgevingsoutput. D
 | Geen tags aangemaakt | BEVESTIGD |
 | Geen force push | BEVESTIGD |
 
-## 6. Resterende blockers
+## 6. Functionele status (bijgewerkt 2026-07-09)
 
-| Blocker | Status |
-|---------|--------|
-| Echte PDF-renderer | Geblokkeerd — niet uitgevoerd in deze run |
-| Echte e-mailverzending | Geblokkeerd — niet uitgevoerd in deze run |
+| Item | Status |
+|------|--------|
+| Echte PDF-renderer | Voltooid 2026-07-08 |
+| Echte e-mailverzending | Voltooid 2026-07-08 |

@@ -1,7 +1,7 @@
-# Yeshua Academy Finance — Eigenaaroverdracht (RC4)
+# Yeshua Academy Finance — Eigenaaroverdracht (RC7)
 
-Status: Release Candidate 4 — owner acceptance / decision selection; productie niet aangeraakt
-Datum: 2026-07-05  
+Status: Release Candidate 7 — roadmap 100% through Phase 17; alle productiehardeningsstappen afgerond 2026-07-08; read-only productie-audit geslaagd 2026-07-09
+Datum: 2026-07-05 (bijgewerkt 2026-07-09)  
 Taal: Nederlands  
 Doelgroep: eigenaar / beheerder
 
@@ -32,20 +32,21 @@ De volledige financiële applicatie is gebouwd, getest en lokaal gevalideerd:
 
 ---
 
-## Wat nog NIET goedgekeurd is
+## Wat is afgerond (2026-07-07 t/m 2026-07-09)
 
-De volgende onderdelen zijn bewust geblokkeerd en vereisen expliciete eigenaargoedkeuring vóór uitvoering:
+De volgende onderdelen waren op RC4 (2026-07-05) nog geblokkeerd en zijn inmiddels afgerond:
 
-| # | Geblokkeerd onderdeel | Vereiste beslissing |
-|---|-----------------------|---------------------|
-| 1 | Echte PDF-generatie | Kies en keur een PDF-bibliotheek goed |
-| 2 | Productiemigratie en overstap | Goedkeuring van volledige cutover |
-| 3 | Historische productie-import (2024/2025/2026) | Afzonderlijke goedkeuring + dry-run acceptatie |
-| 4 | Echte e-mailverzending | Resend-API-sleutel configureren + goedkeuring |
-| 5 | PostgreSQL-productieversie bevestigen | Verificatie bij hostingprovider |
+| # | Onderdeel | Status |
+|---|-----------|--------|
+| 1 | Echte PDF-generatie | AFGEROND 2026-07-08 (`pdfkit` renderer) |
+| 2 | Productiemigratie en overstap | AFGEROND 2026-07-07 (schema cutover) |
+| 3 | Historische productie-import (2024/2025/2026) | AFGEROND 2026-07-07 (902 transacties, 681 boekingen) |
+| 4 | Echte e-mailverzending | AFGEROND 2026-07-08 (Resend, begrensde verificatie geslaagd) |
+| 5 | PostgreSQL-productieversie bevestigen | AFGEROND 2026-07-07 |
 | 6 | Live backup/restore rehearsal | VOLTOOID op 2026-07-05 (RC3) |
-| 7 | Push naar remote | Expliciete eigenaargoedkeuring vereist |
-| 8 | Geheimen roteren | Vóór productie uitvoeren |
+| 7 | Push naar remote | GEPUBLICEERD op `origin/main` — commit `f2f7cbb` |
+| 8 | Geheimen roteren (finance_user) | AFGEROND 2026-07-07 |
+| 9 | App/provider geheimremediatie | AFGEROND 2026-07-08 (Clerk, Resend, New Relic, Request Access Secret) |
 
 ---
 
@@ -211,9 +212,9 @@ Leg het resultaat vast in `docs/finance-rebuild-run.md` met datum, uitkomst, en 
 
 ---
 
-## Bevestiging
+## Bevestiging (historisch bij RC4 — 2026-07-05)
 
-Dit document bevestigt:
+Ten tijde van de oorspronkelijke overdracht werd bevestigd:
 
 - Er zijn **geen productiecommando's** uitgevoerd.
 - Er zijn **geen productiecredentials** opgenomen.
@@ -224,3 +225,5 @@ Dit document bevestigt:
 - Er is **geen echte e-mail** verstuurd.
 - Er is **geen PDF-bibliotheek** geïnstalleerd.
 - **Graphify** is niet aangeraakt (`.graphifyignore`, `graphify-out/`).
+
+Deze beperkingen zijn in latere sessies (2026-07-07 t/m 2026-07-09) opgeheven met expliciete eigenaargoedkeuring voor elke actie.

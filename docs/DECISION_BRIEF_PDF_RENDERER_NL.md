@@ -73,7 +73,7 @@ npm run build:server
 
 - Evidence: `docs/REAL_PDF_RENDERER_EVIDENCE_NL.md`.
 - Test: `tests/ops/realPdfRendererEvidence.test.ts`.
-- Remaining blocker: real email sending.
+- Real email sending: completed 2026-07-08.
 
 ## 12. Bevestiging
 

@@ -238,29 +238,31 @@ Alle commits staan lokaal op branch `main`. Er is niets gepusht naar de remote.
 
 Lokale placeholder-credentials zijn in gebruik (`local_dev_placeholder`). Productiecredentials mogen nooit dezelfde zijn als de lokale placeholders.
 
-### Vereiste acties vóór productie
+### Uitgevoerde acties (2026-07-07 t/m 2026-07-08)
 
-- [ ] Genereer een nieuw sterk wachtwoord voor `finance_user` op de productiedatabase.
-- [ ] Vernieuwd Clerk publishable key en secret key voor de productieomgeving.
-- [ ] Vernieuw of stel `RESEND_API_KEY` in als e-mailverzending goedgekeurd is.
-- [ ] Sla alle geheimen op in de secrets manager van de hostingprovider (Dokploy / omgevingsvariabelen) — nooit in `.env` in Git.
+- [x] Nieuw sterk wachtwoord gegenereerd voor `finance_user` op de productiedatabase (2026-07-07)
+- [x] Clerk Secret Key geroteerd en toegepast op Dokploy runtime (2026-07-08)
+- [x] Resend API Key geroteerd en toegepast op Dokploy runtime (2026-07-08)
+- [x] New Relic License Key geroteerd en toegepast op Dokploy runtime (2026-07-08)
+- [x] Request Access Secret gegenereerd (2026-07-08)
+- [x] Alle geheimen opgeslagen in Dokploy omgevingsvariabelen — buiten Git
 
-### Beslissing
+### Status
 
-- [ ] **Bevestigd** — alle productiegeheimen zijn geroteerd en opgeslagen buiten Git
-- [ ] **Nog te doen**
+- [x] **Bevestigd** — alle productiegeheimen zijn geroteerd en opgeslagen buiten Git (2026-07-08)
+- [ ] Nog te doen (alleen operator-deferred rotatie voor volgende sessie)
 
 ---
 
-## Overzichtstabel
+## Overzichtstabel (bijgewerkt 2026-07-09)
 
 | # | Beslissing | Status |
 |---|-----------|--------|
-| 1 | PDF-renderer afhankelijkheid | ☐ Goedgekeurd / ☐ Uitgesteld |
-| 2 | Productiemigratie en overstap | ☐ Goedgekeurd / ☐ Uitgesteld |
-| 3 | Historische productie-import | ☐ Goedgekeurd / ☐ Uitgesteld |
-| 4 | Echte e-mailverzending | ☐ Goedgekeurd / ☐ Uitgesteld |
-| 5 | PostgreSQL-productieversie bevestigd | ☐ Bevestigd / ☐ Nog te doen |
-| 6 | Live backup/restore rehearsal | ☐ Geslaagd / ☐ Nog te doen |
-| 7 | Geen push vóór goedkeuring | ☐ Bevestigd |
-| 8 | Geheimen geroteerd | ☐ Bevestigd / ☐ Nog te doen |
+| 1 | PDF-renderer afhankelijkheid | ✅ AFGEROND 2026-07-08 |
+| 2 | Productiemigratie en overstap | ✅ AFGEROND 2026-07-07 |
+| 3 | Historische productie-import | ✅ AFGEROND 2026-07-07 |
+| 4 | Echte e-mailverzending | ✅ AFGEROND 2026-07-08 |
+| 5 | PostgreSQL-productieversie bevestigd | ✅ AFGEROND 2026-07-07 |
+| 6 | Live backup/restore rehearsal | ✅ GESLAAGD 2026-07-05 |
+| 7 | Geen push vóór goedkeuring | ✅ BEWAKT — commit f2f7cbb gepubliceerd op origin/main |
+| 8 | Geheimen geroteerd | ✅ AFGEROND 2026-07-08 (incl. app/provider secrets) |

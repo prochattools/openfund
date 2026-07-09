@@ -31,8 +31,8 @@ Phase 11 — Production historical import          COMPLETE (2026-07-07; 2024/20
 Phase 12 — Production secret rotation            COMPLETE (2026-07-07; finance_user credential rotated; old credential rejected; new credential verified; historical totals re-verified)
 Phase 13 — Production runtime credential update  COMPLETE (2026-07-07; final retained credential applied; Dokploy env updated; redeploy triggered; app health verified)
 Phase 14 — App/provider secret remediation       COMPLETE (2026-07-08; Clerk, Resend, and New Relic provider keys rotated and applied to Dokploy runtime; app redeployed; health/readiness verified)
-Phase 15 — Real PDF renderer                     COMPLETE (2026-07-08; pdfkit report artifact renderer; HTML/XLSX preserved; real email still blocked)
-Phase 16 — Real email sending                    COMPLETE (2026-07-08; Resend provider abstraction; executeDispatch with guards; bounded production send verified)
+Phase 15 — Real PDF renderer                     COMPLETE (2026-07-08; pdfkit report artifact renderer; HTML/XLSX preserved)
+Phase 16 — Real email sending                    COMPLETE (2026-07-08; Resend provider abstraction; executeDispatch with guards; bounded production send verified via Resend)
 Phase 17 — Month-by-month accounting reconciliation and administrator reporting COMPLETE (2026-07-09; formula-based monthly chaining model; read-only production audit passed; baseline controls: 2024/2025/2026 confirmed)
 ```
 
@@ -253,7 +253,7 @@ Status: **complete** — REPORT-001 through REPORT-005 complete.
 - Add month trends and transaction drill-down.
 - Generate HTML, XLSX, and PDF artifacts from the same immutable snapshot.
 - Require a separate final administrator approval click before sending.
-- Store report and dispatch hashes, recipients, sender, time, and metadata-only result; real e-mail sending remains blocked.
+- Store report and dispatch hashes, recipients, sender, time, and metadata-only result; real e-mail sending completed 2026-07-08.
 
 ### Exit criteria
 
@@ -303,18 +303,20 @@ Status: **complete (local readiness; production gated)** — INFRA-001 documente
 
 Status: **complete (published RC4 handoff; owner decisions gated)** — OPS-001 (Dutch admin guide) committed as `d51cfad`; OPS-002 (backup/restore rehearsal) guards and dry-run support committed as `77ebbbd`; OPS-003 (final readiness audit) committed as `8d5978c`; RC2/RC3 hardening: backup rehearsal explicit flags (`519b69e`), validate:release-candidate strengthened (`bb666ae`), release manifest generator (`6341be4`), production blocker guard audit (`73d8072`), owner handoff bundle (`0a8c04d`), RC2 readiness evidence (`fd1a6c2`, `4f9cedf`), live local backup/restore evidence (`3ac4bfc`), API route smoke coverage (`9b209c7`), RC4 handoff polish (`7ce6e6d`, `43bfb90`, `42a6f49`, `43137b5`, `33d08c4`), roadmap closeout and owner-review prep (`d942705`, `d07a32f`, `35688c4`, `b3cfc57`, `0a64649`, `0a3904e`), owner acceptance hardening (`a8280c2`, `7e71404`, `18a6802`, `ee473bd`, `6353546`), and post-push owner-decision handoff commits (`e07be8f`, `a5ab4a8`, `949823a`, `84d13d7`, `3866a43`, `f2f7cbb`) published to `origin/main`. Current gate: owner decision selection; recommended next decision is `postgres-version`.
 
-Remaining blockers before production:
+Alle productiehardeningsstappen zijn afgerond (2026-07-07 t/m 2026-07-08):
 
-- Real PDF renderer dependency requires owner approval.
-- Live local backup/restore rehearsal is complete for RC3; production backup/restore remains gated by owner approval.
-- Production cutover requires explicit owner approval (see `docs/PRODUCTION_CUTOVER_PLAN_NL.md`).
-- Historical production import (2024/2025/2026) requires owner approval and dry-run acceptance.
-- Real email sending: complete; bounded production verification email sent via Resend on 2026-07-08.
-- Post-push verification confirms owner-decision handoff commit `f2f7cbb` on `origin/main`; no new push is needed for the published handoff.
-- Push for future local commits, provider secret completion, and any production-provider changes are represented in the owner decision matrix, decision briefs, and approval-intake validator; they remain owner-gated.
-- Local PostgreSQL 15.17 rehearsal evidence is recorded in `docs/POSTGRES_VERSION_EVIDENCE_NL.md`; it does not resolve the production PostgreSQL version blocker.
-- PostgreSQL production version must be confirmed before cutover and is the recommended next low-risk owner decision.
-- Owner acceptance checklist, owner decision menu, decision briefs, approval-intake validation, and post-push evidence are prepared; they do not approve any gated action.
+- Real PDF renderer: COMPLETE 2026-07-08 (pdfkit).
+- Production schema cutover: COMPLETE 2026-07-07.
+- Historical production import: COMPLETE 2026-07-07 (902 transactions, 681 bookings).
+- Real email sending: COMPLETE 2026-07-08 (Resend; bounded production verification email sent).
+- Secret rotation (finance_user): COMPLETE 2026-07-07.
+- Runtime credential update: COMPLETE 2026-07-07.
+- App/provider secret remediation: COMPLETE 2026-07-08 (Clerk, Resend, New Relic).
+- PostgreSQL production version confirmed: COMPLETE 2026-07-07 (15.8).
+- Live local backup/restore rehearsal: COMPLETE RC3 (2026-07-05); production backup/restore remains gated.
+- Phase 17 accounting reconciliation audit: COMPLETE 2026-07-09.
+- Post-push verification confirms owner-decision handoff commit `f2f7cbb` on `origin/main`.
+- Push for future local commits remains owner-gated.
 
 ### Outcomes
 

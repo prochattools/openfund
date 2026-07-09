@@ -62,7 +62,7 @@ De volgende statusregels tonen wat afgerond is en welke blokkades nog van kracht
 |---|---------|-------|
 | 1 | Productiemigratie en cutover | AFGEROND 2026-07-07 |
 | 2 | Historische productie-import (2024/2025/2026) | AFGEROND 2026-07-07 |
-| 3 | Echte e-mailverzending | Provider-call en echte verzending blijven geblokkeerd |
+| 3 | Echte e-mailverzending | AFGEROND 2026-07-08 — Resend provider, begrensde productie-verificatie geslaagd |
 | 4 | PostgreSQL-productieversie bevestigen | AFGEROND 2026-07-07 |
 | 5 | Live backup/restore rehearsal | VOLTOOID op 2026-07-05 (RC3); productieback-up/herstel blijft geblokkeerd tot eigenaargoedkeuring |
 | 6 | Nieuwe push naar remote | Niet nodig voor de gepubliceerde handoff; vereist opnieuw expliciete eigenaargoedkeuring voor toekomstige lokale commits |
@@ -116,7 +116,7 @@ npm run preflight:next-owner-decision
 | Geen ruwe transactiedumps in Git | BEVESTIGD |
 | Geen databasedumps in Git | BEVESTIGD |
 | Geen historische productie-import uitgevoerd | BEVESTIGD |
-| Geen echte e-mail verzonden | BEVESTIGD |
+| Echte e-mailverzending voltooid (begrensde productie-verificatie) | BEVESTIGD — 1 e-mail verzonden via Resend op 2026-07-08 |
 | PDF-bibliotheek alleen voor goedgekeurde renderer geïnstalleerd | BEVESTIGD — `pdfkit` |
 | Geen Dokploy of 10.0.2.4 gebruikt | BEVESTIGD |
 

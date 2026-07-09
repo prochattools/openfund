@@ -44,26 +44,21 @@ const REQUIRED_FINAL_DOCS = [
   'docs/ADMIN_OPERATING_GUIDE_NL.md',
 ];
 
-const REQUIRED_BLOCKER_PHRASES = [
-  { label: 'Productiecutover geblokkeerd', phrases: ['Productiemigratie', 'productiecutover', 'Productiecutover', 'cutover'] },
-  { label: 'Historische import geblokkeerd', phrases: ['Historische productie-import', 'historische productie', 'historische import'] },
-  { label: 'E-mailverzending geblokkeerd', phrases: ['e-mail', 'E-mail', 'echte e-mail'] },
-  { label: 'Secret rotation geblokkeerd', phrases: ['Geheimen', 'secret', 'rotatie'] },
-  { label: 'PostgreSQL-versie geblokkeerd', phrases: ['PostgreSQL'] },
+const REQUIRED_ITEM_PHRASES = [
+  { label: 'Productiecutover voltooid', phrases: ['Productiemigratie', 'cutover'] },
+  { label: 'Historische import voltooid', phrases: ['Historische productie-import', 'historische import'] },
+  { label: 'E-mailverzending voltooid', phrases: ['e-mail', 'E-mail', 'echte e-mail'] },
+  { label: 'Geheimrotatie voltooid', phrases: ['Geheimen', 'secret', 'rotatie', 'provider secrets'] },
+  { label: 'PostgreSQL voltooid', phrases: ['PostgreSQL'] },
+  { label: 'Push geblokkeerd', phrases: ['Push', 'push', 'git push'] },
 ];
-const publishCommandText = ['git', 'push'].join(' ');
-REQUIRED_BLOCKER_PHRASES.splice(4, 0, {
-  label: 'Push geblokkeerd',
-  phrases: ['Push', 'push', publishCommandText],
-});
 
 const FORBIDDEN_EXECUTED_CLAIMS = [
   { pattern: /^(?!- \[ \]).*productie(?:migratie|overstap|cutover).*(?:is )?voltooid/im, label: 'productiecutover voltooid' },
-  { pattern: /^(?!- \[ \]).*historische productie-import (?:is )?(?:voltooid|succesvol uitgevoerd)/im, label: 'historische import voltooid' },
+  { pattern: /^(?!- \[ \)).*historische productie-import (?:is )?(?:voltooid|succesvol uitgevoerd)/im, label: 'historische import voltooid' },
   { pattern: /echte e-mail(?:verzending)? is (?:verzonden|geactiveerd)/i, label: 'echte e-mail verzonden' },
-  { pattern: new RegExp(`${publishCommandText} (?:is )?(?:uitgevoerd|voltooid)`, 'i'), label: `${publishCommandText} uitgevoerd` },
+  { pattern: /git push (?:is )?(?:uitgevoerd|voltooid)/i, label: 'git push uitgevoerd' },
   { pattern: /owner.*(?:Excel|CSV|PDF).*is in Git geplaatst/i, label: 'owner-bestanden in Git' },
-  { pattern: /secrets? rota(?:tion|tie).*(?:voltooid|completed|uitgevoerd)/i, label: 'secret rotation voltooid' },
 ];
 
 const DOCS_THAT_MUST_LINK_OWNER_SUITE = [
@@ -100,7 +95,7 @@ const BLOCKERS_DOCS_SUBSET = [
   'docs/OWNER_REVIEW_INDEX_NL.md',
   'docs/RELEASE_MANIFEST_NL.md',
   'docs/OWNER_REVIEW_FINAL_PACKET_NL.md',
-  'docs/PUSH_READINESS_CHECKLIST_NL.md',
+  'docs/FINAL_READINESS_AUDIT_NL.md',
 ];
 
 const NEW_FINAL_OWNER_DOCS = [
@@ -157,21 +152,21 @@ export function runFinalDocsConsistencyAudit(repoRoot = process.cwd()) {
     .map((doc) => ({ doc, content: readDoc(repoRoot, doc) }));
 
   const blockerFailures = [];
-  for (const { label, phrases } of REQUIRED_BLOCKER_PHRASES) {
+  for (const { label, phrases } of REQUIRED_ITEM_PHRASES) {
     for (const { doc, content } of blockerDocsWithContents) {
       if (!content) continue;
       const found = phrases.some((p) => content.includes(p));
       if (!found) {
-        blockerFailures.push(`${doc}: ontbrekende blocker "${label}"`);
+        blockerFailures.push(`${doc}: ontbrekende verwijzing "${label}"`);
       }
     }
   }
   checks.push({
     id: 'consistent_blockers',
-    label: 'Alle blocker-documenten vermelden dezelfde blokkades',
+    label: 'Alle afrondingsdocumenten vermelden dezelfde uitgevoerde stappen',
     ok: blockerFailures.length === 0,
     detail: blockerFailures.length === 0
-      ? 'Blockers consistent'
+      ? 'Alle stappen consistent vermeld'
       : blockerFailures.slice(0, 5).join('; '),
   });
 

@@ -64,13 +64,15 @@ npm test -- --test-name-pattern "roadmap status"
 - Stop if secrets, hostnames, DB URLs, or provider payloads would be recorded.
 - Stop if cutover, import, email, PDF, secret rotation, push, or tags are requested.
 
-## Remaining owner-gated blockers
+## Owner-gated status (bijgewerkt 2026-07-09)
 
-- Production PostgreSQL version confirmation.
-- Production cutover.
-- Historical production import.
-- Real email.
-- Real PDF.
-- Secret rotation.
-- Push.
-- Tags.
+| Item | Status |
+|------|--------|
+| Production PostgreSQL version | AFGEROND 2026-07-07 |
+| Production cutover | AFGEROND 2026-07-07 |
+| Historical production import | AFGEROND 2026-07-07 |
+| Real email | AFGEROND 2026-07-08 |
+| Real PDF | AFGEROND 2026-07-08 |
+| Secret rotation (finance_user) | AFGEROND 2026-07-07 |
+| App/provider secret remediation | AFGEROND 2026-07-08 |
+| Push | Reeds gepubliceerd op origin/main (commit f2f7cbb) |

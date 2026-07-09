@@ -94,13 +94,13 @@ Na de eerste geheimrotatie (commit `74cd9bd`) was het nieuw gegenereerde wachtwo
 | App redeploy na sessie (commit a23ca94) | BEVESTIGD |
 | App health na redeploy | BEVESTIGD — gezond |
 
-## 8. Resterende functionele blokkers
+## 8. Functionele status (bijgewerkt 2026-07-09)
 
-| Blocker | Status |
-|---------|--------|
-| Echte PDF-renderer | Geblokkeerd — niet goedgekeurd in deze run |
-| Echte e-mail (e-mailprovider API) | Geblokkeerd — niet goedgekeurd in deze run |
+| Item | Status |
+|------|--------|
+| Echte PDF-renderer | Voltooid 2026-07-08 |
+| Echte e-mail (e-mailprovider API) | Voltooid 2026-07-08 |
 
-## 8. Operationele noot
+## 9. Operationele noot
 
 De Dokploy runtime-omgeving is bijgewerkt en de app is herstart. Het credential bestaat nu in de Dokploy omgevingsvariabelen van de Yeshua Academy Finance applicatie en in de PostgreSQL server. Het staat niet in Git, docs, tests, of logbestanden.

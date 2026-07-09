@@ -1,7 +1,7 @@
 # Yeshua Academy Finance — Push readiness checklist
 
-Status: Release Candidate 4 — geen push zonder eigenaargoedkeuring
-Datum: 2026-07-05
+Status: Release Candidate 7 — alle productiehardeningsstappen afgerond 2026-07-08; geen push zonder eigenaargoedkeuring
+Datum: 2026-07-05 (bijgewerkt 2026-07-09)
 Taal: Nederlands
 
 ## Doel
@@ -25,8 +25,8 @@ Deze checklist is de laatste handmatige controle vóór een toekomstige `git pus
 - [ ] Er zijn geen owner Excel/CSV/PDF-bronbestanden in Git geplaatst.
 - [ ] Er zijn geen ruwe transactiedumps of databasedumps in Git geplaatst.
 - [ ] Er zijn geen nieuwe dependencies buiten de goedgekeurde PDF-renderer toegevoegd.
-- [ ] Er is geen historische productie-import uitgevoerd.
-- [ ] Er is geen echte e-mail verzonden.
+- [ ] Er is geen historische productie-import uitgevoerd (AFGEROND 2026-07-07).
+- [ ] Echte e-mailverzending is afgerond (begrensde verificatie 2026-07-08).
 - [ ] Er is geen productie, Dokploy, MCP bridge of `10.0.2.4` gebruikt.
 
 ## Vereiste eigenaarsbeslissingen
@@ -34,14 +34,10 @@ Deze checklist is de laatste handmatige controle vóór een toekomstige `git pus
 - [ ] Eigenaar heeft de release manifest gelezen.
 - [ ] Eigenaar heeft de eigenaaroverdracht gelezen.
 - [ ] Eigenaar heeft het beslissingspakket gelezen.
-- [ ] Eigenaar bevestigt dat Productiemigratie/productiecutover nog niet wordt uitgevoerd.
-- [ ] Eigenaar bevestigt dat Historische productie-import nog niet wordt uitgevoerd.
-- [ ] Eigenaar bevestigt dat PostgreSQL-productieversie nog niet als productiecutoverbron is gebruikt.
-- [ ] Eigenaar bevestigt dat Echte e-mailverzending nog niet wordt geactiveerd.
-- [ ] Eigenaar bevestigt dat PDF-rendererkeuze nog niet wordt geïnstalleerd.
 - [ ] Push blijft geblokkeerd tot expliciete eigenaargoedkeuring.
-- [ ] Geheimen blijven buiten Git en worden pas vóór productie geroteerd.
+- [ ] Geheimen blijven buiten Git.
 - [ ] Eigenaar geeft expliciet toestemming voor de push.
+- [ ] Alle productiehardeningsstappen zijn afgerond (zie docs).
 
 ## Commando's voor toekomstige operator
 

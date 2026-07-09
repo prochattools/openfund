@@ -5,7 +5,7 @@ Status: GESLAAGD
 | Controle | Status | Detail |
 |----------|--------|--------|
 | Alle vereiste eigenaarsdocumenten bestaan | GESLAAGD | 32 documenten aanwezig |
-| Alle blocker-documenten vermelden dezelfde blokkades | GESLAAGD | Blockers consistent |
+| Alle afrondingsdocumenten vermelden dezelfde uitgevoerde stappen | GESLAAGD | Alle stappen consistent vermeld |
 | Geen document beweert dat een verboden productie-actie is uitgevoerd | GESLAAGD | Geen valse beweringen gevonden |
 | Release manifest bevat "Release evidence validated through" referentie | GESLAAGD | Manifest heeft validate-through evidence |
 | Owner-review documenten linken naar de volledige eigenaarssuite | GESLAAGD | Alle links aanwezig |

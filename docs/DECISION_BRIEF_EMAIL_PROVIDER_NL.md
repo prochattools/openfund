@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Decision brief: e-mailprovider
 
-Status: Goedgekeurd en geïmplementeerd — provider Resend; productie-verzendverificatie in afwachting
+Status: Goedgekeurd en geïmplementeerd — provider Resend; productie-verzendverificatie voltooid 2026-07-08
 Taal: Nederlands
 
 ## 1. Beslissing
@@ -84,7 +84,7 @@ Dry-run/no-send configuratie moet metadata-only blijven totdat echte verzending 
 - Schema: DispatchStatus SENT/FAILED, providerMessageId, sentAt, errorMessage — geen migratie nodig
 - Verificatiescript: `scripts/production-email-send-verify.mjs`
 - Bewijs: `docs/REAL_EMAIL_SENDING_EVIDENCE_NL.md`
-- Productie-verzendverificatie: in afwachting van runtime-uitvoering in productieomgeving
+- Productie-verzendverificatie: voltooid 2026-07-08 — precies 1 e-mail verzonden via Resend, app health ok
 
 ## 12. Bevestiging
 

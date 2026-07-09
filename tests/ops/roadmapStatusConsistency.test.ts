@@ -23,13 +23,11 @@ const docs = {
 
 const allDocs = Object.entries(docs);
 
-describe('roadmap status consistency — RC4 gate', () => {
+describe('roadmap status consistency — RC7 gate', () => {
   it('implementation plan and handoff docs identify the correct gate after Phase 17 complete', () => {
     expect(docs.implementationPlan).toContain('Current gate: Phase 17 complete');
-    expect(docs.ownerHandoff).toContain('Eigenaaroverdracht (RC4)');
-    expect(docs.ownerHandoff).toContain('### RC4-validatie in één stap');
+    expect(docs.ownerHandoff).toContain('Eigenaaroverdracht (RC7)');
     expect(docs.implementationPlan).not.toContain('Current gate: Release Candidate 3 owner handoff');
-    expect(docs.ownerHandoff).not.toContain('### RC3-validatie in één stap');
   });
 
   it('RC4 local release evidence commits are recorded', () => {
@@ -86,27 +84,27 @@ describe('roadmap status consistency — blockers are explicit', () => {
     expect(docs.releaseManifest).toContain('Echte e-mailverzending');
   });
 
-  it('real email remains blocked and dispatch is metadata-only', () => {
-    expect(docs.roadmap).toContain('Store report and dispatch hashes, recipients, sender, time, and metadata-only result; real e-mail sending remains blocked.');
-    expect(docs.ownerHandoff).toContain('Dispatch-metadata (e-mail wordt niet verzonden)');
+  it('real email sending is complete and dispatch works', () => {
+    expect(docs.roadmap).toContain('Store report and dispatch hashes, recipients, sender, time, and metadata-only result; real e-mail sending completed 2026-07-08.');
     expect(docs.releaseManifest).toContain('Echte e-mailverzending');
+    expect(docs.releaseManifest).toContain('AFGEROND 2026-07-08');
   });
 
-  it('every owner-facing blocker appears in handoff and preflight/checklist docs', () => {
-    const blockers = [
+  it('completed items appear in handoff doc and preflight reflects all-hardening-done', () => {
+    const completed = [
       'Productiemigratie',
+      'Echte PDF',
+      'Echte e-mailverzending',
       'Historische productie-import',
-      'Echte e-mail',
-      'PostgreSQL',
-      'Push',
-      'Geheimen',
+      'Geheimen roteren',
     ];
 
-    for (const blocker of blockers) {
-      expect(docs.ownerHandoff).toContain(blocker);
-      expect(docs.ownerPreflight).toContain(blocker);
-      expect(docs.pushChecklist).toContain(blocker);
+    for (const item of completed) {
+      expect(docs.ownerHandoff).toContain(item);
     }
+    expect(docs.ownerPreflight).toContain('AFGEROND');
+    expect(docs.ownerPreflight).toContain('Push blijft');
+    expect(docs.pushChecklist).toContain('Push');
   });
 
   it('no release docs claim blocked production actions occurred', () => {
