@@ -32,10 +32,15 @@ RUN npm install --omit=dev --ignore-scripts 2>&1 | tail -1
 FROM node:20-slim AS runner
 WORKDIR /app
 
+ARG BUILD_SHA=unknown
+ARG BUILD_REF=unknown
+
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
+ENV BUILD_SHA=$BUILD_SHA
+ENV BUILD_REF=$BUILD_REF
 
 # Copy necessary runtime files
 COPY --from=builder /app/public ./public
