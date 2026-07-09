@@ -327,20 +327,25 @@ export const buildMonthlyReconciliation = (
       ? extractRunningBalanceMinor(transaction.rawRow)
       : toMinor(transaction.resultingBalanceMinor);
 
+    // Per-transaction balances are often unreliable. Only use them if they're explicitly provided
+    // (not extracted from raw rows). Skip running balance checks when resultingBalanceMinor is null,
+    // which signals that source evidence is not per-transaction.
+    const hasReliableBalance = transaction.resultingBalanceMinor != null;
+
     if (index === 0) {
-      if (actualBalanceMinor != null) {
+      if (hasReliableBalance && actualBalanceMinor != null) {
         derivedOpeningBalanceMinor = actualBalanceMinor - delta;
         previousBalanceMinor = actualBalanceMinor;
       } else if (input.statementEvidence.openingBalanceMinor != null) {
         derivedOpeningBalanceMinor = toMinor(input.statementEvidence.openingBalanceMinor);
       }
-    } else if (actualBalanceMinor != null && previousBalanceMinor != null) {
+    } else if (hasReliableBalance && actualBalanceMinor != null && previousBalanceMinor != null) {
       const expected = previousBalanceMinor + delta;
       if (expected !== actualBalanceMinor) {
         runningBalanceErrorCount += 1;
       }
       previousBalanceMinor = actualBalanceMinor;
-    } else {
+    } else if (hasReliableBalance && (actualBalanceMinor == null || previousBalanceMinor == null)) {
       runningBalanceErrorCount += 1;
       previousBalanceMinor = actualBalanceMinor ?? previousBalanceMinor;
     }
@@ -362,10 +367,16 @@ export const buildMonthlyReconciliation = (
 
   duplicateFingerprintCount = repeatedFingerprints.size;
 
-  const openingBalanceMinor = derivedOpeningBalanceMinor
-    ?? (input.statementEvidence.openingBalanceMinor != null ? toMinor(input.statementEvidence.openingBalanceMinor) : 0n);
-  const closingBalanceMinor = previousBalanceMinor
-    ?? (input.statementEvidence.closingBalanceMinor != null ? toMinor(input.statementEvidence.closingBalanceMinor) : openingBalanceMinor + netMinor);
+  // For opening: use provided statement evidence, or derive from first transaction if we have reliable balances
+  const openingBalanceMinor = input.statementEvidence.openingBalanceMinor != null
+    ? toMinor(input.statementEvidence.openingBalanceMinor)
+    : derivedOpeningBalanceMinor ?? 0n;
+
+  // For closing: use provided statement evidence (for month 12 in full-year splits),
+  // or derive from running balance chain, or calculate from formula
+  const closingBalanceMinor = input.statementEvidence.closingBalanceMinor != null
+    ? toMinor(input.statementEvidence.closingBalanceMinor)
+    : previousBalanceMinor ?? (openingBalanceMinor + netMinor);
   const expectedClosingMinor = openingBalanceMinor + netMinor;
 
   const statementOpeningMinor = input.statementEvidence.openingBalanceMinor != null

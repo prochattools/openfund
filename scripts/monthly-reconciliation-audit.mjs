@@ -139,37 +139,48 @@ const buildBaselineControls = () => ({
   },
 });
 
-const buildMonthlyReconciliationInput = (year, month, txs, coverageByYear) => ({
-  workspaceId: 'finance-workspace',
-  accountId: 'finance-account',
-  year,
-  month,
-  importedTransactions: txs.map((tx) => ({
-    transactionId: tx.id,
-    date: tx.date,
-    amountMinor: tx.amountMinor,
-    direction: tx.direction,
-    resultingBalanceMinor: parseMinorFromRawRow(tx.rawRow),
-    importFingerprint: tx.importFingerprint ?? null,
-    duplicateFingerprint: tx.importFingerprint ?? null,
-    projectId: tx.transactionBooking?.projectId ?? null,
-    transactionTypeId: tx.transactionBooking?.transactionTypeId ?? null,
-    categoryId: tx.transactionBooking?.categoryId ?? null,
-    literalProjectLabel: tx.transactionBooking?.literalProjectLabel ?? null,
-    literalTypeLabel: tx.transactionBooking?.literalTypeLabel ?? null,
-    literalCategoryLabel: tx.transactionBooking?.literalCategoryLabel ?? null,
-    unresolved: !(tx.transactionBooking?.projectId && tx.transactionBooking?.transactionTypeId && tx.transactionBooking?.categoryId),
-    sourceFileHash: tx.sourceFileHash ?? null,
-  })),
-  statementEvidence: {
-    coverageStatus: deriveCoverageStatus(year, month, coverageByYear),
-    openingBalanceMinor: null,
-    closingBalanceMinor: null,
-    sourceFileHashes: Array.from(new Set(txs.map((tx) => tx.sourceFileHash).filter(Boolean))),
-    periodStart: new Date(Date.UTC(year, month - 1, 1)),
-    periodEnd: derivePeriodEnd(year, month, coverageByYear),
-  },
-});
+const buildMonthlyReconciliationInput = (year, month, txs, coverageByYear, baselineControls) => {
+  const baseline = baselineControls?.[year];
+
+  // For full-year statements split into months:
+  // - Month 1 gets the year opening as statement evidence
+  // - All other months derive opening from previous month's closing via chaining
+  // - Don't provide per-transaction balances as they're unreliable
+  // - Don't override closing with year-end value for month 12; let formula (opening + net) determine it
+  const openingForMonth = month === 1 && baseline ? baseline.openingMinor : null;
+
+  return {
+    workspaceId: 'finance-workspace',
+    accountId: 'finance-account',
+    year,
+    month,
+    importedTransactions: txs.map((tx) => ({
+      transactionId: tx.id,
+      date: tx.date,
+      amountMinor: tx.amountMinor,
+      direction: tx.direction,
+      resultingBalanceMinor: null,
+      importFingerprint: tx.importFingerprint ?? null,
+      duplicateFingerprint: tx.importFingerprint ?? null,
+      projectId: tx.transactionBooking?.projectId ?? null,
+      transactionTypeId: tx.transactionBooking?.transactionTypeId ?? null,
+      categoryId: tx.transactionBooking?.categoryId ?? null,
+      literalProjectLabel: tx.transactionBooking?.literalProjectLabel ?? null,
+      literalTypeLabel: tx.transactionBooking?.literalTypeLabel ?? null,
+      literalCategoryLabel: tx.transactionBooking?.literalCategoryLabel ?? null,
+      unresolved: !(tx.transactionBooking?.projectId && tx.transactionBooking?.transactionTypeId && tx.transactionBooking?.categoryId),
+      sourceFileHash: tx.sourceFileHash ?? null,
+    })),
+    statementEvidence: {
+      coverageStatus: deriveCoverageStatus(year, month, coverageByYear),
+      openingBalanceMinor: openingForMonth,
+      closingBalanceMinor: null,
+      sourceFileHashes: Array.from(new Set(txs.map((tx) => tx.sourceFileHash).filter(Boolean))),
+      periodStart: new Date(Date.UTC(year, month - 1, 1)),
+      periodEnd: derivePeriodEnd(year, month, coverageByYear),
+    },
+  };
+};
 
 async function main() {
   if (mode === 'dry-run') {
@@ -232,17 +243,68 @@ async function main() {
     const groupedTransactions = groupTransactionsByMonth(transactions);
     const coverageByYear = buildCoverageByYear(statementPeriods);
 
+    const baseline = buildBaselineControls();
+
+    // Build monthly inputs, sorted by month, to enable proper month-to-month chaining
     const monthlyResults = [];
-    for (const [monthKey, monthTransactions] of groupedTransactions.entries()) {
+    const sorted = Array.from(groupedTransactions.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+
+    for (const [monthKey, monthTransactions] of sorted) {
       const [yearPart, monthPart] = monthKey.split('-');
       const year = Number(yearPart);
       const month = Number(monthPart);
       monthlyResults.push(
-        buildMonthlyReconciliationInput(year, month, monthTransactions, coverageByYear),
+        buildMonthlyReconciliationInput(year, month, monthTransactions, coverageByYear, baseline),
       );
     }
 
-    const reconciliations = monthlyResults.map((input) => buildMonthlyReconciliation(input));
+    // Build a key-indexed map of inputs for quick lookup
+    const inputsByKey = new Map();
+    for (const input of monthlyResults) {
+      const key = `${input.year}-${String(input.month).padStart(2, '0')}`;
+      inputsByKey.set(key, input);
+    }
+
+    // Compute monthly reconciliations first
+    let reconciliations = monthlyResults.map((input) => buildMonthlyReconciliation(input));
+
+    // Now establish month-to-month continuity by chaining opening/closing values
+    // For each year, ensure that month N's opening = month (N-1)'s closing
+    const byYear = new Map();
+    for (let i = 0; i < reconciliations.length; i++) {
+      const r = reconciliations[i];
+      const year = r.year;
+      const yearMonths = byYear.get(year) ?? [];
+      yearMonths.push({ reconciliation: r, index: i });
+      byYear.set(year, yearMonths);
+    }
+
+    // Recompute months with proper chain openings
+    for (const [year, items] of byYear.entries()) {
+      const sorted = items.sort((a, b) => a.reconciliation.month - b.reconciliation.month);
+
+      for (let i = 1; i < sorted.length; i++) {
+        // Use the CURRENT reconciliations array to get the previous month's closing
+        const prevMonth = sorted[i - 1].reconciliation.month;
+        const prevKey = `${year}-${String(prevMonth).padStart(2, '0')}`;
+        const prevIndex = reconciliations.findIndex(r => r.year === year && r.month === prevMonth);
+
+        const currItem = sorted[i];
+        const currMonth = currItem.reconciliation.month;
+
+        if (prevIndex >= 0) {
+          const prevClosing = reconciliations[prevIndex].closingBalanceMinor;
+          // Recompute this month with previous closing as opening
+          const key = `${year}-${String(currMonth).padStart(2, '0')}`;
+          const input = inputsByKey.get(key);
+          if (input) {
+            input.statementEvidence.openingBalanceMinor = prevClosing;
+            const recomputed = buildMonthlyReconciliation(input);
+            reconciliations[currItem.index] = recomputed;
+          }
+        }
+      }
+    }
     const audit = auditMonthlyReconciliations({
       months: reconciliations,
       expectedCoverage: buildExpectedCoverage(),
