@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Final owner review packet
 
-Status: final owner-review packet — roadmap 100% through Phase 16; Phase 17 open; local implementation complete; read-only productie-verificatie pending; schema cutover afgerond 2026-07-07; historische import voltooid 2026-07-07; database credential finalisatie voltooid; alle provider secrets geroteerd 2026-07-08; echte PDF-renderer voltooid; echte e-mailverzending voltooid 2026-07-08
+Status: final owner-review packet — roadmap 100% through Phase 16; Phase 17 open; local implementation complete; read-only productie-audit failed on 2026-07-09; 2024 closing control failed by 190,000 minor units; schema cutover afgerond 2026-07-07; historische import voltooid 2026-07-07; database credential finalisatie voltooid; alle provider secrets geroteerd 2026-07-08; echte PDF-renderer voltooid; echte e-mailverzending voltooid 2026-07-08
 Taal: Nederlands
 
 ## 1. Huidige release-status
@@ -15,7 +15,7 @@ Veilige lokale status:
 - Rapporten HTML/XLSX/PDF klaar; PDF-renderer gebruikt `pdfkit` voor report artifacts.
 - Dispatch-metadata klaar; echte e-mailverzending voltooid (Resend provider; begrensde productie-verificatie geslaagd 2026-07-08).
 - Alle provider secrets geroteerd en toegepast op Dokploy runtime 2026-07-08: Clerk Secret Key, Resend API Key, New Relic License Key, en Request Access Secret.
-- Phase 17 maandreconciliatie en administrator reporting is open; de lokale implementatie is klaar, maar read-only productie-verificatie blijft een aparte gate.
+- Phase 17 maandreconciliatie en administrator reporting is open; de lokale implementatie is klaar, maar de read-only productieaudit faalde op 2026-07-09 en moet na remediation opnieuw worden uitgevoerd.
 - Remote handoff commit `f2f7cbb` is post-push geverifieerd; er waren geen commits ahead of `origin/main` bij de publicatiecheck.
 - Owner acceptance checklist en decision menu zijn beschikbaar voor de volgende expliciete eigenaarskeuze.
 - Decision briefs en approval-intake validation zijn beschikbaar voor elke owner-gated beslissing.

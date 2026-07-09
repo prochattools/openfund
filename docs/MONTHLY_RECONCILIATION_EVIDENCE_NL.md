@@ -1,6 +1,6 @@
 # Maandelijkse Reconciliatie Bewijs
 
-**Status:** IMPLEMENTED (local code and tests complete; read-only production verification pending)
+**Status:** FAILED (local code and tests complete; read-only production audit failed on 2026-07-09)
 
 ## Identificatie
 
@@ -9,15 +9,17 @@
 | Repo | `/Users/Office/Repos/yeshuaacademy/web/finance` |
 | Dokploy app ID | `apps-saas-open-fund-vdymfu` |
 | Bronscope | 2024, 2025, 2026 geïmporteerde transacties |
-| Datum | 2026-07-08 |
+| Datum | 2026-07-09 |
 
 ## Samenvatting
 
 - Phase 17 is lokaal geïmplementeerd als transaction-derived maandcontrole.
+- Read-only production audit is uitgevoerd via Dokploy runtime `apps-saas-open-fund-vdymfu` en is gefaald tegen de live imported data.
+- 2024 closing control faalde: verwacht 1,218,415 minor units, aangetroffen 1,028,415 minor units (verschil -190,000 minor units).
+- 2025 en 2026 imported partial year controls kwamen overeen met de baseline, maar running-balance fouten, maandketenbreuken, onopgeloste 2026-transacties en category/subcategory-mismatches blijven aanwezig.
 - Maandniveau reconciliatie- en exportlogica is toegevoegd als pure service-laag.
-- Maandaudit gebruikt transactie-evidence per maand en behandelt de bekende open juli 2026-maand als partial/incomplete zonder full-month failure.
 - Maandaudit heeft een read-only CLI wrapper en een pure audit service.
-- Tests en build-validatie zijn uitgevoerd; geen productie-mutatie is uitgevoerd in deze stap.
+- Tests en build-validatie zijn uitgevoerd; de productie-verificatie zelf is gefaald.
 
 ## Formules en controles
 
@@ -47,5 +49,6 @@
 
 ## Resterende blockers
 
-- Read-only productie-verificatie met expliciet veilige runtime `DATABASE_URL`
-- Eventuele vervolgafstemming over live productie-audituitvoering
+- Read-only productieaudit faalde tegen runtime data; remediation en heruitvoering nodig
+- Phase 17 blijft open
+- Running-balance, maandketen, en 2026-onopgeloste-transactie fouten moeten worden onderzocht

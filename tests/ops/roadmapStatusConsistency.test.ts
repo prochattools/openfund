@@ -67,10 +67,13 @@ describe('roadmap status consistency — phase status agreement', () => {
     expect(docs.finalAudit).toContain('Phase 9 — Operationele hardening en overdracht | COMPLETE (local-only RC4)');
   });
 
-  it('Phase 17 remains open with local implementation complete and production verification pending', () => {
+  it('Phase 17 remains open with local implementation complete and production audit failed against runtime data', () => {
     expect(docs.roadmap).toContain('Phase 17 — Month-by-month accounting reconciliation and administrator reporting OPEN');
+    expect(docs.roadmap).toContain('read-only production audit failed against runtime data');
     expect(docs.implementationPlan).toContain('Phase 17 — Month-by-month accounting reconciliation and administrator reporting: OPEN');
-    expect(docs.finalAudit).toContain('Phase 17 open');
+    expect(docs.implementationPlan).toContain('production audit failed against runtime data');
+    expect(docs.finalAudit).toContain('read-only productie-audit failed on 2026-07-09');
+    expect(docs.finalAudit).toContain('2024 closing control failed by 190,000 minor units');
   });
 });
 

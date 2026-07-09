@@ -17,6 +17,7 @@ const releaseManifest = readDoc('docs/RELEASE_MANIFEST_NL.md');
 const roadmap = readDoc('docs/ROADMAP.md');
 const implementationPlan = readDoc('docs/IMPLEMENTATION_PLAN.md');
 const rebuildRun = readDoc('docs/finance-rebuild-run.md');
+const monthlyEvidence = readDoc('docs/MONTHLY_RECONCILIATION_EVIDENCE_NL.md');
 const pushChecklist = readDoc('docs/PUSH_READINESS_CHECKLIST_NL.md');
 const ownerPreflight = readDoc('docs/OWNER_GO_NO_GO_PREFLIGHT_NL.md');
 const pkg = JSON.parse(readDoc('package.json')) as { scripts: Record<string, string> };
@@ -42,7 +43,9 @@ describe('release evidence consistency — stale RC labels', () => {
   it('roadmap and implementation plan identify the current handoff after real email completion, not RC2/RC3', () => {
     expect(roadmap).toContain('COMPLETE (published RC4 handoff; owner decisions gated)');
     expect(implementationPlan).toContain('Current gate: Phase 17 open');
+    expect(implementationPlan).toContain('production audit failed against runtime data');
     expect(rebuildRun).toContain('Status: Release Candidate 7');
+    expect(rebuildRun).toContain('Phase 17 monthly reconciliation audit failed on 2026-07-09');
     expect(implementationPlan).not.toContain('Current gate: Release Candidate 3 owner handoff');
     expect(implementationPlan).not.toContain('Current gate: Release Candidate 2 readiness');
   });
@@ -65,6 +68,14 @@ describe('release evidence consistency — manifest evidence', () => {
     expect(finalAudit).toContain('Release Candidate 7');
     expect(roadmap).toContain('Phase 17 — Month-by-month accounting reconciliation and administrator reporting OPEN');
     expect(implementationPlan).toContain('Phase 17 — Month-by-month accounting reconciliation and administrator reporting: OPEN');
+  });
+
+  it('monthly reconciliation evidence records the real production failure', () => {
+    expect(monthlyEvidence).toContain('FAILED');
+    expect(monthlyEvidence).toContain('read-only production audit failed on 2026-07-09');
+    expect(monthlyEvidence).toContain('1,028,415');
+    expect(monthlyEvidence).toContain('1,218,415');
+    expect(monthlyEvidence).toContain('Phase 17 blijft open');
   });
 });
 

@@ -4,7 +4,7 @@ Date: 2026-07-02
 Run: `agent-f961650b-de17-4282-ab18-7a716cc72958`  
 Source: `yeshuaacademy-finance`  
 Branch: `main`  
-Status: Release Candidate 7 — production schema cutover, historical import, database credential finalization, all provider secret rotations, real PDF renderer, and real email sending complete 2026-07-08; Phase 17 monthly reconciliation remains open pending read-only production verification
+Status: Release Candidate 7 — production schema cutover, historical import, database credential finalization, all provider secret rotations, real PDF renderer, and real email sending complete 2026-07-08; Phase 17 monthly reconciliation audit failed on 2026-07-09 against runtime data; 2024 closing control failed by 190,000 minor units; Phase 17 remains open
 
 ## RC2 Hardening Evidence
 
@@ -1533,7 +1533,7 @@ Date: 2026-07-07
 
 ## Phase 15 — Real PDF renderer
 
-Date: 2026-07-08
+Date: 2026-07-09
 
 - Owner-approved `pdfkit` was added for server-side report artifact PDF rendering.
 - `generatePdfArtifact` now returns retained PDF bytes beginning with `%PDF`.
@@ -1558,7 +1558,7 @@ Date: 2026-07-08
 
 Date: 2026-07-08
 
-Production monthly reconciliation audit revealed a discrepancy: 2024 closing balance reported as 1,028,415 minor units instead of expected 1,218,415 (difference: €1,900). Investigation in progress.
+Read-only production monthly reconciliation audit ran against Dokploy runtime `apps-saas-open-fund-vdymfu` and failed on 2026-07-09. The 2024 closing balance reported as 1,028,415 minor units instead of expected 1,218,415 (difference: €1,900). 2025 and 2026 baseline totals matched, but running-balance errors, month-chain breaks, unresolved 2026 transactions, and category/subcategory mismatches remain.
 
 ### Baseline control enforcement added
 
@@ -1593,8 +1593,8 @@ Known baseline controls:
 
 ### Status
 
-- Phase 17 remains open pending production audit result.
-- Baseline control enforcement ready for next production run.
+- Phase 17 remains open pending remediation and a rerun of the read-only production audit.
+- Baseline control enforcement is active and confirmed by the failed production run.
 - No production mutation, secret changes, push, or database write occurred in the implementation.
 - Temporary diagnostic files cleaned up; intentional diagnostics retained and tested.
 - Commit: `ea44d88` (fix: enforce monthly reconciliation baseline controls)

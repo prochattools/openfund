@@ -33,7 +33,7 @@ Phase 13 — Production runtime credential update  COMPLETE (2026-07-07; final r
 Phase 14 — App/provider secret remediation       COMPLETE (2026-07-08; Clerk, Resend, and New Relic provider keys rotated and applied to Dokploy runtime; app redeployed; health/readiness verified)
 Phase 15 — Real PDF renderer                     COMPLETE (2026-07-08; pdfkit report artifact renderer; HTML/XLSX preserved; real email still blocked)
 Phase 16 — Real email sending                    COMPLETE (2026-07-08; Resend provider abstraction; executeDispatch with guards; bounded production send verified)
-Phase 17 — Month-by-month accounting reconciliation and administrator reporting OPEN (2026-07-08; transaction-derived month audit implemented locally; read-only production verification pending)
+Phase 17 — Month-by-month accounting reconciliation and administrator reporting OPEN (2026-07-09; transaction-derived month audit implemented locally; read-only production audit failed against runtime data; 2024 closing control failed by 190,000 minor units)
 ```
 
 ## Authoritative Progress
@@ -41,7 +41,7 @@ Phase 17 — Month-by-month accounting reconciliation and administrator reportin
 ```text
 Expanded roadmap progress: not complete
 Previous roadmap through Phase 16: 100%
-Phase 17: open; local implementation complete; production verification pending
+Phase 17: open; local implementation complete; production audit failed against runtime data
 Phase 0 — Governance and verified controls: 100%
 Phase 1 — Safe categorization foundation: 100%
 Phase 2 — Financial domain and historical model: 100%
@@ -59,8 +59,8 @@ Phase 13 — Production runtime credential update: 100%
 Phase 14 — App/provider secret remediation: 100%
 Phase 15 — Real PDF renderer: 100%
 Phase 16 — Real email sending: 100% — bounded production send verified
-Phase 17 — Month-by-month accounting reconciliation and administrator reporting: open; local implementation complete; production verification pending
-Remaining blockers: read-only production verification
+Phase 17 — Month-by-month accounting reconciliation and administrator reporting: open; local implementation complete; production audit failed against runtime data
+Remaining blockers: read-only production audit remediation and rerun
 ```
 
 ## Phase 0 — Governance and verified controls

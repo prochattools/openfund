@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Release Candidate Validatiechecklist
 
-Status: Release Candidate 7 — roadmap 100% through Phase 16; Phase 17 open; local implementation complete; read-only productie-verificatie pending; real email sending verified 2026-07-08
+Status: Release Candidate 7 — roadmap 100% through Phase 16; Phase 17 open; local implementation complete; read-only productie-audit failed on 2026-07-09; 2024 closing control failed by 190,000 minor units; real email sending verified 2026-07-08
 Datum: 2026-07-08
 Taal: Nederlands
 
