@@ -79,7 +79,18 @@ Eigenaar heeft expliciete goedkeuring verleend voor de rotatie van het blootgest
 | Geen force push | BEVESTIGD |
 | Tijdelijk scriptbestand verwijderd na gebruik | BEVESTIGD |
 
-## 6. Resterende functionele blokkers
+## 6. 2026-07-09 vervolgsessie
+
+| Controle | Status |
+|----------|--------|
+| Nieuwe Dokploy API key rotatie | NIET UITGEVOERD — operator stelde rotatie uit |
+| Nieuwe finance_user wachtwoordrotatie | NIET UITGEVOERD — operator stelde rotatie uit |
+| Bestaand credential intact en werkend | BEVESTIGD |
+| App redeploy na sessie (commit a23ca94) | BEVESTIGD |
+| App health na redeploy | BEVESTIGD — gezond |
+| Operator weet dat handmatige API key rotatie via web UI nodig is | BEVESTIGD |
+
+## 7. Resterende functionele blokkers
 
 | Blocker | Status |
 |---------|--------|

@@ -85,7 +85,16 @@ Na de eerste geheimrotatie (commit `74cd9bd`) was het nieuw gegenereerde wachtwo
 | Geen force push | BEVESTIGD |
 | Tijdelijk rotatiescript verwijderd na gebruik | BEVESTIGD |
 
-## 7. Resterende functionele blokkers
+## 7. 2026-07-09 vervolgsessie
+
+| Controle | Status |
+|----------|--------|
+| Nieuwe finance_user wachtwoordrotatie | NIET UITGEVOERD — operator stelde rotatie uit |
+| Bestaand finance_user credential intact | BEVESTIGD |
+| App redeploy na sessie (commit a23ca94) | BEVESTIGD |
+| App health na redeploy | BEVESTIGD — gezond |
+
+## 8. Resterende functionele blokkers
 
 | Blocker | Status |
 |---------|--------|

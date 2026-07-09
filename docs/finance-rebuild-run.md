@@ -1603,3 +1603,12 @@ The initial failure (2024 closing observed 1,028,415 vs expected 1,218,415, diff
 - Commit: `0e0818a` (fix: correct monthly reconciliation formula diagnostics)
 - Baseline control enforcement is active and confirmed by the passed production run.
 - 2026 open year categorization remains owner-gated outside Phase 17 scope.
+
+### 2026-07-09 redeploy
+
+App `apps-saas-open-fund-vdymfu` redeployed from main (commit `a23ca94`). App health verified. Credential rotation intentionally deferred by operator.
+
+- Dokploy API key rotation: deferred (requires web UI)
+- finance_user DB credential rotation: deferred
+- Original credentials intact and working
+- App healthy after redeploy
