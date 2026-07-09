@@ -117,7 +117,7 @@ describe('monthlyReconciliationService', () => {
     expect(result.reasons).toContain('Gedeeltelijke of open afschriften kunnen niet worden gesloten.');
   });
 
-  it('derives running balances from raw rows when explicit balances are absent', () => {
+  it('uses formula-based monthly chaining when explicit balances are absent (resulting per-transaction balances unreliable)', () => {
     const result = buildMonthlyReconciliation({
       workspaceId: 'workspace-1',
       accountId: 'account-1',
@@ -129,7 +129,7 @@ describe('monthlyReconciliationService', () => {
           date: '2026-04-01T00:00:00.000Z',
           amountMinor: 5000n,
           direction: 'credit' as const,
-          rawRow: { 'Resulting balance': '1.050,00' },
+          resultingBalanceMinor: null,
           importFingerprint: 'raw-fp-1',
           projectId: 'project-1',
           transactionTypeId: 'type-1',
@@ -144,7 +144,7 @@ describe('monthlyReconciliationService', () => {
           date: '2026-04-02T00:00:00.000Z',
           amountMinor: 2000n,
           direction: 'debit' as const,
-          rawRow: { columns: { 'Resulting balance': '1.030,00' } },
+          resultingBalanceMinor: null,
           importFingerprint: 'raw-fp-2',
           projectId: 'project-1',
           transactionTypeId: 'type-2',
@@ -157,11 +157,14 @@ describe('monthlyReconciliationService', () => {
       ],
       statementEvidence: {
         coverageStatus: StatementCoverageStatus.COMPLETE,
+        openingBalanceMinor: 100000n,
         sourceFileHashes: ['source-hash-raw'],
       },
     });
 
     expect(result.openingBalanceMinor).toBe('100000');
+    expect(result.incomeMinor).toBe('5000');
+    expect(result.expenseMinor).toBe('2000');
     expect(result.closingBalanceMinor).toBe('103000');
     expect(result.runningBalanceErrorCount).toBe(0);
     expect(result.status).toBe('BALANCED');
