@@ -42,13 +42,15 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/scripts/start-prod.mjs ./scripts/start-prod.mjs
 COPY --from=builder /app/scripts/production-email-send-verify.mjs ./scripts/production-email-send-verify.mjs
 COPY --from=newrelic-deps /nr/node_modules ./node_modules
-COPY --from=builder /app/node_modules/resend ./node_modules/resend
 
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-  CMD node -e "require('http').get('http://127.0.0.1:3000/api/health', res => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
+  CMD node -e "require('http').get('http://127.0.0.1:3000/healthz', res => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
 
-CMD ["node", "server.js"]
+CMD ["node", "scripts/start-prod.mjs"]
