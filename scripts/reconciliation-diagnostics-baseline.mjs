@@ -109,7 +109,10 @@ async function main() {
 
     let yearIncomeMinor = 0n;
     let yearExpenseMinor = 0n;
+    let yearIncomeAbs = 0n;
+    let yearExpenseAbs = 0n;
     let cumulativeBalance = 172186n;
+    let rawBalanceFound = false;
     const firstTx = transactions[0];
     if (firstTx) {
       const firstRawBalance = parseMinorFromRawRow(firstTx.rawRow);
@@ -119,14 +122,18 @@ async function main() {
       if (firstRawBalance != null) {
         console.log(`  Raw balance parsed: ${firstRawBalance}`);
         cumulativeBalance = firstRawBalance;
+        rawBalanceFound = true;
       }
     }
 
     console.log(`\n--- Monthly Breakdown ---`);
+    console.log(`Columns: month, tx count, income(signed), expense(signed), income(abs), expense(abs), booked, unresolved, raw-balance-errors/total`);
     const months = Array.from(byMonth.entries()).sort();
     for (const [monthKey, txs] of months) {
       let monthIncome = 0n;
       let monthExpense = 0n;
+      let monthIncomeAbs = 0n;
+      let monthExpenseAbs = 0n;
       let bookedCount = 0;
       let unresolvedCount = 0;
       let runningBalanceCount = 0;
@@ -134,10 +141,13 @@ async function main() {
 
       for (const tx of txs) {
         const amount = BigInt(tx.amountMinor);
+        const absAmount = amount < 0n ? -amount : amount;
         if (tx.direction === 'credit') {
           monthIncome += amount;
+          monthIncomeAbs += absAmount;
         } else {
           monthExpense += amount;
+          monthExpenseAbs += absAmount;
         }
 
         if (tx.transactionBooking?.projectId && tx.transactionBooking?.transactionTypeId && tx.transactionBooking?.categoryId) {
@@ -148,8 +158,9 @@ async function main() {
 
         const rawBalance = parseMinorFromRawRow(tx.rawRow);
         if (rawBalance != null) {
+          rawBalanceFound = true;
           runningBalanceCount++;
-          const expectedBalance = cumulativeBalance + (tx.direction === 'credit' ? amount : -amount);
+          const expectedBalance = cumulativeBalance + (tx.direction === 'credit' ? absAmount : -absAmount);
           if (rawBalance !== expectedBalance) {
             runningBalanceErrorCount++;
           }
@@ -159,27 +170,40 @@ async function main() {
 
       yearIncomeMinor += monthIncome;
       yearExpenseMinor += monthExpense;
+      yearIncomeAbs += monthIncomeAbs;
+      yearExpenseAbs += monthExpenseAbs;
 
-      console.log(`${monthKey}: ${txs.length} tx | income: ${monthIncome} | expense: ${monthExpense} | booked: ${bookedCount} | unresolved: ${unresolvedCount} | running-balance-errors: ${runningBalanceErrorCount}/${runningBalanceCount}`);
+      console.log(`${monthKey}: ${txs.length} tx | income: ${monthIncome} | expense: ${monthExpense} | incomeAbs: ${monthIncomeAbs} | expenseAbs: ${monthExpenseAbs} | booked: ${bookedCount} | unresolved: ${unresolvedCount} | raw-balance-errors: ${runningBalanceErrorCount}/${runningBalanceCount}`);
     }
 
     const lastTx = transactions[transactions.length - 1];
-    let finalBalance = cumulativeBalance;
+    let finalRunningBalance = cumulativeBalance;
     if (lastTx) {
       const lastRawBalance = parseMinorFromRawRow(lastTx.rawRow);
       if (lastRawBalance != null) {
-        finalBalance = lastRawBalance;
+        finalRunningBalance = lastRawBalance;
       }
     }
 
+    const formulaClosing = 172186n + yearIncomeAbs - yearExpenseAbs;
+    const formulaClosingSigned = 172186n + yearIncomeMinor + yearExpenseMinor;
+
     console.log(`\n--- Annual Summary ---`);
     console.log(`Opening balance: 172186`);
-    console.log(`Total income: ${yearIncomeMinor}`);
-    console.log(`Total expense: ${yearExpenseMinor}`);
-    console.log(`Final running balance: ${finalBalance}`);
+    console.log(`Total income (signed): ${yearIncomeMinor}`);
+    console.log(`Total expense (signed): ${yearExpenseMinor}`);
+    console.log(`Total income (abs): ${yearIncomeAbs}`);
+    console.log(`Total expense (abs): ${yearExpenseAbs}`);
     console.log(`Expected closing: 1218415`);
-    console.log(`Formula check: 172186 + ${yearIncomeMinor} - ${yearExpenseMinor} = ${172186n + yearIncomeMinor - yearExpenseMinor}`);
-    console.log(`Difference from expected: ${Number(finalBalance - 1218415n)}`);
+    console.log(`Formula closing (abs): ${formulaClosing}`);
+    console.log(`Formula closing (signed): ${formulaClosingSigned}`);
+    console.log(`Raw balance chain closing: ${finalRunningBalance}`);
+    console.log(`Raw balance fields present: ${rawBalanceFound}`);
+    console.log(`Formula matches expected: ${formulaClosing === 1218415n}`);
+    console.log(`Formula matches expected (signed): ${formulaClosingSigned === 1218415n}`);
+    console.log(`Raw balance difference from expected: ${Number(finalRunningBalance - 1218415n)}`);
+    console.log(`\nDiagnostic note: Formula-based model is the audit standard.`);
+    console.log(`Raw balance fields (resultingBalanceMinor) are excluded from formula audit.`);
   } finally {
     await prisma.$disconnect();
   }
