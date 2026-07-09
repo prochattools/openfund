@@ -61,8 +61,8 @@ jobs:
           cat /tmp/dokploy_response.json
 
           if [ "$RESPONSE" != "200" ]; then
-            echo "Dokploy trigger failed with status $RESPONSE"
-            exit 1
+            echo "::warning title=Dokploy redeploy was not triggered::Dokploy returned HTTP $RESPONSE. The GHCR image was still built and pushed; manually redeploy ghcr.io/${{ github.repository }}:${{ github.sha }} or update DOKPLOY_API_KEY/DOKPLOY_APP_ID."
+            exit 0
           fi
 
           echo "Deployment triggered successfully."
