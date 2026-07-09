@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Eigenaarsbeslissing readiness matrix
 
-Status: Release Candidate 7 — roadmap 100% through Phase 16; Phase 17 open; local implementation complete; read-only productie-audit failed on 2026-07-09; 2024 closing control failed by 190,000 minor units; schema cutover, historische import, database credential finalisatie, alle provider secrets, echte PDF-renderer, en echte e-mailverzending volledig afgerond 2026-07-08
+Status: Release Candidate 7 — roadmap 100% through Phase 17; Phase 17 complete; formula-based monthly chaining model; read-only production audit passed on 2026-07-09; 2024 closing 1218415 confirmed; schema cutover, historische import, database credential finalisatie, alle provider secrets, echte PDF-renderer, en echte e-mailverzending volledig afgerond 2026-07-08
 Taal: Nederlands  
 Doel: per owner-gated beslissing tonen wat klaar is, wat geblokkeerd blijft, welke input nodig is, en welk prompt-pad pas na goedkeuring gebruikt mag worden. De huidige gate is owner decision selection. Aanbevolen eerste keuze: `postgres-version`.
 

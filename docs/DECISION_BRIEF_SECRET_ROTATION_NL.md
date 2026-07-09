@@ -88,7 +88,7 @@ Deze brief voert niets uit, wijzigt geen `.env` en roteert geen secrets.
 
 - Databasecredential finalisatie is afgerond.
 - Request Access Secret is gegenereerd en toegepast in de runtime-omgeving.
-- Phase 17 maandreconciliatie en administrator reporting blijft open totdat de maandcontrole is gevalideerd.
+- Phase 17 maandreconciliatie en administrator reporting is compleet; de productieaudit is geslaagd op 2026-07-09.
 - App redeploy en health-check zijn geslaagd.
 - Productie-readiness totalen zijn onveranderd geverifieerd.
 - Clerk Secret Key, Resend API Key en New Relic License Key zijn geroteerd en toegepast op de productie-runtime op 2026-07-08.

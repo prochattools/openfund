@@ -1,6 +1,6 @@
 # Yeshua Academy Finance — Veilige commando-inventaris
 
-Status: Release Candidate 7 — roadmap 100% through Phase 16; Phase 17 open; local implementation complete; read-only productie-audit failed on 2026-07-09; 2024 closing control failed by 190,000 minor units; schema cutover, historische import, database credential finalisatie, provider secret remediation, echte PDF, en echte e-mailverzending zijn volledig afgerond 2026-07-08
+Status: Release Candidate 7 — roadmap 100% through Phase 17; Phase 17 complete; formula-based monthly chaining model; read-only production audit passed on 2026-07-09; 2024 closing 1218415 confirmed; schema cutover, historische import, database credential finalisatie, provider secret remediation, echte PDF, en echte e-mailverzending zijn volledig afgerond 2026-07-08
 Taal: Nederlands
 Doel: Overzicht van alle veilige lokale commando's en alle verboden commando-categorieën voor eigenaarsbeoordeling.
 

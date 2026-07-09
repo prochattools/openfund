@@ -40,12 +40,12 @@ describe('release evidence consistency — stale RC labels', () => {
     expect(ownerHandoff).not.toContain('### RC2-validatie in één stap');
   });
 
-  it('roadmap and implementation plan identify the current handoff after real email completion, not RC2/RC3', () => {
+  it('roadmap and implementation plan identify the current handoff after Phase 17 complete, not RC2/RC3', () => {
     expect(roadmap).toContain('COMPLETE (published RC4 handoff; owner decisions gated)');
-    expect(implementationPlan).toContain('Current gate: Phase 17 open');
-    expect(implementationPlan).toContain('production audit failed against runtime data');
+    expect(implementationPlan).toContain('Current gate: Phase 17 complete');
+    expect(implementationPlan).toContain('production audit passed');
     expect(rebuildRun).toContain('Status: Release Candidate 7');
-    expect(rebuildRun).toContain('Phase 17 monthly reconciliation audit failed on 2026-07-09');
+    expect(rebuildRun).toContain('audit passed');
     expect(implementationPlan).not.toContain('Current gate: Release Candidate 3 owner handoff');
     expect(implementationPlan).not.toContain('Current gate: Release Candidate 2 readiness');
   });
@@ -66,16 +66,15 @@ describe('release evidence consistency — manifest evidence', () => {
     expect(manifestCommit).toMatch(/^[0-9a-f]{40}$/);
     expect(releaseManifest).toContain(manifestCommit);
     expect(finalAudit).toContain('Release Candidate 7');
-    expect(roadmap).toContain('Phase 17 — Month-by-month accounting reconciliation and administrator reporting OPEN');
-    expect(implementationPlan).toContain('Phase 17 — Month-by-month accounting reconciliation and administrator reporting: OPEN');
+    expect(roadmap).toContain('Phase 17 — Month-by-month accounting reconciliation and administrator reporting COMPLETE');
+    expect(implementationPlan).toContain('Phase 17 — Month-by-month accounting reconciliation and administrator reporting: COMPLETE');
   });
 
-  it('monthly reconciliation evidence records the real production failure', () => {
-    expect(monthlyEvidence).toContain('FAILED');
-    expect(monthlyEvidence).toContain('read-only production audit failed on 2026-07-09');
-    expect(monthlyEvidence).toContain('1,028,415');
+  it('monthly reconciliation evidence records the real production pass', () => {
+    expect(monthlyEvidence).toContain('PASSED');
+    expect(monthlyEvidence).toContain('read-only production audit passed');
     expect(monthlyEvidence).toContain('1,218,415');
-    expect(monthlyEvidence).toContain('Phase 17 blijft open');
+    expect(monthlyEvidence).toContain('COMPLEET');
   });
 });
 
