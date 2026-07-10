@@ -13,7 +13,7 @@ const resolveApiBaseUrl = (): string => {
 };
 
 const API_BASE_URL = resolveApiBaseUrl();
-const DEFAULT_USER_ID = process.env.NEXT_PUBLIC_API_USER_ID ?? 'demo-user';
+const CONFIGURED_USER_ID = process.env.NEXT_PUBLIC_API_USER_ID?.trim();
 const DEFAULT_USER_ROLE = process.env.NEXT_PUBLIC_API_USER_ROLE === 'viewer' ? 'viewer' : 'admin';
 
 export type ClientRole = 'admin' | 'viewer';
@@ -100,7 +100,9 @@ const getApiUrl = (path: string): string => {
 
 const withUserHeader = (init: RequestInit = {}): RequestInit => {
   const headers = new Headers(init.headers);
-  headers.set('x-user-id', DEFAULT_USER_ID);
+  if (CONFIGURED_USER_ID) {
+    headers.set('x-user-id', CONFIGURED_USER_ID);
+  }
   headers.set('x-user-role', DEFAULT_USER_ROLE);
 
   return { ...init, headers };

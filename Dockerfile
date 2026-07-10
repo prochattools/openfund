@@ -32,6 +32,10 @@ RUN npm install --omit=dev --ignore-scripts 2>&1 | tail -1
 FROM node:20-slim AS runner
 WORKDIR /app
 
+RUN apt-get update -y \
+  && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
 ARG BUILD_SHA=unknown
 ARG BUILD_REF=unknown
 
@@ -56,6 +60,6 @@ COPY --from=newrelic-deps /nr/node_modules ./node_modules
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-  CMD node -e "require('http').get('http://127.0.0.1:3000/healthz', res => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
+  CMD node -e "require('http').get('http://127.0.0.1:3000/api/health', res => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
 
 CMD ["node", "scripts/start-prod.mjs"]
