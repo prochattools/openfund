@@ -10,10 +10,15 @@ const projectRoot = path.resolve(__dirname, '..');
 const processes = [];
 let shuttingDown = false;
 
+const baseEnv = { ...process.env };
+if (!baseEnv.NEW_RELIC_LICENSE_KEY?.trim()) {
+  delete baseEnv.NODE_OPTIONS;
+}
+
 const startProcess = ({ name, command, args, env }) => {
   const child = spawn(command, args, {
     cwd: projectRoot,
-    env: { ...process.env, ...env },
+    env: { ...baseEnv, ...env },
     stdio: 'inherit',
   });
 
