@@ -1612,3 +1612,132 @@ App `apps-saas-open-fund-vdymfu` redeployed from main (commit `a23ca94`). App he
 - finance_user DB credential rotation: deferred
 - Original credentials intact and working
 - App healthy after redeploy
+
+
+
+
+## 2026-07-12 — Phase 18 accounting-integrity implementation evidence
+
+Status: complete locally; no production write, migration, deployment, commit, or push performed.
+
+Implemented:
+
+- `GET /api/accounting/audit` through `server/services/accountingAuditService.ts`, `server/routes/accountingAudit.ts`, and a direct Next route;
+- separate cash, classification, and close statuses;
+- integer-minor monthly/yearly controls, approved 2024–2026 baselines, duplicate/running-balance checks, unresolved counts, continuity, and explicit no-side-effect metadata;
+- `POST /api/accounting/opening-balance/repair` as administrator-only, dry-run-first, idempotent, conflict-safe, and environment-gated;
+- approved control fixed in code as 172186 minor units effective 2024-01-01 UTC for the verified ING account;
+- exactly-once opening-balance plus audit-log creation inside one transaction when execution is separately approved.
+
+Validation evidence:
+
+- accounting audit service: 5 focused tests passed, including non-canceling monthly differences;
+- opening-balance repair service: 6 focused tests passed, including concurrent unique-key recovery;
+- accounting integrity routes: 4 focused tests passed;
+- monthly reconciliation regression marker: 7 tests passed;
+- `npm run build`: passed after one bounded import-path repair;
+- route manifest includes `/api/accounting/audit` and `/api/accounting/opening-balance/repair`.
+
+Safety evidence:
+
+- repair execution was not enabled;
+- no database command, production write, migration, deployment, commit, or push occurred;
+- unresolved open-year transactions remain visible and block close eligibility without being confused with cash-movement failure.
+
+## 2026-07-12 — Phase 19 local history-based review prefill evidence
+
+Status: complete locally; no production backfill, suggestion persistence, booking, opening-balance repair, migration, deployment, commit, or push performed.
+
+Implemented:
+
+- pure deterministic `history-v1` ranking over approved local booking history;
+- complete project/type/category candidates with integer `scoreBasisPoints`, matcher, confidence, immutable evidence JSON, and stable SHA-256 evidence hashes;
+- direction safety, self-exclusion, deterministic tie-breaking, and bounded top-three output;
+- administrator-only `POST /api/categorization/suggestions/backfill`, dry-run by default and environment-gated for execution;
+- read-only `GET /api/categorization/suggestions/evaluation` for chronological and safe leave-one-out metrics;
+- rank-one server review prefill without creating a final booking;
+- client loading of `/api/ledger` and `/api/review` together;
+- prefilled project, transaction type, derived main category, and subcategory with visible confidence, evidence reason, and ranked alternatives;
+- complete-triple approval through `PATCH /api/transactions/[id]/category`, delegating to the existing `updateTransactionCategory` / `assignManualBooking` workflow so `ReviewDecision` and `TransactionBooking` remain authoritative.
+
+Measured owner-history evaluation:
+
+- chronological: 681 samples, 679 covered (99.71%), 491 top-one correct (72.31%), 541 top-three correct (79.68%);
+- safe leave-one-out: 681 samples, 679 covered (99.71%), 502 top-one correct (73.93%), 556 top-three correct (81.89%);
+- chronological `FUZZY`: 429 / 484 correct (88.64%);
+- chronological `OVERALL`: 2 / 2 correct (100.00%);
+- chronological `DEFAULT`: 60 / 193 correct (31.09%).
+
+Policy consequence:
+
+- `DEFAULT` remains visibly low-confidence and review-only;
+- no heuristic suggestion may auto-approve, auto-book, close a period, or mutate bank facts;
+- every accepted or corrected suggestion requires explicit administrator action and produces the existing authoritative decision and booking records.
+
+Validation evidence:
+
+- history ranker: 6 focused tests passed, including future-history exclusion;
+- suggestion backfill: 5 focused tests passed, including stale pending-suggestion expiry for uncovered targets;
+- review queue: 3 focused tests passed;
+- review decision workflow: 8 focused tests passed;
+- review helper/UI contract: 12 focused tests passed;
+- review response mapper: 2 focused tests passed;
+- direct Next approval route: 2 focused tests passed;
+- API transaction mapper: 3 focused tests passed;
+- owner-history evaluation: 1 test over all 681 approved bookings passed;
+- accounting audit: 5 focused tests passed;
+- monthly reconciliation marker: 7 tests passed;
+- `npm run build`: passed after one bounded callback return-type annotation;
+- route manifest includes `/api/transactions/[id]/category`, `/api/categorization/suggestions/backfill`, and `/api/categorization/suggestions/evaluation`.
+
+Safety evidence:
+
+- execution environment flags were not enabled;
+- dry-run backfill was not executed against production;
+- no production suggestion was persisted;
+- no production transaction booking or review decision was created;
+- the approved opening-balance repair was not run;
+- no database migration, deployment, commit, or push occurred.
+
+## Current position — owner review of uncommitted work
+
+Phase 18 and Phase 19 are implemented and validated locally. The repository contains an uncommitted documentation-and-code diff. The exact next step is owner review of the diff and a separate decision about whether to commit it. Production opening-balance repair, suggestion backfill, suggestion persistence, deployment, and any data mutation remain explicitly unapproved.
+
+
+
+
+## 2026-07-13 — Phase 18/19 commit-readiness review
+
+Scope: all 46 intended documentation, code, API, UI, and test paths; `.graphifyignore` and `graphify-out/` excluded.
+
+Review fixes applied before commit approval:
+
+- accounting cash status now requires every monthly balance difference to equal zero, preventing opposite differences from canceling in the aggregate;
+- accounting cash status also requires expected month coverage and approved yearly baselines;
+- suggestion backfill expires stale pending suggestions for every unresolved transaction, including targets that no longer receive a candidate;
+- opening-balance repair recovers a concurrent `P2002` unique-key race as `ALREADY_CORRECT` or `CONFLICT` instead of returning a server error;
+- history ranking excludes future-dated bookings from production evidence;
+- the final stale detailed Phase 18 roadmap status was corrected.
+
+Validation after review fixes:
+
+- accounting audit service: 5 tests passed;
+- suggestion backfill service: 5 tests passed;
+- opening-balance repair service: 6 tests passed;
+- history suggestion service: 6 tests passed;
+- full repository suite: 1,252 passed, 3 skipped, 0 failed across 134 test files;
+- owner-history evaluation metrics remained unchanged;
+- no production operation or database write was performed.
+
+Final commit-readiness result:
+
+- production build passed with all Phase 18/19 routes in the Next manifest;
+- secret-material scan passed all 46 intended paths;
+- runtime-execution scan passed all 46 intended paths;
+- focused upload/network scan passed all new server, route, helper, UI, and test paths;
+- the broad all-risk scan reported only intentional pre-existing browser `fetch`, `FormData`, and documented upload workflow patterns in `src/libs/api.ts`, `src/context/ledger-context.tsx`, and `docs/STRATEGY.md`;
+- roadmap consistency passed 10 tests;
+- final documentation consistency passed 36 matching tests;
+- final status contains 18 tracked modifications and 28 intended new files; `.graphifyignore` and `graphify-out/` remain the only excluded unrelated artifacts.
+
+The 46 intended paths may be committed together as one coherent validated local implementation commit. Push, deployment, migration, execution flags, opening-balance repair, production suggestion persistence, and production data writes remain separately unapproved.

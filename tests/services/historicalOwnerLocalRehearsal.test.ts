@@ -8,44 +8,17 @@ import { describe, expect, it } from 'vitest';
 import {
   buildOwnerHistoricalLocalRehearsal,
 } from '../../lib/import/historicalOwnerLocalRehearsal';
-import type { OwnerHistoricalSourceDescriptor } from '../../lib/import/historicalOwnerFileAdapter';
 import { rehearseHistoricalImportPlan } from '../../server/services/historicalImportRehearsalService';
+import {
+  OWNER_HISTORICAL_SOURCES,
+  OWNER_HISTORICAL_SOURCE_PATHS,
+  ownerHistoricalFilesAvailable,
+} from '../fixtures/ownerHistoricalSources';
 
 const { Client } = pg;
 
-const OWNER_SOURCE_PATHS = {
-  concludedWorkbook2024: '/Users/Office/Documents/Church/Yeshua Academy/Administratie/2026/YA financieel jaar 2024.xlsx',
-  concludedWorkbook2025: '/Users/Office/Documents/Church/Yeshua Academy/Administratie/2026/YA financieel jaar 2025 v2.xlsx',
-  openStatementCsv2026: '/Users/Office/Documents/Church/Yeshua Academy/Administratie/2026/NL89INGB0006369960_2026-01-01_2026-07-01.csv',
-  openStatementPdf2026: '/Users/Office/Documents/Church/Yeshua Academy/Administratie/2026/NL89INGB0006369960_2026-01-01_2026-07-01.pdf',
-} as const;
-
-const ownerSources: OwnerHistoricalSourceDescriptor[] = [
-  {
-    role: 'concludedWorkbook2024',
-    absolutePath: OWNER_SOURCE_PATHS.concludedWorkbook2024,
-    expectedSha256: '844699610889c6986fec305cdbb7b760da3dfc1d556ab9d0e160c854e1bc7f9f',
-    mediaType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  },
-  {
-    role: 'concludedWorkbook2025',
-    absolutePath: OWNER_SOURCE_PATHS.concludedWorkbook2025,
-    expectedSha256: 'd3913b876f3a6b8ddc3d19c49ef9778125e5e109a7d3ac330afbb3d6d8d7b2ff',
-    mediaType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  },
-  {
-    role: 'openStatementCsv2026',
-    absolutePath: OWNER_SOURCE_PATHS.openStatementCsv2026,
-    expectedSha256: '768912927a7bb3b545616631e6d5360479a90b0bc6448faa3f225925636d31d3',
-    mediaType: 'text/csv',
-  },
-  {
-    role: 'openStatementPdf2026',
-    absolutePath: OWNER_SOURCE_PATHS.openStatementPdf2026,
-    expectedSha256: '5e830a365fe0d87f67e883f24239f60674ed85a174e65db6520136511a6d58d2',
-    mediaType: 'application/pdf',
-  },
-];
+const OWNER_SOURCE_PATHS = OWNER_HISTORICAL_SOURCE_PATHS;
+const ownerSources = OWNER_HISTORICAL_SOURCES;
 
 const quoteIdentifier = (value: string): string => `"${value.replaceAll('"', '""')}"`;
 
@@ -100,9 +73,6 @@ const createDisposableDatabaseUrl = (adminUrl: string, databaseName: string): st
 const hashPersistedContent = (content: Uint8Array): string =>
   crypto.createHash('sha256').update(Buffer.from(content)).digest('hex');
 
-const ownerFilesAvailable = (): boolean =>
-  ownerSources.every((source) => fs.existsSync(source.absolutePath));
-
 const assertOwnerFilesOutsideGit = () => {
   const repoRoot = process.cwd();
   for (const source of ownerSources) {
@@ -121,7 +91,7 @@ describe('historical owner local rehearsal', () => {
   });
 
   const localAdminUrl = loadLocalAdminUrl();
-  const databaseValidation = localAdminUrl && ownerFilesAvailable() ? it : it.skip;
+  const databaseValidation = localAdminUrl && ownerHistoricalFilesAvailable() ? it : it.skip;
 
   databaseValidation(
     'rehearses approved owner historical files in a disposable local database',

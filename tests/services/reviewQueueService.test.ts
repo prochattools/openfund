@@ -159,6 +159,22 @@ describe('review queue service', () => {
     const review = queue.transactions[1]!;
     expect(review).toMatchObject({
       deterministicStatus: 'review_suggested',
+      proposed: {
+        projectId: 'project-1',
+        projectCode: 'YA',
+        projectLabel: 'Yeshua Academy',
+        transactionTypeId: 'type-1',
+        transactionTypeLabel: 'Schenking in',
+        categoryId: 'cat-1',
+        categoryLabel: 'Giften',
+        complete: true,
+      },
+      safeDeterministicCandidate: false,
+      requiresAdministratorApproval: true,
+      sideEffects: {
+        createsTransactionBooking: false,
+        closesPeriod: false,
+      },
       alternatives: [
         expect.objectContaining({
           suggestionId: 'suggestion-1',

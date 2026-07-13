@@ -34,14 +34,16 @@ Phase 14 — App/provider secret remediation       COMPLETE (2026-07-08; Clerk, 
 Phase 15 — Real PDF renderer                     COMPLETE (2026-07-08; pdfkit report artifact renderer; HTML/XLSX preserved)
 Phase 16 — Real email sending                    COMPLETE (2026-07-08; Resend provider abstraction; executeDispatch with guards; bounded production send verified via Resend)
 Phase 17 — Month-by-month accounting reconciliation and administrator reporting COMPLETE (2026-07-09; formula-based monthly chaining model; read-only production audit passed; baseline controls: 2024/2025/2026 confirmed)
+Phase 18 — Cent-exact accounting integrity and opening-balance repair COMPLETE LOCALLY (production repair remains unexecuted)
+Phase 19 — Local history-based review prefill      COMPLETE LOCALLY (history-v1; 681-booking evaluation; human approval remains mandatory; production backfill unexecuted)
 ```
 
 ## Authoritative Progress
 
 ```text
-Expanded roadmap progress: complete
-Previous roadmap through Phase 16: 100%
-Phase 17: complete; formula-based monthly chaining model; production audit passed
+Previous roadmap through Phase 17: 100%
+Phase 18: complete locally; production repair remains unexecuted and owner-gated
+Phase 19: complete locally; chronological 72.31% top-one and 79.68% top-three; safe leave-one-out 73.93% top-one and 81.89% top-three; production backfill remains owner-gated
 Phase 0 — Governance and verified controls: 100%
 Phase 1 — Safe categorization foundation: 100%
 Phase 2 — Financial domain and historical model: 100%
@@ -333,6 +335,65 @@ Alle productiehardeningsstappen zijn afgerond (2026-07-07 t/m 2026-07-08):
 - Backup and restore are tested.
 - All authoritative documentation agrees with code and deployed behavior.
 - No unresolved critical accounting or security issue remains.
+
+## Phase 18 — Cent-exact accounting integrity and opening-balance repair
+
+Status: **complete locally; production opening-balance repair remains unexecuted and owner-gated**
+
+### Outcomes
+
+- Add a read-only accounting audit endpoint that reports monthly and yearly controls in integer minor units.
+- Prove opening balance, income, expense, net movement, closing balance, category totals, continuity, duplicates, running balances, and unresolved counts.
+- Add a dry-run-first, administrator-only, idempotent repair for the approved EUR 1,721.86 opening balance effective 2024-01-01.
+- Reject locked or conflicting opening balances instead of overwriting them.
+- Reuse the existing reconciliation and audit services rather than creating a parallel accounting engine.
+
+### Exit criteria
+
+- Every required difference is represented as an integer minor-unit string and equals `"0"` for approved fixtures.
+- 2024, 2025, and supplied 2026 partial baselines match the authoritative controls.
+- Dry-run performs zero writes; execute mode remains owner-gated and is not run in production during implementation.
+- Conflict, account-identity, idempotency, authorization, and no-side-effect tests pass.
+- Server build, production build, diff review, and documentation alignment pass.
+
+## Phase 19 — Local history-based review prefill
+
+Status: **complete locally; production backfill, deployment, and suggestion persistence remain unexecuted and owner-gated**
+
+### Outcomes
+
+- Generate deterministic ranked complete `Klant` / `Type` / `Category` suggestions from approved local history.
+- Persist immutable evidence, hashes, matcher, confidence, integer score basis points, rank, and algorithm version using the existing `CategorizationSuggestion` model.
+- Guarantee a complete rank-one proposal for each unresolved transaction when compatible historical evidence exists.
+- Prefill the review UI while preserving explicit administrator approval or correction.
+- Add a dry-run-first backfill endpoint that never creates `TransactionBooking` records.
+- Evaluate top-one, top-three, coverage, and confidence calibration using chronological and leave-one-out tests over approved bookings.
+
+### Exit criteria
+
+- All unresolved transactions with compatible history receive a complete rank-one suggestion.
+- Suggestions are deterministic for a fixed algorithm version and produce stable evidence hashes.
+- Dry-run performs zero writes and reports planned matcher/confidence distributions.
+- Execution changes only pending suggestions for unresolved transactions.
+- Tests prove no heuristic suggestion creates a booking, closes a period, or mutates bank facts.
+- Review prefill shows a visible confidence and reason and remains manually changeable.
+- No external AI provider, vector database, or autonomous booking is introduced.
+
+### Exit evidence
+
+- Algorithm version: `history-v1`.
+- Chronological evaluation over 681 approved bookings: 679 covered (99.71%), 491 top-one correct (72.31%), and 541 top-three correct (79.68%).
+- Safe leave-one-out evaluation over the same 681 bookings: 679 covered (99.71%), 502 top-one correct (73.93%), and 556 top-three correct (81.89%).
+- Chronological confidence calibration: `FUZZY` 88.64%, `OVERALL` 100.00%, and `DEFAULT` 31.09%.
+- `DEFAULT` remains visibly low-confidence, review-only, and ineligible for autonomous booking.
+- The Review page loads `/api/ledger` and `/api/review`, pre-fills project, transaction type, derived main category, and subcategory, and displays evidence plus ranked alternatives.
+- Approval requires a complete `projectId` / `transactionTypeId` / `categoryId` triple and delegates to the existing `ReviewDecision` and `TransactionBooking` workflow.
+- Dry-run backfill, read-only evaluation, review prefill, direct PATCH routing, no-side-effect controls, accounting regressions, reconciliation regressions, and the production build all passed locally.
+- No production suggestion persistence, opening-balance repair, migration, deployment, commit, or push occurred.
+
+### Design reference
+
+- `docs/ACCOUNTING_INTEGRITY_AND_REVIEW_PREFILL.md`
 
 ## Future features requiring a new owner decision
 

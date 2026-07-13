@@ -19,7 +19,7 @@ Read these documents in order before changing product behavior:
 3. [`docs/ROADMAP.md`](docs/ROADMAP.md) — ordered product phases and future scope.
 4. [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) — exact AI-executable tasks, statuses, acceptance criteria, and validation.
 
-The active rebuild evidence and resume point are recorded in [`docs/finance-rebuild-run.md`](docs/finance-rebuild-run.md). Older discovery and handoff documents are historical unless one of the four authoritative documents explicitly references them.
+The active rebuild evidence and resume point are recorded in [`docs/finance-rebuild-run.md`](docs/finance-rebuild-run.md). Phase 18 and Phase 19 architecture is defined in [`docs/ACCOUNTING_INTEGRITY_AND_REVIEW_PREFILL.md`](docs/ACCOUNTING_INTEGRITY_AND_REVIEW_PREFILL.md). Older discovery and handoff documents are historical unless one of the four authoritative documents explicitly references them.
 
 ## Runtime model
 

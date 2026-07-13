@@ -85,11 +85,30 @@ export type EvidenceRichReviewItem = {
   };
 };
 
+export type ReviewCategoryOption = {
+  id: string;
+  name: string;
+  parentId: string | null;
+};
+
+export type ReviewProjectOption = {
+  id: string;
+  code: string;
+  name: string;
+};
+
+export type ReviewTransactionTypeOption = {
+  id: string;
+  code: string;
+  literalName: string;
+  direction: 'credit' | 'debit';
+};
+
 export type EvidenceRichReviewResponse = {
   transactions: EvidenceRichReviewItem[];
-  categories: unknown[];
-  projects: unknown[];
-  transactionTypes: unknown[];
+  categories: ReviewCategoryOption[];
+  projects: ReviewProjectOption[];
+  transactionTypes: ReviewTransactionTypeOption[];
   message: string;
 };
 

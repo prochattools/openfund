@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildReviewApprovalPayload,
   buildReviewSubcategoryMap,
   canActivateRuleCreation,
   canAcceptReviewSuggestion,
   findCategoryIdByName,
+  findMainCategoryIdForSubcategory,
   formatReviewEuro,
   getRuleCreationStatusLabel,
   getReviewSuggestedLabel,
@@ -13,6 +15,7 @@ import {
   isReviewPlaceholderCategory,
   normalizeLabel,
   parseReviewDate,
+  resolveDefaultReviewAssignment,
   resolveDefaultReviewSelection,
   translateReviewEvidenceStatus,
   translateSuggestionConfidence,
@@ -145,10 +148,11 @@ describe('review page helpers', () => {
     expect(getReviewSuggestedLabel(makeTx({ suggestedMainCategoryName: 'Inkomsten' }))).toBe('Inkomsten');
     expect(getReviewSuggestedLabel(makeTx({ mainCategoryName: 'Uitgaven' }))).toBe('Uitgaven');
     expect(getReviewSuggestedLabel(makeTx({}))).toBe('Geen suggestie');
-    expect(canAcceptReviewSuggestion(true, 'main-income', '')).toBe(true);
-    expect(canAcceptReviewSuggestion(true, '', 'cat-gifts')).toBe(true);
-    expect(canAcceptReviewSuggestion(false, 'main-income', 'cat-gifts')).toBe(false);
-    expect(canAcceptReviewSuggestion(true, '', '')).toBe(false);
+    expect(canAcceptReviewSuggestion(true, 'project-1', 'type-1', 'cat-gifts')).toBe(true);
+    expect(canAcceptReviewSuggestion(true, '', 'type-1', 'cat-gifts')).toBe(false);
+    expect(canAcceptReviewSuggestion(true, 'project-1', '', 'cat-gifts')).toBe(false);
+    expect(canAcceptReviewSuggestion(true, 'project-1', 'type-1', '')).toBe(false);
+    expect(canAcceptReviewSuggestion(false, 'project-1', 'type-1', 'cat-gifts')).toBe(false);
   });
 
   it('resolves default review selection from ids or category names', () => {
@@ -169,6 +173,62 @@ describe('review page helpers', () => {
       mainId: 'main:income',
       subId: '',
     });
+  });
+
+  it('resolves a complete rank-one review assignment without finalizing ledger fields', () => {
+    const mainCategories = [{ id: 'main-income', name: 'Inkomsten', parentId: null }];
+    const subcategories = {
+      'main-income': [{ id: 'cat-gifts', name: 'Giften', parentId: 'main-income' }],
+    };
+    const transaction = makeTx({
+      categoryId: null,
+      mainCategoryId: null,
+      reviewProposal: {
+        projectId: 'project-1',
+        projectCode: 'YA',
+        projectLabel: 'Yeshua Academy',
+        transactionTypeId: 'type-1',
+        transactionTypeLabel: 'Schenking in',
+        categoryId: 'cat-gifts',
+        categoryLabel: 'Giften',
+        complete: true,
+      },
+      suggestedMainCategoryName: 'Inkomsten',
+      suggestedSubCategoryName: 'Giften',
+    });
+
+    expect(resolveDefaultReviewAssignment(transaction, mainCategories, subcategories)).toEqual({
+      projectId: 'project-1',
+      transactionTypeId: 'type-1',
+      mainId: 'main-income',
+      subId: 'cat-gifts',
+    });
+    expect(transaction.categoryId).toBeNull();
+    expect(findMainCategoryIdForSubcategory('cat-gifts', [
+      ...mainCategories,
+      ...subcategories['main-income'],
+    ])).toBe('main-income');
+  });
+
+  it('builds approval payloads only for complete triples', () => {
+    expect(buildReviewApprovalPayload({
+      projectId: 'project-1',
+      transactionTypeId: 'type-1',
+      categoryId: 'cat-gifts',
+      mainCategoryId: 'main-income',
+      reason: '  gecontroleerd  ',
+    })).toEqual({
+      projectId: 'project-1',
+      transactionTypeId: 'type-1',
+      categoryId: 'cat-gifts',
+      mainCategoryId: 'main-income',
+      reason: 'gecontroleerd',
+    });
+    expect(buildReviewApprovalPayload({
+      projectId: '',
+      transactionTypeId: 'type-1',
+      categoryId: 'cat-gifts',
+    })).toBeNull();
   });
 
   it('builds subcategory maps without review placeholders', () => {

@@ -22,8 +22,12 @@ export const getReviewSuggestedLabel = (transaction: LedgerTransaction): string 
   ?? transaction.mainCategoryName
   ?? 'Geen suggestie';
 
-export const canAcceptReviewSuggestion = (canReview: boolean, mainId: string, subId: string): boolean =>
-  Boolean(canReview && (subId || mainId));
+export const canAcceptReviewSuggestion = (
+  canReview: boolean,
+  projectId: string,
+  transactionTypeId: string,
+  categoryId: string,
+): boolean => Boolean(canReview && projectId && transactionTypeId && categoryId);
 
 export const parseReviewDate = (value: string): Date => {
   const parsed = new Date(value);
@@ -160,4 +164,59 @@ export const buildReviewSubcategoryMap = (
     result[main.id] = (byParent[main.id] ?? []).filter((category) => !isReviewPlaceholderCategory(category));
   });
   return result;
+};
+
+
+
+
+export const resolveDefaultReviewAssignment = (
+  transaction: LedgerTransaction,
+  mainCategories: ReviewCategory[],
+  subcategories: Record<string, ReviewCategory[]>,
+): {
+  projectId: string;
+  transactionTypeId: string;
+  mainId: string;
+  subId: string;
+} => {
+  const categorySelection = resolveDefaultReviewSelection(
+    transaction,
+    mainCategories,
+    subcategories,
+  );
+
+  return {
+    projectId: transaction.reviewProposal?.projectId ?? '',
+    transactionTypeId: transaction.reviewProposal?.transactionTypeId ?? '',
+    mainId: categorySelection.mainId,
+    subId: transaction.reviewProposal?.categoryId ?? categorySelection.subId,
+  };
+};
+
+
+
+
+export const findMainCategoryIdForSubcategory = (
+  categoryId: string,
+  categories: ReviewCategory[],
+): string => categories.find((category) => category.id === categoryId)?.parentId ?? '';
+
+export const buildReviewApprovalPayload = (input: {
+  projectId: string;
+  transactionTypeId: string;
+  categoryId: string;
+  mainCategoryId?: string | null;
+  reason?: string | null;
+}) => {
+  if (!input.projectId || !input.transactionTypeId || !input.categoryId) {
+    return null;
+  }
+
+  return {
+    projectId: input.projectId,
+    transactionTypeId: input.transactionTypeId,
+    categoryId: input.categoryId,
+    mainCategoryId: input.mainCategoryId ?? null,
+    reason: input.reason?.trim() || null,
+  };
 };

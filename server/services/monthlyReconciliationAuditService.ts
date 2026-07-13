@@ -31,6 +31,8 @@ export type MonthlyReconciliationAuditInput = {
   expectedCoverage: MonthlyAuditExpectedCoverage;
   validatorVersion?: string;
   baselineControls?: Record<number, YearlyBaselineControl>;
+  allowUnresolvedForPartial?: boolean;
+  openPeriodYears?: number[];
 };
 
 export type MonthlyReconciliationAuditResult = {
@@ -64,7 +66,8 @@ export const auditMonthlyReconciliations = (
       addIssue(issues, month.year, month.month, 'Maand valt buiten de verwachte scope.');
     }
     const partialCoverage = month.coverageStatus !== 'COMPLETE';
-    if (!partialCoverage && (month.status !== 'BALANCED' || !month.closeEligible)) {
+    const openPeriodYear = input.openPeriodYears?.includes(month.year) === true;
+    if (!partialCoverage && !openPeriodYear && (month.status !== 'BALANCED' || !month.closeEligible)) {
       addIssue(issues, month.year, month.month, 'Maand is niet balancerend en afsluitbaar.');
     }
     if (month.duplicateFingerprintCount !== 0) {
@@ -73,7 +76,10 @@ export const auditMonthlyReconciliations = (
     if (month.runningBalanceErrorCount !== 0) {
       addIssue(issues, month.year, month.month, 'Running-balance fouten aanwezig.');
     }
-    if (month.unresolvedTransactionCount !== 0) {
+    if (
+      month.unresolvedTransactionCount !== 0
+      && !((partialCoverage && input.allowUnresolvedForPartial === true) || openPeriodYear)
+    ) {
       addIssue(issues, month.year, month.month, 'Onopgeloste transacties aanwezig.');
     }
     if (month.balanceDifferenceMinor !== '0') {

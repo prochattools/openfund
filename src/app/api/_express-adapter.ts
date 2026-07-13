@@ -11,6 +11,7 @@ type ExpressLikeRequest = {
   header: (name: string) => string | undefined;
   query: Record<string, string | string[]>;
   params: Record<string, string>;
+  body?: unknown;
 };
 
 type ExpressLikeResponse = {
@@ -85,7 +86,7 @@ const readQuery = (request: NextRequest): Record<string, string | string[]> => {
 export const invokeExpressJsonHandler = async (
   request: NextRequest,
   handler: ExpressJsonHandler,
-  options: { params?: Record<string, string> } = {},
+  options: { params?: Record<string, string>; body?: unknown } = {},
 ) => {
   let statusCode = 200;
   let responseBody: JsonBody = null;
@@ -98,6 +99,7 @@ export const invokeExpressJsonHandler = async (
         : request.headers.get(name) ?? undefined,
     query: readQuery(request),
     params: options.params ?? {},
+    body: options.body,
   };
 
   const res: ExpressLikeResponse = {

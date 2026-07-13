@@ -88,7 +88,7 @@ Suggestion-only sources:
 - dominant or popular categories;
 - direction defaults.
 
-Suggestions may prefill the review screen but may never become final bookings without administrator approval.
+Suggestions should prefill the review screen with the best complete `Klant` / `Type` / `Category` proposal whenever compatible evidence exists, but may never become final bookings without administrator approval. Low-confidence prefill is allowed only when its uncertainty and evidence are visible and the administrator can change every dimension.
 
 ### 4. Preserve evidence and decisions
 

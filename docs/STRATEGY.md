@@ -35,9 +35,11 @@ Success means no source row is lost, altered, duplicated, or silently reinterpre
 
 Replace broad historical guessing with deterministic, administrator-approved rules. Use structured evidence such as direction, counterparty/IBAN, payment purpose, and material amount conditions.
 
-Fuzzy and heuristic methods remain useful only for ranked suggestions.
+Fuzzy and heuristic methods remain useful only for ranked suggestions. They should use the organization’s approved local booking history first, prefill a complete three-dimensional proposal, expose confidence and evidence, and be measured with chronological or leave-one-out evaluation before production backfill.
 
-Success means an ambiguous transaction can never enter a closed report without explicit administrator approval.
+External AI is not the default strategy. It may be considered only after local evaluation demonstrates a material accuracy gap and a separate owner-approved privacy, provider, cost, and audit design exists.
+
+Success means an ambiguous transaction can never enter a closed report without explicit administrator approval, while every reviewable transaction with compatible history starts with a complete, explainable proposal.
 
 ### Goal 3 — Make monthly close mathematically strict
 

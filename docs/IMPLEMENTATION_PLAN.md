@@ -88,15 +88,18 @@ Production secret rotation: complete 2026-07-07; finance_user credential rotated
 Production runtime credential update: complete 2026-07-07; final retained credential applied; Dokploy env updated; app redeployed; health check passed; evidence in docs/PRODUCTION_RUNTIME_DATABASE_CREDENTIAL_EVIDENCE_NL.md
 App/provider secret remediation: complete 2026-07-08; all provider secrets (Clerk, Resend, New Relic, Request Access Secret) rotated and applied to Dokploy runtime; app redeployed; health and production readiness verified; evidence in docs/PRODUCTION_APP_PROVIDER_SECRET_ROTATION_EVIDENCE_NL.md
 Phase 17 — Month-by-month accounting reconciliation and administrator reporting: COMPLETE (2026-07-09; formula-based monthly chaining model; read-only production audit passed; baseline controls: 2024 closing 1218415, 2025 closing 1035086, 2026 partial closing 783725)
-Current gate: Phase 17 complete — formula-based monthly chaining model is implemented, tested, and validated against production. Read-only production audit passed on 2026-07-09. 2024 closing control: 1,218,415 minor units (expected). 2025 closing control: 1,035,086 minor units (expected). 2026 imported partial control: 783,725 minor units (expected). 2026 open year categorization remains owner-gated outside Phase 17 scope.
+Phase 18 — Cent-exact accounting integrity and opening-balance repair: COMPLETE LOCALLY (implementation and validation passed; production repair remains unexecuted)
+Phase 19 — Local history-based review prefill: COMPLETE LOCALLY (ranking, dry-run backfill, review prefill, evaluation, and validation passed; production backfill remains unexecuted)
+Current gate: owner review of the uncommitted diff and documentation. No production backfill, booking, deployment, migration, commit, or push is approved.
+Historical RC7 release-evidence gate: Current gate: Phase 17 complete.
 ```
 
 ## Authoritative Progress
 
 ```text
-Expanded roadmap progress: complete
-Previous roadmap through Phase 16: 100%
-Phase 17: complete; formula-based monthly chaining model; production audit passed
+Previous roadmap through Phase 17: 100%
+Phase 18: complete locally; production repair remains unexecuted and owner-gated
+Phase 19: complete locally; production backfill and suggestion persistence remain unexecuted and owner-gated
 Phase 0 — Governance and verified controls: 100%
 Phase 1 — Safe categorization foundation: 100%
 Phase 2 — Financial domain and historical model: 100%
@@ -1351,6 +1354,221 @@ Acceptance:
 - Legacy documents are clearly historical.
 - Phase statuses in ROADMAP.md and IMPLEMENTATION_PLAN.md agree with committed code.
 - Validation: `npm test`, `npm run build:server`, `npm run build`, `npx prisma validate`, `npx prisma generate`, `git diff --check`.
+
+## Phase 18 — Cent-exact accounting integrity and opening-balance repair
+
+### ACC-001 — Document architecture, reuse assessment, and safety boundaries
+
+Status: `DONE`
+
+Evidence:
+
+- `docs/ACCOUNTING_INTEGRITY_AND_REVIEW_PREFILL.md`
+- `docs/ROADMAP.md` Phase 18 and Phase 19
+- Existing reconciliation, audit, opening-balance, suggestion, review, booking, and decision models were reviewed before planning.
+
+Acceptance:
+
+- Explains what the capability is, how it works, why local-first was selected, what existing code is reused, and which alternatives are rejected.
+- Preserves integer-minor accounting, immutable source facts, suggestion/final-booking separation, human approval, and production-write gates.
+
+### ACC-002 — Implement read-only cent-exact accounting audit
+
+Status: `DONE`
+
+Dependencies: ACC-001
+
+Expected files:
+
+- `server/services/accountingAuditService.ts` (new orchestration service)
+- `server/routes/accountingAudit.ts` (new read-only route)
+- `src/app/api/accounting/audit/route.ts` (direct Next route)
+- targeted service and route tests
+
+Acceptance:
+
+- `GET /api/accounting/audit` is read-only.
+- Reuses `monthlyReconciliationService` and `monthlyReconciliationAuditService`; no parallel financial arithmetic engine.
+- Returns monthly and yearly integer minor-unit controls, coverage, continuity, duplicates, running-balance errors, unresolved counts, and approved baseline comparisons.
+- Every difference is a decimal integer string; no floating-point euro aggregation.
+- Partial/open periods expose unresolved counts without pretending they are close-eligible.
+- Creates no opening balances, bookings, closes, snapshots, suggestions, review decisions, or audit events.
+
+Validation:
+
+- Focused audit service tests with 2024, 2025, and supplied 2026 baselines.
+- Route authorization/read-only tests.
+- Server type check and production build.
+
+Evidence:
+
+- `tests/services/accountingAuditService.test.ts`: 4 passed.
+- `tests/routes/accountingIntegrityRoutes.test.ts`: 4 passed.
+- Monthly reconciliation regression marker: 7 passed across audit, script, and evidence-consistency coverage.
+- `npm run build`: passed after one bounded relative-import repair.
+- Production route manifest includes `/api/accounting/audit`.
+
+### ACC-003 — Implement dry-run-first idempotent opening-balance repair
+
+Status: `DONE`
+
+Dependencies: ACC-002
+
+Expected files:
+
+- `server/services/openingBalanceRepairService.ts` (new)
+- `server/routes/openingBalanceRepair.ts` (new admin route)
+- direct Next route or existing API registration consistent with current architecture
+- targeted service and route tests
+
+Acceptance:
+
+- Approved target is 172186 minor units, 2024-01-01 UTC, for the verified ING account.
+- Default mode is dry-run and performs zero writes.
+- Results are `WOULD_CREATE`, `ALREADY_CORRECT`, `CONFLICT`, or `ACCOUNT_NOT_FOUND`.
+- Execute mode requires administrator authorization and an explicit confirmation flag.
+- Locked or conflicting records are never overwritten.
+- Successful execution creates exactly one opening-balance record and one audit event in one transaction.
+- No production execution occurs during implementation or validation.
+
+Validation:
+
+- Idempotency, conflict, lock, wrong-account, dry-run no-write, authorization, and audit tests.
+- Accounting audit fixture changes from known missing-opening failure to exact approved controls only after explicit test execution.
+
+Evidence:
+
+- `tests/services/openingBalanceRepairService.test.ts`: 5 passed.
+- `tests/routes/accountingIntegrityRoutes.test.ts`: administrator restriction, dry-run default, and environment execution gate passed.
+- No database write, production execution, migration, deployment, commit, or push occurred.
+
+### ACC-004 — Validate and document accounting-integrity evidence
+
+Status: `DONE`
+
+Dependencies: ACC-003
+
+Acceptance:
+
+- Focused tests pass.
+- Full relevant accounting/reconciliation tests pass.
+- Server and production builds pass.
+- Documentation states actual implementation and limitations.
+- No production write, deployment, migration, or commit occurs without separate owner approval.
+
+## Phase 19 — Local history-based review prefill
+
+### SUGGEST-001 — Approve local-first algorithm and reuse contract
+
+Status: `DONE`
+
+Dependencies: ACC-001
+
+Evidence:
+
+- `docs/ACCOUNTING_INTEGRITY_AND_REVIEW_PREFILL.md`
+- Existing `CategorizationSuggestion`, `TransactionBooking`, `ReviewDecision`, deterministic categorization, and evidence-rich review queue are retained.
+
+Acceptance:
+
+- External AI and autonomous booking remain deferred.
+- Prediction target is one complete project/type/category triple.
+- Scores, ranks, evidence, and hashes are deterministic and integer-based.
+
+### SUGGEST-002 — Implement pure history-based candidate ranking
+
+Status: `DONE`
+
+Dependencies: ACC-004, SUGGEST-001
+
+Expected files:
+
+- `server/services/historySuggestionService.ts` (new pure ranking core)
+- focused tests and historical evaluation fixtures
+
+Acceptance:
+
+- Uses approved booking history only.
+- Uses direction, IBAN, normalized counterparty, description/payment-purpose tokens, account, amount support, recurrence, frequency, and recency.
+- Rejects direction-incompatible candidates.
+- Produces up to three complete triples with deterministic integer `scoreBasisPoints`, matcher, confidence, evidence, and stable hash.
+- Identical inputs and algorithm version produce identical output.
+- Amount-only, popularity-only, or direction-only evidence cannot become high confidence.
+- Creates no database records.
+
+### SUGGEST-003 — Implement dry-run-first suggestion backfill
+
+Status: `DONE`
+
+Dependencies: SUGGEST-002
+
+Expected files:
+
+- `server/services/suggestionBackfillService.ts`
+- `server/routes/suggestionBackfill.ts`
+- `src/app/api/categorization/suggestions/backfill/route.ts`
+- targeted service and route tests
+
+Acceptance:
+
+- `POST /api/categorization/suggestions/backfill` defaults to dry-run.
+- Dry-run reports unresolved count, complete rank-one coverage, matcher/confidence distributions, and planned writes while performing zero writes.
+- Explicit execution creates or replaces only pending suggestions for unresolved transactions.
+- Suggestions use existing schema fields, immutable evidence, evidence hashes, and algorithm version.
+- No `TransactionBooking`, period close, report snapshot, source-file, or bank-transaction mutation occurs.
+
+### SUGGEST-004 — Prefill review with rank-one complete suggestion
+
+Status: `DONE`
+
+Dependencies: SUGGEST-003
+
+Acceptance:
+
+- Review items expose rank one as `proposed` when complete.
+- Project, transaction type, category, derived main category, confidence, and reason are prefilled and visible.
+- Administrator can approve, choose an alternative, or manually correct dimensions.
+- Existing `ReviewDecision` and final-booking flow remain authoritative.
+- No uncertain bulk-approval action is added.
+
+### SUGGEST-005 — Evaluate historical prediction quality
+
+Status: `DONE`
+
+Dependencies: SUGGEST-002
+
+Acceptance:
+
+- Evaluate chronological holdout and safe leave-one-out cases over approved historical bookings.
+- Report top-one complete-triple accuracy, top-three accuracy, coverage, and confidence calibration.
+- Metrics are deterministic and versioned.
+- Weak confidence bands remain visibly weak; no accuracy claim is made without measured evidence.
+- External AI remains out of scope unless a later owner-approved phase is added.
+
+### SUGGEST-006 — Validate and document review-prefill evidence
+
+Status: `DONE`
+
+Dependencies: SUGGEST-003, SUGGEST-004, SUGGEST-005
+
+Acceptance:
+
+- Focused suggestion, backfill, review, and no-side-effect tests pass.
+- Server and production builds pass.
+- Documentation describes actual feature behavior, algorithm version, metrics, and administrator workflow.
+- No production backfill, deployment, external provider, commit, or push occurs without separate owner approval.
+
+Evidence:
+
+- Algorithm version: `history-v1`.
+- Chronological evaluation: 681 samples, 679 covered (99.71%), 491 top-one correct (72.31%), 541 top-three correct (79.68%).
+- Safe leave-one-out evaluation: 681 samples, 679 covered (99.71%), 502 top-one correct (73.93%), 556 top-three correct (81.89%).
+- Chronological confidence calibration: FUZZY 88.64%, OVERALL 100.00%, DEFAULT 31.09%; therefore DEFAULT remains visibly low-confidence and review-only.
+- Client loads `/api/ledger` and `/api/review` concurrently for administrators, merges proposals without setting final booking fields, and exposes project/type/category alternatives.
+- Review approval requires `projectId`, `transactionTypeId`, and `categoryId`; the direct Next PATCH route delegates to `updateTransactionCategory`, which retains `ReviewDecision` and `TransactionBooking` authority.
+- Focused tests passed: history ranker 5, backfill 4, review queue 3, review decision 8, review helper 12, review mapper 2, direct route 2, API transaction mapper 3, accounting audit 4, monthly reconciliation marker 7, owner evaluation 1.
+- `npm run build` passed after one bounded catch-callback return-type annotation; route manifest includes `/api/transactions/[id]/category`.
+- No execution flags were enabled and no production suggestion, booking, opening-balance repair, migration, deployment, commit, or push occurred.
 
 ## Exact next execution sequence
 

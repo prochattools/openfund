@@ -279,7 +279,10 @@ const buildAlternative = (
   };
 };
 
-const buildProposedCandidate = (transaction: ReviewTransaction): ReviewDimensionCandidate | null => {
+const buildProposedCandidate = (
+  transaction: ReviewTransaction,
+  alternatives: ReviewEvidenceAlternative[],
+): ReviewDimensionCandidate | null => {
   const current = makeCandidate({
     projectId: transaction.projectId,
     projectCode: transaction.project?.code ?? null,
@@ -301,6 +304,20 @@ const buildProposedCandidate = (transaction: ReviewTransaction): ReviewDimension
       transactionTypeLabel: transaction.transactionBooking.literalTypeLabel,
       categoryId: transaction.transactionBooking.categoryId,
       categoryLabel: transaction.transactionBooking.literalCategoryLabel,
+    });
+  }
+
+  const rankOne = alternatives.find((alternative) => alternative.rank === 1 && alternative.complete)
+    ?? alternatives.find((alternative) => alternative.complete);
+  if (rankOne) {
+    return makeCandidate({
+      projectId: rankOne.projectId,
+      projectCode: rankOne.projectCode,
+      projectLabel: rankOne.projectLabel,
+      transactionTypeId: rankOne.transactionTypeId,
+      transactionTypeLabel: rankOne.transactionTypeLabel,
+      categoryId: rankOne.categoryId,
+      categoryLabel: rankOne.categoryLabel,
     });
   }
 
@@ -366,7 +383,7 @@ const sortItems = (items: EvidenceRichReviewItem[]): EvidenceRichReviewItem[] =>
 
 const buildReviewItem = (transaction: ReviewTransaction): EvidenceRichReviewItem => {
   const alternatives = transaction.categorizationSuggestions.map(buildAlternative);
-  const proposed = buildProposedCandidate(transaction);
+  const proposed = buildProposedCandidate(transaction, alternatives);
   const deterministicStatus = classifyReviewStatus(transaction, proposed, alternatives);
   const reason = buildStatusReason(deterministicStatus, proposed, alternatives);
   const evidenceHashes = uniqueSorted([

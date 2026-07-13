@@ -3,6 +3,7 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
   fetchLedger,
+  fetchReview,
   uploadImportFile,
   fetchCategorizationRules,
   createCategorizationRule,
@@ -10,6 +11,10 @@ import {
   deleteCategorizationRule,
   clearReviewQueue as clearReviewQueueRequest,
   updateCategory,
+  isClientAdmin,
+  type EvidenceRichReviewResponse,
+  type ReviewProjectOption,
+  type ReviewTransactionTypeOption,
 } from '@/libs/api';
 import { buildTransactionFromRow, createLedgerId as createId } from '@/helpers/client-row-transaction';
 import { parseCsvFile } from '@/helpers/client-csv-parser';
@@ -21,6 +26,7 @@ import { mergeCategoriesWithServer } from '@/helpers/server-category-merge';
 import { categorizeTransactions } from '@/helpers/offline-categorization';
 import { buildLedgerSummary, filterReviewTransactions } from '@/helpers/ledger-summary';
 import { mapLedgerMeta, mapUploadSummary, type ImportSummary, type LedgerMeta } from '@/helpers/ledger-response-mappers';
+import { mergeLedgerWithReview } from '@/helpers/review-response-mapper';
 
 type UUID = string;
 
@@ -54,6 +60,8 @@ export interface Category {
 interface LedgerState {
   transactions: LedgerTransaction[];
   categories: Category[];
+  reviewProjects: ReviewProjectOption[];
+  reviewTransactionTypes: ReviewTransactionTypeOption[];
 }
 
 interface LedgerContextValue {
@@ -67,11 +75,19 @@ interface LedgerContextValue {
     totalAmount: number;
   };
   reviewTransactions: LedgerTransaction[];
+  reviewProjects: ReviewProjectOption[];
+  reviewTransactionTypes: ReviewTransactionTypeOption[];
   importCsv: (file: File) => Promise<ImportSummary>;
   refreshLedger: () => Promise<void>;
   assignCategory: (
     transactionId: UUID,
-    options: { categoryId?: UUID | null; mainCategoryId?: UUID | null; categoryName?: string }
+    options: {
+      categoryId: UUID;
+      projectId: UUID;
+      transactionTypeId: UUID;
+      mainCategoryId?: UUID | null;
+      reason?: string | null;
+    }
   ) => Promise<void>;
   clearReviewQueue: () => Promise<void>;
   clearAll: () => void;
@@ -106,6 +122,8 @@ const REVIEW_SUB_CATEGORY: Category = {
 const DEFAULT_STATE: LedgerState = {
   categories: [REVIEW_MAIN_CATEGORY, REVIEW_SUB_CATEGORY],
   transactions: [],
+  reviewProjects: [],
+  reviewTransactionTypes: [],
 };
 
 export const LedgerProvider = ({ children }: { children: ReactNode }) => {
@@ -133,13 +151,33 @@ export const LedgerProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      const payload: ApiLedgerResponse = await fetchLedger();
+      const reviewPromise: Promise<EvidenceRichReviewResponse | null> = isClientAdmin()
+        ? fetchReview().catch((error: unknown): null => {
+            console.error('Beoordelingssuggesties konden niet worden geladen', error);
+            return null;
+          })
+        : Promise.resolve(null);
+      const [payload, reviewPayload]: [ApiLedgerResponse, EvidenceRichReviewResponse | null] = await Promise.all([
+        fetchLedger(),
+        reviewPromise,
+      ]);
       const mapped = payload.transactions.map(mapApiTransaction);
+      const reviewMerge = mergeLedgerWithReview(mapped, reviewPayload);
 
-      setState((current) => ({
-        categories: mergeCategoriesWithServer(current.categories, payload.transactions),
-        transactions: mapped,
-      }));
+      setState((current) => {
+        const serverCategories = mergeCategoriesWithServer(current.categories, payload.transactions);
+        const categoriesById = new Map(serverCategories.map((category) => [category.id, category]));
+        for (const category of reviewMerge.categories) {
+          categoriesById.set(category.id, category);
+        }
+
+        return {
+          categories: Array.from(categoriesById.values()),
+          transactions: reviewMerge.transactions,
+          reviewProjects: reviewMerge.projects,
+          reviewTransactionTypes: reviewMerge.transactionTypes,
+        };
+      });
       setLedgerMeta(mapLedgerMeta(payload.ledgers));
       await refreshRules();
     } catch (error) {
@@ -289,17 +327,32 @@ export const LedgerProvider = ({ children }: { children: ReactNode }) => {
   const assignCategory = useCallback(
     async (
       transactionId: UUID,
-      { categoryId, mainCategoryId, categoryName }: { categoryId?: UUID | null; mainCategoryId?: UUID | null; categoryName?: string },
+      {
+        categoryId,
+        projectId,
+        transactionTypeId,
+        mainCategoryId,
+        reason,
+      }: {
+        categoryId: UUID;
+        projectId: UUID;
+        transactionTypeId: UUID;
+        mainCategoryId?: UUID | null;
+        reason?: string | null;
+      },
     ) => {
       if (USE_SERVER_PIPELINE) {
         await updateCategory(transactionId, {
-          categoryId: categoryId ?? null,
-          categoryName,
+          categoryId,
+          projectId,
+          transactionTypeId,
+          reason,
         });
         await refreshFromServer();
         return;
       }
 
+      const categoryName: string | undefined = undefined;
       setState((current) => {
         const tx = current.transactions.find((item) => item.id === transactionId);
         if (!tx) {
@@ -398,6 +451,7 @@ export const LedgerProvider = ({ children }: { children: ReactNode }) => {
         );
 
         return {
+          ...current,
           categories: nextCategories,
           transactions: updatedTransactions,
         };
@@ -422,6 +476,8 @@ export const LedgerProvider = ({ children }: { children: ReactNode }) => {
       categoryTree,
       summary,
       reviewTransactions,
+      reviewProjects: state.reviewProjects,
+      reviewTransactionTypes: state.reviewTransactionTypes,
       importCsv,
       refreshLedger,
       assignCategory,
@@ -435,7 +491,7 @@ export const LedgerProvider = ({ children }: { children: ReactNode }) => {
       deleteRule,
       ledgerMeta,
     }),
-    [state.transactions, state.categories, categoryTree, summary, reviewTransactions, importCsv, refreshLedger, assignCategory, clearReviewQueue, clearAll, rules, refreshRules, createRule, updateRule, deleteRule, ledgerMeta],
+    [state.transactions, state.categories, state.reviewProjects, state.reviewTransactionTypes, categoryTree, summary, reviewTransactions, importCsv, refreshLedger, assignCategory, clearReviewQueue, clearAll, rules, refreshRules, createRule, updateRule, deleteRule, ledgerMeta],
   );
 
   return <LedgerContext.Provider value={value}>{children}</LedgerContext.Provider>;

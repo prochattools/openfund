@@ -1,6 +1,7 @@
 import { normaliseDescription } from './client-import-normalizers';
 import { deriveMainCategoryId } from './category-labels';
 import { deriveCategoryNames } from './transaction-category-names';
+import type { ReviewDimensionCandidate, ReviewEvidenceAlternative } from '@/libs/api';
 
 export type ApiLedgerTransaction = {
   id: string;
@@ -69,6 +70,12 @@ export type LedgerTransaction = {
   suggestedSubCategoryName?: string | null;
   rawMainCategoryName?: string | null;
   rawCategoryName?: string | null;
+  reviewProposal?: ReviewDimensionCandidate | null;
+  reviewAlternatives?: ReviewEvidenceAlternative[];
+  reviewReason?: string | null;
+  reviewEvidenceSummary?: string | null;
+  reviewConfidence?: string | null;
+  reviewConfidenceLabel?: string | null;
 };
 
 export const mapApiTransaction = (tx: ApiLedgerTransaction): LedgerTransaction => {
@@ -146,5 +153,11 @@ export const mapApiTransaction = (tx: ApiLedgerTransaction): LedgerTransaction =
     suggestedSubCategoryName: suggestedSubName,
     rawMainCategoryName: rawMainName,
     rawCategoryName: rawSubName,
+    reviewProposal: null,
+    reviewAlternatives: [],
+    reviewReason: null,
+    reviewEvidenceSummary: null,
+    reviewConfidence: null,
+    reviewConfidenceLabel: null,
   };
 };

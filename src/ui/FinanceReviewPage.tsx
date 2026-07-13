@@ -7,16 +7,22 @@ import { useLedger, type Category } from '@/context/ledger-context';
 import { FinanceAppFrame } from '@/ui/FinanceAppFrame';
 import type { LedgerTransaction } from '@/helpers/api-transaction-mapper';
 import {
+  buildReviewApprovalPayload,
   buildReviewSubcategoryMap,
   canAcceptReviewSuggestion,
+  findMainCategoryIdForSubcategory,
   formatReviewEuro,
   getReviewSuggestedLabel,
   isReviewPlaceholderCategory,
   parseReviewDate,
-  resolveDefaultReviewSelection,
+  resolveDefaultReviewAssignment,
   translateSuggestionConfidence,
 } from '@/helpers/review-page';
-import { isClientAdmin } from '@/libs/api';
+import {
+  isClientAdmin,
+  type ReviewProjectOption,
+  type ReviewTransactionTypeOption,
+} from '@/libs/api';
 
 const dateFormatter = new Intl.DateTimeFormat('nl-NL', {
   day: '2-digit',
@@ -32,9 +38,9 @@ function Header({ count }: { count: number }) {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-sm font-medium text-[#7d6d5a]">Te beoordelen</p>
-          <h2 className="mt-1 text-3xl font-semibold tracking-[-0.05em] md:text-4xl">Categorieën afronden</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-[#6f6253]">
-            Alleen transacties zonder definitieve categorie komen hier terecht. Accepteer een suggestie of kies zelf een categorie.
+          <h2 className="mt-1 text-3xl font-semibold tracking-[-0.05em] md:text-4xl">Boekingen afronden</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-[#6f6253]">
+            Iedere transactie start met een complete lokale suggestie voor klant/project, transactietype en categorie. De suggestie is nooit definitief totdat een beheerder haar goedkeurt of corrigeert.
           </p>
         </div>
         <div className="rounded-[1.5rem] bg-[#f5e9c8] px-5 py-4 text-center text-[#7a5512]">
@@ -60,49 +66,79 @@ function EmptyReviewState() {
   );
 }
 
+type AssignPayload = {
+  categoryId: string;
+  projectId: string;
+  transactionTypeId: string;
+  mainCategoryId?: string | null;
+  reason?: string | null;
+};
+
 function ReviewCard({
   transaction,
   mainCategories,
   subcategories,
+  allCategories,
+  projects,
+  transactionTypes,
   onAssign,
 }: {
   transaction: LedgerTransaction;
   mainCategories: Category[];
   subcategories: Record<string, Category[]>;
-  onAssign: (transactionId: string, payload: { categoryId?: string | null; mainCategoryId?: string | null; categoryName?: string }) => Promise<void>;
+  allCategories: Category[];
+  projects: ReviewProjectOption[];
+  transactionTypes: ReviewTransactionTypeOption[];
+  onAssign: (transactionId: string, payload: AssignPayload) => Promise<void>;
 }) {
-  const defaultSelection = resolveDefaultReviewSelection(transaction, mainCategories, subcategories);
-  const [mainId, setMainId] = useState(defaultSelection.mainId);
-  const [subId, setSubId] = useState(defaultSelection.subId);
-  const [note, setNote] = useState('');
+  const defaults = resolveDefaultReviewAssignment(transaction, mainCategories, subcategories);
+  const [projectId, setProjectId] = useState(defaults.projectId);
+  const [transactionTypeId, setTransactionTypeId] = useState(defaults.transactionTypeId);
+  const [mainId, setMainId] = useState(defaults.mainId);
+  const [subId, setSubId] = useState(defaults.subId);
+  const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const canReview = isClientAdmin();
   const isExpense = transaction.amount < 0;
   const availableSubs = mainId ? subcategories[mainId] ?? [] : [];
+  const compatibleTypes = transactionTypes.filter((item) => !transaction.direction || item.direction === transaction.direction);
   const suggestedLabel = getReviewSuggestedLabel(transaction);
-  const canAcceptSuggestion = canAcceptReviewSuggestion(canReview, mainId, subId);
+  const canAcceptSuggestion = canAcceptReviewSuggestion(canReview, projectId, transactionTypeId, subId);
+
+  const applyAlternative = (index: number) => {
+    const alternative = transaction.reviewAlternatives?.[index];
+    if (!alternative?.complete || !alternative.projectId || !alternative.transactionTypeId || !alternative.categoryId) return;
+    setProjectId(alternative.projectId);
+    setTransactionTypeId(alternative.transactionTypeId);
+    setSubId(alternative.categoryId);
+    setMainId(findMainCategoryIdForSubcategory(alternative.categoryId, allCategories));
+  };
 
   const save = async () => {
     if (!canReview) {
-      toast.error('Alleen beheerders mogen transacties categoriseren.');
+      toast.error('Alleen beheerders mogen transacties boeken.');
       return;
     }
 
-    if (!mainId && !subId && !note.trim()) {
-      toast.error('Kies een categorie of vul een nieuwe categorie in.');
+    const payload = buildReviewApprovalPayload({
+      projectId,
+      transactionTypeId,
+      categoryId: subId,
+      mainCategoryId: mainId,
+      reason,
+    });
+    if (!payload) {
+      toast.error('Kies een klant/project, transactietype en subcategorie.');
       return;
     }
+
     setBusy(true);
     try {
-      await onAssign(transaction.id, {
-        mainCategoryId: mainId || undefined,
-        categoryId: subId || undefined,
-        categoryName: note.trim() || undefined,
-      });
-      toast.success('Transactie opgeslagen.');
+      await onAssign(transaction.id, payload);
+      toast.success('Boeking en beoordelingsbesluit opgeslagen.');
     } catch (error) {
       console.error(error);
-      toast.error('De transactie kon niet worden opgeslagen.');
+      toast.error('De boeking kon niet worden opgeslagen.');
     } finally {
       setBusy(false);
     }
@@ -120,19 +156,54 @@ function ReviewCard({
       </div>
 
       <div className="mt-6 rounded-[1.5rem] bg-[#f5f1ea] p-4">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8a7965]">Suggestie</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8a7965]">Lokale suggestie · menselijk akkoord vereist</p>
             <p className="mt-2 font-semibold">{suggestedLabel}</p>
-            <p className="mt-1 text-sm text-[#6f6253]">Match: {translateSuggestionConfidence(transaction.suggestionConfidence)}</p>
+            <p className="mt-1 text-sm text-[#6f6253]">Zekerheid: {transaction.reviewConfidenceLabel ?? translateSuggestionConfidence(transaction.suggestionConfidence)}</p>
+            {transaction.reviewReason ? <p className="mt-2 max-w-3xl text-sm leading-6 text-[#6f6253]">{transaction.reviewReason}</p> : null}
+            {transaction.reviewEvidenceSummary ? <p className="mt-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#8a7965]">{transaction.reviewEvidenceSummary}</p> : null}
           </div>
           <button type="button" onClick={save} disabled={busy || !canAcceptSuggestion} className="rounded-2xl bg-[#1f5f4a] px-5 py-3 text-sm font-semibold text-[#fbf8f2] disabled:opacity-60">
-            {!canReview ? 'Alleen beheerder' : busy ? 'Opslaan…' : 'Suggestie accepteren'}
+            {!canReview ? 'Alleen beheerder' : busy ? 'Opslaan…' : 'Suggestie goedkeuren'}
           </button>
         </div>
+
+        {transaction.reviewAlternatives?.length ? (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {transaction.reviewAlternatives.map((alternative, index) => (
+              <button
+                key={alternative.suggestionId}
+                type="button"
+                onClick={() => applyAlternative(index)}
+                disabled={!alternative.complete}
+                className="rounded-xl border border-[#d7cdbf] bg-[#fbf8f2] px-3 py-2 text-left text-xs disabled:opacity-50"
+              >
+                <span className="font-semibold">#{alternative.rank} {alternative.projectLabel ?? alternative.projectCode ?? 'Project'} · {alternative.transactionTypeLabel ?? 'Type'} · {alternative.categoryLabel ?? 'Categorie'}</span>
+                <span className="ml-2 text-[#7d6d5a]">{alternative.confidenceLabel}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_1fr_1fr_auto]">
+      <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <label className="text-sm font-semibold text-[#574b3f]">
+          Klant / project
+          <select value={projectId} onChange={(event) => setProjectId(event.target.value)} className="mt-2 w-full rounded-2xl border border-[#ded5c8] bg-[#f5f1ea] px-4 py-3 text-sm outline-none focus:border-[#1f5f4a]">
+            <option value="">Kies klant/project</option>
+            {projects.map((project) => <option key={project.id} value={project.id}>{project.code} · {project.name}</option>)}
+          </select>
+        </label>
+
+        <label className="text-sm font-semibold text-[#574b3f]">
+          Transactietype
+          <select value={transactionTypeId} onChange={(event) => setTransactionTypeId(event.target.value)} className="mt-2 w-full rounded-2xl border border-[#ded5c8] bg-[#f5f1ea] px-4 py-3 text-sm outline-none focus:border-[#1f5f4a]">
+            <option value="">Kies transactietype</option>
+            {compatibleTypes.map((item) => <option key={item.id} value={item.id}>{item.literalName}</option>)}
+          </select>
+        </label>
+
         <label className="text-sm font-semibold text-[#574b3f]">
           Hoofdcategorie
           <select value={mainId} onChange={(event) => { setMainId(event.target.value); setSubId(''); }} className="mt-2 w-full rounded-2xl border border-[#ded5c8] bg-[#f5f1ea] px-4 py-3 text-sm outline-none focus:border-[#1f5f4a]">
@@ -140,6 +211,7 @@ function ReviewCard({
             {mainCategories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
           </select>
         </label>
+
         <label className="text-sm font-semibold text-[#574b3f]">
           Subcategorie
           <select value={subId} onChange={(event) => setSubId(event.target.value)} disabled={!mainId} className="mt-2 w-full rounded-2xl border border-[#ded5c8] bg-[#f5f1ea] px-4 py-3 text-sm outline-none focus:border-[#1f5f4a] disabled:opacity-60">
@@ -147,15 +219,16 @@ function ReviewCard({
             {availableSubs.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
           </select>
         </label>
-        <label className="text-sm font-semibold text-[#574b3f]">
-          Nieuwe categorie
-          <input value={note} onChange={(event) => setNote(event.target.value)} placeholder="Optioneel" className="mt-2 w-full rounded-2xl border border-[#ded5c8] bg-[#f5f1ea] px-4 py-3 text-sm outline-none focus:border-[#1f5f4a]" />
+      </div>
+
+      <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-end">
+        <label className="flex-1 text-sm font-semibold text-[#574b3f]">
+          Reden of correctienotitie
+          <input value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Optioneel; wordt onderdeel van het beoordelingsbesluit" className="mt-2 w-full rounded-2xl border border-[#ded5c8] bg-[#f5f1ea] px-4 py-3 text-sm outline-none focus:border-[#1f5f4a]" />
         </label>
-        <div className="flex items-end">
-          <button onClick={save} disabled={busy || !canReview} className="w-full rounded-2xl bg-[#1f5f4a] px-5 py-3 text-sm font-semibold text-[#fbf8f2] disabled:opacity-60 lg:w-auto">
-            {!canReview ? 'Alleen beheerder' : busy ? 'Opslaan…' : 'Opslaan'}
-          </button>
-        </div>
+        <button onClick={save} disabled={busy || !canAcceptSuggestion} className="rounded-2xl bg-[#1f5f4a] px-5 py-3 text-sm font-semibold text-[#fbf8f2] disabled:opacity-60">
+          {!canReview ? 'Alleen beheerder' : busy ? 'Opslaan…' : 'Boeking goedkeuren'}
+        </button>
       </div>
     </article>
   );
@@ -166,12 +239,14 @@ function ReviewTableMode({ transactions }: { transactions: LedgerTransaction[] }
     <details className="rounded-[2rem] border border-[#ded5c8] bg-[#fbf8f2] p-6 shadow-[0_24px_70px_rgba(87,67,45,0.08)]">
       <summary className="cursor-pointer text-lg font-semibold tracking-[-0.03em]">Tabelweergave</summary>
       <div className="mt-5 overflow-x-auto rounded-[1.5rem] border border-[#ded5c8]">
-        <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+        <table className="w-full min-w-[900px] border-collapse text-left text-sm">
           <thead className="bg-[#f5f1ea] text-xs uppercase tracking-[0.14em] text-[#8a7965]">
             <tr>
               <th className="px-4 py-3">Datum</th>
               <th className="px-4 py-3">Omschrijving</th>
-              <th className="px-4 py-3">Suggestie</th>
+              <th className="px-4 py-3">Project</th>
+              <th className="px-4 py-3">Type</th>
+              <th className="px-4 py-3">Categorie</th>
               <th className="px-4 py-3 text-right">Bedrag</th>
             </tr>
           </thead>
@@ -180,7 +255,9 @@ function ReviewTableMode({ transactions }: { transactions: LedgerTransaction[] }
               <tr key={transaction.id} className="border-t border-[#ded5c8]">
                 <td className="px-4 py-4 text-[#6f6253]">{dateFormatter.format(parseReviewDate(transaction.date))}</td>
                 <td className="px-4 py-4 font-semibold">{transaction.description}</td>
-                <td className="px-4 py-4 text-[#6f6253]">{transaction.suggestedSubCategoryName ?? transaction.categoryName ?? 'Geen suggestie'}</td>
+                <td className="px-4 py-4 text-[#6f6253]">{transaction.reviewProposal?.projectLabel ?? transaction.reviewProposal?.projectCode ?? 'Geen voorstel'}</td>
+                <td className="px-4 py-4 text-[#6f6253]">{transaction.reviewProposal?.transactionTypeLabel ?? 'Geen voorstel'}</td>
+                <td className="px-4 py-4 text-[#6f6253]">{transaction.reviewProposal?.categoryLabel ?? 'Geen voorstel'}</td>
                 <td className={`px-4 py-4 text-right font-semibold ${transaction.amount < 0 ? 'text-[#914f35]' : 'text-[#1f5f4a]'}`}>{formatEuro(transaction.amount)}</td>
               </tr>
             ))}
@@ -192,7 +269,15 @@ function ReviewTableMode({ transactions }: { transactions: LedgerTransaction[] }
 }
 
 export default function FinanceReviewPage() {
-  const { reviewTransactions, categoryTree, assignCategory, summary } = useLedger();
+  const {
+    reviewTransactions,
+    reviewProjects,
+    reviewTransactionTypes,
+    categories,
+    categoryTree,
+    assignCategory,
+    summary,
+  } = useLedger();
   const mainCategories = useMemo(() => categoryTree.main.filter((category) => !isReviewPlaceholderCategory(category)), [categoryTree.main]);
   const subcategories = useMemo(
     () => buildReviewSubcategoryMap(mainCategories, categoryTree.byParent),
@@ -205,7 +290,16 @@ export default function FinanceReviewPage() {
       {reviewTransactions.length ? (
         <div className="space-y-6">
           {reviewTransactions.slice(0, 1).map((transaction) => (
-            <ReviewCard key={transaction.id} transaction={transaction} mainCategories={mainCategories} subcategories={subcategories} onAssign={assignCategory} />
+            <ReviewCard
+              key={transaction.id}
+              transaction={transaction}
+              mainCategories={mainCategories}
+              subcategories={subcategories}
+              allCategories={categories}
+              projects={reviewProjects}
+              transactionTypes={reviewTransactionTypes}
+              onAssign={assignCategory}
+            />
           ))}
           {reviewTransactions.length > 1 ? (
             <section className="rounded-[2rem] border border-[#ded5c8] bg-[#fbf8f2] p-6 shadow-[0_24px_70px_rgba(87,67,45,0.08)]">
@@ -217,6 +311,7 @@ export default function FinanceReviewPage() {
                       <div>
                         <p className="text-xs text-[#8a7965]">{dateFormatter.format(parseReviewDate(transaction.date))}</p>
                         <p className="mt-1 font-semibold">{transaction.description}</p>
+                        <p className="mt-2 text-xs text-[#6f6253]">{transaction.reviewProposal?.projectLabel ?? transaction.reviewProposal?.projectCode ?? 'Geen projectvoorstel'} · {transaction.reviewProposal?.transactionTypeLabel ?? 'Geen typevoorstel'} · {transaction.reviewProposal?.categoryLabel ?? 'Geen categorievoorstel'}</p>
                       </div>
                       <p className={`font-semibold ${transaction.amount < 0 ? 'text-[#914f35]' : 'text-[#1f5f4a]'}`}>{formatEuro(transaction.amount)}</p>
                     </div>
