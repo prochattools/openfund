@@ -42,3 +42,7 @@ public/sitemap-0.xml
 # build artifacts
 dist/
 _brain
+
+# local repository analysis artifacts
+.graphifyignore
+graphify-out/
