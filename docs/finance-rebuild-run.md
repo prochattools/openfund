@@ -1057,7 +1057,7 @@ FLOW-003 evidence-rich Dutch review queue committed as `6618cb6`. FLOW-004 expli
 Implementation summary:
 
 - Extended `server/services/reviewQueueService.ts` with a read-only evidence-rich Dutch review queue builder.
-- `GET /api/review` now requires an administrator and delegates queue shaping to the review queue service.
+- `GET /api/review` now requires an authenticated production session, supports authenticated viewer/admin reads, and delegates queue shaping to the review queue service while leaving mutations administrator-only.
 - Review items include transaction id/import fingerprint, raw ING display date, counterparty/IBAN where available, amount, direction, description/payment purpose, proposed `Klant`, `Type`, `Category`, deterministic status, Dutch reason text, rule ids, historical evidence, evidence hashes, and alternatives.
 - The queue distinguishes finalized deterministic candidates, review suggestions, conflicts, unmatched items, and incomplete dimension candidates.
 - Added bounded API/helper types and Dutch helper labels for evidence-rich review statuses.
@@ -1662,8 +1662,10 @@ Implemented:
 
 Measured owner-history evaluation:
 
-- chronological: 681 samples, 679 covered (99.71%), 491 top-one correct (72.31%), 541 top-three correct (79.68%);
+- chronological: 681 samples, 679 covered (99.71%), 489 top-one correct (72.02%), 539 top-three correct (79.38%);
 - safe leave-one-out: 681 samples, 679 covered (99.71%), 502 top-one correct (73.93%), 556 top-three correct (81.89%);
+- chronological confidence calibration: DEFAULT 442 predictions / 261 correct (59.05%), EXACT_FALLBACK 235 / 227 (96.60%), FUZZY 2 / 1 (50.00%);
+- chronological matcher calibration: DIRECTION_DEFAULT 30 predictions / 0 correct (0.00%), FUZZY_HISTORY 103 / 45 (43.69%), NORMALIZED_HISTORY 546 / 444 (81.32%);
 - chronological `FUZZY`: 429 / 484 correct (88.64%);
 - chronological `OVERALL`: 2 / 2 correct (100.00%);
 - chronological `DEFAULT`: 60 / 193 correct (31.09%).

@@ -80,7 +80,7 @@ const parseOptionalDate = (value: unknown): Date | null => {
 };
 
 export const handleImportUpload = async (req: Request, res: Response) => {
-  const actor = requireAdmin(req, res);
+  const actor = await requireAdmin(req, res);
   if (!actor) {
     return;
   }
@@ -132,7 +132,7 @@ export const handleImportUpload = async (req: Request, res: Response) => {
 };
 
 export const handleMonthlyImportPreviewUpload = async (req: Request, res: Response) => {
-  const actor = requireAdmin(req, res);
+  const actor = await requireAdmin(req, res);
   if (!actor) {
     return;
   }

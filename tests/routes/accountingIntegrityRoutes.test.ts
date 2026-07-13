@@ -20,6 +20,7 @@ const makeRequest = (options: {
   role?: 'admin' | 'viewer';
   body?: unknown;
   query?: Record<string, string>;
+  cookie?: string | null;
 } = {}) => ({
   body: options.body ?? {},
   query: options.query ?? {},
@@ -29,6 +30,7 @@ const makeRequest = (options: {
     if (name === 'x-user-role') return options.role ?? 'viewer';
     if (name === 'x-actor-id') return 'actor-1';
     if (name === 'x-user-email') return 'admin@example.test';
+    if (name === 'cookie') return options.cookie === undefined ? 'ory_kratos_session=session-1' : options.cookie;
     return undefined;
   },
 });
@@ -56,30 +58,57 @@ describe('accounting integrity routes', () => {
   });
 
   it('allows read-only accounting audit access without administrator mutation rights', async () => {
-    const audit = {
-      status: 'PASSED',
-      readOnly: true,
-      sideEffects: {
-        createsOpeningBalance: false,
-        createsTransactionBooking: false,
-        createsCategorizationSuggestion: false,
-        closesPeriod: false,
-        createsReportSnapshot: false,
-      },
-    };
-    mocks.getAccountingAudit.mockResolvedValue(audit);
-    const req = makeRequest({ role: 'viewer', query: { accountIdentifier: 'NL89INGB0006369960' } });
-    const res = makeResponse();
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    try {
+      const audit = {
+        status: 'PASSED',
+        readOnly: true,
+        sideEffects: {
+          createsOpeningBalance: false,
+          createsTransactionBooking: false,
+          createsCategorizationSuggestion: false,
+          closesPeriod: false,
+          createsReportSnapshot: false,
+        },
+      };
+      mocks.getAccountingAudit.mockResolvedValue(audit);
+      const req = makeRequest({
+        role: 'viewer',
+        query: { accountIdentifier: 'NL89INGB0006369960' },
+      });
+      const res = makeResponse();
 
-    await getAccountingAuditReport(req as any, res as any);
+      await getAccountingAuditReport(req as any, res as any);
 
-    expect(res.statusCode).toBe(200);
-    expect(res.body).toEqual(audit);
-    expect(mocks.getAccountingAudit).toHaveBeenCalledWith(
-      expect.anything(),
-      { userId: 'user-1', accountIdentifier: 'NL89INGB0006369960' },
-    );
-    expect(mocks.repairApprovedOpeningBalance).not.toHaveBeenCalled();
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toEqual(audit);
+      expect(mocks.getAccountingAudit).toHaveBeenCalledWith(
+        expect.anything(),
+        { userId: 'user-1', accountIdentifier: 'NL89INGB0006369960' },
+      );
+      expect(mocks.repairApprovedOpeningBalance).not.toHaveBeenCalled();
+    } finally {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
+  });
+
+  it('rejects unauthenticated production accounting audit requests before calling the service', async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    try {
+      const req = makeRequest({ role: 'viewer', cookie: null, query: { accountIdentifier: 'NL89INGB0006369960' } });
+      const res = makeResponse();
+
+      await getAccountingAuditReport(req as any, res as any);
+
+      expect(res.statusCode).toBe(401);
+      expect(res.body).toEqual({ error: 'Authenticatie vereist.' });
+      expect(mocks.getAccountingAudit).not.toHaveBeenCalled();
+      expect(mocks.repairApprovedOpeningBalance).not.toHaveBeenCalled();
+    } finally {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
   });
 
   it('rejects opening-balance repair for viewers before calling the service', async () => {

@@ -20,6 +20,7 @@ const makeRequest = (options: {
   role?: 'admin' | 'viewer';
   body?: unknown;
   query?: Record<string, string>;
+  cookie?: string | null;
 } = {}) => ({
   body: options.body ?? {},
   query: options.query ?? {},
@@ -29,6 +30,7 @@ const makeRequest = (options: {
     if (name === 'x-user-role') return options.role ?? 'viewer';
     if (name === 'x-actor-id') return 'actor-1';
     if (name === 'x-user-email') return 'admin@example.test';
+    if (name === 'cookie') return options.cookie === undefined ? 'ory_kratos_session=session-1' : options.cookie;
     return undefined;
   },
 });
@@ -53,32 +55,56 @@ describe('suggestion routes', () => {
   });
 
   it('allows read-only evaluation for viewers and performs no backfill', async () => {
-    mocks.evaluateHistorySuggestionsForUser.mockResolvedValue({
-      mode: 'chronological',
-      sampleCount: 681,
-      coveredCount: 680,
-      safeguards: {
-        createsCategorizationSuggestion: false,
-        createsTransactionBooking: false,
-        mutatesBankFacts: false,
-      },
-    });
-    const req = makeRequest({ role: 'viewer', query: { mode: 'chronological' } });
-    const res = makeResponse();
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    try {
+      mocks.evaluateHistorySuggestionsForUser.mockResolvedValue({
+        mode: 'chronological',
+        sampleCount: 681,
+        coveredCount: 680,
+        safeguards: {
+          createsCategorizationSuggestion: false,
+          createsTransactionBooking: false,
+          mutatesBankFacts: false,
+        },
+      });
+      const req = makeRequest({ role: 'viewer', query: { mode: 'chronological' } });
+      const res = makeResponse();
 
-    await getSuggestionEvaluation(req as any, res as any);
+      await getSuggestionEvaluation(req as any, res as any);
 
-    expect(res.statusCode).toBe(200);
-    expect(res.body).toMatchObject({
-      mode: 'chronological',
-      sampleCount: 681,
-      readOnly: true,
-    });
-    expect(mocks.evaluateHistorySuggestionsForUser).toHaveBeenCalledWith(
-      expect.anything(),
-      { userId: 'user-1', mode: 'chronological', algorithmVersion: undefined },
-    );
-    expect(mocks.backfillHistorySuggestions).not.toHaveBeenCalled();
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toMatchObject({
+        mode: 'chronological',
+        sampleCount: 681,
+        readOnly: true,
+      });
+      expect(mocks.evaluateHistorySuggestionsForUser).toHaveBeenCalledWith(
+        expect.anything(),
+        { userId: 'user-1', mode: 'chronological', algorithmVersion: undefined },
+      );
+      expect(mocks.backfillHistorySuggestions).not.toHaveBeenCalled();
+    } finally {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
+  });
+
+  it('rejects unauthenticated production evaluation requests before querying history', async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    try {
+      const req = makeRequest({ role: 'viewer', cookie: null, query: { mode: 'chronological' } });
+      const res = makeResponse();
+
+      await getSuggestionEvaluation(req as any, res as any);
+
+      expect(res.statusCode).toBe(401);
+      expect(res.body).toEqual({ error: 'Authenticatie vereist.' });
+      expect(mocks.evaluateHistorySuggestionsForUser).not.toHaveBeenCalled();
+      expect(mocks.backfillHistorySuggestions).not.toHaveBeenCalled();
+    } finally {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
   });
 
   it('rejects unsupported evaluation modes before querying history', async () => {

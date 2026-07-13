@@ -14,7 +14,7 @@ import { describe, expect, it } from 'vitest';
 import { requireAdmin } from '../../server/auth/requestContext';
 
 describe('Dutch user-facing text — auth guard', () => {
-  it('403 error is Dutch', () => {
+  it('403 error is Dutch', async () => {
     const res = {
       statusCode: 200,
       body: undefined as unknown,
@@ -22,7 +22,7 @@ describe('Dutch user-facing text — auth guard', () => {
       json(payload: unknown) { this.body = payload; return this; },
     };
     const req = { header: (_: string) => 'viewer' } as any;
-    requireAdmin(req, res as any);
+    await requireAdmin(req, res as any);
     expect((res.body as Record<string, string>).error).toBe('Alleen beheerders mogen deze actie uitvoeren.');
   });
 });

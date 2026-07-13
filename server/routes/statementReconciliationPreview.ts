@@ -13,7 +13,7 @@ import {
 } from '../services/categoryControlTotalsService';
 
 export const getStatementReconciliationPreview = async (req: Request, res: Response) => {
-  const actor = requireAdmin(req, res);
+  const actor = await requireAdmin(req, res);
   if (!actor) return;
 
   const statementPeriodId = typeof req.params.id === 'string' ? req.params.id : '';

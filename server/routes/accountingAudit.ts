@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { prisma } from '../prismaClient';
-import { getRequestActor } from '../auth/requestContext';
+import { requireAuthenticatedRequest } from '../auth/requestContext';
 import { getAccountingAudit } from '../services/accountingAuditService';
 
 const readSingleQuery = (value: unknown): string | undefined => {
@@ -10,7 +10,12 @@ const readSingleQuery = (value: unknown): string | undefined => {
 };
 
 export const getAccountingAuditReport = async (req: Request, res: Response) => {
-  const { userId } = getRequestActor(req);
+  const actor = await requireAuthenticatedRequest(req, res);
+  if (!actor) {
+    return;
+  }
+
+  const { userId } = actor;
   const accountIdentifier = readSingleQuery(req.query.accountIdentifier);
 
   try {

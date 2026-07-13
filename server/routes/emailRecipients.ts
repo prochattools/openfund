@@ -41,7 +41,7 @@ export const listEmailRecipients = async (req: Request, res: Response) => {
 };
 
 export const upsertEmailRecipient = async (req: Request, res: Response) => {
-  const actor = requireAdmin(req, res);
+  const actor = await requireAdmin(req, res);
   if (!actor) return;
 
   const { userId, actorId, actorEmail } = actor;
@@ -113,7 +113,7 @@ export const upsertEmailRecipient = async (req: Request, res: Response) => {
 };
 
 export const deactivateEmailRecipient = async (req: Request, res: Response) => {
-  const actor = requireAdmin(req, res);
+  const actor = await requireAdmin(req, res);
   if (!actor) return;
 
   const { userId, actorId, actorEmail } = actor;

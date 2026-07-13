@@ -4,7 +4,7 @@ import { requireAdmin } from '../auth/requestContext';
 import { backfillHistorySuggestions } from '../services/suggestionBackfillService';
 
 export const postSuggestionBackfill = async (req: Request, res: Response) => {
-  const actor = requireAdmin(req, res);
+  const actor = await requireAdmin(req, res);
   if (!actor) return;
 
   const body = (req.body ?? {}) as {

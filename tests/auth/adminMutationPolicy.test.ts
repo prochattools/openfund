@@ -145,7 +145,6 @@ vi.mock('../../server/services/ruleCreationService', () => ({
 }));
 
 import {
-  getReviewTransactions,
   updateTransactionCategory,
   clearReviewQueue,
   previewReviewRuleCreation,
@@ -160,14 +159,6 @@ describe('admin mutation policy — review routes', () => {
     reviewMocks.previewRuleCreation.mockReset();
     reviewMocks.activateRuleCreation.mockReset();
     reviewMocks.prismaTransaction2.mockImplementation((cb: (db: unknown) => unknown) => cb({}));
-  });
-
-  it('GET /api/review requires admin', async () => {
-    const res = makeRes();
-    await getReviewTransactions(makeViewerRequest() as any, res as any);
-    expect(res.statusCode).toBe(403);
-    expect(res.body).toEqual(ADMIN_ONLY_403);
-    expect(reviewMocks.getEvidenceRichReviewQueue).not.toHaveBeenCalled();
   });
 
   it('PATCH /api/transactions/:id/category requires admin', async () => {

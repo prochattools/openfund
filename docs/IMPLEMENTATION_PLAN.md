@@ -928,7 +928,7 @@ Acceptance:
 Validation:
 
 - Focused review queue tests cover enriched Dutch evidence, deterministic sorting, finalized candidates, conflicts, incomplete candidates, alternatives, historical hashes, rule ids, sanitization, and no booking/close side effects.
-- Focused review route tests cover admin-only behavior and evidence-rich read responses without approving anything.
+- Focused review route tests cover authenticated read access, production unauthenticated denial, and evidence-rich read responses without approving anything.
 - Focused review page helper tests cover Dutch evidence status and summary labels.
 - Full validation passed and is recorded in `docs/finance-rebuild-run.md`: review queue, review decision, review route, review page, deterministic categorization, monthly import preview, full suite, Prisma validate/generate, server build, production build, diff check, executable/test high-risk scan, and documentation scans.
 
@@ -950,7 +950,7 @@ Acceptance:
 Validation:
 
 - Focused rule creation service tests cover preview-only behavior, explicit activation, hash validation, broad/ambiguous rejection, conflicting active rule rejection, and admin-only access.
-- Focused review route tests cover admin-only preview/activation routes and confirm preview does not activate a rule.
+- Focused review route tests cover authenticated read access plus admin-only preview/activation routes and confirm preview does not activate a rule.
 - Focused review page helper tests cover Dutch rule creation activation labels.
 - Surrounding rule engine, categorization, review queue, review decision, deterministic categorization, and monthly import preview regressions passed locally.
 - Full validation passed and is recorded in `docs/finance-rebuild-run.md`: focused FLOW-004 tests, surrounding review/categorization regressions, full suite, Prisma validate/generate, server build, production build, diff check, changed executable/test high-risk scan, and documentation scans.
@@ -1561,10 +1561,10 @@ Acceptance:
 Evidence:
 
 - Algorithm version: `history-v1`.
-- Chronological evaluation: 681 samples, 679 covered (99.71%), 491 top-one correct (72.31%), 541 top-three correct (79.68%).
+- Chronological evaluation: 681 samples, 679 covered (99.71%), 489 top-one correct (72.02%), 539 top-three correct (79.38%).
 - Safe leave-one-out evaluation: 681 samples, 679 covered (99.71%), 502 top-one correct (73.93%), 556 top-three correct (81.89%).
 - Chronological confidence calibration: FUZZY 88.64%, OVERALL 100.00%, DEFAULT 31.09%; therefore DEFAULT remains visibly low-confidence and review-only.
-- Client loads `/api/ledger` and `/api/review` concurrently for administrators, merges proposals without setting final booking fields, and exposes project/type/category alternatives.
+- Client loads `/api/ledger` and `/api/review` concurrently for authenticated users, merges proposals without setting final booking fields, and exposes project/type/category alternatives.
 - Review approval requires `projectId`, `transactionTypeId`, and `categoryId`; the direct Next PATCH route delegates to `updateTransactionCategory`, which retains `ReviewDecision` and `TransactionBooking` authority.
 - Focused tests passed: history ranker 5, backfill 4, review queue 3, review decision 8, review helper 12, review mapper 2, direct route 2, API transaction mapper 3, accounting audit 4, monthly reconciliation marker 7, owner evaluation 1.
 - `npm run build` passed after one bounded catch-callback return-type annotation; route manifest includes `/api/transactions/[id]/category`.

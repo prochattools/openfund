@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { prisma } from '../prismaClient';
-import { getRequestActor } from '../auth/requestContext';
+import { requireAuthenticatedRequest } from '../auth/requestContext';
 import {
   evaluateHistorySuggestionsForUser,
   type HistoryEvaluationMode,
@@ -13,7 +13,12 @@ const readSingleQuery = (value: unknown): string | undefined => {
 };
 
 export const getSuggestionEvaluation = async (req: Request, res: Response) => {
-  const { userId } = getRequestActor(req);
+  const actor = await requireAuthenticatedRequest(req, res);
+  if (!actor) {
+    return;
+  }
+
+  const { userId } = actor;
   const requestedMode = readSingleQuery(req.query.mode) ?? 'chronological';
   if (requestedMode !== 'chronological' && requestedMode !== 'leave-one-out') {
     return res.status(400).json({

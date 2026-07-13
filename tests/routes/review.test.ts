@@ -58,10 +58,12 @@ const makeRequest = ({
   body = {},
   params = { id: 'tx-1' },
   role = 'admin',
+  cookie = 'ory_kratos_session=session-1',
 }: {
   body?: unknown;
   params?: Record<string, string>;
   role?: 'admin' | 'viewer';
+  cookie?: string | null;
 }) => ({
   body,
   params,
@@ -70,6 +72,7 @@ const makeRequest = ({
     if (name === 'x-user-role') return role;
     if (name === 'x-actor-id') return 'actor-1';
     if (name === 'x-user-email') return 'finance@example.test';
+    if (name === 'cookie') return cookie;
     return undefined;
   },
 });
@@ -83,52 +86,64 @@ describe('review routes', () => {
     serviceMocks.prismaTransaction.mockImplementation((callback: (db: unknown) => unknown) => callback({}));
   });
 
-  it('review route returns Dutch evidence-rich items for admins without approving anything', async () => {
-    serviceMocks.getEvidenceRichReviewQueue.mockResolvedValueOnce({
-      transactions: [{
-        transactionId: 'tx-1',
-        deterministicStatus: 'conflict',
-        statusLabel: 'Conflict, handmatig beoordelen',
-        alternatives: [{ suggestionId: 'suggestion-1' }],
-        sideEffects: {
-          createsTransactionBooking: false,
-          closesPeriod: false,
-        },
-      }],
-      categories: [],
-      projects: [],
-      transactionTypes: [],
-      message: 'Beoordelingsrij geladen. Er zijn geen boekingen of periodeafsluitingen gemaakt.',
-    });
-    const response = makeResponse();
+  it('rejects unauthenticated production review requests before loading the queue', async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    try {
+      const response = makeResponse();
 
-    await getReviewTransactions(makeRequest({}) as any, response as any);
+      await getReviewTransactions(makeRequest({ cookie: null }) as any, response as any);
 
-    expect(response.statusCode).toBe(200);
-    expect(response.body).toMatchObject({
-      message: 'Beoordelingsrij geladen. Er zijn geen boekingen of periodeafsluitingen gemaakt.',
-      transactions: [
-        {
+      expect(response.statusCode).toBe(401);
+      expect(response.body).toEqual({ error: 'Authenticatie vereist.' });
+      expect(serviceMocks.getEvidenceRichReviewQueue).not.toHaveBeenCalled();
+    } finally {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
+  });
+
+  it('review route returns Dutch evidence-rich items for authenticated viewers without approving anything', async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    try {
+      serviceMocks.getEvidenceRichReviewQueue.mockResolvedValueOnce({
+        transactions: [{
           transactionId: 'tx-1',
           deterministicStatus: 'conflict',
+          statusLabel: 'Conflict, handmatig beoordelen',
+          alternatives: [{ suggestionId: 'suggestion-1' }],
           sideEffects: {
             createsTransactionBooking: false,
             closesPeriod: false,
           },
-        },
-      ],
-    });
-    expect(serviceMocks.getEvidenceRichReviewQueue).toHaveBeenCalledWith(expect.anything(), 'user-1');
-  });
+        }],
+        categories: [],
+        projects: [],
+        transactionTypes: [],
+        message: 'Beoordelingsrij geladen. Er zijn geen boekingen of periodeafsluitingen gemaakt.',
+      });
+      const response = makeResponse();
 
-  it('review route remains admin-only', async () => {
-    const response = makeResponse();
+      await getReviewTransactions(makeRequest({ role: 'viewer' }) as any, response as any);
 
-    await getReviewTransactions(makeRequest({ role: 'viewer' }) as any, response as any);
-
-    expect(response.statusCode).toBe(403);
-    expect(response.body).toEqual({ error: 'Alleen beheerders mogen deze actie uitvoeren.' });
-    expect(serviceMocks.getEvidenceRichReviewQueue).not.toHaveBeenCalled();
+      expect(response.statusCode).toBe(200);
+      expect(response.body).toMatchObject({
+        message: 'Beoordelingsrij geladen. Er zijn geen boekingen of periodeafsluitingen gemaakt.',
+        transactions: [
+          {
+            transactionId: 'tx-1',
+            deterministicStatus: 'conflict',
+            sideEffects: {
+              createsTransactionBooking: false,
+              closesPeriod: false,
+            },
+          },
+        ],
+      });
+      expect(serviceMocks.getEvidenceRichReviewQueue).toHaveBeenCalledWith(expect.anything(), 'user-1');
+    } finally {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
   });
 
   it('rejects category-only updates before touching persistence', async () => {

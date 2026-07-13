@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { CLERK_RUNTIME_ENABLED, ORY_ENABLED, getOryBaseUrl, getOryLoginUrl } from "@/utils/auth";
+import { hasAuthSessionCookie, isProductionAuthEnforced, isProductionSessionAuthenticated } from "@/utils/session-auth";
 
 /* eslint-disable @typescript-eslint/no-var-requires */
 let clerkExports: any = null;
@@ -13,6 +14,8 @@ const publicRoutes = [
   "/sign-in(.*)",
   "/api/health",
   "/api/health(.*)",
+  "/api/deployment-info",
+  "/api/deployment-info(.*)",
 ];
 
 const isPublicRoute =
@@ -20,10 +23,14 @@ const isPublicRoute =
     ? clerkExports.createRouteMatcher(publicRoutes)
     : () => true;
 
-const oryHandler = (request: NextRequest) => {
+const oryHandler = async (request: NextRequest) => {
   const sessionCookie = request.cookies.get("ory_kratos_session") ?? request.cookies.get("ory_session");
-  if (sessionCookie) {
+  if (await isProductionSessionAuthenticated(sessionCookie?.value ? request.headers.get("cookie") : null)) {
     return NextResponse.next();
+  }
+
+  if (request.nextUrl.pathname.startsWith("/api/")) {
+    return NextResponse.json({ error: "Authenticatie vereist." }, { status: 401 });
   }
 
   const oryBaseUrl = getOryBaseUrl();
@@ -37,6 +44,33 @@ const oryHandler = (request: NextRequest) => {
   return NextResponse.redirect(loginUrl);
 };
 
+const productionFallbackHandler = (request: NextRequest) => {
+  if (!isProductionAuthEnforced()) {
+    return NextResponse.next();
+  }
+
+  if (
+    request.nextUrl.pathname.startsWith("/sign-in") ||
+    request.nextUrl.pathname.startsWith("/api/health") ||
+    request.nextUrl.pathname.startsWith("/api/deployment-info")
+  ) {
+    return NextResponse.next();
+  }
+
+  if (hasAuthSessionCookie(request.headers.get("cookie"))) {
+    return NextResponse.next();
+  }
+
+  if (request.nextUrl.pathname.startsWith("/api/")) {
+    return NextResponse.json({ error: "Authenticatie vereist." }, { status: 401 });
+  }
+
+  const redirectTo = request.nextUrl.pathname + request.nextUrl.search;
+  const loginUrl = new URL("/sign-in", request.url);
+  loginUrl.searchParams.set("redirect_url", redirectTo);
+  return NextResponse.redirect(loginUrl);
+};
+
 const handler = CLERK_RUNTIME_ENABLED
   ? clerkExports!.clerkMiddleware((auth: any, request: NextRequest) => {
       if (isPublicRoute(request)) {
@@ -44,10 +78,10 @@ const handler = CLERK_RUNTIME_ENABLED
       }
 
       auth().protect();
-    })
+  })
   : ORY_ENABLED
   ? ((request: NextRequest) => oryHandler(request))
-  : (() => NextResponse.next());
+  : ((request: NextRequest) => productionFallbackHandler(request));
 
 export default handler;
 

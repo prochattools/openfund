@@ -4,7 +4,7 @@ import { prisma } from '../prismaClient';
 import { executeAuditedReopen, AuditedReopenError } from '../services/auditedPeriodReopenService';
 
 export const postAuditedPeriodReopen = async (req: Request, res: Response) => {
-  const actor = requireAdmin(req, res);
+  const actor = await requireAdmin(req, res);
   if (!actor) return;
 
   const periodCloseId = typeof req.params.id === 'string' ? req.params.id : '';

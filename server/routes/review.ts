@@ -16,7 +16,7 @@ import {
   RuleCreationError,
   type RuleCreationCondition,
 } from '../services/ruleCreationService';
-import { requireAdmin } from '../auth/requestContext';
+import { requireAuthenticatedRequest, requireAdmin } from '../auth/requestContext';
 import { readRouteParam } from './routeParams';
 
 const sendReviewDecisionError = (res: Response, error: unknown, fallback: string) => {
@@ -28,7 +28,7 @@ const sendReviewDecisionError = (res: Response, error: unknown, fallback: string
 };
 
 export const getReviewTransactions = async (req: Request, res: Response) => {
-  const actor = requireAdmin(req, res);
+  const actor = await requireAuthenticatedRequest(req, res);
   if (!actor) {
     return;
   }
@@ -42,7 +42,7 @@ export const getReviewTransactions = async (req: Request, res: Response) => {
 };
 
 export const updateTransactionCategory = async (req: Request, res: Response) => {
-  const actor = requireAdmin(req, res);
+  const actor = await requireAdmin(req, res);
   if (!actor) {
     return;
   }
@@ -94,7 +94,7 @@ export const updateTransactionCategory = async (req: Request, res: Response) => 
 };
 
 export const clearReviewQueue = async (req: Request, res: Response) => {
-  const actor = requireAdmin(req, res);
+  const actor = await requireAdmin(req, res);
   if (!actor) {
     return;
   }
@@ -134,7 +134,7 @@ const readRuleCreationPayload = (body: unknown): {
 };
 
 export const previewReviewRuleCreation = async (req: Request, res: Response) => {
-  const actor = requireAdmin(req, res);
+  const actor = await requireAdmin(req, res);
   if (!actor) {
     return;
   }
@@ -159,7 +159,7 @@ export const previewReviewRuleCreation = async (req: Request, res: Response) => 
 };
 
 export const activateReviewRuleCreation = async (req: Request, res: Response) => {
-  const actor = requireAdmin(req, res);
+  const actor = await requireAdmin(req, res);
   if (!actor) {
     return;
   }

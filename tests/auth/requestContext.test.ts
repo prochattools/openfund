@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { getRequestActor, requireAdmin } from '../../server/auth/requestContext';
+import { getRequestActor, requireAdmin, requireAuthenticatedRequest } from '../../server/auth/requestContext';
 
 const makeRequest = (headers: Record<string, string | undefined>) => ({
   header: (name: string) => headers[name.toLowerCase()],
@@ -41,9 +41,9 @@ describe('request context auth guard', () => {
     });
   });
 
-  it('blocks viewers with a Dutch forbidden response', () => {
+  it('blocks viewers with a Dutch forbidden response', async () => {
     const res = makeResponse();
-    const actor = requireAdmin(makeRequest({
+    const actor = await requireAdmin(makeRequest({
       'x-user-id': 'finance-user',
       'x-user-role': 'viewer',
     }) as any, res as any);
@@ -53,9 +53,9 @@ describe('request context auth guard', () => {
     expect(res.json).toHaveBeenCalledWith({ error: 'Alleen beheerders mogen deze actie uitvoeren.' });
   });
 
-  it('allows admins through mutation guards', () => {
+  it('allows admins through mutation guards', async () => {
     const res = makeResponse();
-    const actor = requireAdmin(makeRequest({
+    const actor = await requireAdmin(makeRequest({
       'x-user-id': 'finance-user',
       'x-user-role': 'admin',
     }) as any, res as any);
@@ -64,5 +64,47 @@ describe('request context auth guard', () => {
     expect(actor?.userId).toBe('finance-user');
     expect(res.status).not.toHaveBeenCalled();
     expect(res.json).not.toHaveBeenCalled();
+  });
+
+  it('requires a production auth cookie before allowing protected reads', async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    try {
+      const res = makeResponse();
+      const actor = await requireAuthenticatedRequest(makeRequest({
+        'x-user-id': 'finance-user',
+        'x-user-role': 'viewer',
+      }) as any, res as any);
+
+      expect(actor).toBeNull();
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Authenticatie vereist.' });
+    } finally {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
+  });
+
+  it('allows production reads when the auth cookie is present', async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    try {
+      const res = makeResponse();
+      const actor = await requireAuthenticatedRequest(makeRequest({
+        'x-user-id': 'finance-user',
+        'x-user-role': 'viewer',
+        cookie: 'ory_kratos_session=session-1',
+      }) as any, res as any);
+
+      expect(actor).toEqual({
+        userId: 'finance-user',
+        role: 'viewer',
+        actorId: 'finance-user',
+        actorEmail: null,
+      });
+      expect(res.status).not.toHaveBeenCalled();
+      expect(res.json).not.toHaveBeenCalled();
+    } finally {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
   });
 });

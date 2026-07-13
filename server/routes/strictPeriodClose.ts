@@ -6,7 +6,7 @@ import { PeriodCloseError } from '../services/periodCloseService';
 import { StatementReconciliationControlError } from '../services/statementReconciliationControlService';
 
 export const postStrictPeriodClose = async (req: Request, res: Response) => {
-  const actor = requireAdmin(req, res);
+  const actor = await requireAdmin(req, res);
   if (!actor) return;
 
   const statementPeriodId = typeof req.params.id === 'string' ? req.params.id : '';

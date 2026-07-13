@@ -11,7 +11,7 @@ export const lockLedger = async (req: Request, res: Response) => {
     return res.status(200).json({ message: 'Vergrendelen is uitgeschakeld.' });
   }
 
-  const actor = requireAdmin(req, res);
+  const actor = await requireAdmin(req, res);
   if (!actor) return;
 
   const { userId, actorId, actorEmail } = actor;
@@ -118,7 +118,7 @@ export const unlockLedger = async (req: Request, res: Response) => {
     return res.status(200).json({ message: 'Vergrendelen is uitgeschakeld.' });
   }
 
-  const actor = requireAdmin(req, res);
+  const actor = await requireAdmin(req, res);
   if (!actor) return;
 
   const { userId, actorId, actorEmail } = actor;

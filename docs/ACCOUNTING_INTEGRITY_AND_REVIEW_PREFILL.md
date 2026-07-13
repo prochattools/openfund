@@ -215,7 +215,7 @@ Measured evaluation over the 681 approved 2024–2025 bookings:
 
 | Evaluation mode | Samples | Covered | Coverage | Top-one | Top-three |
 |---|---:|---:|---:|---:|---:|
-| Chronological | 681 | 679 | 99.71% | 491 / 679 = 72.31% | 541 / 679 = 79.68% |
+| Chronological | 681 | 679 | 99.71% | 489 / 679 = 72.02% | 539 / 679 = 79.38% |
 | Safe leave-one-out | 681 | 679 | 99.71% | 502 / 679 = 73.93% | 556 / 679 = 81.89% |
 
 Chronological confidence calibration:

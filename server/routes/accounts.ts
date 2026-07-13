@@ -61,7 +61,7 @@ export const listAccounts = async (req: Request, res: Response) => {
 };
 
 export const upsertOpeningBalance = async (req: Request, res: Response) => {
-  const actor = requireAdmin(req, res);
+  const actor = await requireAdmin(req, res);
   if (!actor) return;
 
   const { userId, actorId, actorEmail } = actor;
@@ -190,7 +190,7 @@ export const upsertOpeningBalance = async (req: Request, res: Response) => {
 };
 
 export const lockOpeningBalance = async (req: Request, res: Response) => {
-  const actor = requireAdmin(req, res);
+  const actor = await requireAdmin(req, res);
   if (!actor) return;
 
   const { userId, actorId, actorEmail } = actor;

@@ -47,7 +47,7 @@ export const getRules = async (req: Request, res: Response) => {
 
 export const postRule = async (req: Request, res: Response) => {
   logRequest(req);
-  const actor = requireAdmin(req, res);
+  const actor = await requireAdmin(req, res);
   if (!actor) return;
 
   const { userId, actorId, actorEmail } = actor;
@@ -121,7 +121,7 @@ export const postRule = async (req: Request, res: Response) => {
 
 export const patchRule = async (req: Request, res: Response) => {
   logRequest(req);
-  const actor = requireAdmin(req, res);
+  const actor = await requireAdmin(req, res);
   if (!actor) return;
 
   const { userId, actorId, actorEmail } = actor;
@@ -244,7 +244,7 @@ export const previewRule = async (req: Request, res: Response) => {
 
 export const applyRule = async (req: Request, res: Response) => {
   logRequest(req);
-  const actor = requireAdmin(req, res);
+  const actor = await requireAdmin(req, res);
   if (!actor) return;
 
   const { userId, actorId, actorEmail } = actor;
@@ -287,7 +287,7 @@ export const applyRule = async (req: Request, res: Response) => {
 
 export const removeRule = async (req: Request, res: Response) => {
   logRequest(req);
-  const actor = requireAdmin(req, res);
+  const actor = await requireAdmin(req, res);
   if (!actor) return;
 
   const { userId, actorId, actorEmail } = actor;

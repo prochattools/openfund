@@ -45,7 +45,7 @@ import { ReportKind, ReportLineKind } from '@prisma/client';
  * and its totals, without creating any snapshot.
  */
 export const getMonthlyReportPreview = async (req: Request, res: Response) => {
-  const actor = requireAdmin(req, res);
+  const actor = await requireAdmin(req, res);
   if (!actor) return;
 
   const year = parseInt(typeof req.params.year === 'string' ? req.params.year : '', 10);
@@ -124,7 +124,7 @@ export const getMonthlyReportPreview = async (req: Request, res: Response) => {
  * POST /api/reports/monthly/:year/:month/snapshot
  */
 export const postMonthlyReportSnapshot = async (req: Request, res: Response) => {
-  const actor = requireAdmin(req, res);
+  const actor = await requireAdmin(req, res);
   if (!actor) return;
 
   const year = parseInt(typeof req.params.year === 'string' ? req.params.year : '', 10);
@@ -193,7 +193,7 @@ export const postMonthlyReportSnapshot = async (req: Request, res: Response) => 
  * POST /api/reports/yearly/:year/snapshot
  */
 export const postYearlyReportSnapshot = async (req: Request, res: Response) => {
-  const actor = requireAdmin(req, res);
+  const actor = await requireAdmin(req, res);
   if (!actor) return;
 
   const year = parseInt(typeof req.params.year === 'string' ? req.params.year : '', 10);
@@ -257,7 +257,7 @@ export const postYearlyReportSnapshot = async (req: Request, res: Response) => {
  * Requires the caller to supply the snapshotHash for staleness protection.
  */
 export const postReportArtifacts = async (req: Request, res: Response) => {
-  const actor = requireAdmin(req, res);
+  const actor = await requireAdmin(req, res);
   if (!actor) return;
 
   const snapshotId = typeof req.params.snapshotId === 'string' ? req.params.snapshotId : '';
@@ -345,7 +345,7 @@ export const postReportArtifacts = async (req: Request, res: Response) => {
  * POST /api/reports/:snapshotId/approve
  */
 export const postApproveReportSnapshot = async (req: Request, res: Response) => {
-  const actor = requireAdmin(req, res);
+  const actor = await requireAdmin(req, res);
   if (!actor) return;
 
   const snapshotId = typeof req.params.snapshotId === 'string' ? req.params.snapshotId : '';
@@ -399,7 +399,7 @@ export const postApproveReportSnapshot = async (req: Request, res: Response) => 
  * POST /api/reports/:snapshotId/dispatch/prepare
  */
 export const postPrepareReportDispatch = async (req: Request, res: Response) => {
-  const actor = requireAdmin(req, res);
+  const actor = await requireAdmin(req, res);
   if (!actor) return;
 
   const snapshotId = typeof req.params.snapshotId === 'string' ? req.params.snapshotId : '';

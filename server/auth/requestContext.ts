@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { isProductionSessionAuthenticated } from '../../src/utils/session-auth';
 
 export type AppRole = 'admin' | 'viewer';
 
@@ -29,8 +30,20 @@ export const getRequestActor = (req: Request): RequestActor => {
   };
 };
 
-export const requireAdmin = (req: Request, res: Response): RequestActor | null => {
-  const actor = getRequestActor(req);
+export const requireAuthenticatedRequest = async (req: Request, res: Response): Promise<RequestActor | null> => {
+  if (!(await isProductionSessionAuthenticated(req.header('cookie')))) {
+    res.status(401).json({ error: 'Authenticatie vereist.' });
+    return null;
+  }
+
+  return getRequestActor(req);
+};
+
+export const requireAdmin = async (req: Request, res: Response): Promise<RequestActor | null> => {
+  const actor = await requireAuthenticatedRequest(req, res);
+  if (!actor) {
+    return null;
+  }
 
   if (actor.role !== 'admin') {
     res.status(403).json({ error: 'Alleen beheerders mogen deze actie uitvoeren.' });

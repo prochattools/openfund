@@ -43,7 +43,7 @@ Phase 19 — Local history-based review prefill      COMPLETE LOCALLY (history-v
 ```text
 Previous roadmap through Phase 17: 100%
 Phase 18: complete locally; production repair remains unexecuted and owner-gated
-Phase 19: complete locally; chronological 72.31% top-one and 79.68% top-three; safe leave-one-out 73.93% top-one and 81.89% top-three; production backfill remains owner-gated
+Phase 19: complete locally; chronological 72.02% top-one and 79.38% top-three; safe leave-one-out 73.93% top-one and 81.89% top-three; production backfill remains owner-gated
 Phase 0 — Governance and verified controls: 100%
 Phase 1 — Safe categorization foundation: 100%
 Phase 2 — Financial domain and historical model: 100%
@@ -382,11 +382,11 @@ Status: **complete locally; production backfill, deployment, and suggestion pers
 ### Exit evidence
 
 - Algorithm version: `history-v1`.
-- Chronological evaluation over 681 approved bookings: 679 covered (99.71%), 491 top-one correct (72.31%), and 541 top-three correct (79.68%).
+- Chronological evaluation over 681 approved bookings: 679 covered (99.71%), 489 top-one correct (72.02%), and 539 top-three correct (79.38%).
 - Safe leave-one-out evaluation over the same 681 bookings: 679 covered (99.71%), 502 top-one correct (73.93%), and 556 top-three correct (81.89%).
 - Chronological confidence calibration: `FUZZY` 88.64%, `OVERALL` 100.00%, and `DEFAULT` 31.09%.
 - `DEFAULT` remains visibly low-confidence, review-only, and ineligible for autonomous booking.
-- The Review page loads `/api/ledger` and `/api/review`, pre-fills project, transaction type, derived main category, and subcategory, and displays evidence plus ranked alternatives.
+- The Review page loads `/api/ledger` and `/api/review` for authenticated users, pre-fills project, transaction type, derived main category, and subcategory, and displays evidence plus ranked alternatives.
 - Approval requires a complete `projectId` / `transactionTypeId` / `categoryId` triple and delegates to the existing `ReviewDecision` and `TransactionBooking` workflow.
 - Dry-run backfill, read-only evaluation, review prefill, direct PATCH routing, no-side-effect controls, accounting regressions, reconciliation regressions, and the production build all passed locally.
 - No production suggestion persistence, opening-balance repair, migration, deployment, commit, or push occurred.
