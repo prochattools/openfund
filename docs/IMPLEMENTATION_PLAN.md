@@ -88,9 +88,10 @@ Production secret rotation: complete 2026-07-07; finance_user credential rotated
 Production runtime credential update: complete 2026-07-07; final retained credential applied; Dokploy env updated; app redeployed; health check passed; evidence in docs/PRODUCTION_RUNTIME_DATABASE_CREDENTIAL_EVIDENCE_NL.md
 App/provider secret remediation: complete 2026-07-08; all provider secrets (Clerk, Resend, New Relic, Request Access Secret) rotated and applied to Dokploy runtime; app redeployed; health and production readiness verified; evidence in docs/PRODUCTION_APP_PROVIDER_SECRET_ROTATION_EVIDENCE_NL.md
 Phase 17 — Month-by-month accounting reconciliation and administrator reporting: COMPLETE (2026-07-09; formula-based monthly chaining model; read-only production audit passed; baseline controls: 2024 closing 1218415, 2025 closing 1035086, 2026 partial closing 783725)
-Phase 18 — Cent-exact accounting integrity and opening-balance repair: COMPLETE LOCALLY (implementation and validation passed; production repair remains unexecuted)
-Phase 19 — Local history-based review prefill: COMPLETE LOCALLY (ranking, dry-run backfill, review prefill, evaluation, and validation passed; production backfill remains unexecuted)
-Current gate: owner review of the uncommitted diff and documentation. No production backfill, booking, deployment, migration, commit, or push is approved.
+Phase 18 — Cent-exact accounting integrity and opening-balance repair: COMPLETE; implementation deployed in 7cbbfa10a2c9bb1809aa7bce288388f3936a4152 and the one-time owner-approved production repair completed 2026-07-14
+Phase 19 — Local history-based review prefill: IMPLEMENTED AND DEPLOYED in 7cbbfa10a2c9bb1809aa7bce288388f3936a4152; evaluation and review prefill are live, while production backfill remains unexecuted
+Production session authentication hardening: DEPLOYED in 7cbbfa10a2c9bb1809aa7bce288388f3936a4152; unauthenticated API reads return 401 JSON, unauthenticated review/report pages redirect to sign-in, permitted reads succeed, and viewer mutations remain 403
+Current gate: do not repeat the completed opening-balance repair. Classification remains pending with 221 unresolved transactions and close remains blocked; suggestion backfill, suggestion persistence, booking approval, and migration remain separately gated.
 Historical RC7 release-evidence gate: Current gate: Phase 17 complete.
 ```
 
@@ -98,8 +99,8 @@ Historical RC7 release-evidence gate: Current gate: Phase 17 complete.
 
 ```text
 Previous roadmap through Phase 17: 100%
-Phase 18: complete locally; production repair remains unexecuted and owner-gated
-Phase 19: complete locally; production backfill and suggestion persistence remain unexecuted and owner-gated
+Phase 18: complete; implementation deployed and the one-time production repair restored the approved cash controls
+Phase 19: implementation deployed; chronological 681-sample evaluation and review prefill are live; production backfill and suggestion persistence remain unexecuted and owner-gated
 Phase 0 — Governance and verified controls: 100%
 Phase 1 — Safe categorization foundation: 100%
 Phase 2 — Financial domain and historical model: 100%
@@ -1440,7 +1441,12 @@ Evidence:
 
 - `tests/services/openingBalanceRepairService.test.ts`: 5 passed.
 - `tests/routes/accountingIntegrityRoutes.test.ts`: administrator restriction, dry-run default, and environment execution gate passed.
-- No database write, production execution, migration, deployment, commit, or push occurred.
+- No database write, production execution, migration, deployment, commit, or push occurred during implementation validation.
+- Owner-approved production execution occurred exactly once at 2026-07-13 23:23:50 UTC (2026-07-14 00:23:50 Europe/Lisbon) on deployed commit `7cbbfa10a2c9bb1809aa7bce288388f3936a4152`.
+- HTTP 201 returned `CREATED`; OpeningBalance `4c8c0d0b-2e2b-4557-868f-1174842680a9` and audit log `769c1cde-992f-403d-8614-c6d0e4238440` were created in the approved transaction.
+- Pre-repair control was expected 172186, actual 0, difference -172186. Post-repair control is expected 172186, actual 172186, difference 0.
+- Post-repair `cashStatus` is `PASSED`; `classificationStatus` remains `PENDING`, `closeStatus` remains `BLOCKED`, and 221 transactions remain unresolved.
+- The execution guard was set back to `false` immediately after the request and the same deployed build was reloaded. No suggestion backfill, suggestion persistence, transaction approval, migration, TransactionBooking, period close, report snapshot, or bank-fact mutation occurred.
 
 ### ACC-004 — Validate and document accounting-integrity evidence
 
@@ -1568,11 +1574,13 @@ Evidence:
 - Review approval requires `projectId`, `transactionTypeId`, and `categoryId`; the direct Next PATCH route delegates to `updateTransactionCategory`, which retains `ReviewDecision` and `TransactionBooking` authority.
 - Focused tests passed: history ranker 5, backfill 4, review queue 3, review decision 8, review helper 12, review mapper 2, direct route 2, API transaction mapper 3, accounting audit 4, monthly reconciliation marker 7, owner evaluation 1.
 - `npm run build` passed after one bounded catch-callback return-type annotation; route manifest includes `/api/transactions/[id]/category`.
-- No execution flags were enabled and no production suggestion, booking, opening-balance repair, migration, deployment, commit, or push occurred.
+- No execution flags were enabled and no production suggestion, booking, opening-balance repair, or migration occurred during validation. The validated Phase 18/19 and authentication slice was later committed and deployed as `7cbbfa10a2c9bb1809aa7bce288388f3936a4152`.
 
 ## Exact next execution sequence
 
 Phases 0–9 are complete as a published RC4 owner-decision handoff through `f2f7cbb`. Phase 10 production schema cutover was completed on 2026-07-07: PostgreSQL 15.8, database finance, schema finance, 4 migrations applied, 30 tables verified. Evidence: `docs/PRODUCTION_SCHEMA_CUTOVER_EVIDENCE_NL.md`.
+
+The Phase 18/19 implementation and production authentication hardening are deployed as `7cbbfa10a2c9bb1809aa7bce288388f3936a4152`. The one-time owner-approved opening-balance repair is complete; it must not be executed again. Cash integrity passes, while the 221 unresolved 2026 transactions keep classification pending and close blocked.
 
 Remaining owner-gated decisions:
 

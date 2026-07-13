@@ -1701,9 +1701,9 @@ Safety evidence:
 - the approved opening-balance repair was not run;
 - no database migration, deployment, commit, or push occurred.
 
-## Current position — owner review of uncommitted work
+## Historical position — owner review before commit (superseded)
 
-Phase 18 and Phase 19 are implemented and validated locally. The repository contains an uncommitted documentation-and-code diff. The exact next step is owner review of the diff and a separate decision about whether to commit it. Production opening-balance repair, suggestion backfill, suggestion persistence, deployment, and any data mutation remain explicitly unapproved.
+At this point in the chronology, Phase 18 and Phase 19 were implemented and validated locally but still uncommitted. This state was superseded by the reviewed authentication-and-documentation release recorded below. Production opening-balance repair, suggestion backfill, suggestion persistence, and financial-data mutation remained explicitly unapproved.
 
 
 
@@ -1742,4 +1742,62 @@ Final commit-readiness result:
 - final documentation consistency passed 36 matching tests;
 - final status contains 18 tracked modifications and 28 intended new files; `.graphifyignore` and `graphify-out/` remain the only excluded unrelated artifacts.
 
-The 46 intended paths may be committed together as one coherent validated local implementation commit. Push, deployment, migration, execution flags, opening-balance repair, production suggestion persistence, and production data writes remain separately unapproved.
+The 46 intended paths were subsequently committed and deployed as part of `7cbbfa10a2c9bb1809aa7bce288388f3936a4152`. Migration, execution flags, opening-balance repair, production suggestion persistence, and production data writes remained separately unapproved.
+
+## 2026-07-13 — Production authentication release and accounting repair preflight
+
+Deployment status:
+
+- commit `7cbbfa10a2c9bb1809aa7bce288388f3936a4152` is deployed on `main`;
+- the production deployment-info endpoint reports the full commit SHA;
+- unauthenticated review, accounting-audit, and chronological-evaluation API requests return 401 JSON;
+- unauthenticated `/review` and `/reports` requests redirect to sign-in;
+- permitted authenticated reads succeed, the administrator Review page loads, and a viewer mutation attempt returns 403;
+- no mutation was submitted during authentication smoke testing.
+
+Production opening-balance preflight:
+
+- the administrator-only dry run returned `WOULD_CREATE`, `dryRun: true`, `writesPerformed: false`, and no existing record;
+- the approved control remains 172186 minor units effective 2024-01-01 UTC for the verified ING account;
+- the read-only audit still reports expected 172186, actual 0, and difference -172186 minor units;
+- report opening and closing balances for 2024, 2025, and 2026 are each exactly 172186 minor units below the approved controls;
+- cash status remains failed only because the opening control is absent; classification remains pending with 221 unresolved transactions and close status remains blocked;
+- the deployed chronological `history-v1` evaluation remains 681 samples, 679 covered, 489 top-one correct (72.02%), and 539 top-three correct (79.38%);
+- no execution flag was enabled and no opening balance, audit log, booking, suggestion, period close, report snapshot, bank fact, migration, or other production financial data was created or changed.
+
+Historical gate: the single production opening-balance repair was pending separate explicit owner approval. That approval and execution are recorded below. Suggestion backfill and suggestion persistence remain unexecuted.
+
+## 2026-07-14 — One-time production opening-balance repair
+
+Execution evidence:
+
+- owner-approved execution started at 2026-07-13 23:23:50 UTC (2026-07-14 00:23:50 Europe/Lisbon);
+- execution used deployed commit `7cbbfa10a2c9bb1809aa7bce288388f3936a4152` and the same application image digest verified before execution;
+- the pre-execution dry run returned `WOULD_CREATE`, `dryRun: true`, `writesPerformed: false`, and no existing OpeningBalance;
+- the single execution request returned HTTP 201 with `status: CREATED`, `dryRun: false`, and `writesPerformed: true`;
+- OpeningBalance `4c8c0d0b-2e2b-4557-868f-1174842680a9` was created for the approved 172186-minor-unit control effective 2024-01-01 UTC;
+- audit log `769c1cde-992f-403d-8614-c6d0e4238440` records `opening-balance.approved-control-created` for that OpeningBalance;
+- exactly one matching OpeningBalance and exactly one matching audit-log entry were observed after execution;
+- the execution guard was changed back to `false` immediately after the request, the same deployed build was reloaded, and Dokploy re-verification reported the guard disabled with all non-guard environment content unchanged.
+
+Control transition:
+
+- before: expected opening 172186, actual opening 0, difference -172186, `cashStatus: FAILED`;
+- after: expected opening 172186, actual opening 172186, difference 0, `cashStatus: PASSED`;
+- 2024 report: opening 172186, closing 1218415;
+- 2025 report: opening 1218415, closing 1035086;
+- 2026 partial report: opening 1035086, closing 783725;
+- `classificationStatus` remains `PENDING`, `closeStatus` remains `BLOCKED`, and 221 transactions remain unresolved;
+- duplicate fingerprints remain 0 and running-balance errors remain 0;
+- the aggregate audit status remains failed because classification work is pending; this is not a cash-integrity failure.
+
+Safety and authentication verification:
+
+- no TransactionBooking, CategorizationSuggestion, period close, report snapshot, or bank fact was created or changed by the repair;
+- no suggestion backfill, suggestion persistence, transaction approval, migration, manual database edit, or other production financial-data write occurred;
+- unauthenticated review, accounting-audit, and chronological-evaluation APIs return 401 JSON;
+- unauthenticated `/review` and `/reports` redirect to sign-in;
+- authenticated reads succeed and a viewer mutation attempt returns 403 without executing a write;
+- chronological evaluation remains 681 samples and 679 covered, with safeguards declaring no suggestion, booking, or bank-fact mutation.
+
+Current gate: do not repeat the completed opening-balance repair. Classification review of the 221 unresolved transactions and any suggestion persistence remain separately owner-gated; close eligibility remains blocked.
