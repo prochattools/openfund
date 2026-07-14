@@ -1,6 +1,8 @@
 'use client';
 
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useUser } from '@/utils/clerkClient';
+import { AUTH_ENABLED } from '@/utils/auth';
 import {
   fetchLedger,
   fetchReview,
@@ -27,6 +29,7 @@ import { categorizeTransactions } from '@/helpers/offline-categorization';
 import { buildLedgerSummary, filterReviewTransactions } from '@/helpers/ledger-summary';
 import { mapLedgerMeta, mapUploadSummary, type ImportSummary, type LedgerMeta } from '@/helpers/ledger-response-mappers';
 import { mergeLedgerWithReview } from '@/helpers/review-response-mapper';
+import { isFinanceSessionReady } from '@/helpers/client-auth-readiness';
 
 type UUID = string;
 
@@ -129,6 +132,12 @@ const DEFAULT_STATE: LedgerState = {
 };
 
 export const LedgerProvider = ({ children }: { children: ReactNode }) => {
+  const clerkUser = useUser();
+  const sessionReady = isFinanceSessionReady({
+    authEnabled: AUTH_ENABLED,
+    isLoaded: clerkUser.isLoaded,
+    isSignedIn: clerkUser.isSignedIn,
+  });
   const [state, setState] = useState<LedgerState>(DEFAULT_STATE);
   const [rules, setRules] = useState<RuleSummary[]>([]);
   const [ledgerMeta, setLedgerMeta] = useState<LedgerMeta[]>([]);
@@ -148,7 +157,7 @@ export const LedgerProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const refreshFromServer = useCallback(async () => {
-    if (!USE_SERVER_PIPELINE) {
+    if (!USE_SERVER_PIPELINE || !sessionReady) {
       return;
     }
 
@@ -184,7 +193,7 @@ export const LedgerProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error('Grootboek kon niet worden vernieuwd via de API', error);
     }
-  }, [refreshRules]);
+  }, [refreshRules, sessionReady]);
 
   const createRule = useCallback(async (payload: RuleInput) => {
     if (!USE_SERVER_PIPELINE) {
@@ -213,10 +222,10 @@ export const LedgerProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    if (USE_SERVER_PIPELINE) {
+    if (USE_SERVER_PIPELINE && sessionReady) {
       refreshFromServer();
     }
-  }, [refreshFromServer]);
+  }, [refreshFromServer, sessionReady]);
 
   const { map: categoryIndex, tree: categoryTree } = useMemo(
     () => ensureCategoryIndex(state.categories),

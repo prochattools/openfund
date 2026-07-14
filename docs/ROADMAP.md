@@ -37,6 +37,14 @@ without recording the identity. Unauthenticated API/page smoke tests pass.
 The 221 unresolved transactions and 663 review-only suggestions remain
 unchanged.
 
+The empty authenticated-portal report was diagnosed as a client timing race:
+`LedgerProvider` could fetch before Clerk had established the session, swallow
+the transient `401`, and remain empty. The client now waits for Clerk readiness
+and refreshes when the signed-in state becomes available. A read-only production
+ownership audit confirmed the authenticated administrator already owns the
+finance dataset; no `FINANCE_DATA_OWNER_USER_ID` configuration or ownership
+reassignment was needed.
+
 ## Current position
 
 ```text

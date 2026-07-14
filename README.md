@@ -87,3 +87,10 @@ inputs. Unauthenticated API requests return `401` JSON; unauthenticated
 application pages redirect to `/sign-in`. The pre-provisioned administrator
 was verified against the active local `ADMIN` membership without recording the
 identity here.
+
+The authenticated portal waits for Clerk to report a loaded, signed-in session
+before reading finance data. This prevents a transient pre-session `401` from
+becoming a permanent empty state. A read-only production ownership audit
+confirmed that the authenticated administrator already owns the imported
+finance records, so no separate finance-owner variable or ownership
+reassignment was required.

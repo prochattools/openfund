@@ -35,6 +35,21 @@ protected APIs and `307` sign-in redirects for `/review` and `/reports`;
 no financial data: 221 transactions remain unresolved and 663 suggestions
 remain review-only; no mutation was submitted.
 
+## Authenticated portal regression diagnosis
+
+The empty authenticated-portal report was a client readiness failure, not a
+missing-data or ownership failure. `LedgerProvider` could issue its initial
+reads before Clerk had finished establishing the signed-in session; the
+resulting transient `401` was caught without a retry, leaving the client state
+empty. The client now waits for Clerk `isLoaded` and `isSignedIn` before reading
+finance data and refreshes when the session becomes ready.
+
+A read-only production ownership audit confirmed that the authenticated local
+administrator is also the owner of the existing finance dataset. No separate
+`FINANCE_DATA_OWNER_USER_ID` configuration was added, and no ownership column,
+finance row, import, suggestion, opening balance, booking, or review decision
+was changed.
+
 ## RC2 Hardening Evidence
 
 | Task | Commit | Tests |

@@ -116,3 +116,23 @@ and all booking and review-decision records remain unchanged.
   case-insensitively; the identity is intentionally not recorded here.
 - No transaction approval, booking, review decision, suggestion backfill,
   opening-balance repair, or other financial write was submitted.
+
+## Authenticated portal regression diagnosis
+
+The empty authenticated-portal report was a client session-readiness race:
+`LedgerProvider` could read before Clerk had finished establishing the session,
+swallow the transient `401`, and remain empty. The client now waits for Clerk
+to be loaded and signed in before reading finance data, then refreshes when that
+state becomes ready.
+
+A read-only production ownership audit confirmed that the authenticated
+administrator already owns the imported finance records. No separate
+`FINANCE_DATA_OWNER_USER_ID` variable, ownership reassignment, migration,
+reimport, or financial write was required.
+
+Authenticated production verification returned `200` JSON for the ledger,
+accounts, review, reports summary, and accounting audit reads. The ledger
+contained 902 transactions, review contained 221 unresolved items, the audit
+reported cash `PASSED`, classification `PENDING`, and close `BLOCKED`, and the
+ledger, review, and reports pages rendered populated content without hydration
+errors or failed network requests.
