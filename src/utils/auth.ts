@@ -51,8 +51,7 @@ export const CLERK_SERVER_ENABLED =
 
 export const CLERK_RUNTIME_ENABLED =
   CLERK_ENABLED &&
-  isValidPublishableKey(publishableKey) &&
-  (typeof window !== 'undefined' || isValidSecretKey(secretKey));
+  isValidPublishableKey(publishableKey);
 
 export const getPublishableKey = () => publishableKey;
 export const getSignInUrl = () =>

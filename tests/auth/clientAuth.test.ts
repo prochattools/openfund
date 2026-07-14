@@ -63,6 +63,16 @@ describe('client auth configuration utilities', () => {
     expect(auth.CLERK_RUNTIME_ENABLED).toBe(false);
   });
 
+  it('keeps the browser Clerk runtime enabled from the publishable key alone', async () => {
+    const auth = await loadAuth({
+      NEXT_PUBLIC_AUTH_PROVIDER: 'clerk',
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: 'pk_test_browser_bundle_key_123456789',
+      CLERK_SECRET_KEY: undefined,
+    });
+
+    expect(auth.CLERK_RUNTIME_ENABLED).toBe(true);
+  });
+
   it('uses internal sign-in URLs when no provider URLs are configured', async () => {
     const auth = await loadAuth({
       NEXT_PUBLIC_SIGN_IN_URL: undefined,
