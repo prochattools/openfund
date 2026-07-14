@@ -19,6 +19,8 @@ type TxClient = Prisma.TransactionClient;
 
 export type ReviewEvidenceStatus = 'finalized' | 'review_suggested' | 'conflict' | 'unmatched';
 
+export type ReviewCategoryOption = Pick<Category, 'id' | 'name'>;
+
 export type ReviewDimensionCandidate = {
   projectId: string | null;
   projectCode: string | null;
@@ -84,7 +86,7 @@ export type EvidenceRichReviewItem = {
 
 export type EvidenceRichReviewQueue = {
   transactions: EvidenceRichReviewItem[];
-  categories: Category[];
+  categories: ReviewCategoryOption[];
   projects: Project[];
   transactionTypes: TransactionType[];
   message: string;
@@ -512,6 +514,10 @@ export const getEvidenceRichReviewQueue = async (
       ],
     }),
     db.category.findMany({
+      select: {
+        id: true,
+        name: true,
+      },
       orderBy: {
         name: 'asc',
       },

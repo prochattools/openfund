@@ -1,25 +1,24 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import toast from 'react-hot-toast';
-import { useLedger, type Category } from '@/context/ledger-context';
+import { useLedger } from '@/context/ledger-context';
 import { FinanceAppFrame } from '@/ui/FinanceAppFrame';
 import type { LedgerTransaction } from '@/helpers/api-transaction-mapper';
 import {
   buildReviewApprovalPayload,
-  buildReviewSubcategoryMap,
   canAcceptReviewSuggestion,
-  findMainCategoryIdForSubcategory,
   formatReviewEuro,
   getReviewSuggestedLabel,
   isReviewPlaceholderCategory,
   parseReviewDate,
-  resolveDefaultReviewAssignment,
+  resolveDefaultReviewCategory,
   translateSuggestionConfidence,
 } from '@/helpers/review-page';
 import {
   isClientAdmin,
+  type ReviewCategoryOption,
   type ReviewProjectOption,
   type ReviewTransactionTypeOption,
 } from '@/libs/api';
@@ -70,48 +69,39 @@ type AssignPayload = {
   categoryId: string;
   projectId: string;
   transactionTypeId: string;
-  mainCategoryId?: string | null;
   reason?: string | null;
 };
 
 function ReviewCard({
   transaction,
-  mainCategories,
-  subcategories,
-  allCategories,
+  categories,
   projects,
   transactionTypes,
   onAssign,
 }: {
   transaction: LedgerTransaction;
-  mainCategories: Category[];
-  subcategories: Record<string, Category[]>;
-  allCategories: Category[];
+  categories: ReviewCategoryOption[];
   projects: ReviewProjectOption[];
   transactionTypes: ReviewTransactionTypeOption[];
   onAssign: (transactionId: string, payload: AssignPayload) => Promise<void>;
 }) {
-  const defaults = resolveDefaultReviewAssignment(transaction, mainCategories, subcategories);
-  const [projectId, setProjectId] = useState(defaults.projectId);
-  const [transactionTypeId, setTransactionTypeId] = useState(defaults.transactionTypeId);
-  const [mainId, setMainId] = useState(defaults.mainId);
-  const [subId, setSubId] = useState(defaults.subId);
+  const [projectId, setProjectId] = useState(transaction.reviewProposal?.projectId ?? '');
+  const [transactionTypeId, setTransactionTypeId] = useState(transaction.reviewProposal?.transactionTypeId ?? '');
+  const [categoryId, setCategoryId] = useState(() => resolveDefaultReviewCategory(transaction, categories));
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const canReview = isClientAdmin();
   const isExpense = transaction.amount < 0;
-  const availableSubs = mainId ? subcategories[mainId] ?? [] : [];
   const compatibleTypes = transactionTypes.filter((item) => !transaction.direction || item.direction === transaction.direction);
   const suggestedLabel = getReviewSuggestedLabel(transaction);
-  const canAcceptSuggestion = canAcceptReviewSuggestion(canReview, projectId, transactionTypeId, subId);
+  const canAcceptSuggestion = canAcceptReviewSuggestion(canReview, projectId, transactionTypeId, categoryId);
 
   const applyAlternative = (index: number) => {
     const alternative = transaction.reviewAlternatives?.[index];
     if (!alternative?.complete || !alternative.projectId || !alternative.transactionTypeId || !alternative.categoryId) return;
     setProjectId(alternative.projectId);
     setTransactionTypeId(alternative.transactionTypeId);
-    setSubId(alternative.categoryId);
-    setMainId(findMainCategoryIdForSubcategory(alternative.categoryId, allCategories));
+    setCategoryId(alternative.categoryId);
   };
 
   const save = async () => {
@@ -123,12 +113,11 @@ function ReviewCard({
     const payload = buildReviewApprovalPayload({
       projectId,
       transactionTypeId,
-      categoryId: subId,
-      mainCategoryId: mainId,
+      categoryId,
       reason,
     });
     if (!payload) {
-      toast.error('Kies een klant/project, transactietype en subcategorie.');
+      toast.error('Kies een klant/project, transactietype en categorie.');
       return;
     }
 
@@ -204,19 +193,11 @@ function ReviewCard({
           </select>
         </label>
 
-        <label className="text-sm font-semibold text-[#574b3f]">
-          Hoofdcategorie
-          <select value={mainId} onChange={(event) => { setMainId(event.target.value); setSubId(''); }} className="mt-2 w-full rounded-2xl border border-[#ded5c8] bg-[#f5f1ea] px-4 py-3 text-sm outline-none focus:border-[#1f5f4a]">
-            <option value="">Kies hoofdcategorie</option>
-            {mainCategories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
-          </select>
-        </label>
-
-        <label className="text-sm font-semibold text-[#574b3f]">
-          Subcategorie
-          <select value={subId} onChange={(event) => setSubId(event.target.value)} disabled={!mainId} className="mt-2 w-full rounded-2xl border border-[#ded5c8] bg-[#f5f1ea] px-4 py-3 text-sm outline-none focus:border-[#1f5f4a] disabled:opacity-60">
-            <option value="">Kies subcategorie</option>
-            {availableSubs.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+        <label className="text-sm font-semibold text-[#574b3f] md:col-span-2">
+          Categorie
+          <select value={categoryId} onChange={(event) => setCategoryId(event.target.value)} className="mt-2 w-full rounded-2xl border border-[#ded5c8] bg-[#f5f1ea] px-4 py-3 text-sm outline-none focus:border-[#1f5f4a]">
+            <option value="">Kies categorie</option>
+            {categories.filter((category) => !isReviewPlaceholderCategory(category)).map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
           </select>
         </label>
       </div>
@@ -273,17 +254,10 @@ export default function FinanceReviewPage() {
     reviewTransactions,
     reviewProjects,
     reviewTransactionTypes,
-    categories,
-    categoryTree,
+    reviewCategories,
     assignCategory,
     summary,
   } = useLedger();
-  const mainCategories = useMemo(() => categoryTree.main.filter((category) => !isReviewPlaceholderCategory(category)), [categoryTree.main]);
-  const subcategories = useMemo(
-    () => buildReviewSubcategoryMap(mainCategories, categoryTree.byParent),
-    [categoryTree.byParent, mainCategories],
-  );
-
   return (
     <FinanceAppFrame reviewCount={summary.reviewCount} activeHref="/review">
       <Header count={reviewTransactions.length} />
@@ -293,9 +267,7 @@ export default function FinanceReviewPage() {
             <ReviewCard
               key={transaction.id}
               transaction={transaction}
-              mainCategories={mainCategories}
-              subcategories={subcategories}
-              allCategories={categories}
+              categories={reviewCategories}
               projects={reviewProjects}
               transactionTypes={reviewTransactionTypes}
               onAssign={assignCategory}

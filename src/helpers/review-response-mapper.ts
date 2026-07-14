@@ -55,8 +55,6 @@ export const mergeLedgerWithReview = (
   const reviewByTransactionId = new Map(
     response.transactions.map((item) => [item.transactionId, item]),
   );
-  const categoryById = new Map(response.categories.map((category) => [category.id, category]));
-
   const mergedTransactions = transactions.map((transaction) => {
     const review = reviewByTransactionId.get(transaction.id);
     if (!review) return transaction;
@@ -65,8 +63,6 @@ export const mergeLedgerWithReview = (
       ?? review.alternatives[0]
       ?? null;
     const proposal = review.proposed;
-    const category = proposal?.categoryId ? categoryById.get(proposal.categoryId) : null;
-    const mainCategory = category?.parentId ? categoryById.get(category.parentId) : null;
 
     return {
       ...transaction,
@@ -83,13 +79,9 @@ export const mergeLedgerWithReview = (
       reviewConfidence: rankOne?.confidence ?? null,
       reviewConfidenceLabel: rankOne?.confidenceLabel ?? null,
       suggestionConfidence: normalizeConfidence(rankOne?.confidence),
-      suggestedMainCategoryName: mainCategory?.name
-        ?? (category && category.parentId === null ? category.name : null)
-        ?? transaction.suggestedMainCategoryName,
-      suggestedSubCategoryName: category?.parentId
-        ? category.name
-        : proposal?.categoryLabel
-          ?? transaction.suggestedSubCategoryName,
+      suggestedMainCategoryName: transaction.suggestedMainCategoryName,
+      suggestedSubCategoryName: proposal?.categoryLabel
+        ?? transaction.suggestedSubCategoryName,
     } satisfies LedgerTransaction;
   });
 

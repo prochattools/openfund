@@ -12,6 +12,11 @@ export type ServerCategoryTransaction = TransactionCategoryNameInput & {
   categoryId?: string | null;
 };
 
+export type FlatReviewCategory = {
+  id: string;
+  name: string;
+};
+
 export const DEFAULT_CATEGORY_COLOR_PALETTE = [
   '#4C6EF5',
   '#15AABF',
@@ -82,6 +87,31 @@ export const mergeCategoriesWithServer = <TCategory extends ServerCategory>(
     if (tx.categoryId && subLabel) {
       ensureCategory(tx.categoryId, subLabel, mainId ?? null);
     }
+  });
+
+  return next;
+};
+
+export const mergeFlatReviewCategories = <TCategory extends ServerCategory>(
+  current: TCategory[],
+  reviewCategories: FlatReviewCategory[],
+): TCategory[] => {
+  const next = current.map((category) => ({ ...category })) as TCategory[];
+  const byId = new Map(next.map((category) => [category.id, category] as const));
+
+  reviewCategories.forEach((category) => {
+    const existing = byId.get(category.id);
+    const merged = existing
+      ? { ...existing, name: category.name }
+      : ({ id: category.id, name: category.name, parentId: null } as TCategory);
+    const index = next.findIndex((entry) => entry.id === category.id);
+
+    if (index >= 0) {
+      next[index] = merged;
+    } else {
+      next.push(merged);
+    }
+    byId.set(category.id, merged);
   });
 
   return next;

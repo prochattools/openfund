@@ -1,11 +1,5 @@
 import type { LedgerTransaction } from './api-transaction-mapper';
-import type { EvidenceRichReviewItem, ReviewEvidenceStatus, RuleCreationPreview } from '@/libs/api';
-
-export type ReviewCategory = {
-  id: string;
-  name: string;
-  parentId: string | null;
-};
+import type { EvidenceRichReviewItem, ReviewCategoryOption, ReviewEvidenceStatus, RuleCreationPreview } from '@/libs/api';
 
 const reviewEuroFormatter = new Intl.NumberFormat('nl-NL', {
   style: 'currency',
@@ -34,17 +28,11 @@ export const parseReviewDate = (value: string): Date => {
   return Number.isNaN(parsed.getTime()) ? new Date(0) : parsed;
 };
 
-export const getSuggestedMain = (transaction: LedgerTransaction): string =>
-  transaction.mainCategoryId ?? transaction.suggestedMainCategoryName ?? transaction.rawMainCategoryName ?? '';
-
-export const getSuggestedSub = (transaction: LedgerTransaction): string =>
-  transaction.categoryId ?? transaction.suggestedSubCategoryName ?? transaction.rawCategoryName ?? '';
-
 export const normalizeLabel = (value: string | null | undefined): string =>
   (value ?? '').trim().toLowerCase();
 
 export const findCategoryIdByName = (
-  categories: ReviewCategory[],
+  categories: ReviewCategoryOption[],
   name: string | null | undefined,
 ): string => {
   const normalized = normalizeLabel(name);
@@ -52,7 +40,7 @@ export const findCategoryIdByName = (
   return categories.find((category) => normalizeLabel(category.name) === normalized)?.id ?? '';
 };
 
-export const isReviewPlaceholderCategory = (category: ReviewCategory): boolean => {
+export const isReviewPlaceholderCategory = (category: Pick<ReviewCategoryOption, 'id' | 'name'>): boolean => {
   const normalized = normalizeLabel(category.name);
   return category.id === 'cat-review'
     || category.id === 'sub-review-needs-category'
@@ -132,80 +120,29 @@ export const getRuleCreationStatusLabel = (
     : `Regel kan worden geactiveerd voor ${count} voorbeeldmatches`;
 };
 
-export const resolveDefaultReviewSelection = (
+export const resolveDefaultReviewCategory = (
   transaction: LedgerTransaction,
-  mainCategories: ReviewCategory[],
-  subcategories: Record<string, ReviewCategory[]>,
-): { mainId: string; subId: string } => {
-  const suggestedMain = getSuggestedMain(transaction);
-  const mainId = transaction.mainCategoryId
-    ?? (typeof suggestedMain === 'string' && suggestedMain.startsWith('main:')
-      ? suggestedMain
-      : findCategoryIdByName(mainCategories, suggestedMain));
-  const initialSubs = mainId ? subcategories[mainId] ?? [] : [];
-  const suggestedSub = getSuggestedSub(transaction);
-  const subId = transaction.categoryId
-    ?? (typeof suggestedSub === 'string' && suggestedSub.includes(' — ')
-      ? ''
-      : findCategoryIdByName(initialSubs, suggestedSub));
+  categories: ReviewCategoryOption[],
+): string => {
+  const proposedCategoryId = transaction.reviewProposal?.categoryId;
+  if (proposedCategoryId && categories.some((category) => category.id === proposedCategoryId)) {
+    return proposedCategoryId;
+  }
 
-  return {
-    mainId: mainId ?? '',
-    subId: subId ?? '',
-  };
-};
+  if (transaction.categoryId && categories.some((category) => category.id === transaction.categoryId)) {
+    return transaction.categoryId;
+  }
 
-export const buildReviewSubcategoryMap = (
-  mainCategories: ReviewCategory[],
-  byParent: Record<string, ReviewCategory[]>,
-): Record<string, ReviewCategory[]> => {
-  const result: Record<string, ReviewCategory[]> = {};
-  mainCategories.forEach((main) => {
-    result[main.id] = (byParent[main.id] ?? []).filter((category) => !isReviewPlaceholderCategory(category));
-  });
-  return result;
-};
-
-
-
-
-export const resolveDefaultReviewAssignment = (
-  transaction: LedgerTransaction,
-  mainCategories: ReviewCategory[],
-  subcategories: Record<string, ReviewCategory[]>,
-): {
-  projectId: string;
-  transactionTypeId: string;
-  mainId: string;
-  subId: string;
-} => {
-  const categorySelection = resolveDefaultReviewSelection(
-    transaction,
-    mainCategories,
-    subcategories,
+  return findCategoryIdByName(
+    categories,
+    transaction.reviewProposal?.categoryLabel ?? transaction.suggestedSubCategoryName ?? transaction.categoryName,
   );
-
-  return {
-    projectId: transaction.reviewProposal?.projectId ?? '',
-    transactionTypeId: transaction.reviewProposal?.transactionTypeId ?? '',
-    mainId: categorySelection.mainId,
-    subId: transaction.reviewProposal?.categoryId ?? categorySelection.subId,
-  };
 };
-
-
-
-
-export const findMainCategoryIdForSubcategory = (
-  categoryId: string,
-  categories: ReviewCategory[],
-): string => categories.find((category) => category.id === categoryId)?.parentId ?? '';
 
 export const buildReviewApprovalPayload = (input: {
   projectId: string;
   transactionTypeId: string;
   categoryId: string;
-  mainCategoryId?: string | null;
   reason?: string | null;
 }) => {
   if (!input.projectId || !input.transactionTypeId || !input.categoryId) {
@@ -216,7 +153,6 @@ export const buildReviewApprovalPayload = (input: {
     projectId: input.projectId,
     transactionTypeId: input.transactionTypeId,
     categoryId: input.categoryId,
-    mainCategoryId: input.mainCategoryId ?? null,
     reason: input.reason?.trim() || null,
   };
 };

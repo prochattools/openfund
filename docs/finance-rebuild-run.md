@@ -1836,3 +1836,15 @@ Post-execution controls and safeguards:
 - `DEFAULT` suggestions remain visibly low-confidence and review-only. Suggestion persistence does not authorize automatic approval or booking.
 
 Remaining manual workload: 221 administrator decisions are still required before classification can pass. The next phase must be a separate review workflow; no bulk approval or automatic booking is authorized.
+
+## 2026-07-14 — Review category contract correction
+
+Status: corrected locally for the next reviewed release; production administrator decisions remain paused until this contract is deployed and verified.
+
+- Read-only production analysis confirmed 67 active review categories, each represented by a flat `id` and `name`; no production category parent relation or explicit `main — subcategory` convention exists.
+- The review queue now exposes a focused flat category DTO, and the client preserves legacy ledger display metadata without fabricating a parent category.
+- The Review page presents one `Categorie` selector. The authoritative approval payload remains exactly `projectId`, `transactionTypeId`, `categoryId`, and optional reason; no synthetic main-category identifier is submitted.
+- Complete proposals, alternatives, confidence, evidence, direction checks, and no-side-effect review behavior remain unchanged. No pilot decision, booking, review decision, suggestion backfill, opening-balance repair, or other production financial write was performed for this correction.
+- Historical evaluation remains 681 samples, 679 covered, 489 top-one correct (72.02%), and 539 top-three correct (79.38%). Cash remains passed, classification remains pending, close remains blocked, and 221 transactions remain unresolved.
+
+Sensitive transaction details, account identifiers, credentials, session material, production URLs/hosts, and raw rows are not recorded in this evidence.

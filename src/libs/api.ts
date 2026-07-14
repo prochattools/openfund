@@ -88,7 +88,6 @@ export type EvidenceRichReviewItem = {
 export type ReviewCategoryOption = {
   id: string;
   name: string;
-  parentId: string | null;
 };
 
 export type ReviewProjectOption = {

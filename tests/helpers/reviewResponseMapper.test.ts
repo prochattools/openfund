@@ -71,8 +71,7 @@ const response: EvidenceRichReviewResponse = {
     },
   }],
   categories: [
-    { id: 'main-income', name: 'Inkomsten', parentId: null },
-    { id: 'category-gifts', name: 'Giften', parentId: 'main-income' },
+    { id: 'category-gifts', name: 'Giften' },
   ],
   projects: [{ id: 'project-1', code: 'YA', name: 'Yeshua Academy' }],
   transactionTypes: [{ id: 'type-1', code: 'GIFT_IN', literalName: 'Schenking in', direction: 'credit' }],
@@ -103,7 +102,7 @@ describe('review response mapper', () => {
       mainCategoryName: null,
       needsManualCategory: true,
       autoCategorized: false,
-      suggestedMainCategoryName: 'Inkomsten',
+      suggestedMainCategoryName: null,
       suggestedSubCategoryName: 'Giften',
       reviewProposal: {
         projectId: 'project-1',

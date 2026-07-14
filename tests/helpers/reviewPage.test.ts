@@ -1,22 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildReviewApprovalPayload,
-  buildReviewSubcategoryMap,
   canActivateRuleCreation,
   canAcceptReviewSuggestion,
   findCategoryIdByName,
-  findMainCategoryIdForSubcategory,
   formatReviewEuro,
   getRuleCreationStatusLabel,
   getReviewSuggestedLabel,
   getReviewEvidenceSummary,
-  getSuggestedMain,
-  getSuggestedSub,
   isReviewPlaceholderCategory,
   normalizeLabel,
   parseReviewDate,
-  resolveDefaultReviewAssignment,
-  resolveDefaultReviewSelection,
+  resolveDefaultReviewCategory,
   translateReviewEvidenceStatus,
   translateSuggestionConfidence,
 } from '../../src/helpers/review-page';
@@ -53,7 +48,7 @@ describe('review page helpers', () => {
   });
 
   it('normalizes labels and finds categories by name case-insensitively', () => {
-    const categories = [{ id: 'cat-gifts', name: ' Giften ', parentId: 'main-income' }];
+    const categories = [{ id: 'cat-gifts', name: ' Giften ' }];
 
     expect(normalizeLabel('  GIFTEN  ')).toBe('giften');
     expect(findCategoryIdByName(categories, 'giften')).toBe('cat-gifts');
@@ -61,17 +56,10 @@ describe('review page helpers', () => {
   });
 
   it('detects review placeholder categories', () => {
-    expect(isReviewPlaceholderCategory({ id: 'cat-review', name: 'Iets', parentId: null })).toBe(true);
-    expect(isReviewPlaceholderCategory({ id: 'x', name: 'Beoordeling nodig', parentId: null })).toBe(true);
-    expect(isReviewPlaceholderCategory({ id: 'x', name: 'Needs manual categorization', parentId: null })).toBe(true);
-    expect(isReviewPlaceholderCategory({ id: 'cat-gifts', name: 'Giften', parentId: null })).toBe(false);
-  });
-
-  it('resolves suggested main and sub values in fallback order', () => {
-    expect(getSuggestedMain(makeTx({ mainCategoryId: 'main-income', suggestedMainCategoryName: 'Inkomsten' }))).toBe('main-income');
-    expect(getSuggestedMain(makeTx({ suggestedMainCategoryName: 'Inkomsten', rawMainCategoryName: 'Raw' }))).toBe('Inkomsten');
-    expect(getSuggestedSub(makeTx({ categoryId: 'cat-gifts', suggestedSubCategoryName: 'Giften' }))).toBe('cat-gifts');
-    expect(getSuggestedSub(makeTx({ suggestedSubCategoryName: 'Giften', rawCategoryName: 'Raw' }))).toBe('Giften');
+    expect(isReviewPlaceholderCategory({ id: 'cat-review', name: 'Iets' })).toBe(true);
+    expect(isReviewPlaceholderCategory({ id: 'x', name: 'Beoordeling nodig' })).toBe(true);
+    expect(isReviewPlaceholderCategory({ id: 'x', name: 'Needs manual categorization' })).toBe(true);
+    expect(isReviewPlaceholderCategory({ id: 'cat-gifts', name: 'Giften' })).toBe(false);
   });
 
   it('translates suggestion confidence values to Dutch labels', () => {
@@ -155,31 +143,7 @@ describe('review page helpers', () => {
     expect(canAcceptReviewSuggestion(false, 'project-1', 'type-1', 'cat-gifts')).toBe(false);
   });
 
-  it('resolves default review selection from ids or category names', () => {
-    const mainCategories = [{ id: 'main-income', name: 'Inkomsten', parentId: null }];
-    const subcategories = {
-      'main-income': [{ id: 'cat-gifts', name: 'Giften', parentId: 'main-income' }],
-    };
-
-    expect(resolveDefaultReviewSelection(makeTx({ mainCategoryId: 'main-income', categoryId: 'cat-gifts' }), mainCategories, subcategories)).toEqual({
-      mainId: 'main-income',
-      subId: 'cat-gifts',
-    });
-    expect(resolveDefaultReviewSelection(makeTx({ suggestedMainCategoryName: 'Inkomsten', suggestedSubCategoryName: 'Giften' }), mainCategories, subcategories)).toEqual({
-      mainId: 'main-income',
-      subId: 'cat-gifts',
-    });
-    expect(resolveDefaultReviewSelection(makeTx({ suggestedMainCategoryName: 'main:income', suggestedSubCategoryName: 'Inkomsten — Giften' }), mainCategories, subcategories)).toEqual({
-      mainId: 'main:income',
-      subId: '',
-    });
-  });
-
-  it('resolves a complete rank-one review assignment without finalizing ledger fields', () => {
-    const mainCategories = [{ id: 'main-income', name: 'Inkomsten', parentId: null }];
-    const subcategories = {
-      'main-income': [{ id: 'cat-gifts', name: 'Giften', parentId: 'main-income' }],
-    };
+  it('prefills the authoritative flat category from the complete proposal', () => {
     const transaction = makeTx({
       categoryId: null,
       mainCategoryId: null,
@@ -197,17 +161,8 @@ describe('review page helpers', () => {
       suggestedSubCategoryName: 'Giften',
     });
 
-    expect(resolveDefaultReviewAssignment(transaction, mainCategories, subcategories)).toEqual({
-      projectId: 'project-1',
-      transactionTypeId: 'type-1',
-      mainId: 'main-income',
-      subId: 'cat-gifts',
-    });
+    expect(resolveDefaultReviewCategory(transaction, [{ id: 'cat-gifts', name: 'Giften' }])).toBe('cat-gifts');
     expect(transaction.categoryId).toBeNull();
-    expect(findMainCategoryIdForSubcategory('cat-gifts', [
-      ...mainCategories,
-      ...subcategories['main-income'],
-    ])).toBe('main-income');
   });
 
   it('builds approval payloads only for complete triples', () => {
@@ -215,13 +170,11 @@ describe('review page helpers', () => {
       projectId: 'project-1',
       transactionTypeId: 'type-1',
       categoryId: 'cat-gifts',
-      mainCategoryId: 'main-income',
       reason: '  gecontroleerd  ',
     })).toEqual({
       projectId: 'project-1',
       transactionTypeId: 'type-1',
       categoryId: 'cat-gifts',
-      mainCategoryId: 'main-income',
       reason: 'gecontroleerd',
     });
     expect(buildReviewApprovalPayload({
@@ -231,17 +184,10 @@ describe('review page helpers', () => {
     })).toBeNull();
   });
 
-  it('builds subcategory maps without review placeholders', () => {
-    expect(buildReviewSubcategoryMap(
-      [{ id: 'main-income', name: 'Inkomsten', parentId: null }],
-      {
-        'main-income': [
-          { id: 'cat-gifts', name: 'Giften', parentId: 'main-income' },
-          { id: 'sub-review-needs-category', name: 'Review', parentId: 'main-income' },
-        ],
-      },
-    )).toEqual({
-      'main-income': [{ id: 'cat-gifts', name: 'Giften', parentId: 'main-income' }],
-    });
+  it('does not invent a parent category for flat review options', () => {
+    expect(resolveDefaultReviewCategory(
+      makeTx({ reviewProposal: { categoryId: 'cat-gifts', categoryLabel: 'Giften' } as any }),
+      [{ id: 'cat-gifts', name: 'Giften' }],
+    )).toBe('cat-gifts');
   });
 });

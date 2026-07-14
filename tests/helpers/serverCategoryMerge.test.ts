@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mergeCategoriesWithServer } from '../../src/helpers/server-category-merge';
+import { mergeCategoriesWithServer, mergeFlatReviewCategories } from '../../src/helpers/server-category-merge';
 
 describe('server category merge helper', () => {
   it('returns the current categories unchanged when there are no server transactions', () => {
@@ -63,6 +63,21 @@ describe('server category merge helper', () => {
     expect(merged).toEqual([
       { id: 'main:uitgaven', name: 'Uitgaven', parentId: null, color: '#111111' },
       { id: 'cat-bank', name: 'Bankkosten', parentId: 'main:uitgaven', color: '#222222' },
+    ]);
+  });
+
+  it('preserves client display metadata when merging flat review categories', () => {
+    expect(mergeFlatReviewCategories(
+      [{ id: 'cat-gifts', name: 'Old label', parentId: 'legacy-parent', color: '#111111' }],
+      [{ id: 'cat-gifts', name: 'Giften' }],
+    )).toEqual([
+      { id: 'cat-gifts', name: 'Giften', parentId: 'legacy-parent', color: '#111111' },
+    ]);
+  });
+
+  it('adds new flat review categories without fabricating a parent', () => {
+    expect(mergeFlatReviewCategories([], [{ id: 'cat-gifts', name: 'Giften' }])).toEqual([
+      { id: 'cat-gifts', name: 'Giften', parentId: null },
     ]);
   });
 });

@@ -146,6 +146,31 @@ describe('review routes', () => {
     }
   });
 
+  it('returns the production category contract as a flat id/name DTO', async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    try {
+      serviceMocks.getEvidenceRichReviewQueue.mockResolvedValueOnce({
+        transactions: [],
+        categories: [{ id: 'cat-gifts', name: 'Giften' }],
+        projects: [],
+        transactionTypes: [],
+        message: 'Beoordelingsrij geladen.',
+      });
+      const response = makeResponse();
+
+      await getReviewTransactions(makeRequest({ role: 'viewer' }) as any, response as any);
+
+      expect(response.statusCode).toBe(200);
+      expect(response.body).toMatchObject({
+        categories: [{ id: 'cat-gifts', name: 'Giften' }],
+      });
+      expect((response.body as any).categories[0]).not.toHaveProperty('parentId');
+    } finally {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
+  });
+
   it('rejects category-only updates before touching persistence', async () => {
     const response = makeResponse();
 

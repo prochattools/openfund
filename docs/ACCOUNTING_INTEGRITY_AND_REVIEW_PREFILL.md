@@ -113,7 +113,7 @@ The engine predicts exactly one complete triple:
 projectId + transactionTypeId + categoryId
 ```
 
-The main category shown in the UI is derived from the selected category hierarchy. A partial proposal is not valid as rank one.
+Production review categories are a flat DTO containing only `id` and `name`; the production `Category` model has no parent relation. The review UI therefore uses one authoritative category selector. Any main/subcategory grouping retained by legacy ledger display helpers is presentation-only and is never part of the review approval payload. A partial proposal is not valid as rank one.
 
 ### Evidence sources
 
@@ -203,7 +203,7 @@ For every unresolved transaction, the local engine:
 The administrator workflow is implemented as follows:
 
 - the client loads `/api/ledger` and `/api/review` together;
-- rank one pre-fills project, transaction type, derived main category, and subcategory without populating final booking fields;
+- rank one pre-fills project, transaction type, and the authoritative flat category without populating final booking fields;
 - confidence, reason, evidence summary, and ranked alternatives remain visible;
 - the administrator may approve rank one, select another alternative, or manually correct any dimension;
 - approval is disabled until `projectId`, `transactionTypeId`, and `categoryId` are all present;

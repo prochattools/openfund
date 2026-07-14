@@ -92,6 +92,8 @@ Phase 18 — Cent-exact accounting integrity and opening-balance repair: COMPLET
 Phase 19 — Local history-based review prefill: IMPLEMENTED AND DEPLOYED in 7cbbfa10a2c9bb1809aa7bce288388f3936a4152; controlled history-v1 suggestion persistence completed 2026-07-14, while administrator decisions remain pending
 Production session authentication hardening: DEPLOYED in 7cbbfa10a2c9bb1809aa7bce288388f3936a4152; unauthenticated API reads return 401 JSON, unauthenticated review/report pages redirect to sign-in, permitted reads succeed, and viewer mutations remain 403
 Current gate: do not repeat the completed opening-balance repair. Classification remains pending with 221 unresolved transactions and close remains blocked; all 663 pending suggestions remain review-only and administrator booking decisions are still separately gated.
+
+Current review category contract: production review options are flat `{ id, name }` records because the deployed `Category` model has no parent relation. The Review page presents one authoritative category selector and approval sends only `projectId`, `transactionTypeId`, `categoryId`, and an optional reason. Legacy main/subcategory fields remain display-only compatibility data and are not authoritative booking dimensions. The Phase 18/19 implementation, authentication hardening, and controlled suggestion persistence are deployed; no administrator decision has been submitted for the 221 unresolved transactions.
 Historical RC7 release-evidence gate: Current gate: Phase 17 complete.
 ```
 
@@ -1532,7 +1534,7 @@ Dependencies: SUGGEST-003
 Acceptance:
 
 - Review items expose rank one as `proposed` when complete.
-- Project, transaction type, category, derived main category, confidence, and reason are prefilled and visible.
+- Project, transaction type, flat category, confidence, and reason are prefilled and visible.
 - Administrator can approve, choose an alternative, or manually correct dimensions.
 - Existing `ReviewDecision` and final-booking flow remain authoritative.
 - No uncertain bulk-approval action is added.
