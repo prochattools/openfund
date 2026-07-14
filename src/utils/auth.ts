@@ -39,12 +39,11 @@ export const isValidPublishableKey = (key: string) =>
 export const isValidSecretKey = (key: string | null | undefined) =>
   typeof key === 'string' && key.startsWith('sk_') && key.length > 20 && !isStubKey(key);
 
-const ZERO_WORKSPACE_ID = '00000000-0000-4000-8000-000000000001';
 const WORKSPACE_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export const isValidWorkspaceId = (value: string | null | undefined) => {
   const normalized = value?.trim();
-  return Boolean(normalized && normalized !== ZERO_WORKSPACE_ID && WORKSPACE_ID_PATTERN.test(normalized));
+  return Boolean(normalized && WORKSPACE_ID_PATTERN.test(normalized));
 };
 
 export const CLERK_SERVER_ENABLED =

@@ -84,6 +84,16 @@ describe('Clerk identity to finance membership authorization', () => {
     });
   });
 
+  it('accepts the seeded production workspace UUID when it is configured as the active workspace', async () => {
+    process.env.DEFAULT_WORKSPACE_ID = '00000000-0000-4000-8000-000000000001';
+    const { resolveRequestActor } = await import('../../server/auth/requestContext');
+
+    await expect(resolveRequestActor('__session=verified')).resolves.toMatchObject({
+      actor: { userId: 'local-user-1' },
+      error: null,
+    });
+  });
+
   it('denies a verified Clerk user without an active local User', async () => {
     mocks.userFindFirst.mockResolvedValue(null);
     const { resolveRequestActor } = await import('../../server/auth/requestContext');
