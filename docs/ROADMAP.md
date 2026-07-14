@@ -28,10 +28,13 @@ by this slice.
 
 The deployed release uses the GitHub Actions publishable-key secret and the
 Dokploy Clerk runtime variables, including the configured active workspace UUID.
-The current verified production commit is
+Current application implementation commit:
 `f9e967f54632f86bad2ef3c5774334a48cda85ad`.
-The Clerk secret remains runtime-only. No Ory variables or generic cookie
-fallbacks are present. Dokploy uses the four sign-in-only route variables:
+The current running production build SHA is verified from the no-cache
+deployment-info endpoint after each release; it is not duplicated here as a
+self-referential static value.
+The Clerk secret remains runtime-only. Ory is historical only; no Ory variables
+or generic cookie fallbacks are present. Dokploy uses the four sign-in-only route variables:
 `NEXT_PUBLIC_SIGN_IN_URL`, `NEXT_PUBLIC_CLERK_SIGN_IN_URL`,
 `NEXT_PUBLIC_SIGN_UP_URL`, and `NEXT_PUBLIC_CLERK_SIGN_UP_URL`. The active
 finance administrator was verified against the local `ADMIN` membership
@@ -53,7 +56,7 @@ reassignment was needed.
 Phase 0 — Governance and verified controls       COMPLETE
 Phase 1 — Safe categorization foundation         COMPLETE
 Phase 2 — Financial domain and historical model  COMPLETE
-Phase 3 — Historical loading and truth fixtures  COMPLETE_LOCAL_OWNER_GATED_PRODUCTION
+Phase 3 — Historical loading and truth fixtures  COMPLETE (historical local gate superseded by Phase 11 production import)
 Phase 4 — Monthly import and review workflow     COMPLETE_LOCAL_APP_WORKFLOW
 Phase 5 — Reconciliation, close, and snapshots   COMPLETE
 Phase 6 — Visual reports and distribution        COMPLETE
@@ -61,7 +64,7 @@ Phase 7 — Dutch UX and authorization hardening   COMPLETE
 Phase 8 — Infrastructure and deployment          COMPLETE (local readiness; production gated)
 Phase 9 — Operational hardening and handoff      COMPLETE (published RC4 handoff; owner decisions gated)
 Phase 9 post-push evidence and decision hardening COMPLETE (published at f2f7cbb; next decision selection gated)
-Phase 10 — Production schema cutover             COMPLETE (2026-07-07; finance schema deployed; historical import gated)
+Phase 10 — Production schema cutover             COMPLETE (2026-07-07; finance schema deployed; Phase 11 completed the historical import)
 Phase 11 — Production historical import          COMPLETE (2026-07-07; 2024/2025 concluded data imported; 2026 partial open statement imported and not closed; 902 transactions, 681 bookings)
 Phase 12 — Production secret rotation            COMPLETE (2026-07-07; finance_user credential rotated; old credential rejected; new credential verified; historical totals re-verified)
 Phase 13 — Production runtime credential update  COMPLETE (2026-07-07; final retained credential applied; Dokploy env updated; redeploy triggered; app health verified)
@@ -194,7 +197,11 @@ Schema changes must be derived from verified workflow needs. Do not create a gen
 
 ## Phase 3 — Historical loading and truth fixtures
 
-Status: **complete local/sanitized; production import owner-gated** — sanitized fixtures, owner-approved local rehearsal adapter, retained-byte hashing, disposable local database rehearsal, and guarded dry-run command service are complete. Historical production import remains blocked until explicit owner approval.
+Historical implementation status (superseded by Phase 11): the local/sanitized
+fixtures, owner-approved rehearsal adapter, retained-byte hashing, disposable
+database rehearsal, and guarded dry-run command service were complete while
+production import was still owner-gated. Phase 11 subsequently completed the
+approved production import with 902 transactions.
 
 ### Outcomes
 
@@ -387,7 +394,7 @@ Status: **complete; one-time production opening-balance repair completed 2026-07
 
 - Every required difference is represented as an integer minor-unit string and equals `"0"` for approved fixtures.
 - 2024, 2025, and supplied 2026 partial baselines match the authoritative controls.
-- Dry-run performs zero writes; execute mode remains owner-gated and is not run in production during implementation.
+- Historical implementation acceptance: dry-run performs zero writes; execute mode remained owner-gated and was not run in production during implementation. The later approved one-time repair is recorded above.
 - Conflict, account-identity, idempotency, authorization, and no-side-effect tests pass.
 - Server build, production build, diff review, and documentation alignment pass.
 

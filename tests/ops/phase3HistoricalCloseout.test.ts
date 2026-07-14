@@ -1,9 +1,8 @@
 /**
  * OPS-011 — Phase 3 historical loading closeout evidence.
  *
- * Static/local guard for the RC4 closeout claim: historical loading is complete
- * for local/sanitized and owner-approved rehearsal paths, while production
- * execution remains owner-gated.
+ * Static/local guard for the historical Phase 3 implementation claim. The
+ * later approved production import is recorded by Phase 11 evidence.
  */
 
 import { existsSync, readFileSync } from 'node:fs';
@@ -22,9 +21,11 @@ const workbookParser = read('lib/import/historicalWorkbookParser.ts');
 const importPlanner = read('lib/import/historicalImportPlanner.ts');
 
 describe('Phase 3 historical loading closeout', () => {
-  it('marks HIST-001 through HIST-004 complete locally and owner-gates production import', () => {
-    expect(roadmap).toContain('Phase 3 — Historical loading and truth fixtures  COMPLETE_LOCAL_OWNER_GATED_PRODUCTION');
-    expect(implementationPlan).toContain('Phase 3 local/sanitized historical loading: complete; production historical import remains owner-gated');
+  it('marks HIST-001 through HIST-004 complete locally and labels the old production gate as historical', () => {
+    expect(roadmap).toContain('Phase 3 — Historical loading and truth fixtures  COMPLETE (historical local gate superseded by Phase 11 production import)');
+    expect(roadmap).toContain('Phase 11 — Production historical import          COMPLETE');
+    expect(roadmap).toContain('Historical implementation status (superseded by Phase 11)');
+    expect(implementationPlan).toContain('Phase 3 local/sanitized historical loading: complete; its historical production gate was superseded by the completed Phase 11 import');
 
     for (const task of ['HIST-001', 'HIST-002', 'HIST-003', 'HIST-004']) {
       const section = implementationPlan.match(new RegExp(`### ${task}[\\s\\S]*?(?=\\n### |\\n## |$)`))?.[0] ?? '';

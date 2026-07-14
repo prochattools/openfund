@@ -6,7 +6,16 @@ Source: `yeshuaacademy-finance`
 Branch: `main`  
 Status: Release Candidate 7 — production schema cutover, historical import, database credential finalization, all provider secret rotations, real PDF renderer, real email sending, and Phase 17 monthly reconciliation complete 2026-07-09; formula-based monthly chaining model; production audit passed; 2024 closing 1218415, 2025 closing 1035086, 2026 partial closing 783725 all confirmed; Phase 17 complete
 
-Current deployed production release: `f9e967f54632f86bad2ef3c5774334a48cda85ad`.
+Historical evidence convention: dated packet, phase, and preflight sections
+below describe earlier implementation states. They are superseded by the
+current release facts in this opening section and are not current runtime
+instructions.
+
+Current application implementation commit: `f9e967f54632f86bad2ef3c5774334a48cda85ad`.
+Previous final documentation/release-evidence commit: `df1ccb009769a89e33b3393e0e546d3caa90f174`.
+The current running production build SHA is verified from the no-cache
+deployment-info endpoint after each release; the exact runtime value is
+reported in closeout evidence rather than duplicated self-referentially.
 Phase 18's one-time opening-balance repair was completed on 2026-07-14 and
 must never be repeated. Phase 19 history-v1 suggestion persistence is
 complete with 663 review-only suggestions; 221 administrator decisions remain.

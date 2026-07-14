@@ -3,8 +3,10 @@
 Status: Clerk-only production email sign-in configured; public sign-up and Google disabled
 Date: 2026-07-14
 
-Current deployed commit: `f9e967f54632f86bad2ef3c5774334a48cda85ad`. The normal
-GitHub Actions and Dokploy rollout completed successfully for this release.
+Current application implementation commit: `f9e967f54632f86bad2ef3c5774334a48cda85ad`.
+The running production build SHA is verified from the no-cache deployment-info
+endpoint after each release; the normal GitHub Actions and Dokploy rollout is
+the source of runtime truth.
 
 ## Goal
 

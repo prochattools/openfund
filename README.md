@@ -95,7 +95,10 @@ confirmed that the authenticated administrator already owns the imported
 finance records, so no separate finance-owner variable or ownership
 reassignment was required.
 
-The current production release is `f9e967f54632f86bad2ef3c5774334a48cda85ad`.
+Current application implementation commit: `f9e967f54632f86bad2ef3c5774334a48cda85ad`.
+The running production build SHA is verified from the no-cache deployment-info
+endpoint after each release; it is intentionally not duplicated as a
+self-referential static value in this document.
 The authenticated portal is populated with 902 ledger transactions, 221
 unresolved review items, and 663 persisted review-only suggestions. The
 one-time Phase 18 opening-balance repair is complete and must not be repeated;

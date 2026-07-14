@@ -27,6 +27,12 @@ ignored, review/accounting/evaluation reads remain read-only, and mutations
 remain administrator-only. No opening-balance repair or suggestion backfill is
 part of this authentication work.
 
+The current running production build SHA is verified from the no-cache
+deployment-info endpoint after each release. The previous final
+documentation/release-evidence commit was `df1ccb009769a89e33b3393e0e546d3caa90f174`;
+the application implementation commit remains the separate `f9e967f` value
+above.
+
 Release configuration: GitHub Actions requires the named
 `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` secret and validates its publishable-key
 shape before Docker execution. Dokploy supplies `AUTH_PROVIDER=clerk`,
@@ -116,7 +122,7 @@ Phase 9 RC4 evidence: release evidence corrected (`7ce6e6d`), manifest refreshed
 Phase 9 RC4 final hardening: final docs consistency audit added (`scripts/final-docs-consistency-audit.mjs`, `tests/ops/finalDocsConsistencyAudit.test.ts`, `docs/FINAL_DOCS_CONSISTENCY_AUDIT_NL.md`), repo contamination guard added (`tests/ops/repoContaminationGuard.test.ts`), final docs link integrity guard added (`tests/ops/finalDocsLinkIntegrity.test.ts`), safe command inventory added (`docs/SAFE_COMMAND_INVENTORY_NL.md`), final owner review preflight added (`scripts/final-owner-review-preflight.mjs`, `tests/ops/finalOwnerReviewPreflight.test.ts`), package scripts extended (`preflight:final-owner-review`, `audit:final-docs`), package script safety tests extended to 26
 Phase 9 owner acceptance hardening: owner acceptance checklist, owner decision menu, static package preflight scripts, generated menu doc, and final doc links added; published basiscommit `6353546` was verified on `origin/main`; all remaining owner actions remain gated
 Phase 9 post-push owner-decision handoff: post-push verification evidence (`e07be8f`), owner decision briefs (`a5ab4a8`), decision brief guards (`949823a`), approval-intake validator (`84d13d7`), post-push owner preflight package scripts (`3866a43`), and final handoff update (`f2f7cbb`) are published to `origin/main`
-Phase 3 local/sanitized historical loading: complete; production historical import remains owner-gated
+Phase 3 local/sanitized historical loading: complete; its historical production gate was superseded by the completed Phase 11 import
 Phase 4 monthly import/review workflow: complete for local/app behavior; future real owner monthly files remain operator-controlled
 Production schema cutover: complete 2026-07-07; schema finance deployed on PostgreSQL 15.8; 4 migrations; 30 tables; evidence in docs/PRODUCTION_SCHEMA_CUTOVER_EVIDENCE_NL.md
 Production historical import: complete 2026-07-07; 902 transactions (268 2024 + 413 2025 + 221 2026), 681 bookings, 4 source files, 2026 partial/open and not closed; evidence in docs/PRODUCTION_HISTORICAL_IMPORT_EVIDENCE_NL.md
@@ -1396,6 +1402,10 @@ Acceptance:
 - Phase statuses in ROADMAP.md and IMPLEMENTATION_PLAN.md agree with committed code.
 - Validation: `npm test`, `npm run build:server`, `npm run build`, `npx prisma validate`, `npx prisma generate`, `git diff --check`.
 
+The detailed Phase 18 and Phase 19 acceptance criteria below are historical
+implementation evidence. Their later approved production outcomes are recorded
+in the current position above.
+
 ## Phase 18 — Cent-exact accounting integrity and opening-balance repair
 
 ### ACC-001 — Document architecture, reuse assessment, and safety boundaries
@@ -1602,7 +1612,7 @@ Acceptance:
 - Focused suggestion, backfill, review, and no-side-effect tests pass.
 - Server and production builds pass.
 - Documentation describes actual feature behavior, algorithm version, metrics, and administrator workflow.
-- No production backfill, deployment, external provider, commit, or push occurs without separate owner approval.
+- Historical implementation acceptance: no production backfill, deployment, external provider, commit, or push occurred without separate owner approval. The later controlled persistence is recorded above.
 
 Evidence:
 
@@ -1630,8 +1640,10 @@ Controlled production suggestion persistence evidence:
 
 Phases 0–9 are complete as a published RC4 owner-decision handoff through `f2f7cbb`. Phase 10 production schema cutover was completed on 2026-07-07: PostgreSQL 15.8, database finance, schema finance, 4 migrations applied, 30 tables verified. Evidence: `docs/PRODUCTION_SCHEMA_CUTOVER_EVIDENCE_NL.md`.
 
-The Phase 18/19 implementation and production authentication hardening are
-running in `f9e967f54632f86bad2ef3c5774334a48cda85ad`. The one-time
+The Phase 18/19 implementation and production authentication hardening use
+application implementation commit `f9e967f54632f86bad2ef3c5774334a48cda85ad`;
+the running build SHA is verified externally from the no-cache
+deployment-info endpoint after each release. The one-time
 owner-approved opening-balance repair is complete; it must not be executed
 again. Cash integrity passes, while the 221 unresolved 2026 transactions keep
 classification pending and close blocked.

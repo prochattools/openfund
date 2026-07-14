@@ -40,13 +40,15 @@ describe('roadmap status consistency — RC7 gate', () => {
 });
 
 describe('roadmap status consistency — phase status agreement', () => {
-  it('Phase 3 is precise: local/sanitized machinery complete, production import owner-gated', () => {
-    const status = 'COMPLETE_LOCAL_OWNER_GATED_PRODUCTION';
-    expect(docs.roadmap).toContain(`Phase 3 — Historical loading and truth fixtures  ${status}`);
+  it('Phase 3 current status records the later Phase 11 production import', () => {
+    expect(docs.roadmap).toContain('Phase 3 — Historical loading and truth fixtures  COMPLETE (historical local gate superseded by Phase 11 production import)');
+    expect(docs.roadmap).toContain('Phase 11 — Production historical import          COMPLETE');
+    expect(docs.roadmap).toContain('Historical implementation status (superseded by Phase 11)');
     expect(docs.implementationPlan).toContain('Phase 3 local/sanitized historical loading: complete');
     expect(docs.finalAudit).toContain('Phase 3 — Historisch laden | COMPLETE LOKAAL / PRODUCTIE-IMPORT OWNER-GATED');
     expect(docs.releaseManifest).toContain('Phase 3 — Historisch laden | COMPLETE LOKAAL / PRODUCTIE-IMPORT OWNER-GATED');
     expect(docs.roadmap).not.toContain('Phase 3 — Historical loading and truth fixtures  IN PROGRESS');
+    expect(docs.roadmap).not.toContain('COMPLETE_LOCAL_OWNER_GATED_PRODUCTION');
   });
 
   it('Phase 4 is precise: local/app monthly workflow complete', () => {
