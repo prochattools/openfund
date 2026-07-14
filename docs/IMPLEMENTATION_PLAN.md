@@ -11,8 +11,9 @@ This file converts the roadmap into concise, unambiguous tasks that an AI coding
 
 ## Current authentication contract
 
-The production authentication standardization is deployed in `fe7fd44`
-(`fix: enable Clerk browser runtime`) on 2026-07-14. Clerk is the only
+The production authentication standardization is deployed in
+`f9e967f54632f86bad2ef3c5774334a48cda85ad` (`fix: restore authenticated
+finance data scope`) on 2026-07-14. Clerk is the only
 production provider and is configured for email sign-in only. `/sign-in` is
 the canonical public authentication route; public application sign-up is
 disabled, there is no supported `/sign-up` route, and Google/social providers
@@ -33,8 +34,9 @@ shape before Docker execution. Dokploy supplies `AUTH_PROVIDER=clerk`,
 `CLERK_SECRET_KEY`, `NEXT_PUBLIC_SIGN_IN_URL=/sign-in`,
 `NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in`, `NEXT_PUBLIC_SIGN_UP_URL=/sign-in`,
 `NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-in`, application URLs, CORS origin, and
-the configured active `DEFAULT_WORKSPACE_ID`. Ory variables and cookie
-fallbacks are inactive; no Ory variables are present in Dokploy. The active
+the configured active `DEFAULT_WORKSPACE_ID`. Ory is historical only and has
+been removed from the production authentication path; no Ory variables or
+cookie fallbacks are present in Dokploy. The active
 finance administrator is pre-provisioned locally and its verified Clerk
 primary email matches case-insensitively; the identity is not recorded here.
 The 221 unresolved transactions and 663 review-only suggestions remain unchanged.
@@ -122,14 +124,15 @@ Production secret rotation: complete 2026-07-07; finance_user credential rotated
 Production runtime credential update: complete 2026-07-07; final retained credential applied; Dokploy env updated; app redeployed; health check passed; evidence in docs/PRODUCTION_RUNTIME_DATABASE_CREDENTIAL_EVIDENCE_NL.md
 App/provider secret remediation: complete 2026-07-08; all provider secrets (Clerk, Resend, New Relic, Request Access Secret) rotated and applied to Dokploy runtime; app redeployed; health and production readiness verified; evidence in docs/PRODUCTION_APP_PROVIDER_SECRET_ROTATION_EVIDENCE_NL.md
 Phase 17 — Month-by-month accounting reconciliation and administrator reporting: COMPLETE (2026-07-09; formula-based monthly chaining model; read-only production audit passed; baseline controls: 2024 closing 1218415, 2025 closing 1035086, 2026 partial closing 783725)
-Phase 18 — Cent-exact accounting integrity and opening-balance repair: COMPLETE; implementation deployed in 7cbbfa10a2c9bb1809aa7bce288388f3936a4152 and the one-time owner-approved production repair completed 2026-07-14
-Phase 19 — Local history-based review prefill: IMPLEMENTED AND DEPLOYED in 7cbbfa10a2c9bb1809aa7bce288388f3936a4152; controlled history-v1 suggestion persistence completed 2026-07-14, while administrator decisions remain pending
+Phase 18 — Cent-exact accounting integrity and opening-balance repair: COMPLETE; implementation and the one-time owner-approved production repair completed 2026-07-14; never repeat
+Phase 19 — History-based review prefill: DEPLOYED AND COMPLETE in f9e967f54632f86bad2ef3c5774334a48cda85ad; controlled history-v1 suggestion persistence completed with 663 review-only suggestions; 221 administrator decisions remain pending
 Production session authentication hardening: Clerk-only standardization is deployed; workspace configuration is valid, unauthenticated denial/redirect checks pass, and authenticated production reads return the populated finance dataset. The client waits for Clerk session readiness before loading finance data, preventing a transient sign-in `401` from becoming a permanent empty state.
 Production ownership diagnosis: a read-only audit confirmed the authenticated administrator is already the owner of the 902 imported transactions, 663 persisted review-only suggestions, 681 bookings, and approved opening balance. No `FINANCE_DATA_OWNER_USER_ID` variable, ownership reassignment, migration, reimport, or data copy was required.
 Current gate: do not repeat the completed opening-balance repair. Classification remains pending with 221 unresolved transactions and close remains blocked; all 663 pending suggestions remain review-only and administrator booking decisions are still separately gated.
 
 Current review category contract: production review options are flat `{ id, name }` records because the deployed `Category` model has no parent relation. The Review page presents one authoritative category selector and approval sends only `projectId`, `transactionTypeId`, `categoryId`, and an optional reason. Legacy main/subcategory fields remain display-only compatibility data and are not authoritative booking dimensions. The Phase 18/19 implementation, authentication hardening, and controlled suggestion persistence are deployed; no administrator decision has been submitted for the 221 unresolved transactions.
-Historical RC7 release-evidence gate: Current gate: Phase 17 complete.
+Historical RC7 release-evidence gate: Phase 17 complete; superseded by the
+deployed Phase 18/19 and Clerk session-readiness release above.
 ```
 
 ## Authoritative Progress
@@ -1499,7 +1502,7 @@ Acceptance:
 - Documentation states actual implementation and limitations.
 - No production write, deployment, migration, or commit occurs without separate owner approval.
 
-## Phase 19 — Local history-based review prefill
+## Phase 19 — History-based review prefill
 
 ### SUGGEST-001 — Approve local-first algorithm and reuse contract
 
@@ -1627,7 +1630,11 @@ Controlled production suggestion persistence evidence:
 
 Phases 0–9 are complete as a published RC4 owner-decision handoff through `f2f7cbb`. Phase 10 production schema cutover was completed on 2026-07-07: PostgreSQL 15.8, database finance, schema finance, 4 migrations applied, 30 tables verified. Evidence: `docs/PRODUCTION_SCHEMA_CUTOVER_EVIDENCE_NL.md`.
 
-The Phase 18/19 implementation and production authentication hardening are deployed as `7cbbfa10a2c9bb1809aa7bce288388f3936a4152`. The one-time owner-approved opening-balance repair is complete; it must not be executed again. Cash integrity passes, while the 221 unresolved 2026 transactions keep classification pending and close blocked.
+The Phase 18/19 implementation and production authentication hardening are
+running in `f9e967f54632f86bad2ef3c5774334a48cda85ad`. The one-time
+owner-approved opening-balance repair is complete; it must not be executed
+again. Cash integrity passes, while the 221 unresolved 2026 transactions keep
+classification pending and close blocked.
 
 Remaining owner-gated decisions:
 

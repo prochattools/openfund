@@ -6,6 +6,14 @@ Source: `yeshuaacademy-finance`
 Branch: `main`  
 Status: Release Candidate 7 — production schema cutover, historical import, database credential finalization, all provider secret rotations, real PDF renderer, real email sending, and Phase 17 monthly reconciliation complete 2026-07-09; formula-based monthly chaining model; production audit passed; 2024 closing 1218415, 2025 closing 1035086, 2026 partial closing 783725 all confirmed; Phase 17 complete
 
+Current deployed production release: `f9e967f54632f86bad2ef3c5774334a48cda85ad`.
+Phase 18's one-time opening-balance repair was completed on 2026-07-14 and
+must never be repeated. Phase 19 history-v1 suggestion persistence is
+complete with 663 review-only suggestions; 221 administrator decisions remain.
+Current controls are `cashStatus=PASSED`, `classificationStatus=PENDING`, and
+`closeStatus=BLOCKED`. The authenticated portal readiness fix is deployed and
+the portal reloads its populated finance data after Clerk session readiness.
+
 ## Current authentication standardization
 
 The Clerk-only authentication hardening is configured for email sign-in only.
@@ -28,7 +36,8 @@ Dokploy uses `NEXT_PUBLIC_SIGN_IN_URL=/sign-in`,
 and `NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-in`. The pre-provisioned finance
 administrator is verified against the active local `ADMIN` membership without
 recording the identity.
-No Ory variables or generic cookie fallbacks are present in the Dokploy
+Ory is historical only and has been removed from the production authentication
+path; no Ory variables or generic cookie fallbacks are present in the Dokploy
 runtime. Unauthenticated production checks returned `401` JSON for the three
 protected APIs and `307` sign-in redirects for `/review` and `/reports`;
 `/sign-up` also redirects to `/sign-in`. This release changes

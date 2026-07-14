@@ -28,6 +28,8 @@ by this slice.
 
 The deployed release uses the GitHub Actions publishable-key secret and the
 Dokploy Clerk runtime variables, including the configured active workspace UUID.
+The current verified production commit is
+`f9e967f54632f86bad2ef3c5774334a48cda85ad`.
 The Clerk secret remains runtime-only. No Ory variables or generic cookie
 fallbacks are present. Dokploy uses the four sign-in-only route variables:
 `NEXT_PUBLIC_SIGN_IN_URL`, `NEXT_PUBLIC_CLERK_SIGN_IN_URL`,
@@ -75,8 +77,8 @@ Phase 19 — History-based review prefill            DEPLOYED (history-v1; 681-b
 
 ```text
 Previous roadmap through Phase 17: 100%
-Phase 18: complete locally; production repair remains unexecuted and owner-gated
-Phase 19: complete locally; chronological 72.02% top-one and 79.38% top-three; safe leave-one-out 73.93% top-one and 81.89% top-three; production backfill remains owner-gated
+Phase 18: complete; one-time production opening-balance repair completed 2026-07-14 and must never be repeated
+Phase 19: deployed and complete; history-v1 persistence completed with 663 review-only suggestions; 221 administrator decisions remain
 Phase 0 — Governance and verified controls: 100%
 Phase 1 — Safe categorization foundation: 100%
 Phase 2 — Financial domain and historical model: 100%
@@ -371,7 +373,7 @@ Alle productiehardeningsstappen zijn afgerond (2026-07-07 t/m 2026-07-08):
 
 ## Phase 18 — Cent-exact accounting integrity and opening-balance repair
 
-Status: **complete locally; production opening-balance repair remains unexecuted and owner-gated**
+Status: **complete; one-time production opening-balance repair completed 2026-07-14 and must never be repeated**
 
 ### Outcomes
 
@@ -389,9 +391,9 @@ Status: **complete locally; production opening-balance repair remains unexecuted
 - Conflict, account-identity, idempotency, authorization, and no-side-effect tests pass.
 - Server build, production build, diff review, and documentation alignment pass.
 
-## Phase 19 — Local history-based review prefill
+## Phase 19 — History-based review prefill
 
-Status: **complete locally; production backfill, deployment, and suggestion persistence remain unexecuted and owner-gated**
+Status: **deployed and complete; 663 review-only suggestions are persisted and 221 administrator decisions remain**
 
 ### Outcomes
 

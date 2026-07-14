@@ -24,8 +24,8 @@ const docs = {
 const allDocs = Object.entries(docs);
 
 describe('roadmap status consistency — RC7 gate', () => {
-  it('implementation plan and handoff docs identify the correct gate after Phase 17 complete', () => {
-    expect(docs.implementationPlan).toContain('Current gate: Phase 17 complete');
+  it('implementation plan marks the superseded Phase 17 gate as historical', () => {
+    expect(docs.implementationPlan).toContain('Historical RC7 release-evidence gate: Phase 17 complete; superseded');
     expect(docs.ownerHandoff).toContain('Eigenaaroverdracht (RC7)');
     expect(docs.implementationPlan).not.toContain('Current gate: Release Candidate 3 owner handoff');
   });

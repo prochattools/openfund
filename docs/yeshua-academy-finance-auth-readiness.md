@@ -3,8 +3,8 @@
 Status: Clerk-only production email sign-in configured; public sign-up and Google disabled
 Date: 2026-07-14
 
-Deployment commits: `96d74d6`, `74959e8`, and `fe7fd44`. The normal GitHub
-Actions and Dokploy rollout completed successfully for `fe7fd44`.
+Current deployed commit: `f9e967f54632f86bad2ef3c5774334a48cda85ad`. The normal
+GitHub Actions and Dokploy rollout completed successfully for this release.
 
 ## Goal
 
@@ -61,9 +61,9 @@ DEFAULT_WORKSPACE_ID=<finance-workspace-id>
 
 `disabled` is local-only. Production always selects the statically imported
 Clerk middleware. Missing or invalid runtime Clerk configuration fails closed
-with a safe response. Ory is inactive and removed from the production
-authentication path; no Ory cookie or generic cookie fallback authenticates a
-request.
+with a safe response. Ory is historical only and has been removed from the
+production authentication path; no Ory cookie or generic cookie fallback
+authenticates a request.
 
 Provisioning requires the Clerk primary email to match an active local `User`
 and an active `WorkspaceMembership` in the configured active finance

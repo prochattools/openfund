@@ -94,3 +94,10 @@ becoming a permanent empty state. A read-only production ownership audit
 confirmed that the authenticated administrator already owns the imported
 finance records, so no separate finance-owner variable or ownership
 reassignment was required.
+
+The current production release is `f9e967f54632f86bad2ef3c5774334a48cda85ad`.
+The authenticated portal is populated with 902 ledger transactions, 221
+unresolved review items, and 663 persisted review-only suggestions. The
+one-time Phase 18 opening-balance repair is complete and must not be repeated;
+cash status is passed, classification remains pending, and close remains
+blocked until administrator review decisions are completed.

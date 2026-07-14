@@ -40,9 +40,9 @@ describe('release evidence consistency — stale RC labels', () => {
     expect(ownerHandoff).not.toContain('### RC2-validatie in één stap');
   });
 
-  it('roadmap and implementation plan identify the current handoff after Phase 17 complete, not RC2/RC3', () => {
+  it('roadmap and implementation plan preserve historical RC7 evidence without stale current status', () => {
     expect(roadmap).toContain('COMPLETE (published RC4 handoff; owner decisions gated)');
-    expect(implementationPlan).toContain('Current gate: Phase 17 complete');
+    expect(implementationPlan).toContain('Historical RC7 release-evidence gate: Phase 17 complete; superseded');
     expect(implementationPlan).toContain('production audit passed');
     expect(rebuildRun).toContain('Status: Release Candidate 7');
     expect(rebuildRun).toContain('audit passed');
