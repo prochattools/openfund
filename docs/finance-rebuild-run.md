@@ -1765,7 +1765,7 @@ Production opening-balance preflight:
 - the deployed chronological `history-v1` evaluation remains 681 samples, 679 covered, 489 top-one correct (72.02%), and 539 top-three correct (79.38%);
 - no execution flag was enabled and no opening balance, audit log, booking, suggestion, period close, report snapshot, bank fact, migration, or other production financial data was created or changed.
 
-Historical gate: the single production opening-balance repair was pending separate explicit owner approval. That approval and execution are recorded below. Suggestion backfill and suggestion persistence remain unexecuted.
+Historical gate: the single production opening-balance repair was pending separate explicit owner approval. That approval and execution are recorded below. At that point in the chronology, suggestion backfill and suggestion persistence were also unexecuted; the later controlled history-v1 execution is recorded below.
 
 ## 2026-07-14 — One-time production opening-balance repair
 
@@ -1800,4 +1800,39 @@ Safety and authentication verification:
 - authenticated reads succeed and a viewer mutation attempt returns 403 without executing a write;
 - chronological evaluation remains 681 samples and 679 covered, with safeguards declaring no suggestion, booking, or bank-fact mutation.
 
-Current gate: do not repeat the completed opening-balance repair. Classification review of the 221 unresolved transactions and any suggestion persistence remain separately owner-gated; close eligibility remains blocked.
+Current gate: do not repeat the completed opening-balance repair. The controlled history-v1 suggestion persistence is recorded below; classification review of the 221 unresolved transactions and all authoritative bookings remain administrator-gated, and close eligibility remains blocked.
+
+## 2026-07-14 — Controlled history-v1 suggestion backfill
+
+Execution evidence:
+
+- owner-approved execution started at 2026-07-14 08:48:46 UTC (09:48:46 Europe/Lisbon) on deployed commit `6b7ddba217103d7fdb8e0291710686feb3e2836f`;
+- the pre-execution dry run returned HTTP 200, `DRY_RUN_COMPLETE`, `dryRun: true`, `writesPerformed: false`, `algorithmVersion: history-v1`, 221 unresolved transactions, 221 complete rank-one proposals, 0 uncovered transactions, 663 planned suggestions, 0 expired suggestions, and 0 created suggestions;
+- the single execution request returned HTTP 201 with `status: CREATED`, `dryRun: false`, `writesPerformed: true`, 663 planned suggestions, 663 created suggestions, and 0 expired suggestions;
+- the response envelope reported `createsCategorizationSuggestion: true`, `expiresPendingSuggestion: false`, `createsTransactionBooking: false`, `closesPeriod: false`, and `mutatesBankFacts: false`;
+- the response contained 663 transaction-level proposal rows. Those rows and their evidence are not reproduced here to avoid recording transaction-level financial details.
+
+Persisted review inventory:
+
+- 221 unresolved transactions remain in the review queue;
+- 663 pending suggestions are now visible through the authenticated review API;
+- ranks 1, 2, and 3 each contain 221 suggestions;
+- every persisted suggestion is a complete project/type/category triple with evidence;
+- confidence distribution: `DEFAULT` 656 and `OVERALL` 7;
+- matcher distribution: `NORMALIZED_HISTORY` 353, `FUZZY_HISTORY` 152, `DIRECTION_DEFAULT` 151, and `BEST_HISTORY` 7;
+- primary proposals comprise 3 `OVERALL` / `BEST_HISTORY` candidates and 218 `DEFAULT` candidates; all require administrator review;
+- no direction conflicts were detected;
+- proposal coverage spans all 2026 unresolved months: January 29, February 34, March 44, April 44, May 28, June 37, and July 5 transactions, each with complete rank-one coverage;
+- no transaction was approved or finalized by this operation.
+
+Post-execution controls and safeguards:
+
+- `cashStatus` remains `PASSED`, `classificationStatus` remains `PENDING`, and `closeStatus` remains `BLOCKED`;
+- transaction count remains 902, unresolved count remains 221, duplicate fingerprints remain 0, and running-balance errors remain 0;
+- the opening-balance repair was not repeated;
+- no `TransactionBooking`, `ReviewDecision`, transaction category finalization, period close, report snapshot, bank-fact mutation, opening-balance change, migration, or manual database edit occurred;
+- the execution guard `ALLOW_SUGGESTION_BACKFILL_EXECUTION` was disabled immediately after execution, independently verified disabled in Dokploy, and all unrelated runtime environment content remained unchanged;
+- authenticated review reads return 200 with proposals, alternatives, evidence, and confidence; unauthenticated API requests remain denied and page redirects remain enforced;
+- `DEFAULT` suggestions remain visibly low-confidence and review-only. Suggestion persistence does not authorize automatic approval or booking.
+
+Remaining manual workload: 221 administrator decisions are still required before classification can pass. The next phase must be a separate review workflow; no bulk approval or automatic booking is authorized.

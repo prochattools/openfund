@@ -89,9 +89,9 @@ Production runtime credential update: complete 2026-07-07; final retained creden
 App/provider secret remediation: complete 2026-07-08; all provider secrets (Clerk, Resend, New Relic, Request Access Secret) rotated and applied to Dokploy runtime; app redeployed; health and production readiness verified; evidence in docs/PRODUCTION_APP_PROVIDER_SECRET_ROTATION_EVIDENCE_NL.md
 Phase 17 — Month-by-month accounting reconciliation and administrator reporting: COMPLETE (2026-07-09; formula-based monthly chaining model; read-only production audit passed; baseline controls: 2024 closing 1218415, 2025 closing 1035086, 2026 partial closing 783725)
 Phase 18 — Cent-exact accounting integrity and opening-balance repair: COMPLETE; implementation deployed in 7cbbfa10a2c9bb1809aa7bce288388f3936a4152 and the one-time owner-approved production repair completed 2026-07-14
-Phase 19 — Local history-based review prefill: IMPLEMENTED AND DEPLOYED in 7cbbfa10a2c9bb1809aa7bce288388f3936a4152; evaluation and review prefill are live, while production backfill remains unexecuted
+Phase 19 — Local history-based review prefill: IMPLEMENTED AND DEPLOYED in 7cbbfa10a2c9bb1809aa7bce288388f3936a4152; controlled history-v1 suggestion persistence completed 2026-07-14, while administrator decisions remain pending
 Production session authentication hardening: DEPLOYED in 7cbbfa10a2c9bb1809aa7bce288388f3936a4152; unauthenticated API reads return 401 JSON, unauthenticated review/report pages redirect to sign-in, permitted reads succeed, and viewer mutations remain 403
-Current gate: do not repeat the completed opening-balance repair. Classification remains pending with 221 unresolved transactions and close remains blocked; suggestion backfill, suggestion persistence, booking approval, and migration remain separately gated.
+Current gate: do not repeat the completed opening-balance repair. Classification remains pending with 221 unresolved transactions and close remains blocked; all 663 pending suggestions remain review-only and administrator booking decisions are still separately gated.
 Historical RC7 release-evidence gate: Current gate: Phase 17 complete.
 ```
 
@@ -100,7 +100,7 @@ Historical RC7 release-evidence gate: Current gate: Phase 17 complete.
 ```text
 Previous roadmap through Phase 17: 100%
 Phase 18: complete; implementation deployed and the one-time production repair restored the approved cash controls
-Phase 19: implementation deployed; chronological 681-sample evaluation and review prefill are live; production backfill and suggestion persistence remain unexecuted and owner-gated
+Phase 19: implementation deployed; the controlled history-v1 backfill persisted 663 pending suggestions; chronological evaluation and review prefill are live; administrator decisions remain owner-gated
 Phase 0 — Governance and verified controls: 100%
 Phase 1 — Safe categorization foundation: 100%
 Phase 2 — Financial domain and historical model: 100%
@@ -1575,6 +1575,16 @@ Evidence:
 - Focused tests passed: history ranker 5, backfill 4, review queue 3, review decision 8, review helper 12, review mapper 2, direct route 2, API transaction mapper 3, accounting audit 4, monthly reconciliation marker 7, owner evaluation 1.
 - `npm run build` passed after one bounded catch-callback return-type annotation; route manifest includes `/api/transactions/[id]/category`.
 - No execution flags were enabled and no production suggestion, booking, opening-balance repair, or migration occurred during validation. The validated Phase 18/19 and authentication slice was later committed and deployed as `7cbbfa10a2c9bb1809aa7bce288388f3936a4152`.
+
+Controlled production suggestion persistence evidence:
+
+- On 2026-07-14 at 08:48:46 UTC (09:48:46 Europe/Lisbon), the existing deployed `history-v1` implementation was executed exactly once on commit `6b7ddba217103d7fdb8e0291710686feb3e2836f`.
+- The request returned HTTP 201 with `status: CREATED`, `dryRun: false`, `writesPerformed: true`, `unresolvedTransactionCount: 221`, `completeRankOneCount: 221`, `uncoveredTransactionCount: 0`, `plannedSuggestionCount: 663`, `createdSuggestionCount: 663`, and `expiredSuggestionCount: 0`.
+- The response reported `createsCategorizationSuggestion: true`, `expiresPendingSuggestion: false`, `createsTransactionBooking: false`, `closesPeriod: false`, and `mutatesBankFacts: false`. The 663 transaction-level proposal rows are intentionally not reproduced in this document.
+- Post-execution review exposes 663 pending suggestions: ranks 1, 2, and 3 each contain 221 rows; all rows are complete and evidence-bearing; no direction conflicts were found.
+- Persisted distribution: `DEFAULT` 656 and `OVERALL` 7; matchers are `NORMALIZED_HISTORY` 353, `FUZZY_HISTORY` 152, `DIRECTION_DEFAULT` 151, and `BEST_HISTORY` 7. The three primary `OVERALL` candidates and 218 primary `DEFAULT` candidates remain administrator decisions.
+- The execution guard `ALLOW_SUGGESTION_BACKFILL_EXECUTION` was disabled immediately afterward and independently verified disabled in Dokploy. No unrelated runtime environment field changed.
+- Post-execution controls remain `cashStatus: PASSED`, `classificationStatus: PENDING`, `closeStatus: BLOCKED`, 902 transactions, 221 unresolved transactions, zero duplicate fingerprints, and zero running-balance errors. No `TransactionBooking`, `ReviewDecision`, transaction finalization, period close, report snapshot, bank-fact, opening-balance, or migration write occurred.
 
 ## Exact next execution sequence
 
