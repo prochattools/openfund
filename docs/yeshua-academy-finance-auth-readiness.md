@@ -1,7 +1,10 @@
 # Yeshua Academy Finance - Auth Readiness
 
-Status: Clerk-only production authentication standardization prepared locally; not deployed
+Status: Clerk-only production authentication deployed; authenticated smoke tests blocked by Clerk frontend DNS
 Date: 2026-07-14
+
+Deployment commits: `96d74d6`, `74959e8`, and `fe7fd44`. The normal GitHub
+Actions and Dokploy rollout completed successfully for `fe7fd44`.
 
 ## Goal
 
@@ -34,8 +37,10 @@ DEFAULT_WORKSPACE_ID=<finance-workspace-id>
 
 `CLERK_SECRET_KEY` is runtime-only. It is never a GitHub build secret, Docker
 build argument, image-layer value, public variable, or logged payload. The
-workspace value must be the real active finance workspace UUID; missing,
-malformed, or placeholder values fail closed.
+workspace value must be the configured active finance workspace UUID; missing
+or malformed values fail closed. The production finance workspace uses the
+seeded UUID recorded in Dokploy because it is the one active workspace with
+the active membership data.
 
 Local development may explicitly use the server-side bypass:
 
@@ -89,3 +94,14 @@ authenticated smoke tests. Do not change financial data during rollback.
 This authentication cutover changes no financial records. The 221 unresolved
 transactions, 663 review-only suggestions, cash/classification/close controls,
 and all booking and review-decision records remain unchanged.
+
+## Rollout verification
+
+- The three protected APIs returned `401` JSON without a Clerk session.
+- `/review` and `/reports` returned `307` redirects to the internal `/sign-in`
+  flow without a Clerk session.
+- The deployed browser bundle contains Clerk, but the Clerk frontend endpoint
+  selected by the current publishable key does not resolve in DNS. The sign-in
+  widget cannot initialize in the verification browser.
+- Authenticated administrator/viewer reads and mutation checks remain pending
+  until the provider DNS issue is corrected. No mutation was submitted.

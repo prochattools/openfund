@@ -11,9 +11,9 @@ This file converts the roadmap into concise, unambiguous tasks that an AI coding
 
 ## Current authentication contract
 
-The production authentication standardization is currently prepared in the
-local working tree and is not yet committed, pushed, or deployed. Clerk is the
-only production provider. Protected API routes require a server-verified Clerk
+The production authentication standardization is deployed in `fe7fd44`
+(`fix: enable Clerk browser runtime`) on 2026-07-14. Clerk is the only
+production provider. Protected API routes require a server-verified Clerk
 `__session` token, map the verified identity to an active local `User` and
 active `WorkspaceMembership`, and derive `admin` or `viewer` from that
 membership. Missing or invalid sessions return `401` JSON; authenticated users
@@ -28,9 +28,14 @@ Release configuration: GitHub Actions requires the named
 shape before Docker execution. Dokploy supplies `AUTH_PROVIDER=clerk`,
 `NEXT_PUBLIC_AUTH_PROVIDER=clerk`, the public Clerk variables, runtime-only
 `CLERK_SECRET_KEY`, the internal sign-in paths, application URLs, CORS origin,
-and the real active `DEFAULT_WORKSPACE_ID`. Ory variables and cookie fallbacks
-are inactive and are removed only after successful Clerk verification. The
+and the configured active `DEFAULT_WORKSPACE_ID`. Ory variables and cookie
+fallbacks are inactive; no Ory variables are present in Dokploy. The
 221 unresolved transactions and 663 review-only suggestions remain unchanged.
+
+Unauthenticated production smoke tests passed: the three protected APIs return
+`401` JSON and `/review` plus `/reports` redirect to `/sign-in`. Authenticated
+checks are blocked by the current Clerk frontend endpoint's DNS resolution
+failure; no financial or review mutation was attempted.
 
 ## Status legend
 
@@ -113,7 +118,7 @@ App/provider secret remediation: complete 2026-07-08; all provider secrets (Cler
 Phase 17 — Month-by-month accounting reconciliation and administrator reporting: COMPLETE (2026-07-09; formula-based monthly chaining model; read-only production audit passed; baseline controls: 2024 closing 1218415, 2025 closing 1035086, 2026 partial closing 783725)
 Phase 18 — Cent-exact accounting integrity and opening-balance repair: COMPLETE; implementation deployed in 7cbbfa10a2c9bb1809aa7bce288388f3936a4152 and the one-time owner-approved production repair completed 2026-07-14
 Phase 19 — Local history-based review prefill: IMPLEMENTED AND DEPLOYED in 7cbbfa10a2c9bb1809aa7bce288388f3936a4152; controlled history-v1 suggestion persistence completed 2026-07-14, while administrator decisions remain pending
-Production session authentication hardening: the previously deployed release contains the existing session controls; the current Clerk-only standardization is prepared locally and remains uncommitted, unpushed, and undeployed until separately approved
+Production session authentication hardening: Clerk-only standardization is deployed through `fe7fd44`; workspace configuration is valid, unauthenticated denial/redirect checks pass, and authenticated checks remain blocked only by the Clerk frontend endpoint DNS failure
 Current gate: do not repeat the completed opening-balance repair. Classification remains pending with 221 unresolved transactions and close remains blocked; all 663 pending suggestions remain review-only and administrator booking decisions are still separately gated.
 
 Current review category contract: production review options are flat `{ id, name }` records because the deployed `Category` model has no parent relation. The Review page presents one authoritative category selector and approval sends only `projectId`, `transactionTypeId`, `categoryId`, and an optional reason. Legacy main/subcategory fields remain display-only compatibility data and are not authoritative booking dimensions. The Phase 18/19 implementation, authentication hardening, and controlled suggestion persistence are deployed; no administrator decision has been submitted for the 221 unresolved transactions.

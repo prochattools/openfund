@@ -14,8 +14,8 @@ Execution detail: `docs/IMPLEMENTATION_PLAN.md`
 
 ## Current authentication standardization
 
-The local authentication hardening slice is not yet committed, pushed, or
-deployed. Clerk is the only production provider; the server verifies the Clerk
+The Clerk-only authentication hardening is deployed in `fe7fd44` on
+2026-07-14. Clerk is the only production provider; the server verifies the Clerk
 session, maps the verified user to an active local `User` and
 `WorkspaceMembership`, and derives administrator/viewer permissions from that
 membership. Protected APIs return `401` JSON for missing or invalid sessions,
@@ -23,11 +23,13 @@ protected pages redirect to `/sign-in`, client identity headers are ignored,
 and all financial mutations remain administrator-only. No financial data,
 opening balance, suggestion, or review decision is changed by this slice.
 
-The coordinated release requires the GitHub Actions publishable-key secret and
-the Dokploy Clerk runtime variables, including the real active workspace UUID.
-The Clerk secret remains runtime-only. Ory variables and generic cookie
-fallbacks are removed only after the verified Clerk rollout. The 221
-unresolved transactions and 663 review-only suggestions remain unchanged.
+The deployed release uses the GitHub Actions publishable-key secret and the
+Dokploy Clerk runtime variables, including the configured active workspace UUID.
+The Clerk secret remains runtime-only. No Ory variables or generic cookie
+fallbacks are present. Unauthenticated API/page smoke tests pass; authenticated
+smoke tests are blocked by the Clerk frontend endpoint DNS resolution failure.
+The 221 unresolved transactions and 663 review-only suggestions remain
+unchanged.
 
 ## Current position
 
@@ -51,8 +53,8 @@ Phase 14 — App/provider secret remediation       COMPLETE (2026-07-08; Clerk, 
 Phase 15 — Real PDF renderer                     COMPLETE (2026-07-08; pdfkit report artifact renderer; HTML/XLSX preserved)
 Phase 16 — Real email sending                    COMPLETE (2026-07-08; Resend provider abstraction; executeDispatch with guards; bounded production send verified via Resend)
 Phase 17 — Month-by-month accounting reconciliation and administrator reporting COMPLETE (2026-07-09; formula-based monthly chaining model; read-only production audit passed; baseline controls: 2024/2025/2026 confirmed)
-Phase 18 — Cent-exact accounting integrity and opening-balance repair COMPLETE LOCALLY (production repair remains unexecuted)
-Phase 19 — Local history-based review prefill      COMPLETE LOCALLY (history-v1; 681-booking evaluation; human approval remains mandatory; production backfill unexecuted)
+Phase 18 — Cent-exact accounting integrity and opening-balance repair COMPLETE (one-time production repair completed 2026-07-14; never repeat)
+Phase 19 — History-based review prefill            DEPLOYED (history-v1; 681-booking evaluation; 663 review-only suggestions persisted; human approval remains mandatory)
 ```
 
 ## Authoritative Progress

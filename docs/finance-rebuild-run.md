@@ -6,11 +6,11 @@ Source: `yeshuaacademy-finance`
 Branch: `main`  
 Status: Release Candidate 7 — production schema cutover, historical import, database credential finalization, all provider secret rotations, real PDF renderer, real email sending, and Phase 17 monthly reconciliation complete 2026-07-09; formula-based monthly chaining model; production audit passed; 2024 closing 1218415, 2025 closing 1035086, 2026 partial closing 783725 all confirmed; Phase 17 complete
 
-## Current authentication standardization slice
+## Current authentication standardization
 
-The local working tree contains an uncommitted Clerk-only authentication
-hardening slice. It has not been committed, pushed, or deployed. In the
-proposed contract, API routes verify the Clerk `__session` token server-side,
+The Clerk-only authentication hardening is deployed through `fe7fd44`
+(`fix: enable Clerk browser runtime`) on 2026-07-14. API routes verify the
+Clerk `__session` token server-side,
 map the verified email to an active local `User` and active
 `WorkspaceMembership`, and derive the role from that membership. Missing or
 invalid sessions return `401` JSON; authenticated users without membership
@@ -22,9 +22,13 @@ decision, or other financial write.
 The release requires the GitHub Actions `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
 secret for the browser bundle and Dokploy runtime-only `CLERK_SECRET_KEY` plus
 the real active `DEFAULT_WORKSPACE_ID`; no Clerk secret is passed to Docker.
-Ory variables and generic cookie fallbacks are removed only after Clerk
-verification. This slice changes no financial data: 221 transactions remain
-unresolved and 663 suggestions remain review-only.
+No Ory variables or generic cookie fallbacks are present in the Dokploy
+runtime. Unauthenticated production checks returned `401` JSON for the three
+protected APIs and `307` sign-in redirects for `/review` and `/reports`. The
+authenticated checks are blocked because the Clerk frontend endpoint selected
+by the current publishable key does not resolve in DNS. This release changes
+no financial data: 221 transactions remain unresolved and 663 suggestions
+remain review-only; no mutation was submitted.
 
 ## RC2 Hardening Evidence
 
