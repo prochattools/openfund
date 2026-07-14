@@ -44,4 +44,15 @@ describe('production route authentication middleware', () => {
       expect(response.headers.get('location')).toContain('redirect_url=%2Freports');
     });
   });
+
+  it('does not expose a public application sign-up route', async () => {
+    await withProductionEnv(async () => {
+      const request = new NextRequest('http://localhost/sign-up');
+      const response = await middleware(request);
+
+      expect([307, 308]).toContain(response.status);
+      expect(response.headers.get('location')).toContain('/sign-in');
+    });
+  });
+
 });

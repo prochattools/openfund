@@ -46,6 +46,10 @@ NEXT_PUBLIC_APP_URL=https://finance.yeshua.academy
 NEXT_PUBLIC_API_BASE_URL=https://finance.yeshua.academy
 AUTH_PROVIDER=clerk
 NEXT_PUBLIC_AUTH_PROVIDER=clerk
+NEXT_PUBLIC_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_SIGN_UP_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-in
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=<publishable-key>
 CLERK_SECRET_KEY=<runtime-secret-key>
 DEFAULT_WORKSPACE_ID=<finance-workspace-id>
@@ -72,9 +76,14 @@ The intended workflow is:
 - `ya_finance_schema` exists in production as an older, empty schema and should not be treated as the source of truth.
 - The live source of truth before cutover is `openfund.openfund`.
 
-Production authentication is Clerk-only. API routes verify the Clerk session
-server-side, map the verified email to an active local `User` and active
-`WorkspaceMembership`, and derive the administrator/viewer role from that
-membership. Client identity headers and public user/role defaults are not
-authorization inputs. Unauthenticated API requests return `401` JSON;
-unauthenticated application pages redirect to `/sign-in`.
+Production authentication is Clerk-only and email sign-in only. `/sign-in` is
+the canonical public authentication route; there is no public application
+`/sign-up` route, and Google/social sign-in is disabled. API routes verify the
+Clerk session server-side, map the verified primary email to an active local
+`User` and active `WorkspaceMembership`, and derive the administrator/viewer
+role from that membership. A Clerk account alone never grants finance access.
+Client identity headers and public user/role defaults are not authorization
+inputs. Unauthenticated API requests return `401` JSON; unauthenticated
+application pages redirect to `/sign-in`. The pre-provisioned administrator
+was verified against the active local `ADMIN` membership without recording the
+identity here.

@@ -14,20 +14,26 @@ Execution detail: `docs/IMPLEMENTATION_PLAN.md`
 
 ## Current authentication standardization
 
-The Clerk-only authentication hardening is deployed in `fe7fd44` on
-2026-07-14. Clerk is the only production provider; the server verifies the Clerk
-session, maps the verified user to an active local `User` and
-`WorkspaceMembership`, and derives administrator/viewer permissions from that
-membership. Protected APIs return `401` JSON for missing or invalid sessions,
-protected pages redirect to `/sign-in`, client identity headers are ignored,
-and all financial mutations remain administrator-only. No financial data,
-opening balance, suggestion, or review decision is changed by this slice.
+The Clerk-only authentication hardening is configured for email sign-in only.
+`/sign-in` is the canonical public authentication route; public application
+sign-up is disabled, `/sign-up` is unsupported, and Google/social providers are
+disabled. The server verifies the Clerk session, maps the verified primary
+email to an active local `User` and `WorkspaceMembership`, and derives
+administrator/viewer permissions from that membership. A Clerk account alone
+never grants finance access. Protected APIs return `401` JSON for missing or
+invalid sessions, protected pages redirect to `/sign-in`, client identity
+headers are ignored, and all financial mutations remain administrator-only.
+No financial data, opening balance, suggestion, or review decision is changed
+by this slice.
 
 The deployed release uses the GitHub Actions publishable-key secret and the
 Dokploy Clerk runtime variables, including the configured active workspace UUID.
 The Clerk secret remains runtime-only. No Ory variables or generic cookie
-fallbacks are present. Unauthenticated API/page smoke tests pass; authenticated
-smoke tests are blocked by the Clerk frontend endpoint DNS resolution failure.
+fallbacks are present. Dokploy uses the four sign-in-only route variables:
+`NEXT_PUBLIC_SIGN_IN_URL`, `NEXT_PUBLIC_CLERK_SIGN_IN_URL`,
+`NEXT_PUBLIC_SIGN_UP_URL`, and `NEXT_PUBLIC_CLERK_SIGN_UP_URL`. The active
+finance administrator was verified against the local `ADMIN` membership
+without recording the identity. Unauthenticated API/page smoke tests pass.
 The 221 unresolved transactions and 663 review-only suggestions remain
 unchanged.
 

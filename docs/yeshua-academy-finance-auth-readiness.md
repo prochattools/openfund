@@ -1,6 +1,6 @@
 # Yeshua Academy Finance - Auth Readiness
 
-Status: Clerk-only production authentication deployed; authenticated smoke tests blocked by Clerk frontend DNS
+Status: Clerk-only production email sign-in configured; public sign-up and Google disabled
 Date: 2026-07-14
 
 Deployment commits: `96d74d6`, `74959e8`, and `fe7fd44`. The normal GitHub
@@ -9,9 +9,13 @@ Actions and Dokploy rollout completed successfully for `fe7fd44`.
 ## Goal
 
 The app is private-only. Clerk is the only supported production identity
-provider. The server maps a verified Clerk identity to an active local `User`
-and active `WorkspaceMembership`; the membership role is authoritative for
-administrator/viewer authorization.
+provider and is used for email sign-in and session verification only. `/sign-in`
+is the canonical public authentication route. Public application sign-up is
+disabled, `/sign-up` is unsupported, and Google/social sign-in is disabled.
+The server maps a verified Clerk primary email to an active local `User` and
+active `WorkspaceMembership`; the membership role is authoritative for
+administrator/viewer authorization. A Clerk account alone never grants finance
+access.
 
 ## Configuration
 
@@ -30,6 +34,10 @@ Dokploy production runtime configuration must provide:
 ```bash
 AUTH_PROVIDER=clerk
 NEXT_PUBLIC_AUTH_PROVIDER=clerk
+NEXT_PUBLIC_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_SIGN_UP_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-in
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=<publishable-key>
 CLERK_SECRET_KEY=<runtime-secret-key>
 DEFAULT_WORKSPACE_ID=<finance-workspace-id>
@@ -72,12 +80,15 @@ users receive `403`.
 3. Active `ADMIN` membership permits mutations; active `VIEWER` membership
    permits reads only.
 4. Review, accounting, and evaluation reads never create financial records.
-5. Browser pages redirect unauthenticated users to `/sign-in`.
+5. `/sign-in` is the only public authentication page; `/sign-up` is not a
+   supported application route and redirects to `/sign-in`.
 6. Client-supplied `x-user-id`, `x-user-role`, `x-actor-id`, and `x-user-email`
    headers are ignored.
 
-The sign-in redirect accepts only internal single-slash paths. External and
-protocol-relative redirect targets fall back to `/ledger`.
+The sign-in redirect accepts only internal single-slash paths. External,
+protocol-relative, absolute, and malformed redirect targets fall back to
+`/ledger`. Google remains disabled until separately configured production OAuth
+credentials and verified redirect URIs are approved.
 
 Administrators may import, review, categorize, send summaries, and manage
 settings. Viewers may read dashboard, reports, ledger, review, accounting,
@@ -100,8 +111,8 @@ and all booking and review-decision records remain unchanged.
 - The three protected APIs returned `401` JSON without a Clerk session.
 - `/review` and `/reports` returned `307` redirects to the internal `/sign-in`
   flow without a Clerk session.
-- The deployed browser bundle contains Clerk, but the Clerk frontend endpoint
-  selected by the current publishable key does not resolve in DNS. The sign-in
-  widget cannot initialize in the verification browser.
-- Authenticated administrator/viewer reads and mutation checks remain pending
-  until the provider DNS issue is corrected. No mutation was submitted.
+- `/sign-in` returned `200`; `/sign-up` redirected to `/sign-in`.
+- The active local administrator and verified Clerk primary email matched
+  case-insensitively; the identity is intentionally not recorded here.
+- No transaction approval, booking, review decision, suggestion backfill,
+  opening-balance repair, or other financial write was submitted.

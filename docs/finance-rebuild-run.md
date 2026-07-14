@@ -8,9 +8,10 @@ Status: Release Candidate 7 — production schema cutover, historical import, da
 
 ## Current authentication standardization
 
-The Clerk-only authentication hardening is deployed through `fe7fd44`
-(`fix: enable Clerk browser runtime`) on 2026-07-14. API routes verify the
-Clerk `__session` token server-side,
+The Clerk-only authentication hardening is configured for email sign-in only.
+`/sign-in` is the canonical public authentication route; public application
+sign-up is disabled, `/sign-up` is unsupported, and Google/social providers are
+disabled. API routes verify the Clerk `__session` token server-side,
 map the verified email to an active local `User` and active
 `WorkspaceMembership`, and derive the role from that membership. Missing or
 invalid sessions return `401` JSON; authenticated users without membership
@@ -22,11 +23,15 @@ decision, or other financial write.
 The release requires the GitHub Actions `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
 secret for the browser bundle and Dokploy runtime-only `CLERK_SECRET_KEY` plus
 the real active `DEFAULT_WORKSPACE_ID`; no Clerk secret is passed to Docker.
+Dokploy uses `NEXT_PUBLIC_SIGN_IN_URL=/sign-in`,
+`NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in`, `NEXT_PUBLIC_SIGN_UP_URL=/sign-in`,
+and `NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-in`. The pre-provisioned finance
+administrator is verified against the active local `ADMIN` membership without
+recording the identity.
 No Ory variables or generic cookie fallbacks are present in the Dokploy
 runtime. Unauthenticated production checks returned `401` JSON for the three
-protected APIs and `307` sign-in redirects for `/review` and `/reports`. The
-authenticated checks are blocked because the Clerk frontend endpoint selected
-by the current publishable key does not resolve in DNS. This release changes
+protected APIs and `307` sign-in redirects for `/review` and `/reports`;
+`/sign-up` also redirects to `/sign-in`. This release changes
 no financial data: 221 transactions remain unresolved and 663 suggestions
 remain review-only; no mutation was submitted.
 

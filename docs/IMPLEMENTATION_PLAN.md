@@ -13,7 +13,10 @@ This file converts the roadmap into concise, unambiguous tasks that an AI coding
 
 The production authentication standardization is deployed in `fe7fd44`
 (`fix: enable Clerk browser runtime`) on 2026-07-14. Clerk is the only
-production provider. Protected API routes require a server-verified Clerk
+production provider and is configured for email sign-in only. `/sign-in` is
+the canonical public authentication route; public application sign-up is
+disabled, there is no supported `/sign-up` route, and Google/social providers
+are disabled. Protected API routes require a server-verified Clerk
 `__session` token, map the verified identity to an active local `User` and
 active `WorkspaceMembership`, and derive `admin` or `viewer` from that
 membership. Missing or invalid sessions return `401` JSON; authenticated users
@@ -27,15 +30,18 @@ Release configuration: GitHub Actions requires the named
 `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` secret and validates its publishable-key
 shape before Docker execution. Dokploy supplies `AUTH_PROVIDER=clerk`,
 `NEXT_PUBLIC_AUTH_PROVIDER=clerk`, the public Clerk variables, runtime-only
-`CLERK_SECRET_KEY`, the internal sign-in paths, application URLs, CORS origin,
-and the configured active `DEFAULT_WORKSPACE_ID`. Ory variables and cookie
-fallbacks are inactive; no Ory variables are present in Dokploy. The
-221 unresolved transactions and 663 review-only suggestions remain unchanged.
+`CLERK_SECRET_KEY`, `NEXT_PUBLIC_SIGN_IN_URL=/sign-in`,
+`NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in`, `NEXT_PUBLIC_SIGN_UP_URL=/sign-in`,
+`NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-in`, application URLs, CORS origin, and
+the configured active `DEFAULT_WORKSPACE_ID`. Ory variables and cookie
+fallbacks are inactive; no Ory variables are present in Dokploy. The active
+finance administrator is pre-provisioned locally and its verified Clerk
+primary email matches case-insensitively; the identity is not recorded here.
+The 221 unresolved transactions and 663 review-only suggestions remain unchanged.
 
 Unauthenticated production smoke tests passed: the three protected APIs return
-`401` JSON and `/review` plus `/reports` redirect to `/sign-in`. Authenticated
-checks are blocked by the current Clerk frontend endpoint's DNS resolution
-failure; no financial or review mutation was attempted.
+`401` JSON and `/review` plus `/reports` redirect to `/sign-in`; `/sign-up`
+redirects to `/sign-in`. No financial or review mutation was attempted.
 
 ## Status legend
 
