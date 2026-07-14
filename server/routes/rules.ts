@@ -2,13 +2,13 @@ import { Request, Response } from 'express';
 import { prisma } from '../prismaClient';
 import { createRule, deleteRule, updateRule, previewRuleMatchesForUser, applyRuleToTransactions } from '../services/ruleEngine';
 import { createAuditLog } from '../services/auditLogService';
-import { getRequestActor, requireAdmin } from '../auth/requestContext';
+import { requireAuthenticatedRequest, requireAdmin } from '../auth/requestContext';
 import { readRouteParam } from './routeParams';
 import { readOptionalNumber } from './queryParams';
 import type { RuleMatchField, RuleMatchType } from '@prisma/client';
 
 const logRequest = (req: Request) => {
-  console.log(`[rules] ${req.method} ${req.originalUrl} user=${req.header('x-user-id') ?? 'unknown'}`);
+  console.log(`[rules] ${req.method} ${req.originalUrl}`);
 };
 
 const isMatchType = (value: string): value is RuleMatchType =>
@@ -19,7 +19,9 @@ const isMatchField = (value: string): value is RuleMatchField =>
 
 export const getRules = async (req: Request, res: Response) => {
   logRequest(req);
-  const { userId } = getRequestActor(req);
+  const actor = await requireAuthenticatedRequest(req, res);
+  if (!actor) return;
+  const { userId } = actor;
 
   try {
     const rules = await prisma.categorizationRule.findMany({
@@ -208,7 +210,9 @@ export const patchRule = async (req: Request, res: Response) => {
 
 export const previewRule = async (req: Request, res: Response) => {
   logRequest(req);
-  const { userId } = getRequestActor(req);
+  const actor = await requireAuthenticatedRequest(req, res);
+  if (!actor) return;
+  const { userId } = actor;
   const ruleId = readRouteParam(req, 'id');
   const scope = req.body?.scope;
   const importBatchId = req.body?.importBatchId;

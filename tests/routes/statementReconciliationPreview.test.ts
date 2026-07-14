@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Request, Response } from 'express';
+import { setRequestActor } from '../../server/auth/requestContext';
 
 vi.mock('../../server/prismaClient', () => ({
   prisma: {
@@ -15,11 +16,20 @@ vi.mock('../../server/prismaClient', () => ({
 import { prisma } from '../../server/prismaClient';
 import { getStatementReconciliationPreview } from '../../server/routes/statementReconciliationPreview';
 
-const mockReq = (params: Record<string, string> = {}, headers: Record<string, string> = {}): Request =>
-  ({
+const mockReq = (params: Record<string, string> = {}, headers: Record<string, string> = {}): Request => {
+  const request = {
     params,
     header: (name: string) => headers[name.toLowerCase()] ?? undefined,
-  }) as unknown as Request;
+  } as unknown as Request;
+  const role = headers['x-user-role'] === 'viewer' ? 'viewer' : 'admin';
+  setRequestActor(request, {
+    userId: 'user-1',
+    role,
+    actorId: 'user-1',
+    actorEmail: 'finance@example.test',
+  });
+  return request;
+};
 
 const mockRes = () => {
   const res: Partial<Response> = {};

@@ -30,7 +30,6 @@ describe('client auth configuration utilities', () => {
 
     expect(auth.AUTH_PROVIDER).toBe('disabled');
     expect(auth.AUTH_ENABLED).toBe(false);
-    expect(auth.ORY_ENABLED).toBe(false);
     expect(auth.CLERK_ENABLED).toBe(false);
   });
 
@@ -41,19 +40,15 @@ describe('client auth configuration utilities', () => {
     expect(auth.AUTH_ENABLED).toBe(false);
   });
 
-  it('enables Ory mode and exposes configured Ory URLs', async () => {
+  it('treats legacy provider selection as Clerk mode instead of selecting a fallback', async () => {
     const auth = await loadAuth({
       NEXT_PUBLIC_AUTH_PROVIDER: 'ory',
-      NEXT_PUBLIC_ORY_SDK_URL: 'https://ory.example.test',
-      NEXT_PUBLIC_ORY_LOGIN_URL: '/login/browser',
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: 'pk_test_Y2xlcmsuZXhhbXBsZS5jb20k',
     });
 
-    expect(auth.AUTH_PROVIDER).toBe('ory');
+    expect(auth.AUTH_PROVIDER).toBe('clerk');
     expect(auth.AUTH_ENABLED).toBe(true);
-    expect(auth.ORY_ENABLED).toBe(true);
-    expect(auth.CLERK_ENABLED).toBe(false);
-    expect(auth.getOryBaseUrl()).toBe('https://ory.example.test');
-    expect(auth.getOryLoginUrl()).toBe('/login/browser');
+    expect(auth.CLERK_ENABLED).toBe(true);
   });
 
   it('keeps Clerk runtime disabled for stub keys', async () => {

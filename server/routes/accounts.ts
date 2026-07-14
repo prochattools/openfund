@@ -2,13 +2,15 @@ import { Request, Response } from 'express';
 import { prisma } from '../prismaClient';
 import { toMinorUnits } from '../../lib/import/normalizers';
 import { readRouteParam } from './routeParams';
-import { getRequestActor, requireAdmin } from '../auth/requestContext';
+import { requireAuthenticatedRequest, requireAdmin } from '../auth/requestContext';
 import { createAuditLog } from '../services/auditLogService';
 
 const LOCKS_ENABLED = process.env.RECONCILIATION_LOCKS_ENABLED !== 'false';
 
 export const listAccounts = async (req: Request, res: Response) => {
-  const { userId } = getRequestActor(req);
+  const actor = await requireAuthenticatedRequest(req, res);
+  if (!actor) return;
+  const { userId } = actor;
 
   try {
     const accounts = await prisma.account.findMany({

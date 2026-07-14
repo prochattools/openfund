@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { getRequestActor, requireAdmin, requireAuthenticatedRequest } from '../../server/auth/requestContext';
+import {
+  getRequestActor,
+  requireAdmin,
+  requireAuthenticatedRequest,
+  setRequestActor,
+} from '../../server/auth/requestContext';
 
 const makeRequest = (headers: Record<string, string | undefined>) => ({
   header: (name: string) => headers[name.toLowerCase()],
@@ -13,96 +18,66 @@ const makeResponse = () => {
   return res;
 };
 
-describe('request context auth guard', () => {
-  it('defaults to admin role for internal/local requests', () => {
-    const actor = getRequestActor(makeRequest({ 'x-user-id': 'demo-user' }) as any);
+const trustedActor = {
+  userId: 'finance-user',
+  role: 'viewer' as const,
+  actorId: 'finance-user',
+  actorEmail: 'admin@example.test',
+};
 
-    expect(actor).toEqual({
-      userId: 'demo-user',
-      role: 'admin',
-      actorId: 'demo-user',
-      actorEmail: null,
+describe('request context auth guard', () => {
+  it('ignores client-supplied identity headers', () => {
+    const request = makeRequest({
+      'x-user-id': 'spoofed-user',
+      'x-user-role': 'admin',
+      'x-actor-id': 'spoofed-actor',
+      'x-user-email': 'spoofed@example.test',
     });
+
+    expect(getRequestActor(request as any)).toBeNull();
   });
 
-  it('parses viewer role and actor metadata from headers', () => {
-    const actor = getRequestActor(makeRequest({
-      'x-user-id': 'finance-user',
-      'x-user-role': 'viewer',
-      'x-actor-id': 'ory-identity-1',
-      'x-user-email': 'admin@example.test',
-    }) as any);
+  it('returns the server-stamped actor only', () => {
+    const request = makeRequest({ 'x-user-role': 'admin' });
+    setRequestActor(request, trustedActor);
 
-    expect(actor).toEqual({
-      userId: 'finance-user',
-      role: 'viewer',
-      actorId: 'ory-identity-1',
-      actorEmail: 'admin@example.test',
-    });
+    expect(getRequestActor(request as any)).toEqual(trustedActor);
   });
 
   it('blocks viewers with a Dutch forbidden response', async () => {
+    const request = makeRequest({});
+    setRequestActor(request, trustedActor);
     const res = makeResponse();
-    const actor = await requireAdmin(makeRequest({
-      'x-user-id': 'finance-user',
-      'x-user-role': 'viewer',
-    }) as any, res as any);
+
+    const actor = await requireAdmin(request as any, res as any);
 
     expect(actor).toBeNull();
     expect(res.status).toHaveBeenCalledWith(403);
     expect(res.json).toHaveBeenCalledWith({ error: 'Alleen beheerders mogen deze actie uitvoeren.' });
   });
 
-  it('allows admins through mutation guards', async () => {
+  it('allows trusted admins through mutation guards', async () => {
+    const request = makeRequest({});
+    setRequestActor(request, { ...trustedActor, role: 'admin' });
     const res = makeResponse();
-    const actor = await requireAdmin(makeRequest({
-      'x-user-id': 'finance-user',
-      'x-user-role': 'admin',
-    }) as any, res as any);
+
+    const actor = await requireAdmin(request as any, res as any);
 
     expect(actor?.role).toBe('admin');
     expect(actor?.userId).toBe('finance-user');
     expect(res.status).not.toHaveBeenCalled();
-    expect(res.json).not.toHaveBeenCalled();
   });
 
-  it('requires a production auth cookie before allowing protected reads', async () => {
+  it('requires a verified session when no trusted actor is present', async () => {
     const originalNodeEnv = process.env.NODE_ENV;
     process.env.NODE_ENV = 'production';
     try {
       const res = makeResponse();
-      const actor = await requireAuthenticatedRequest(makeRequest({
-        'x-user-id': 'finance-user',
-        'x-user-role': 'viewer',
-      }) as any, res as any);
+      const actor = await requireAuthenticatedRequest(makeRequest({}) as any, res as any);
 
       expect(actor).toBeNull();
       expect(res.status).toHaveBeenCalledWith(401);
       expect(res.json).toHaveBeenCalledWith({ error: 'Authenticatie vereist.' });
-    } finally {
-      process.env.NODE_ENV = originalNodeEnv;
-    }
-  });
-
-  it('allows production reads when the auth cookie is present', async () => {
-    const originalNodeEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'production';
-    try {
-      const res = makeResponse();
-      const actor = await requireAuthenticatedRequest(makeRequest({
-        'x-user-id': 'finance-user',
-        'x-user-role': 'viewer',
-        cookie: 'ory_kratos_session=session-1',
-      }) as any, res as any);
-
-      expect(actor).toEqual({
-        userId: 'finance-user',
-        role: 'viewer',
-        actorId: 'finance-user',
-        actorEmail: null,
-      });
-      expect(res.status).not.toHaveBeenCalled();
-      expect(res.json).not.toHaveBeenCalled();
     } finally {
       process.env.NODE_ENV = originalNodeEnv;
     }

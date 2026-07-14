@@ -1,66 +1,64 @@
-import { AUTH_PROVIDER, getOryBaseUrl } from './auth';
+import { verifyToken } from '@clerk/backend';
+import { CLERK_SERVER_ENABLED } from './auth';
 
-export const AUTH_SESSION_COOKIE_NAMES = ['ory_kratos_session', 'ory_session'] as const;
+export const AUTH_SESSION_COOKIE_NAMES = ['__session'] as const;
 
-const ORY_WHOAMI_PATH = '/sessions/whoami';
+export type VerifiedClerkSession = {
+  clerkUserId: string;
+};
 
 const isNonEmptyString = (value: string | null | undefined): value is string =>
   typeof value === 'string' && value.trim().length > 0;
 
 export const isProductionAuthEnforced = () => process.env.NODE_ENV === 'production';
 
-export const hasAuthSessionCookie = (cookieHeader: string | null | undefined): boolean => {
-  if (!isNonEmptyString(cookieHeader)) {
-    return false;
+const readCookie = (cookieHeader: string | null | undefined, name: string): string | null => {
+  if (!isNonEmptyString(cookieHeader)) return null;
+
+  for (const part of cookieHeader.split(';')) {
+    const separator = part.indexOf('=');
+    if (separator < 0) continue;
+    const key = part.slice(0, separator).trim();
+    if (key !== name) continue;
+    const value = part.slice(separator + 1).trim();
+    return value || null;
   }
 
-  return cookieHeader.split(';').some((part) => {
-    const [rawName, ...rawValueParts] = part.trim().split('=');
-    const name = rawName?.trim();
-    const value = rawValueParts.join('=').trim();
-
-    if (!name || !value) {
-      return false;
-    }
-
-    return AUTH_SESSION_COOKIE_NAMES.includes(name as typeof AUTH_SESSION_COOKIE_NAMES[number]);
-  });
+  return null;
 };
+
+export const getClerkSessionToken = (cookieHeader: string | null | undefined): string | null =>
+  readCookie(cookieHeader, '__session');
+
+export const hasAuthSessionCookie = (cookieHeader: string | null | undefined): boolean =>
+  Boolean(getClerkSessionToken(cookieHeader));
 
 export const hasAuthSessionCookieFromStore = (
   cookieStore: { get: (name: string) => { value?: string } | undefined } | null | undefined,
-): boolean => AUTH_SESSION_COOKIE_NAMES.some((cookieName) => isNonEmptyString(cookieStore?.get(cookieName)?.value));
+): boolean => Boolean(cookieStore?.get('__session')?.value?.trim());
 
-export const isProductionSessionAuthenticated = async (cookieHeader: string | null | undefined): Promise<boolean> => {
-  if (!isProductionAuthEnforced()) {
-    return true;
-  }
+export const verifyClerkSession = async (
+  cookieHeader: string | null | undefined,
+): Promise<VerifiedClerkSession | null> => {
+  if (!CLERK_SERVER_ENABLED) return null;
 
-  if (!hasAuthSessionCookie(cookieHeader)) {
-    return false;
-  }
-
-  if (AUTH_PROVIDER !== 'ory') {
-    return true;
-  }
-
-  const oryBaseUrl = getOryBaseUrl().trim();
-  if (!oryBaseUrl) {
-    return false;
-  }
+  const token = getClerkSessionToken(cookieHeader);
+  const secretKey = process.env.CLERK_SECRET_KEY?.trim();
+  if (!token || !secretKey) return null;
 
   try {
-    const response = await fetch(new URL(ORY_WHOAMI_PATH, oryBaseUrl), {
-      method: 'GET',
-      headers: {
-        accept: 'application/json',
-        cookie: cookieHeader ?? '',
-      },
-      cache: 'no-store',
-    });
-
-    return response.ok;
+    const claims = await verifyToken(token, { secretKey });
+    return typeof claims.sub === 'string' && claims.sub.trim()
+      ? { clerkUserId: claims.sub }
+      : null;
   } catch {
-    return false;
+    return null;
   }
+};
+
+export const isProductionSessionAuthenticated = async (
+  cookieHeader: string | null | undefined,
+): Promise<boolean> => {
+  if (!isProductionAuthEnforced() && !CLERK_SERVER_ENABLED) return true;
+  return Boolean(await verifyClerkSession(cookieHeader));
 };

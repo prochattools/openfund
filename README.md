@@ -44,8 +44,11 @@ SHADOW_DATABASE_URL=postgresql://finance_user:<app-password>@<db-host>:5433/fina
 DATABASE_SCHEMA=finance
 NEXT_PUBLIC_APP_URL=https://finance.yeshua.academy
 NEXT_PUBLIC_API_BASE_URL=https://finance.yeshua.academy
-DEFAULT_USER_ID=finance_user
-NEXT_PUBLIC_API_USER_ID=finance_user
+AUTH_PROVIDER=clerk
+NEXT_PUBLIC_AUTH_PROVIDER=clerk
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=<publishable-key>
+CLERK_SECRET_KEY=<runtime-secret-key>
+DEFAULT_WORKSPACE_ID=<finance-workspace-id>
 ```
 
 Local development should mirror the same shape, but point at local Postgres.
@@ -68,3 +71,10 @@ The intended workflow is:
 - `openfund` is the legacy name.
 - `ya_finance_schema` exists in production as an older, empty schema and should not be treated as the source of truth.
 - The live source of truth before cutover is `openfund.openfund`.
+
+Production authentication is Clerk-only. API routes verify the Clerk session
+server-side, map the verified email to an active local `User` and active
+`WorkspaceMembership`, and derive the administrator/viewer role from that
+membership. Client identity headers and public user/role defaults are not
+authorization inputs. Unauthenticated API requests return `401` JSON;
+unauthenticated application pages redirect to `/sign-in`.

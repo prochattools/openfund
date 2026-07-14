@@ -16,6 +16,11 @@ RUN npm ci --ignore-scripts || npm install --ignore-scripts
 # Copy app source
 COPY . .
 
+# This key is intentionally public and is required by the Clerk client bundle.
+# The Clerk secret remains runtime-only in Dokploy.
+ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+
 # Generate Prisma client
 RUN npx prisma generate
 

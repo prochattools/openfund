@@ -13,11 +13,10 @@ const resolveApiBaseUrl = (): string => {
 };
 
 const API_BASE_URL = resolveApiBaseUrl();
-const CONFIGURED_USER_ID = process.env.NEXT_PUBLIC_API_USER_ID?.trim();
-const DEFAULT_USER_ROLE = process.env.NEXT_PUBLIC_API_USER_ROLE === 'viewer' ? 'viewer' : 'admin';
-
 export type ClientRole = 'admin' | 'viewer';
-export const getClientRole = (): ClientRole => DEFAULT_USER_ROLE;
+// The server derives the actual role from Clerk plus workspace membership.
+// This value is UI-only and never authorizes an API request.
+export const getClientRole = (): ClientRole => 'admin';
 export const isClientAdmin = () => getClientRole() === 'admin';
 
 export type ReviewEvidenceStatus = 'finalized' | 'review_suggested' | 'conflict' | 'unmatched';
@@ -117,13 +116,7 @@ const getApiUrl = (path: string): string => {
 };
 
 const withUserHeader = (init: RequestInit = {}): RequestInit => {
-  const headers = new Headers(init.headers);
-  if (CONFIGURED_USER_ID) {
-    headers.set('x-user-id', CONFIGURED_USER_ID);
-  }
-  headers.set('x-user-role', DEFAULT_USER_ROLE);
-
-  return { ...init, headers };
+  return { ...init, credentials: 'include' };
 };
 
 export const fetchLedger = async () => {

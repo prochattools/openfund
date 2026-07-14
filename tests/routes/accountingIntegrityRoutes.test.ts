@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { setRequestActor } from '../../server/auth/requestContext';
 
 const mocks = vi.hoisted(() => ({
   getAccountingAudit: vi.fn(),
@@ -21,19 +22,24 @@ const makeRequest = (options: {
   body?: unknown;
   query?: Record<string, string>;
   cookie?: string | null;
-} = {}) => ({
-  body: options.body ?? {},
-  query: options.query ?? {},
-  params: {},
-  header: (name: string) => {
-    if (name === 'x-user-id') return 'user-1';
-    if (name === 'x-user-role') return options.role ?? 'viewer';
-    if (name === 'x-actor-id') return 'actor-1';
-    if (name === 'x-user-email') return 'admin@example.test';
-    if (name === 'cookie') return options.cookie === undefined ? 'ory_kratos_session=session-1' : options.cookie;
-    return undefined;
-  },
-});
+} = {}) => {
+  const request = {
+    body: options.body ?? {},
+    query: options.query ?? {},
+    params: {},
+    header: (name: string) =>
+      name === 'cookie' ? (options.cookie === undefined ? 'test-session' : options.cookie) : undefined,
+  };
+  if (options.cookie !== null) {
+    setRequestActor(request, {
+      userId: 'user-1',
+      role: options.role ?? 'viewer',
+      actorId: 'user-1',
+      actorEmail: 'admin@example.test',
+    });
+  }
+  return request;
+};
 
 const makeResponse = () => {
   const response = {
@@ -140,7 +146,7 @@ describe('accounting integrity routes', () => {
         userId: 'user-1',
         execute: false,
         confirmApprovedControl: false,
-        actorId: 'actor-1',
+        actorId: 'user-1',
         actorEmail: 'admin@example.test',
       }),
     );

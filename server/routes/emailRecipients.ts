@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prismaClient';
-import { getRequestActor, requireAdmin } from '../auth/requestContext';
+import { requireAuthenticatedRequest, requireAdmin } from '../auth/requestContext';
 import { createAuditLog } from '../services/auditLogService';
 import { readRouteParam } from './routeParams';
 
@@ -25,7 +25,9 @@ export const serializeEmailRecipient = (recipient: EmailRecipientResponseInput) 
 });
 
 export const listEmailRecipients = async (req: Request, res: Response) => {
-  const { userId } = getRequestActor(req);
+  const actor = await requireAuthenticatedRequest(req, res);
+  if (!actor) return;
+  const { userId } = actor;
 
   try {
     const recipients = await prisma.emailRecipient.findMany({

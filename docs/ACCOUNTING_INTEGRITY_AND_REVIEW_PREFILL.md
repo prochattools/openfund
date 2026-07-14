@@ -6,6 +6,17 @@ Depends on: `docs/PHILOSOPHY.md`, `docs/STRATEGY.md`, `docs/DOMAIN_MODEL.md`, `d
 Roadmap: Phase 18 and Phase 19  
 External AI: explicitly deferred
 
+## Access control
+
+Production access is Clerk-only. The server verifies the Clerk session and
+maps the verified identity to an active local user and workspace membership
+before exposing review, accounting, or evaluation data. API requests without a
+valid session return `401` JSON; authenticated users without membership return
+`403`; browser pages redirect unauthenticated users to `/sign-in`. Client
+identity headers are not trusted. Read endpoints remain side-effect free, and
+review, booking, close, import, report, and email mutations remain
+administrator-only.
+
 ## What this capability is
 
 This capability adds two related safeguards to Yeshua Academy Finance:

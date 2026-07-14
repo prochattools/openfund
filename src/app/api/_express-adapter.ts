@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '../../../server/prismaClient';
-
-const PRODUCTION_WORKSPACE_ID = process.env.DEFAULT_WORKSPACE_ID?.trim() || '00000000-0000-4000-8000-000000000001';
-const CONFIGURED_DEFAULT_USER_ID = process.env.DEFAULT_USER_ID?.trim();
-let cachedDefaultDataOwnerId: string | undefined;
+import { resolveRequestActor, setRequestActor } from '../../../server/auth/requestContext';
 
 type JsonBody = unknown;
 
@@ -20,53 +16,6 @@ type ExpressLikeResponse = {
 };
 
 type ExpressJsonHandler = (req: any, res: any) => Promise<unknown> | unknown;
-
-const resolveDataOwnerId = async (request: NextRequest): Promise<string | undefined> => {
-  const requestedUserId = request.headers.get('x-user-id')?.trim() || CONFIGURED_DEFAULT_USER_ID;
-  if (!requestedUserId) {
-    return undefined;
-  }
-
-  const directUser = await prisma.user.findFirst({
-    where: {
-      isActive: true,
-      OR: [{ id: requestedUserId }, { email: requestedUserId }],
-    },
-    select: { id: true },
-  });
-
-  if (directUser) {
-    return directUser.id;
-  }
-
-  const isConfiguredDefault = requestedUserId === CONFIGURED_DEFAULT_USER_ID;
-  if (!isConfiguredDefault) {
-    return requestedUserId;
-  }
-
-  if (cachedDefaultDataOwnerId) {
-    return cachedDefaultDataOwnerId;
-  }
-
-  const adminMembership = await prisma.workspaceMembership.findFirst({
-    where: {
-      workspaceId: PRODUCTION_WORKSPACE_ID,
-      role: 'ADMIN',
-      isActive: true,
-      user: { isActive: true },
-    },
-    orderBy: { createdAt: 'asc' },
-    select: { userId: true },
-  });
-
-  cachedDefaultDataOwnerId = adminMembership?.userId;
-  if (cachedDefaultDataOwnerId) {
-    console.info('[identity] resolved configured data owner to workspace admin user');
-    return cachedDefaultDataOwnerId;
-  }
-
-  return requestedUserId;
-};
 
 const readQuery = (request: NextRequest): Record<string, string | string[]> => {
   const query: Record<string, string | string[]> = {};
@@ -88,19 +37,32 @@ export const invokeExpressJsonHandler = async (
   handler: ExpressJsonHandler,
   options: { params?: Record<string, string>; body?: unknown } = {},
 ) => {
+  const resolution = await resolveRequestActor(request.headers.get('cookie'));
+  if (!resolution.actor) {
+    const status = resolution.error === 'forbidden' ? 403 : resolution.error === 'misconfigured' ? 503 : 401;
+    return NextResponse.json(
+      {
+        error:
+          resolution.error === 'forbidden'
+            ? 'Geen toegang tot deze financiële werkruimte.'
+            : resolution.error === 'misconfigured'
+              ? 'Authenticatie is tijdelijk niet beschikbaar.'
+              : 'Authenticatie vereist.',
+      },
+      { status },
+    );
+  }
+
   let statusCode = 200;
   let responseBody: JsonBody = null;
-  const resolvedDataOwnerId = await resolveDataOwnerId(request);
 
   const req: ExpressLikeRequest = {
-    header: (name) =>
-      name.toLowerCase() === 'x-user-id'
-        ? resolvedDataOwnerId
-        : request.headers.get(name) ?? undefined,
+    header: (name) => request.headers.get(name) ?? undefined,
     query: readQuery(request),
     params: options.params ?? {},
     body: options.body,
   };
+  setRequestActor(req, resolution.actor);
 
   const res: ExpressLikeResponse = {
     status: (code) => {

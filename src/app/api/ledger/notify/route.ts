@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { resolveRequestActor } from '@/../server/auth/requestContext';
 import { resendService } from '@/libs/resend';
 import prisma from '@/libs/prisma';
 import config from '@/config';
@@ -11,20 +12,31 @@ type AttachmentPayload = {
   content: string;
 };
 
-const isAdminRequest = (request: Request) => {
-  const role = request.headers.get('x-user-role') ?? process.env.DEFAULT_USER_ROLE ?? 'admin';
-  return role.toLowerCase() === 'admin';
-};
-
 export async function POST(request: Request) {
-  if (!isAdminRequest(request)) {
+  const resolution = await resolveRequestActor(request.headers.get('cookie'));
+  if (!resolution.actor) {
+    const status = resolution.error === 'forbidden' ? 403 : resolution.error === 'misconfigured' ? 503 : 401;
+    return NextResponse.json(
+      {
+        error:
+          resolution.error === 'forbidden'
+            ? 'Geen toegang tot deze financiële werkruimte.'
+            : resolution.error === 'misconfigured'
+              ? 'Authenticatie is tijdelijk niet beschikbaar.'
+              : 'Authenticatie vereist.',
+      },
+      { status },
+    );
+  }
+
+  if (resolution.actor.role !== 'admin') {
     return NextResponse.json({ error: 'Alleen beheerders mogen financiële samenvattingen verzenden.' }, { status: 403 });
   }
 
   try {
     const body = await request.json();
     const explicitRecipients = Array.isArray(body.recipients) ? normalizeEmailRecipients(body.recipients) : [];
-    const userId = request.headers.get('x-user-id') ?? process.env.DEFAULT_USER_ID ?? 'demo-user';
+    const userId = resolution.actor.userId;
     const storedRecipients = explicitRecipients.length
       ? []
       : await prisma.emailRecipient.findMany({

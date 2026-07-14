@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prismaClient';
-import { getRequestActor } from '../auth/requestContext';
+import { requireAuthenticatedRequest } from '../auth/requestContext';
 import { readRouteParam } from './routeParams';
 import { buildContentDisposition, buildImportFileDownload } from '../services/importBatchDownload';
 import { readListLimit } from './queryParams';
@@ -43,7 +43,9 @@ export const serializeImportBatchSummary = (batch: ImportBatchResponseInput) => 
 });
 
 export const listImportBatches = async (req: Request, res: Response) => {
-  const { userId } = getRequestActor(req);
+  const actor = await requireAuthenticatedRequest(req, res);
+  if (!actor) return;
+  const { userId } = actor;
   const limit = readImportBatchLimit(req.query.limit);
 
   try {
@@ -62,7 +64,9 @@ export const listImportBatches = async (req: Request, res: Response) => {
 
 
 export const downloadImportBatchFile = async (req: Request, res: Response) => {
-  const { userId } = getRequestActor(req);
+  const actor = await requireAuthenticatedRequest(req, res);
+  if (!actor) return;
+  const { userId } = actor;
   const batchId = readRouteParam(req, 'id');
 
   if (!batchId) {

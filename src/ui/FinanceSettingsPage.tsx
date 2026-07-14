@@ -322,7 +322,7 @@ export default function FinanceSettingsPage() {
 
       <div className="space-y-6">
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <SettingCard title="Gebruikers" body="De app blijft privé. Voor nu blijft authenticatie via de huidige provider actief tot de Ory-migratie apart wordt uitgevoerd." status="Voorbereid" />
+          <SettingCard title="Gebruikers" body="De app blijft privé. Clerk verzorgt de aanmelding; actieve workspace-lidmaatschappen bepalen de lees- en beheermachtigingen." status="Actief" />
           <SettingCard title="E-mailupdates" body="Maandelijkse financiële samenvattingen blijven via Resend lopen en zijn versimpeld naar finance-only e-mails." status="Actief" />
           <SettingCard title="Beheermodus" body="Handmatig wijzigen of verwijderen van transacties hoort later achter een aparte veilige beheermodus, niet in het normale dashboard." status="Gepland" />
         </section>

@@ -1,31 +1,31 @@
-export type AuthProvider = 'disabled' | 'ory' | 'clerk';
+export type AuthProvider = 'disabled' | 'clerk';
+
+const configuredProvider = (process.env.AUTH_PROVIDER ?? process.env.NEXT_PUBLIC_AUTH_PROVIDER ?? '')
+  .trim()
+  .toLowerCase();
+
+const isProduction = process.env.NODE_ENV === 'production';
 
 const readAuthProvider = (): AuthProvider => {
-  const configured = (process.env.NEXT_PUBLIC_AUTH_PROVIDER ?? process.env.AUTH_PROVIDER ?? '').trim().toLowerCase();
-
-  if (configured === 'ory' || configured === 'clerk') {
-    return configured;
-  }
-
-  if (configured === 'disabled' || configured === 'false' || process.env.AUTH_ENABLED === 'false') {
+  if (!isProduction && (configuredProvider === 'disabled' || configuredProvider === 'false')) {
     return 'disabled';
   }
 
-  return 'disabled';
+  if (!isProduction && !configuredProvider && !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
+    return 'disabled';
+  }
+
+  // Clerk is the only supported provider. Unknown and legacy provider values
+  // fail closed into Clerk mode instead of selecting an alternate trust path.
+  return 'clerk';
 };
 
 export const AUTH_PROVIDER: AuthProvider = readAuthProvider();
-export const AUTH_ENABLED = AUTH_PROVIDER !== 'disabled';
-export const ORY_ENABLED = AUTH_PROVIDER === 'ory';
+export const AUTH_ENABLED = AUTH_PROVIDER === 'clerk';
 export const CLERK_ENABLED = AUTH_PROVIDER === 'clerk';
 
 const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? '';
-const secretKey = (() => {
-  if (typeof window !== 'undefined') {
-    return null;
-  }
-  return process.env.CLERK_SECRET_KEY ?? '';
-})();
+const secretKey = typeof window === 'undefined' ? process.env.CLERK_SECRET_KEY ?? '' : null;
 
 const isStubKey = (key: string) =>
   key.startsWith('pk_stub_') ||
@@ -33,21 +33,30 @@ const isStubKey = (key: string) =>
   key === 'pk_test_dummy' ||
   key === 'sk_test_dummy';
 
-const isValidPublishableKey = (key: string) =>
+export const isValidPublishableKey = (key: string) =>
   key.startsWith('pk_') && key.length > 20 && !isStubKey(key);
 
-const isValidSecretKey = (key: string | null) => {
-  if (key == null) {
-    return true;
-  }
-  return key.startsWith('sk_') && key.length > 20 && !isStubKey(key);
+export const isValidSecretKey = (key: string | null | undefined) =>
+  typeof key === 'string' && key.startsWith('sk_') && key.length > 20 && !isStubKey(key);
+
+const ZERO_WORKSPACE_ID = '00000000-0000-4000-8000-000000000001';
+const WORKSPACE_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export const isValidWorkspaceId = (value: string | null | undefined) => {
+  const normalized = value?.trim();
+  return Boolean(normalized && normalized !== ZERO_WORKSPACE_ID && WORKSPACE_ID_PATTERN.test(normalized));
 };
 
+export const CLERK_SERVER_ENABLED =
+  CLERK_ENABLED && isValidSecretKey(process.env.CLERK_SECRET_KEY);
+
 export const CLERK_RUNTIME_ENABLED =
-  CLERK_ENABLED && isValidPublishableKey(publishableKey) && isValidSecretKey(secretKey);
+  CLERK_ENABLED &&
+  isValidPublishableKey(publishableKey) &&
+  (typeof window !== 'undefined' || isValidSecretKey(secretKey));
 
 export const getPublishableKey = () => publishableKey;
-export const getSignInUrl = () => process.env.NEXT_PUBLIC_SIGN_IN_URL ?? process.env.NEXT_PUBLIC_CLERK_SIGN_IN_URL ?? '/sign-in';
-export const getSignUpUrl = () => process.env.NEXT_PUBLIC_SIGN_UP_URL ?? process.env.NEXT_PUBLIC_CLERK_SIGN_UP_URL ?? '/sign-in';
-export const getOryBaseUrl = () => process.env.NEXT_PUBLIC_ORY_SDK_URL ?? process.env.ORY_SDK_URL ?? '';
-export const getOryLoginUrl = () => process.env.NEXT_PUBLIC_ORY_LOGIN_URL ?? '/self-service/login/browser';
+export const getSignInUrl = () =>
+  process.env.NEXT_PUBLIC_SIGN_IN_URL ?? process.env.NEXT_PUBLIC_CLERK_SIGN_IN_URL ?? '/sign-in';
+export const getSignUpUrl = () =>
+  process.env.NEXT_PUBLIC_SIGN_UP_URL ?? process.env.NEXT_PUBLIC_CLERK_SIGN_UP_URL ?? '/sign-in';

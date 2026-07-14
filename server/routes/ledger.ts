@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prismaClient';
+import { requireAuthenticatedRequest } from '../auth/requestContext';
 
-const DEFAULT_USER_ID = process.env.DEFAULT_USER_ID ?? 'demo-user';
 
 export const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -182,7 +182,9 @@ export const buildRunningBalanceMap = (
 };
 
 export const getLedger = async (req: Request, res: Response) => {
-  const userId = req.header('x-user-id') ?? DEFAULT_USER_ID;
+  const actor = await requireAuthenticatedRequest(req, res);
+  if (!actor) return;
+  const { userId } = actor;
 
   try {
     const transactions = await prisma.transaction.findMany({

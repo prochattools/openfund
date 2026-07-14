@@ -1,10 +1,12 @@
 import { Request, Response } from 'express';
-import { getRequestActor } from '../auth/requestContext';
+import { requireAuthenticatedRequest } from '../auth/requestContext';
 import { computeReconciliation } from '../services/reconciliationService';
 import { readOptionalNumber, readOptionalString } from './queryParams';
 
 export const getReconciliation = async (req: Request, res: Response) => {
-  const { userId } = getRequestActor(req);
+  const actor = await requireAuthenticatedRequest(req, res);
+  if (!actor) return;
+  const { userId } = actor;
   const accountId = req.query.accountId;
 
   if (typeof accountId !== 'string' || !accountId) {

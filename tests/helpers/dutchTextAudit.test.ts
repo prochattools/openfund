@@ -8,6 +8,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import { setRequestActor } from '../../server/auth/requestContext';
 
 // ─── Route error messages ─────────────────────────────────────────────────────
 
@@ -21,7 +22,13 @@ describe('Dutch user-facing text — auth guard', () => {
       status(code: number) { this.statusCode = code; return this; },
       json(payload: unknown) { this.body = payload; return this; },
     };
-    const req = { header: (_: string) => 'viewer' } as any;
+    const req = { header: (_: string) => undefined } as any;
+    setRequestActor(req, {
+      userId: 'viewer-user',
+      role: 'viewer',
+      actorId: 'viewer-user',
+      actorEmail: 'viewer@example.test',
+    });
     await requireAdmin(req, res as any);
     expect((res.body as Record<string, string>).error).toBe('Alleen beheerders mogen deze actie uitvoeren.');
   });

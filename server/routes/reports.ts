@@ -2,8 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../prismaClient';
 import { buildPeriodReportSummary, calculateOpeningBalanceMinor } from '../services/reportingService';
 import { readBoundedInteger, readNullableBoundedInteger } from './queryParams';
-
-const DEFAULT_USER_ID = process.env.DEFAULT_USER_ID ?? 'demo-user';
+import { requireAuthenticatedRequest } from '../auth/requestContext';
 
 export const readReportYear = (value: unknown): number =>
   readBoundedInteger(value, { fallback: new Date().getUTCFullYear(), min: 2000, max: 2100 });
@@ -72,7 +71,9 @@ const sumOpeningBalanceMinor = async (userId: string, periodStart: Date): Promis
 };
 
 export const getReportSummary = async (req: Request, res: Response) => {
-  const userId = req.header('x-user-id') ?? DEFAULT_USER_ID;
+  const actor = await requireAuthenticatedRequest(req, res);
+  if (!actor) return;
+  const { userId } = actor;
   const year = readReportYear(req.query.year);
   const month = readReportMonth(req.query.month);
   const { start, end } = getReportPeriodBounds(year, month);

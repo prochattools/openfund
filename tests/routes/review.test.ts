@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { setRequestActor } from '../../server/auth/requestContext';
 import {
   activateReviewRuleCreation,
   getReviewTransactions,
@@ -58,24 +59,28 @@ const makeRequest = ({
   body = {},
   params = { id: 'tx-1' },
   role = 'admin',
-  cookie = 'ory_kratos_session=session-1',
+  cookie = 'test-session',
 }: {
   body?: unknown;
   params?: Record<string, string>;
   role?: 'admin' | 'viewer';
   cookie?: string | null;
-}) => ({
-  body,
-  params,
-  header: (name: string) => {
-    if (name === 'x-user-id') return 'user-1';
-    if (name === 'x-user-role') return role;
-    if (name === 'x-actor-id') return 'actor-1';
-    if (name === 'x-user-email') return 'finance@example.test';
-    if (name === 'cookie') return cookie;
-    return undefined;
-  },
-});
+}) => {
+  const request = {
+    body,
+    params,
+    header: (name: string) => (name === 'cookie' ? cookie : undefined),
+  };
+  if (cookie !== null) {
+    setRequestActor(request, {
+      userId: 'user-1',
+      role,
+      actorId: 'user-1',
+      actorEmail: 'finance@example.test',
+    });
+  }
+  return request;
+};
 
 describe('review routes', () => {
   beforeEach(() => {

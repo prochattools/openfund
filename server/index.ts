@@ -35,6 +35,7 @@ import {
   postPrepareReportDispatch,
 } from './routes/reportSnapshots';
 import { ensureCategorizationRuleConditionsColumn } from './db/ensureCategorizationRuleConditions';
+import { authenticateExpressRequest } from './auth/requestContext';
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -45,6 +46,8 @@ app.use(express.json());
 app.get('/healthz', (_req, res) => {
   res.json({ status: 'ok' });
 });
+
+app.use('/api', authenticateExpressRequest);
 
 app.post('/api/upload', upload.single('file'), handleImportUpload);
 app.post('/api/upload/preview', upload.single('file'), handleMonthlyImportPreviewUpload);

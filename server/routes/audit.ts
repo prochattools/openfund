@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prismaClient';
-import { getRequestActor } from '../auth/requestContext';
+import { requireAuthenticatedRequest } from '../auth/requestContext';
 import { readListLimit } from './queryParams';
 
 export const readAuditLogLimit = readListLimit;
@@ -32,7 +32,9 @@ export const serializeAuditLogEntry = (log: AuditLogResponseInput) => ({
 });
 
 export const listAuditLogs = async (req: Request, res: Response) => {
-  const { userId } = getRequestActor(req);
+  const actor = await requireAuthenticatedRequest(req, res);
+  if (!actor) return;
+  const { userId } = actor;
   const limit = readAuditLogLimit(req.query.limit);
 
   try {

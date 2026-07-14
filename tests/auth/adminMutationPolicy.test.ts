@@ -12,36 +12,41 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { setRequestActor } from '../../server/auth/requestContext';
 
 // ─── Shared test helpers ──────────────────────────────────────────────────────
 
-const makeAdminRequest = (body: unknown = {}, params: Record<string, string> = {}) => ({
-  body,
-  params,
-  header: (name: string) => {
-    if (name === 'x-user-id') return 'admin-user';
-    if (name === 'x-user-role') return 'admin';
-    if (name === 'x-actor-id') return 'actor-1';
-    if (name === 'x-user-email') return 'admin@example.test';
-    if (name === 'x-workspace-id') return 'workspace-1';
-    return undefined;
-  },
-  query: {} as Record<string, string>,
-});
+const makeAdminRequest = (body: unknown = {}, params: Record<string, string> = {}) => {
+  const request = {
+    body,
+    params,
+    header: (name: string) => (name === 'x-workspace-id' ? 'workspace-1' : undefined),
+    query: {} as Record<string, string>,
+  };
+  setRequestActor(request, {
+    userId: 'admin-user',
+    role: 'admin',
+    actorId: 'admin-user',
+    actorEmail: 'admin@example.test',
+  });
+  return request;
+};
 
-const makeViewerRequest = (body: unknown = {}, params: Record<string, string> = {}) => ({
-  body,
-  params,
-  header: (name: string) => {
-    if (name === 'x-user-id') return 'viewer-user';
-    if (name === 'x-user-role') return 'viewer';
-    if (name === 'x-actor-id') return null;
-    if (name === 'x-user-email') return null;
-    if (name === 'x-workspace-id') return 'workspace-1';
-    return undefined;
-  },
-  query: {} as Record<string, string>,
-});
+const makeViewerRequest = (body: unknown = {}, params: Record<string, string> = {}) => {
+  const request = {
+    body,
+    params,
+    header: (name: string) => (name === 'x-workspace-id' ? 'workspace-1' : undefined),
+    query: {} as Record<string, string>,
+  };
+  setRequestActor(request, {
+    userId: 'viewer-user',
+    role: 'viewer',
+    actorId: 'viewer-user',
+    actorEmail: 'viewer@example.test',
+  });
+  return request;
+};
 
 const makeRes = () => {
   const res = {
@@ -97,7 +102,7 @@ describe('admin mutation policy — upload routes', () => {
   });
 
   it('POST /api/upload requires admin', async () => {
-    const req = { ...makeViewerRequest(), file: { buffer: Buffer.from('csv'), originalname: 'test.csv', mimetype: 'text/csv' } };
+    const req = Object.assign(makeViewerRequest(), { file: { buffer: Buffer.from('csv'), originalname: 'test.csv', mimetype: 'text/csv' } });
     const res = makeRes();
     await handleImportUpload(req as any, res as any);
     expect(res.statusCode).toBe(403);
@@ -106,7 +111,7 @@ describe('admin mutation policy — upload routes', () => {
   });
 
   it('POST /api/upload/preview requires admin', async () => {
-    const req = { ...makeViewerRequest(), file: { buffer: Buffer.from('csv'), originalname: 'test.csv', mimetype: 'text/csv' } };
+    const req = Object.assign(makeViewerRequest(), { file: { buffer: Buffer.from('csv'), originalname: 'test.csv', mimetype: 'text/csv' } });
     const res = makeRes();
     await handleMonthlyImportPreviewUpload(req as any, res as any);
     expect(res.statusCode).toBe(403);

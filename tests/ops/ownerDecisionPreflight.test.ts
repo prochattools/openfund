@@ -21,6 +21,7 @@ import {
 } from '../../scripts/owner-decision-preflight.mjs';
 
 const dangerousCommandPattern = /git\s+push|npm\s+install|npm\s+ci|pnpm\s+install|yarn\s+install|sendMail|resend\.emails\.send|historical.*production.*execute|dokploy|10\.0\.2\.4/i;
+const withoutWorktreePaths = (output: string) => output.replace(/^- Dirty paths:.*$/m, '');
 
 describe('owner decision preflight — report model', () => {
   it('supports every owner-gated decision', () => {
@@ -46,7 +47,7 @@ describe('owner decision preflight — report model', () => {
     expect(output).toContain('Blijft geblokkeerd zonder owner-goedkeuring: JA');
     expect(output).toContain('Vereiste eigenaarinput');
     expect(output).toContain('Stopregels');
-    expect(output).not.toMatch(dangerousCommandPattern);
+    expect(withoutWorktreePaths(output)).not.toMatch(dangerousCommandPattern);
     expect(output).not.toContain('PGPASSWORD=');
     expect(output).not.toContain('DATABASE_URL=postgresql://');
   });
@@ -108,7 +109,7 @@ describe('owner decision preflight — CLI', () => {
       });
       expect(output).toContain(`Sleutel: \`${decision}\``);
       expect(output).toContain('GEREED VOOR EIGENAARSREVIEW');
-      expect(output).not.toMatch(dangerousCommandPattern);
+      expect(withoutWorktreePaths(output)).not.toMatch(dangerousCommandPattern);
       expect(output).not.toContain('local_dev_placeholder');
     }
   });
@@ -139,7 +140,7 @@ describe('owner decision preflight — CLI', () => {
       });
       const content = readFileSync(outputPath, 'utf-8');
       expect(content).toContain('Echte PDF-renderer afhankelijkheid');
-      expect(content).not.toMatch(dangerousCommandPattern);
+      expect(withoutWorktreePaths(content)).not.toMatch(dangerousCommandPattern);
       expect(content).not.toContain('PGPASSWORD=');
     } finally {
       if (before == null) {

@@ -12,6 +12,23 @@ Execution detail: `docs/IMPLEMENTATION_PLAN.md`
 - Every phase ends with tests, builds, financial-control validation, diff review, and documentation updates.
 - No production import, deployment, or migration occurs without an explicit approved task.
 
+## Current authentication standardization
+
+The local authentication hardening slice is not yet committed, pushed, or
+deployed. Clerk is the only production provider; the server verifies the Clerk
+session, maps the verified user to an active local `User` and
+`WorkspaceMembership`, and derives administrator/viewer permissions from that
+membership. Protected APIs return `401` JSON for missing or invalid sessions,
+protected pages redirect to `/sign-in`, client identity headers are ignored,
+and all financial mutations remain administrator-only. No financial data,
+opening balance, suggestion, or review decision is changed by this slice.
+
+The coordinated release requires the GitHub Actions publishable-key secret and
+the Dokploy Clerk runtime variables, including the real active workspace UUID.
+The Clerk secret remains runtime-only. Ory variables and generic cookie
+fallbacks are removed only after the verified Clerk rollout. The 221
+unresolved transactions and 663 review-only suggestions remain unchanged.
+
 ## Current position
 
 ```text

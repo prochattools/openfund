@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { resolveRequestActor } from '@/../server/auth/requestContext';
 import * as XLSX from 'xlsx';
 import prisma from '@/libs/prisma';
 import {
@@ -13,10 +14,23 @@ import {
   splitCategoryLabel,
 } from './exportHelpers';
 
-const DEFAULT_USER_ID = process.env.DEFAULT_USER_ID ?? 'demo-user';
-
 export async function GET(request: Request) {
-  const userId = request.headers.get('x-user-id') ?? DEFAULT_USER_ID;
+  const resolution = await resolveRequestActor(request.headers.get('cookie'));
+  if (!resolution.actor) {
+    const status = resolution.error === 'forbidden' ? 403 : resolution.error === 'misconfigured' ? 503 : 401;
+    return NextResponse.json(
+      {
+        error:
+          resolution.error === 'forbidden'
+            ? 'Geen toegang tot deze financiële werkruimte.'
+            : resolution.error === 'misconfigured'
+              ? 'Authenticatie is tijdelijk niet beschikbaar.'
+              : 'Authenticatie vereist.',
+      },
+      { status },
+    );
+  }
+  const { userId } = resolution.actor;
 
   const transactions = await prisma.transaction.findMany({
     where: {

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { setRequestActor } from '../../server/auth/requestContext';
 import { postAuditedPeriodReopen } from '../../server/routes/auditedPeriodReopen';
 import { AuditedReopenError } from '../../server/services/auditedPeriodReopenService';
 
@@ -48,18 +49,20 @@ const makeRequest = ({
   params?: Record<string, string>;
   role?: 'admin' | 'viewer';
   workspaceHeader?: string | null;
-} = {}) => ({
-  body,
-  params,
-  header: (name: string) => {
-    if (name === 'x-user-id') return 'user-1';
-    if (name === 'x-user-role') return role;
-    if (name === 'x-actor-id') return 'actor-1';
-    if (name === 'x-user-email') return 'finance@example.test';
-    if (name === 'x-workspace-id') return workspaceHeader ?? undefined;
-    return undefined;
-  },
-});
+} = {}) => {
+  const request = {
+    body,
+    params,
+    header: (name: string) => (name === 'x-workspace-id' ? workspaceHeader ?? undefined : undefined),
+  };
+  setRequestActor(request, {
+    userId: 'user-1',
+    role,
+    actorId: 'user-1',
+    actorEmail: 'finance@example.test',
+  });
+  return request;
+};
 
 const successResult = {
   closeId: 'close-1',
@@ -96,7 +99,7 @@ describe('audited period reopen route', () => {
       actor: {
         userId: 'user-1',
         role: 'admin',
-        actorId: 'actor-1',
+        actorId: 'user-1',
         actorEmail: 'finance@example.test',
       },
       workspaceId: 'workspace-1',
