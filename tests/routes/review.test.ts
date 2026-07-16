@@ -151,6 +151,11 @@ describe('review routes', () => {
       expect(serviceMocks.getEvidenceRichReviewQueue).toHaveBeenCalledWith(expect.anything(), 'user-1', {
         page: 1,
         pageSize: 25,
+        confidence: null,
+        direction: null,
+        projectId: null,
+        categoryId: null,
+        state: 'all',
       });
     } finally {
       process.env.NODE_ENV = originalNodeEnv;
@@ -184,6 +189,52 @@ describe('review routes', () => {
     expect(serviceMocks.getEvidenceRichReviewQueue).toHaveBeenCalledWith(expect.anything(), 'user-1', {
       page: 3,
       pageSize: 50,
+      confidence: null,
+      direction: null,
+      projectId: null,
+      categoryId: null,
+      state: 'all',
+    });
+  });
+
+  it('forwards supported review filters to the queue service', async () => {
+    serviceMocks.getEvidenceRichReviewQueue.mockResolvedValueOnce({
+      transactions: [], categories: [], projects: [], transactionTypes: [],
+      pagination: { page: 1, pageSize: 25, totalItems: 0, totalPages: 1, hasPreviousPage: false, hasNextPage: false },
+      message: 'Beoordelingsrij geladen.',
+    });
+    const response = makeResponse();
+
+    await getReviewTransactions(makeRequest({
+      role: 'viewer',
+      query: {
+        confidence: 'red', direction: 'debit', projectId: 'project-1',
+        categoryId: 'category-1', state: 'incomplete',
+      },
+    }) as any, response as any);
+
+    expect(serviceMocks.getEvidenceRichReviewQueue).toHaveBeenCalledWith(expect.anything(), 'user-1', {
+      page: 1, pageSize: 25, confidence: 'red', direction: 'debit',
+      projectId: 'project-1', categoryId: 'category-1', state: 'incomplete',
+    });
+  });
+
+  it('falls back safely for unsupported review query values', async () => {
+    serviceMocks.getEvidenceRichReviewQueue.mockResolvedValueOnce({
+      transactions: [], categories: [], projects: [], transactionTypes: [],
+      pagination: { page: 1, pageSize: 25, totalItems: 0, totalPages: 1, hasPreviousPage: false, hasNextPage: false },
+      message: 'Beoordelingsrij geladen.',
+    });
+    const response = makeResponse();
+
+    await getReviewTransactions(makeRequest({
+      role: 'viewer',
+      query: { page: '-4', pageSize: '40', confidence: 'blue', direction: 'sideways', state: 'closed' },
+    }) as any, response as any);
+
+    expect(serviceMocks.getEvidenceRichReviewQueue).toHaveBeenCalledWith(expect.anything(), 'user-1', {
+      page: 1, pageSize: 25, confidence: null, direction: null,
+      projectId: null, categoryId: null, state: 'all',
     });
   });
 

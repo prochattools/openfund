@@ -93,9 +93,17 @@ export type ReviewPagination = {
   hasNextPage: boolean;
 };
 
+export type ReviewReliabilityBand = 'green' | 'amber' | 'red' | 'gray';
+export type ReviewStateFilter = 'all' | 'incomplete';
+
 export type ReviewQueueOptions = {
   page: number;
   pageSize: number;
+  confidence?: ReviewReliabilityBand | null;
+  direction?: TransactionDirection | null;
+  projectId?: string | null;
+  categoryId?: string | null;
+  state?: ReviewStateFilter;
 };
 
 export type EvidenceRichReviewQueue = {
@@ -390,8 +398,38 @@ const buildStatusReason = (
   return 'Er is geen deterministische match gevonden. Classificeer deze transactie handmatig.';
 };
 
+const reliabilityBand = (item: EvidenceRichReviewItem): ReviewReliabilityBand => {
+  const first = item.alternatives[0];
+  if (item.deterministicStatus === 'conflict') return 'red';
+  if (item.deterministicStatus === 'finalized' || first?.confidence === 'EXACT_FALLBACK') return 'green';
+  if (first?.confidence === 'OVERALL') return 'amber';
+  if (first?.confidence === 'FUZZY') return 'red';
+  return 'gray';
+};
+
+const reliabilityRank: Record<ReviewReliabilityBand, number> = {
+  red: 0,
+  gray: 1,
+  amber: 2,
+  green: 3,
+};
+
+const filterItems = (items: EvidenceRichReviewItem[], options: ReviewQueueOptions): EvidenceRichReviewItem[] =>
+  items.filter((item) => {
+    if (options.confidence && reliabilityBand(item) !== options.confidence) return false;
+    if (options.direction && item.direction !== options.direction) return false;
+    if (options.projectId && item.proposed?.projectId !== options.projectId) return false;
+    if (options.categoryId && item.proposed?.categoryId !== options.categoryId) return false;
+    if (options.state === 'incomplete' && item.proposed?.complete === true) return false;
+    return true;
+  });
+
 const sortItems = (items: EvidenceRichReviewItem[]): EvidenceRichReviewItem[] =>
   [...items].sort((left, right) => {
+    const reliabilityDifference = reliabilityRank[reliabilityBand(left)] - reliabilityRank[reliabilityBand(right)];
+    if (reliabilityDifference !== 0) return reliabilityDifference;
+    const amountDifference = Math.abs(right.amount) - Math.abs(left.amount);
+    if (amountDifference !== 0) return amountDifference;
     const leftTime = new Date(left.displayDate).getTime();
     const rightTime = new Date(right.displayDate).getTime();
     if (leftTime !== rightTime) return leftTime - rightTime;
@@ -466,15 +504,30 @@ const buildReviewItem = (transaction: ReviewTransaction): EvidenceRichReviewItem
 export const buildEvidenceRichReviewQueue = (
   transactions: ReviewTransaction[],
   dimensions: Pick<EvidenceRichReviewQueue, 'categories' | 'projects' | 'transactionTypes'>,
-  pagination: ReviewPagination,
-): EvidenceRichReviewQueue => ({
-  transactions: sortItems(transactions.map(buildReviewItem)),
-  categories: dimensions.categories,
-  projects: dimensions.projects,
-  transactionTypes: dimensions.transactionTypes,
-  pagination,
-  message: 'Beoordelingsrij geladen. Er zijn geen boekingen of periodeafsluitingen gemaakt.',
-});
+  options: ReviewQueueOptions = { page: 1, pageSize: 25, state: 'all' },
+): EvidenceRichReviewQueue => {
+  const orderedItems = sortItems(filterItems(transactions.map(buildReviewItem), options));
+  const totalItems = orderedItems.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / options.pageSize));
+  const page = Math.min(options.page, totalPages);
+  const start = (page - 1) * options.pageSize;
+
+  return {
+    transactions: orderedItems.slice(start, start + options.pageSize),
+    categories: dimensions.categories,
+    projects: dimensions.projects,
+    transactionTypes: dimensions.transactionTypes,
+    pagination: {
+      page,
+      pageSize: options.pageSize,
+      totalItems,
+      totalPages,
+      hasPreviousPage: page > 1,
+      hasNextPage: page < totalPages,
+    },
+    message: 'Beoordelingsrij geladen. Er zijn geen boekingen of periodeafsluitingen gemaakt.',
+  };
+};
 
 export const getEvidenceRichReviewQueue = async (
   db: ReviewQueueDbClient,
@@ -492,10 +545,8 @@ export const getEvidenceRichReviewQueue = async (
       { classificationSource: 'import' },
     ],
   };
-  const [transactions, totalItems, categories, projects, transactionTypes] = await Promise.all([
+  const [transactions, categories, projects, transactionTypes] = await Promise.all([
     db.transaction.findMany({
-      skip: (options.page - 1) * options.pageSize,
-      take: options.pageSize,
       where,
       include: {
         account: true,
@@ -534,7 +585,6 @@ export const getEvidenceRichReviewQueue = async (
         { id: 'asc' },
       ],
     }),
-    db.transaction.count({ where }),
     db.category.findMany({
       select: {
         id: true,
@@ -554,18 +604,10 @@ export const getEvidenceRichReviewQueue = async (
     }),
   ]);
 
-  const totalPages = Math.max(1, Math.ceil(totalItems / options.pageSize));
   return buildEvidenceRichReviewQueue(
     transactions as ReviewTransaction[],
     { categories, projects, transactionTypes },
-    {
-      page: options.page,
-      pageSize: options.pageSize,
-      totalItems,
-      totalPages,
-      hasPreviousPage: options.page > 1,
-      hasNextPage: options.page < totalPages,
-    },
+    options,
   );
 };
 

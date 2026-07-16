@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { FinanceAppFrame } from '@/ui/FinanceAppFrame';
 import {
@@ -35,13 +35,16 @@ type Reliability = {
 
 const reliabilityFor = (item: EvidenceRichReviewItem): Reliability => {
   const first = item.alternatives[0];
+  if (item.deterministicStatus === 'conflict') {
+    return { band: 'red' as const, score: 60, label: 'Onzeker', className: 'border-rose-300 bg-rose-50 text-rose-800' };
+  }
   if (item.deterministicStatus === 'finalized' || first?.confidence === 'EXACT_FALLBACK') {
     return { band: 'green' as const, score: 97, label: 'Zeer betrouwbaar', className: 'border-emerald-300 bg-emerald-50 text-emerald-800' };
   }
   if (first?.confidence === 'OVERALL') {
     return { band: 'amber' as const, score: 85, label: 'Controleer zorgvuldig', className: 'border-amber-300 bg-amber-50 text-amber-900' };
   }
-  if (first?.confidence === 'FUZZY' || item.deterministicStatus === 'conflict') {
+  if (first?.confidence === 'FUZZY') {
     return { band: 'red' as const, score: 60, label: 'Onzeker', className: 'border-rose-300 bg-rose-50 text-rose-800' };
   }
   return { band: 'gray' as const, score: null, label: 'Onvoldoende bewijs', className: 'border-stone-300 bg-stone-100 text-stone-700' };
@@ -152,12 +155,21 @@ export default function FinanceReviewPage() {
   const [direction, setDirection] = useState<'all' | 'credit' | 'debit'>('all');
   const [projectFilter, setProjectFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [stateFilter, setStateFilter] = useState<'all' | 'incomplete'>('all');
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetchReview({ page, pageSize });
+      const response = await fetchReview({
+        page,
+        pageSize,
+        confidence: confidence === 'all' ? null : confidence,
+        direction: direction === 'all' ? null : direction,
+        projectId: projectFilter || null,
+        categoryId: categoryFilter || null,
+        state: stateFilter,
+      });
       setData(response);
       if (page > response.pagination.totalPages) setPage(response.pagination.totalPages);
     } catch (error) {
@@ -166,18 +178,11 @@ export default function FinanceReviewPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize]);
+  }, [page, pageSize, confidence, direction, projectFilter, categoryFilter, stateFilter]);
 
   useEffect(() => { void load(); }, [load]);
 
-  const visibleTransactions = useMemo(() => (data?.transactions ?? []).filter((item) => {
-    const reliability = reliabilityFor(item);
-    if (confidence !== 'all' && reliability.band !== confidence) return false;
-    if (direction !== 'all' && item.direction !== direction) return false;
-    if (projectFilter && item.proposed?.projectId !== projectFilter) return false;
-    if (categoryFilter && item.proposed?.categoryId !== categoryFilter) return false;
-    return true;
-  }), [data, confidence, direction, projectFilter, categoryFilter]);
+  const visibleTransactions = data?.transactions ?? [];
 
   const pagination = data?.pagination;
   return (
@@ -189,11 +194,12 @@ export default function FinanceReviewPage() {
         </div>
       </header>
 
-      <section className="mb-4 grid gap-3 rounded-2xl border border-[#ded5c8] bg-[#fbf8f2] p-4 md:grid-cols-2 xl:grid-cols-5">
-        <select aria-label="Betrouwbaarheid filter" value={confidence} onChange={(event) => setConfidence(event.target.value as ConfidenceFilter)} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm"><option value="all">Alle betrouwbaarheid</option><option value="green">Zeer betrouwbaar</option><option value="amber">Controleer zorgvuldig</option><option value="red">Onzeker</option><option value="gray">Onvoldoende bewijs</option></select>
-        <select aria-label="Richting filter" value={direction} onChange={(event) => setDirection(event.target.value as typeof direction)} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm"><option value="all">Alle richtingen</option><option value="debit">Afschrijvingen</option><option value="credit">Bijschrijvingen</option></select>
-        <select aria-label="Project filter" value={projectFilter} onChange={(event) => setProjectFilter(event.target.value)} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm"><option value="">Alle projecten</option>{data?.projects.map((project) => <option key={project.id} value={project.id}>{project.code} · {project.name}</option>)}</select>
-        <select aria-label="Categorie filter" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm"><option value="">Alle categorieën</option>{data?.categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select>
+      <section className="mb-4 grid gap-3 rounded-2xl border border-[#ded5c8] bg-[#fbf8f2] p-4 md:grid-cols-2 xl:grid-cols-6">
+        <select aria-label="Betrouwbaarheid filter" value={confidence} onChange={(event) => { setConfidence(event.target.value as ConfidenceFilter); setPage(1); }} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm"><option value="all">Alle betrouwbaarheid</option><option value="green">Zeer betrouwbaar</option><option value="amber">Controleer zorgvuldig</option><option value="red">Onzeker</option><option value="gray">Onvoldoende bewijs</option></select>
+        <select aria-label="Richting filter" value={direction} onChange={(event) => { setDirection(event.target.value as typeof direction); setPage(1); }} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm"><option value="all">Alle richtingen</option><option value="debit">Afschrijvingen</option><option value="credit">Bijschrijvingen</option></select>
+        <select aria-label="Project filter" value={projectFilter} onChange={(event) => { setProjectFilter(event.target.value); setPage(1); }} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm"><option value="">Alle projecten</option>{data?.projects.map((project) => <option key={project.id} value={project.id}>{project.code} · {project.name}</option>)}</select>
+        <select aria-label="Categorie filter" value={categoryFilter} onChange={(event) => { setCategoryFilter(event.target.value); setPage(1); }} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm"><option value="">Alle categorieën</option>{data?.categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select>
+        <select aria-label="Status filter" value={stateFilter} onChange={(event) => { setStateFilter(event.target.value as 'all' | 'incomplete'); setPage(1); }} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm"><option value="all">Alle open transacties</option><option value="incomplete">Onvolledige voorstellen</option></select>
         <select aria-label="Aantal per pagina" value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value) as PageSize); setPage(1); }} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">{PAGE_SIZES.map((size) => <option key={size} value={size}>{size} per pagina</option>)}</select>
       </section>
 

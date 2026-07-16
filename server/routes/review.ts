@@ -20,6 +20,13 @@ import { requireAuthenticatedRequest, requireAdmin } from '../auth/requestContex
 import { readRouteParam } from './routeParams';
 
 const REVIEW_PAGE_SIZES = new Set([25, 50, 100]);
+const REVIEW_CONFIDENCE_BANDS = new Set(['green', 'amber', 'red', 'gray']);
+const REVIEW_DIRECTIONS = new Set(['credit', 'debit']);
+
+const readQueryString = (value: unknown): string | null => {
+  const raw = Array.isArray(value) ? value[0] : value;
+  return typeof raw === 'string' && raw.trim() ? raw.trim() : null;
+};
 
 const readPositiveInteger = (value: unknown, fallback: number): number => {
   const raw = Array.isArray(value) ? value[0] : value;
@@ -32,7 +39,22 @@ const readReviewQueueOptions = (req: Request) => {
   const page = readPositiveInteger(query.page, 1);
   const requestedPageSize = readPositiveInteger(query.pageSize, 25);
   const pageSize = REVIEW_PAGE_SIZES.has(requestedPageSize) ? requestedPageSize : 25;
-  return { page, pageSize };
+  const confidenceValue = readQueryString(query.confidence);
+  const directionValue = readQueryString(query.direction);
+  const stateValue = readQueryString(query.state);
+  return {
+    page,
+    pageSize,
+    confidence: confidenceValue && REVIEW_CONFIDENCE_BANDS.has(confidenceValue)
+      ? confidenceValue as 'green' | 'amber' | 'red' | 'gray'
+      : null,
+    direction: directionValue && REVIEW_DIRECTIONS.has(directionValue)
+      ? directionValue as 'credit' | 'debit'
+      : null,
+    projectId: readQueryString(query.projectId),
+    categoryId: readQueryString(query.categoryId),
+    state: stateValue === 'incomplete' ? 'incomplete' as const : 'all' as const,
+  };
 };
 
 const sendReviewDecisionError = (res: Response, error: unknown, fallback: string) => {

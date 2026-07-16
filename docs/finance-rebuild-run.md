@@ -2053,3 +2053,61 @@ Push restriction: **do not push**
 ### Exact next task
 
 Read the authoritative roadmap, implementation plan, architecture, and this handoff. Verify source/branch/HEAD/worktree. Review the committed Phase 2 slice and then implement the next bounded Phase 2 packet: server-side filter and documented risk-first ordering support, targeted queue-service pagination/filter tests, and browser-level responsive/accessibility verification where existing tooling supports it. Do not add Bedrock, AI, merchant schema changes, bulk confirmation, or automatic booking. Do not push.
+
+
+
+
+---
+
+## 2026-07-16 — Program Phase 2 server filtering and risk-ordering checkpoint
+
+Status: **second coherent Phase 2 slice implemented and validated**  
+Starting HEAD: `4b9fe33` (`feat: add paginated transaction review table`)  
+Push restriction: **do not push**
+
+### Completed behavior
+
+- `GET /api/review` now supports server-side filters for reliability band, direction, proposed project, proposed category, and incomplete proposal state.
+- Filter values are allowlisted and invalid values safely normalize to the unfiltered defaults.
+- Filters are applied before pagination so matching unresolved transactions cannot be hidden on later pages.
+- Review rows use documented stable risk-first ordering:
+  1. lowest reliability;
+  2. highest absolute amount;
+  3. oldest transaction date;
+  4. stable transaction ID tie-breaker.
+- Out-of-range pages are clamped to the final available page; empty filtered results normalize to page 1 of 1.
+- The client forwards only active filters and no longer filters just the currently loaded page.
+- Filter changes reset the page to 1.
+- The UI now exposes the incomplete-proposal filter.
+- Conflict status takes precedence over an exact first alternative in both server ordering and UI reliability display, preventing conflicting suggestions from appearing green.
+- Existing administrator-only, transactional, audited individual confirmation remains unchanged.
+- No AI, Bedrock, schema, migration, bulk-confirmation, or automatic-booking behavior was added.
+
+### Changed paths
+
+- `server/routes/review.ts`
+- `server/services/reviewQueueService.ts`
+- `src/libs/api.ts`
+- `src/ui/FinanceReviewPage.tsx`
+- `tests/routes/review.test.ts`
+- `tests/services/reviewQueueService.test.ts`
+- `docs/finance-rebuild-run.md`
+
+### Validation evidence
+
+- Focused review queue tests — exit `0`; 5 relevant tests passed, including filters-before-pagination, confidence, direction, project, category, incomplete state, risk ordering, pagination boundaries, empty results, and page clamping.
+- Focused review route tests — exit `0`; 17 relevant tests passed, including valid filters, pagination forwarding, and invalid-value fallbacks.
+- `npm run build:server` — exit `0`.
+- Full `npm run build` — exit `0`; Prisma generation, server TypeScript, Next.js compilation, type validation, and static generation completed successfully.
+- One bounded production-code repair changed reliability precedence so `conflict` is always red before exact-candidate handling; server and UI now agree.
+
+### Remaining Phase 2 work
+
+- Browser-level responsive and accessibility verification remains to be completed where tooling supports it.
+- Searchable comboboxes may replace native selects in a later bounded UI slice if warranted.
+- Reliability scores remain provisional display values and are not calibrated probabilities.
+- Dedicated UI interaction tests for filter changes, inline editing, evidence expansion, and per-row confirmation remain desirable.
+
+### Exact next task
+
+Read the authoritative roadmap, implementation plan, architecture, and this handoff. Verify source, branch, HEAD, and worktree. Complete browser-level responsive/accessibility verification of `/review` and add the smallest targeted UI interaction coverage available in the repository. Preserve all accounting and authorization controls. Do not add Bedrock, AI, merchant schema changes, bulk confirmation, automatic booking, or future phases. Do not push.

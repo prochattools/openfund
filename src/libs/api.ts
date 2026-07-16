@@ -114,6 +114,11 @@ export type ReviewPagination = {
 export type ReviewQuery = {
   page?: number;
   pageSize?: 25 | 50 | 100;
+  confidence?: 'green' | 'amber' | 'red' | 'gray' | null;
+  direction?: 'credit' | 'debit' | null;
+  projectId?: string | null;
+  categoryId?: string | null;
+  state?: 'all' | 'incomplete';
 };
 
 export type EvidenceRichReviewResponse = {
@@ -144,11 +149,24 @@ export const fetchLedger = async () => {
   return response.json();
 };
 
-export const fetchReview = async ({ page = 1, pageSize = 25 }: ReviewQuery = {}): Promise<EvidenceRichReviewResponse> => {
+export const fetchReview = async ({
+  page = 1,
+  pageSize = 25,
+  confidence = null,
+  direction = null,
+  projectId = null,
+  categoryId = null,
+  state = 'all',
+}: ReviewQuery = {}): Promise<EvidenceRichReviewResponse> => {
   const query = new URLSearchParams({
     page: String(page),
     pageSize: String(pageSize),
   });
+  if (confidence) query.set('confidence', confidence);
+  if (direction) query.set('direction', direction);
+  if (projectId) query.set('projectId', projectId);
+  if (categoryId) query.set('categoryId', categoryId);
+  if (state !== 'all') query.set('state', state);
   const response = await fetch(getApiUrl(`/api/review?${query.toString()}`), withUserHeader({ cache: 'no-store' }));
 
   if (!response.ok) {

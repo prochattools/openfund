@@ -125,9 +125,9 @@ describe('review queue service', () => {
     });
 
     expect(queue.message).toBe('Beoordelingsrij geladen. Er zijn geen boekingen of periodeafsluitingen gemaakt.');
-    expect(queue.transactions.map((item) => item.transactionId)).toEqual(['tx-finalized', 'tx-review', 'tx-late']);
+    expect(queue.transactions.map((item) => item.transactionId)).toEqual(['tx-late', 'tx-finalized', 'tx-review']);
 
-    const finalized = queue.transactions[0]!;
+    const finalized = queue.transactions.find((item) => item.transactionId === 'tx-finalized')!;
     expect(finalized).toMatchObject({
       deterministicStatus: 'finalized',
       statusLabel: 'Veilige deterministische kandidaat',
@@ -156,7 +156,7 @@ describe('review queue service', () => {
       },
     });
 
-    const review = queue.transactions[1]!;
+    const review = queue.transactions.find((item) => item.transactionId === 'tx-review')!;
     expect(review).toMatchObject({
       deterministicStatus: 'review_suggested',
       proposed: {
@@ -244,5 +244,51 @@ describe('review queue service', () => {
         }),
       ],
     });
+  });
+
+  it('filters before pagination and applies stable risk-first ordering with page clamping', () => {
+    const conflictSuggestions = (projectId: string, categoryId: string) => [
+      completeSuggestion({ id: `${projectId}-1`, projectId, categoryId }),
+      completeSuggestion({
+        id: `${projectId}-2`,
+        projectId: `${projectId}-other`,
+        categoryId,
+        evidenceHash: `${projectId}-hash-2`,
+        project: { id: `${projectId}-other`, code: 'ALT', name: 'Alternative' },
+      }),
+    ];
+    const transactions = [
+      makeTransaction({ id: 'red-high', amountMinor: 20000n, direction: 'debit', date: new Date('2026-05-03T00:00:00.000Z'), categorizationSuggestions: conflictSuggestions('project-red', 'cat-red') }),
+      makeTransaction({ id: 'red-low', amountMinor: 10000n, direction: 'credit', date: new Date('2026-05-01T00:00:00.000Z'), categorizationSuggestions: conflictSuggestions('project-red', 'cat-red') }),
+      makeTransaction({ id: 'gray-high', amountMinor: 30000n, direction: 'debit', date: new Date('2026-04-01T00:00:00.000Z') }),
+      makeTransaction({ id: 'amber', amountMinor: 5000n, categorizationSuggestions: [completeSuggestion({ id: 'amber-suggestion', confidence: 'OVERALL', projectId: 'project-amber', categoryId: 'cat-amber', project: { id: 'project-amber', code: 'AMB', name: 'Amber' }, category: { id: 'cat-amber', name: 'Amber category' } })] }),
+      makeTransaction({ id: 'green', amountMinor: 9000n, categorizationSuggestions: [completeSuggestion({ id: 'green-suggestion', projectId: 'project-green', categoryId: 'cat-green', project: { id: 'project-green', code: 'GRN', name: 'Green' }, category: { id: 'cat-green', name: 'Green category' } })] }),
+    ] as any;
+    const dimensions = { categories: [], projects: [], transactionTypes: [] };
+
+    const first = buildEvidenceRichReviewQueue(transactions, dimensions, { page: 1, pageSize: 2, state: 'all' });
+    expect(first.transactions.map((item) => item.transactionId)).toEqual(['red-high', 'red-low']);
+    expect(first.pagination).toEqual({ page: 1, pageSize: 2, totalItems: 5, totalPages: 3, hasPreviousPage: false, hasNextPage: true });
+
+    const middle = buildEvidenceRichReviewQueue(transactions, dimensions, { page: 2, pageSize: 2, state: 'all' });
+    expect(middle.transactions.map((item) => item.transactionId)).toEqual(['gray-high', 'amber']);
+
+    const final = buildEvidenceRichReviewQueue(transactions, dimensions, { page: 3, pageSize: 2, state: 'all' });
+    expect(final.transactions.map((item) => item.transactionId)).toEqual(['green']);
+    expect(final.pagination.hasNextPage).toBe(false);
+
+    const clamped = buildEvidenceRichReviewQueue(transactions, dimensions, { page: 99, pageSize: 2, state: 'all' });
+    expect(clamped.pagination.page).toBe(3);
+    expect(clamped.transactions.map((item) => item.transactionId)).toEqual(['green']);
+
+    expect(buildEvidenceRichReviewQueue(transactions, dimensions, { page: 1, pageSize: 25, confidence: 'red', state: 'all' }).transactions.map((item) => item.transactionId)).toEqual(['red-high', 'red-low']);
+    expect(buildEvidenceRichReviewQueue(transactions, dimensions, { page: 1, pageSize: 25, direction: 'debit', state: 'all' }).transactions.map((item) => item.transactionId)).toEqual(['red-high', 'gray-high']);
+    expect(buildEvidenceRichReviewQueue(transactions, dimensions, { page: 1, pageSize: 25, projectId: 'project-amber', state: 'all' }).transactions.map((item) => item.transactionId)).toEqual(['amber']);
+    expect(buildEvidenceRichReviewQueue(transactions, dimensions, { page: 1, pageSize: 25, categoryId: 'cat-green', state: 'all' }).transactions.map((item) => item.transactionId)).toEqual(['green']);
+    expect(buildEvidenceRichReviewQueue(transactions, dimensions, { page: 1, pageSize: 25, state: 'incomplete' }).transactions.map((item) => item.transactionId)).toEqual(['gray-high']);
+
+    const empty = buildEvidenceRichReviewQueue(transactions, dimensions, { page: 5, pageSize: 25, projectId: 'missing', state: 'all' });
+    expect(empty.transactions).toEqual([]);
+    expect(empty.pagination).toEqual({ page: 1, pageSize: 25, totalItems: 0, totalPages: 1, hasPreviousPage: false, hasNextPage: false });
   });
 });
