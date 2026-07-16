@@ -1,130 +1,95 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useLedger } from '@/context/ledger-context';
 import { FinanceAppFrame } from '@/ui/FinanceAppFrame';
-import type { LedgerTransaction } from '@/helpers/api-transaction-mapper';
 import {
-  buildReviewApprovalPayload,
-  canAcceptReviewSuggestion,
-  formatReviewEuro,
-  getReviewSuggestedLabel,
-  isReviewPlaceholderCategory,
-  parseReviewDate,
-  resolveDefaultReviewCategory,
-  translateSuggestionConfidence,
-} from '@/helpers/review-page';
-import {
+  fetchReview,
   isClientAdmin,
+  updateCategory,
+  type EvidenceRichReviewItem,
+  type EvidenceRichReviewResponse,
   type ReviewCategoryOption,
   type ReviewProjectOption,
   type ReviewTransactionTypeOption,
 } from '@/libs/api';
+
+const PAGE_SIZES = [25, 50, 100] as const;
+type PageSize = (typeof PAGE_SIZES)[number];
+type ConfidenceFilter = 'all' | 'green' | 'amber' | 'red' | 'gray';
 
 const dateFormatter = new Intl.DateTimeFormat('nl-NL', {
   day: '2-digit',
   month: 'short',
   year: 'numeric',
 });
+const moneyFormatter = new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' });
 
-const formatEuro = formatReviewEuro;
+type Reliability = {
+  band: Exclude<ConfidenceFilter, 'all'>;
+  score: number | null;
+  label: string;
+  className: string;
+};
 
-function Header({ count }: { count: number }) {
-  return (
-    <header className="mb-6 rounded-[2rem] border border-[#ded5c8] bg-[#fbf8f2] p-5 shadow-[0_24px_70px_rgba(87,67,45,0.08)]">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="text-sm font-medium text-[#7d6d5a]">Te beoordelen</p>
-          <h2 className="mt-1 text-3xl font-semibold tracking-[-0.05em] md:text-4xl">Boekingen afronden</h2>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-[#6f6253]">
-            Iedere transactie start met een complete lokale suggestie voor klant/project, transactietype en categorie. De suggestie is nooit definitief totdat een beheerder haar goedkeurt of corrigeert.
-          </p>
-        </div>
-        <div className="rounded-[1.5rem] bg-[#f5e9c8] px-5 py-4 text-center text-[#7a5512]">
-          <p className="text-3xl font-semibold tracking-[-0.05em]">{count}</p>
-          <p className="text-sm font-semibold">open</p>
-        </div>
-      </div>
-    </header>
-  );
-}
+const reliabilityFor = (item: EvidenceRichReviewItem): Reliability => {
+  const first = item.alternatives[0];
+  if (item.deterministicStatus === 'finalized' || first?.confidence === 'EXACT_FALLBACK') {
+    return { band: 'green' as const, score: 97, label: 'Zeer betrouwbaar', className: 'border-emerald-300 bg-emerald-50 text-emerald-800' };
+  }
+  if (first?.confidence === 'OVERALL') {
+    return { band: 'amber' as const, score: 85, label: 'Controleer zorgvuldig', className: 'border-amber-300 bg-amber-50 text-amber-900' };
+  }
+  if (first?.confidence === 'FUZZY' || item.deterministicStatus === 'conflict') {
+    return { band: 'red' as const, score: 60, label: 'Onzeker', className: 'border-rose-300 bg-rose-50 text-rose-800' };
+  }
+  return { band: 'gray' as const, score: null, label: 'Onvoldoende bewijs', className: 'border-stone-300 bg-stone-100 text-stone-700' };
+};
 
 function EmptyReviewState() {
   return (
-    <section className="rounded-[2rem] border border-[#ded5c8] bg-[#fbf8f2] p-8 text-center shadow-[0_24px_70px_rgba(87,67,45,0.08)]">
-      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#8a7965]">Alles is bijgewerkt</p>
-      <h3 className="mx-auto mt-3 max-w-2xl text-3xl font-semibold tracking-[-0.05em]">Er zijn geen transacties die beoordeling nodig hebben.</h3>
-      <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-[#6f6253]">Je kunt terug naar het dashboard of een nieuwe ING maandexport importeren.</p>
-      <div className="mt-6 flex justify-center gap-3">
-        <Link href="/" className="rounded-2xl bg-[#1f5f4a] px-5 py-3 text-sm font-semibold text-[#fbf8f2]">Dashboard</Link>
-        <Link href="/ledger#importeren" className="rounded-2xl border border-[#ded5c8] bg-[#fbf8f2] px-5 py-3 text-sm font-semibold text-[#574b3f]">Importeren</Link>
-      </div>
+    <section className="rounded-3xl border border-[#ded5c8] bg-[#fbf8f2] p-8 text-center">
+      <h2 className="text-2xl font-semibold">Er zijn geen transacties die beoordeling nodig hebben.</h2>
+      <Link href="/" className="mt-5 inline-block rounded-xl bg-[#1f5f4a] px-5 py-3 text-sm font-semibold text-white">Dashboard</Link>
     </section>
   );
 }
 
-type AssignPayload = {
-  categoryId: string;
-  projectId: string;
-  transactionTypeId: string;
-  reason?: string | null;
-};
-
-function ReviewCard({
-  transaction,
+function ReviewRow({
+  item,
   categories,
   projects,
   transactionTypes,
-  onAssign,
+  onConfirmed,
 }: {
-  transaction: LedgerTransaction;
+  item: EvidenceRichReviewItem;
   categories: ReviewCategoryOption[];
   projects: ReviewProjectOption[];
   transactionTypes: ReviewTransactionTypeOption[];
-  onAssign: (transactionId: string, payload: AssignPayload) => Promise<void>;
+  onConfirmed: () => Promise<void>;
 }) {
-  const [projectId, setProjectId] = useState(transaction.reviewProposal?.projectId ?? '');
-  const [transactionTypeId, setTransactionTypeId] = useState(transaction.reviewProposal?.transactionTypeId ?? '');
-  const [categoryId, setCategoryId] = useState(() => resolveDefaultReviewCategory(transaction, categories));
+  const initialProjectId = item.proposed?.projectId ?? '';
+  const initialTypeId = item.proposed?.transactionTypeId ?? '';
+  const initialCategoryId = item.proposed?.categoryId ?? '';
+  const [projectId, setProjectId] = useState(initialProjectId);
+  const [transactionTypeId, setTransactionTypeId] = useState(initialTypeId);
+  const [categoryId, setCategoryId] = useState(initialCategoryId);
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
-  const canReview = isClientAdmin();
-  const isExpense = transaction.amount < 0;
-  const compatibleTypes = transactionTypes.filter((item) => !transaction.direction || item.direction === transaction.direction);
-  const suggestedLabel = getReviewSuggestedLabel(transaction);
-  const canAcceptSuggestion = canAcceptReviewSuggestion(canReview, projectId, transactionTypeId, categoryId);
+  const admin = isClientAdmin();
+  const reliability = reliabilityFor(item);
+  const changed = projectId !== initialProjectId || transactionTypeId !== initialTypeId || categoryId !== initialCategoryId;
+  const complete = Boolean(projectId && transactionTypeId && categoryId);
+  const compatibleTypes = transactionTypes.filter((type) => type.direction === item.direction);
 
-  const applyAlternative = (index: number) => {
-    const alternative = transaction.reviewAlternatives?.[index];
-    if (!alternative?.complete || !alternative.projectId || !alternative.transactionTypeId || !alternative.categoryId) return;
-    setProjectId(alternative.projectId);
-    setTransactionTypeId(alternative.transactionTypeId);
-    setCategoryId(alternative.categoryId);
-  };
-
-  const save = async () => {
-    if (!canReview) {
-      toast.error('Alleen beheerders mogen transacties boeken.');
-      return;
-    }
-
-    const payload = buildReviewApprovalPayload({
-      projectId,
-      transactionTypeId,
-      categoryId,
-      reason,
-    });
-    if (!payload) {
-      toast.error('Kies een klant/project, transactietype en categorie.');
-      return;
-    }
-
+  const confirm = async () => {
+    if (!admin || !complete) return;
     setBusy(true);
     try {
-      await onAssign(transaction.id, payload);
+      await updateCategory(item.transactionId, { projectId, transactionTypeId, categoryId, reason: reason.trim() || null });
       toast.success('Boeking en beoordelingsbesluit opgeslagen.');
+      await onConfirmed();
     } catch (error) {
       console.error(error);
       toast.error('De boeking kon niet worden opgeslagen.');
@@ -134,169 +99,115 @@ function ReviewCard({
   };
 
   return (
-    <article className="rounded-[2rem] border border-[#ded5c8] bg-[#fbf8f2] p-6 shadow-[0_24px_70px_rgba(87,67,45,0.08)]">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+    <article className="border-b border-[#ded5c8] bg-[#fbf8f2] p-4 last:border-b-0">
+      <div className="grid gap-3 xl:grid-cols-[110px_minmax(190px,1.2fr)_minmax(220px,1.5fr)_110px_minmax(170px,1fr)_minmax(170px,1fr)_minmax(180px,1fr)_145px_140px] xl:items-center">
+        <div className="text-sm text-[#6f6253]">{dateFormatter.format(new Date(item.displayDate))}</div>
         <div>
-          <p className="text-sm font-medium text-[#7d6d5a]">{dateFormatter.format(parseReviewDate(transaction.date))}</p>
-          <h3 className="mt-2 text-2xl font-semibold tracking-[-0.04em]">{transaction.description}</h3>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-[#6f6253]">{transaction.notificationDetail ?? 'Geen extra omschrijving'}</p>
+          <p className="font-semibold">{item.counterparty ?? 'Onbekende tegenpartij'}</p>
+          <p className="text-xs text-[#7d6d5a]">{item.counterpartyIban ?? item.accountIdentifier ?? ''}</p>
         </div>
-        <p className={`text-3xl font-semibold tracking-[-0.05em] ${isExpense ? 'text-[#914f35]' : 'text-[#1f5f4a]'}`}>{formatEuro(transaction.amount)}</p>
-      </div>
-
-      <div className="mt-6 rounded-[1.5rem] bg-[#f5f1ea] p-4">
-        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8a7965]">Lokale suggestie · menselijk akkoord vereist</p>
-            <p className="mt-2 font-semibold">{suggestedLabel}</p>
-            <p className="mt-1 text-sm text-[#6f6253]">Zekerheid: {transaction.reviewConfidenceLabel ?? translateSuggestionConfidence(transaction.suggestionConfidence)}</p>
-            {transaction.reviewReason ? <p className="mt-2 max-w-3xl text-sm leading-6 text-[#6f6253]">{transaction.reviewReason}</p> : null}
-            {transaction.reviewEvidenceSummary ? <p className="mt-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#8a7965]">{transaction.reviewEvidenceSummary}</p> : null}
-          </div>
-          <button type="button" onClick={save} disabled={busy || !canAcceptSuggestion} className="rounded-2xl bg-[#1f5f4a] px-5 py-3 text-sm font-semibold text-[#fbf8f2] disabled:opacity-60">
-            {!canReview ? 'Alleen beheerder' : busy ? 'Opslaan…' : 'Suggestie goedkeuren'}
-          </button>
+        <div className="min-w-0">
+          <p className="truncate font-medium" title={item.description}>{item.description}</p>
+          <p className="truncate text-xs text-[#7d6d5a]" title={item.paymentPurpose ?? ''}>{item.paymentPurpose ?? 'Geen extra omschrijving'}</p>
         </div>
-
-        {transaction.reviewAlternatives?.length ? (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {transaction.reviewAlternatives.map((alternative, index) => (
-              <button
-                key={alternative.suggestionId}
-                type="button"
-                onClick={() => applyAlternative(index)}
-                disabled={!alternative.complete}
-                className="rounded-xl border border-[#d7cdbf] bg-[#fbf8f2] px-3 py-2 text-left text-xs disabled:opacity-50"
-              >
-                <span className="font-semibold">#{alternative.rank} {alternative.projectLabel ?? alternative.projectCode ?? 'Project'} · {alternative.transactionTypeLabel ?? 'Type'} · {alternative.categoryLabel ?? 'Categorie'}</span>
-                <span className="ml-2 text-[#7d6d5a]">{alternative.confidenceLabel}</span>
-              </button>
-            ))}
-          </div>
-        ) : null}
-      </div>
-
-      <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <label className="text-sm font-semibold text-[#574b3f]">
-          Klant / project
-          <select value={projectId} onChange={(event) => setProjectId(event.target.value)} className="mt-2 w-full rounded-2xl border border-[#ded5c8] bg-[#f5f1ea] px-4 py-3 text-sm outline-none focus:border-[#1f5f4a]">
-            <option value="">Kies klant/project</option>
-            {projects.map((project) => <option key={project.id} value={project.id}>{project.code} · {project.name}</option>)}
-          </select>
-        </label>
-
-        <label className="text-sm font-semibold text-[#574b3f]">
-          Transactietype
-          <select value={transactionTypeId} onChange={(event) => setTransactionTypeId(event.target.value)} className="mt-2 w-full rounded-2xl border border-[#ded5c8] bg-[#f5f1ea] px-4 py-3 text-sm outline-none focus:border-[#1f5f4a]">
-            <option value="">Kies transactietype</option>
-            {compatibleTypes.map((item) => <option key={item.id} value={item.id}>{item.literalName}</option>)}
-          </select>
-        </label>
-
-        <label className="text-sm font-semibold text-[#574b3f] md:col-span-2">
-          Categorie
-          <select value={categoryId} onChange={(event) => setCategoryId(event.target.value)} className="mt-2 w-full rounded-2xl border border-[#ded5c8] bg-[#f5f1ea] px-4 py-3 text-sm outline-none focus:border-[#1f5f4a]">
-            <option value="">Kies categorie</option>
-            {categories.filter((category) => !isReviewPlaceholderCategory(category)).map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
-          </select>
-        </label>
-      </div>
-
-      <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-end">
-        <label className="flex-1 text-sm font-semibold text-[#574b3f]">
-          Reden of correctienotitie
-          <input value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Optioneel; wordt onderdeel van het beoordelingsbesluit" className="mt-2 w-full rounded-2xl border border-[#ded5c8] bg-[#f5f1ea] px-4 py-3 text-sm outline-none focus:border-[#1f5f4a]" />
-        </label>
-        <button onClick={save} disabled={busy || !canAcceptSuggestion} className="rounded-2xl bg-[#1f5f4a] px-5 py-3 text-sm font-semibold text-[#fbf8f2] disabled:opacity-60">
-          {!canReview ? 'Alleen beheerder' : busy ? 'Opslaan…' : 'Boeking goedkeuren'}
+        <div className={`text-right font-semibold ${item.amount < 0 ? 'text-[#914f35]' : 'text-[#1f5f4a]'}`}>{moneyFormatter.format(item.amount)}</div>
+        <select aria-label="Klant of project" disabled={!admin || busy} value={projectId} onChange={(event) => setProjectId(event.target.value)} className="w-full rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
+          <option value="">Kies project</option>
+          {projects.map((project) => <option key={project.id} value={project.id}>{project.code} · {project.name}</option>)}
+        </select>
+        <select aria-label="Transactietype" disabled={!admin || busy} value={transactionTypeId} onChange={(event) => setTransactionTypeId(event.target.value)} className="w-full rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
+          <option value="">Kies type</option>
+          {compatibleTypes.map((type) => <option key={type.id} value={type.id}>{type.literalName}</option>)}
+        </select>
+        <select aria-label="Categorie" disabled={!admin || busy} value={categoryId} onChange={(event) => setCategoryId(event.target.value)} className="w-full rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
+          <option value="">Kies categorie</option>
+          {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+        </select>
+        <div className={`rounded-xl border px-3 py-2 text-xs font-semibold ${reliability.className}`}>
+          <span aria-hidden="true">● </span>{reliability.score === null ? reliability.label : `${reliability.score}% · ${reliability.label}`}
+        </div>
+        <button type="button" onClick={confirm} disabled={!admin || busy || !complete} className="rounded-xl bg-[#1f5f4a] px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
+          {!admin ? 'Alleen beheerder' : busy ? 'Opslaan…' : changed ? 'Wijzigingen bevestigen' : 'Bevestigen'}
         </button>
       </div>
+      <details className="mt-3 rounded-xl bg-[#f5f1ea] px-4 py-3 text-sm">
+        <summary className="cursor-pointer font-semibold">Bewijs en details</summary>
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <div><strong>Status:</strong> {item.statusLabel}<br /><strong>Reden:</strong> {item.reason}<br /><strong>Bron:</strong> {item.source}</div>
+          <div><strong>Regels:</strong> {item.evidence.matchedRuleIds.join(', ') || 'geen'}<br /><strong>Historische records:</strong> {item.evidence.historicalRecordIds.length}<br /><strong>Alternatieven:</strong> {item.alternatives.length}</div>
+        </div>
+        <label className="mt-3 block font-semibold">Correctienotitie
+          <input value={reason} onChange={(event) => setReason(event.target.value)} disabled={!admin || busy} placeholder="Optioneel; wordt onderdeel van de audit" className="mt-1 w-full rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 font-normal" />
+        </label>
+      </details>
     </article>
   );
 }
 
-function ReviewTableMode({ transactions }: { transactions: LedgerTransaction[] }) {
-  return (
-    <details className="rounded-[2rem] border border-[#ded5c8] bg-[#fbf8f2] p-6 shadow-[0_24px_70px_rgba(87,67,45,0.08)]">
-      <summary className="cursor-pointer text-lg font-semibold tracking-[-0.03em]">Tabelweergave</summary>
-      <div className="mt-5 overflow-x-auto rounded-[1.5rem] border border-[#ded5c8]">
-        <table className="w-full min-w-[900px] border-collapse text-left text-sm">
-          <thead className="bg-[#f5f1ea] text-xs uppercase tracking-[0.14em] text-[#8a7965]">
-            <tr>
-              <th className="px-4 py-3">Datum</th>
-              <th className="px-4 py-3">Omschrijving</th>
-              <th className="px-4 py-3">Project</th>
-              <th className="px-4 py-3">Type</th>
-              <th className="px-4 py-3">Categorie</th>
-              <th className="px-4 py-3 text-right">Bedrag</th>
-            </tr>
-          </thead>
-          <tbody>
-            {transactions.map((transaction) => (
-              <tr key={transaction.id} className="border-t border-[#ded5c8]">
-                <td className="px-4 py-4 text-[#6f6253]">{dateFormatter.format(parseReviewDate(transaction.date))}</td>
-                <td className="px-4 py-4 font-semibold">{transaction.description}</td>
-                <td className="px-4 py-4 text-[#6f6253]">{transaction.reviewProposal?.projectLabel ?? transaction.reviewProposal?.projectCode ?? 'Geen voorstel'}</td>
-                <td className="px-4 py-4 text-[#6f6253]">{transaction.reviewProposal?.transactionTypeLabel ?? 'Geen voorstel'}</td>
-                <td className="px-4 py-4 text-[#6f6253]">{transaction.reviewProposal?.categoryLabel ?? 'Geen voorstel'}</td>
-                <td className={`px-4 py-4 text-right font-semibold ${transaction.amount < 0 ? 'text-[#914f35]' : 'text-[#1f5f4a]'}`}>{formatEuro(transaction.amount)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </details>
-  );
-}
-
 export default function FinanceReviewPage() {
-  const {
-    reviewTransactions,
-    reviewProjects,
-    reviewTransactionTypes,
-    reviewCategories,
-    assignCategory,
-    summary,
-  } = useLedger();
+  const [data, setData] = useState<EvidenceRichReviewResponse | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<PageSize>(25);
+  const [confidence, setConfidence] = useState<ConfidenceFilter>('all');
+  const [direction, setDirection] = useState<'all' | 'credit' | 'debit'>('all');
+  const [projectFilter, setProjectFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await fetchReview({ page, pageSize });
+      setData(response);
+      if (page > response.pagination.totalPages) setPage(response.pagination.totalPages);
+    } catch (error) {
+      console.error(error);
+      toast.error('De beoordelingsrij kon niet worden geladen.');
+    } finally {
+      setLoading(false);
+    }
+  }, [page, pageSize]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const visibleTransactions = useMemo(() => (data?.transactions ?? []).filter((item) => {
+    const reliability = reliabilityFor(item);
+    if (confidence !== 'all' && reliability.band !== confidence) return false;
+    if (direction !== 'all' && item.direction !== direction) return false;
+    if (projectFilter && item.proposed?.projectId !== projectFilter) return false;
+    if (categoryFilter && item.proposed?.categoryId !== categoryFilter) return false;
+    return true;
+  }), [data, confidence, direction, projectFilter, categoryFilter]);
+
+  const pagination = data?.pagination;
   return (
-    <FinanceAppFrame reviewCount={summary.reviewCount} activeHref="/review">
-      <Header count={reviewTransactions.length} />
-      {reviewTransactions.length ? (
-        <div className="space-y-6">
-          {reviewTransactions.slice(0, 1).map((transaction) => (
-            <ReviewCard
-              key={transaction.id}
-              transaction={transaction}
-              categories={reviewCategories}
-              projects={reviewProjects}
-              transactionTypes={reviewTransactionTypes}
-              onAssign={assignCategory}
-            />
-          ))}
-          {reviewTransactions.length > 1 ? (
-            <section className="rounded-[2rem] border border-[#ded5c8] bg-[#fbf8f2] p-6 shadow-[0_24px_70px_rgba(87,67,45,0.08)]">
-              <p className="text-sm font-medium text-[#7d6d5a]">Volgende transacties</p>
-              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {reviewTransactions.slice(1, 7).map((transaction) => (
-                  <div key={transaction.id} className="rounded-[1.25rem] border border-[#ded5c8] bg-[#f8f3ec] p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-xs text-[#8a7965]">{dateFormatter.format(parseReviewDate(transaction.date))}</p>
-                        <p className="mt-1 font-semibold">{transaction.description}</p>
-                        <p className="mt-2 text-xs text-[#6f6253]">{transaction.reviewProposal?.projectLabel ?? transaction.reviewProposal?.projectCode ?? 'Geen projectvoorstel'} · {transaction.reviewProposal?.transactionTypeLabel ?? 'Geen typevoorstel'} · {transaction.reviewProposal?.categoryLabel ?? 'Geen categorievoorstel'}</p>
-                      </div>
-                      <p className={`font-semibold ${transaction.amount < 0 ? 'text-[#914f35]' : 'text-[#1f5f4a]'}`}>{formatEuro(transaction.amount)}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          ) : null}
-          <ReviewTableMode transactions={reviewTransactions} />
+    <FinanceAppFrame reviewCount={pagination?.totalItems ?? 0} activeHref="/review">
+      <header className="mb-4 rounded-3xl border border-[#ded5c8] bg-[#fbf8f2] p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div><p className="text-sm font-medium text-[#7d6d5a]">Te beoordelen</p><h1 className="text-3xl font-semibold">Transacties controleren</h1><p className="mt-1 text-sm text-[#6f6253]">Controleer de voorgestelde classificatie en bevestig iedere transactie afzonderlijk.</p></div>
+          <div className="rounded-2xl bg-[#f5e9c8] px-5 py-3 text-center"><strong className="text-2xl">{pagination?.totalItems ?? 0}</strong><div className="text-xs">open</div></div>
         </div>
-      ) : (
-        <EmptyReviewState />
-      )}
+      </header>
+
+      <section className="mb-4 grid gap-3 rounded-2xl border border-[#ded5c8] bg-[#fbf8f2] p-4 md:grid-cols-2 xl:grid-cols-5">
+        <select aria-label="Betrouwbaarheid filter" value={confidence} onChange={(event) => setConfidence(event.target.value as ConfidenceFilter)} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm"><option value="all">Alle betrouwbaarheid</option><option value="green">Zeer betrouwbaar</option><option value="amber">Controleer zorgvuldig</option><option value="red">Onzeker</option><option value="gray">Onvoldoende bewijs</option></select>
+        <select aria-label="Richting filter" value={direction} onChange={(event) => setDirection(event.target.value as typeof direction)} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm"><option value="all">Alle richtingen</option><option value="debit">Afschrijvingen</option><option value="credit">Bijschrijvingen</option></select>
+        <select aria-label="Project filter" value={projectFilter} onChange={(event) => setProjectFilter(event.target.value)} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm"><option value="">Alle projecten</option>{data?.projects.map((project) => <option key={project.id} value={project.id}>{project.code} · {project.name}</option>)}</select>
+        <select aria-label="Categorie filter" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm"><option value="">Alle categorieën</option>{data?.categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select>
+        <select aria-label="Aantal per pagina" value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value) as PageSize); setPage(1); }} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">{PAGE_SIZES.map((size) => <option key={size} value={size}>{size} per pagina</option>)}</select>
+      </section>
+
+      {loading && !data ? <div className="rounded-2xl border border-[#ded5c8] bg-[#fbf8f2] p-8 text-center">Laden…</div> : null}
+      {!loading && data && data.pagination.totalItems === 0 ? <EmptyReviewState /> : null}
+      {data && data.pagination.totalItems > 0 ? (
+        <section className="overflow-hidden rounded-2xl border border-[#ded5c8] bg-[#fbf8f2]">
+          <div className="hidden bg-[#f5f1ea] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[#7d6d5a] xl:grid xl:grid-cols-[110px_minmax(190px,1.2fr)_minmax(220px,1.5fr)_110px_minmax(170px,1fr)_minmax(170px,1fr)_minmax(180px,1fr)_145px_140px] xl:gap-3"><span>Datum</span><span>Tegenpartij</span><span>Omschrijving</span><span className="text-right">Bedrag</span><span>Project</span><span>Type</span><span>Categorie</span><span>Betrouwbaarheid</span><span>Actie</span></div>
+          {visibleTransactions.map((item) => <ReviewRow key={item.transactionId} item={item} categories={data.categories} projects={data.projects} transactionTypes={data.transactionTypes} onConfirmed={load} />)}
+          {!visibleTransactions.length ? <div className="p-8 text-center text-sm text-[#6f6253]">Geen transacties op deze pagina voldoen aan de filters.</div> : null}
+        </section>
+      ) : null}
+
+      {pagination ? <nav aria-label="Paginering" className="mt-4 flex flex-col gap-3 rounded-2xl border border-[#ded5c8] bg-[#fbf8f2] p-4 sm:flex-row sm:items-center sm:justify-between"><span className="text-sm">Pagina {pagination.page} van {pagination.totalPages} · {pagination.totalItems} transacties</span><div className="flex gap-2"><button type="button" disabled={!pagination.hasPreviousPage || loading} onClick={() => setPage((value) => Math.max(1, value - 1))} className="rounded-xl border border-[#d7cdbf] px-4 py-2 text-sm font-semibold disabled:opacity-40">Vorige</button><button type="button" disabled={!pagination.hasNextPage || loading} onClick={() => setPage((value) => value + 1)} className="rounded-xl bg-[#1f5f4a] px-4 py-2 text-sm font-semibold text-white disabled:opacity-40">Volgende</button></div></nav> : null}
     </FinanceAppFrame>
   );
 }

@@ -102,11 +102,26 @@ export type ReviewTransactionTypeOption = {
   direction: 'credit' | 'debit';
 };
 
+export type ReviewPagination = {
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+};
+
+export type ReviewQuery = {
+  page?: number;
+  pageSize?: 25 | 50 | 100;
+};
+
 export type EvidenceRichReviewResponse = {
   transactions: EvidenceRichReviewItem[];
   categories: ReviewCategoryOption[];
   projects: ReviewProjectOption[];
   transactionTypes: ReviewTransactionTypeOption[];
+  pagination: ReviewPagination;
   message: string;
 };
 
@@ -129,8 +144,12 @@ export const fetchLedger = async () => {
   return response.json();
 };
 
-export const fetchReview = async (): Promise<EvidenceRichReviewResponse> => {
-  const response = await fetch(getApiUrl('/api/review'), withUserHeader({ cache: 'no-store' }));
+export const fetchReview = async ({ page = 1, pageSize = 25 }: ReviewQuery = {}): Promise<EvidenceRichReviewResponse> => {
+  const query = new URLSearchParams({
+    page: String(page),
+    pageSize: String(pageSize),
+  });
+  const response = await fetch(getApiUrl(`/api/review?${query.toString()}`), withUserHeader({ cache: 'no-store' }));
 
   if (!response.ok) {
     throw new Error('De beoordelingsrij kon niet worden geladen.');

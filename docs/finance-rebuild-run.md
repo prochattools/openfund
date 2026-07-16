@@ -1994,3 +1994,62 @@ At the time this handoff text was written, documentation changes were not yet co
 
 
 - `npm test -- --test-name-pattern "final docs consistency"` — exit `0`; 36 passed, 0 failed across the targeted consistency and contamination guards.
+
+
+
+
+---
+
+## 2026-07-16 — Program Phase 2 implementation checkpoint
+
+Status: **first coherent Phase 2 slice implemented and validated**  
+Active run: `agent-1e6c0562-ac27-4655-9792-e3bc18490d99`  
+Starting implementation HEAD: `5b66d0b` (`docs: define transaction review intelligence program`)  
+Push restriction: **do not push**
+
+### Completed behavior
+
+- `GET /api/review` now accepts `page` and `pageSize`.
+- Defaults are page `1` and page size `25`.
+- Allowed page sizes are `25`, `50`, and `100`; unsupported values fall back to `25`.
+- The queue service applies database `skip`/`take` and counts all unresolved transactions using the same unresolved predicate.
+- The API returns `page`, `pageSize`, `totalItems`, `totalPages`, `hasPreviousPage`, and `hasNextPage`.
+- The client sends explicit pagination parameters.
+- `/review` now uses a compact responsive row list rather than the previous first-card-plus-preview layout.
+- Each row displays date, counterparty, description/payment purpose, amount, project, transaction type, category, reliability, and an individual confirm action.
+- Project, transaction type, and category remain editable inline.
+- Reliability uses green/amber/red/gray visual treatment plus text and a score where available; the bands remain provisional and non-calibrated.
+- Each row exposes expandable evidence/details and an optional audited correction note.
+- Page-size choices and previous/next navigation are present.
+- Page-local filters cover reliability, direction, proposed project, and proposed category.
+- Confirmation continues through the existing administrator-only audited `updateCategory` route; no bulk confirmation or AI path was added.
+
+### Changed paths
+
+- `server/routes/review.ts`
+- `server/services/reviewQueueService.ts`
+- `src/libs/api.ts`
+- `src/ui/FinanceReviewPage.tsx`
+- `tests/routes/review.test.ts`
+- `docs/finance-rebuild-run.md`
+
+### Validation evidence
+
+- `npm run build:server` — exit `0`.
+- `npm test -- --test-name-pattern "review routes"` — exit `0`; 15 passed, 0 failed in the focused run after adding explicit pagination coverage.
+- `npm test -- --test-name-pattern "review queue"` — exit `0`; 4 passed, 0 failed in the focused run.
+- First full `npm run build` found one TypeScript inference error in the reliability helper.
+- One bounded repair added an explicit reliability return type.
+- Repaired full `npm run build` — exit `0`; Next.js compilation, type validation, and static generation completed successfully.
+
+### Known limitations and remaining Phase 2 work
+
+- Reliability scores are deterministic provisional display values derived from current suggestion status; they are not calibrated probabilities.
+- Current project/category/reliability filters operate on the loaded server page. Server-side filter and risk-first sorting parameters remain to be implemented in a later Phase 2 slice if still required by acceptance criteria.
+- Searchable comboboxes were not introduced; native selects preserve compatibility and accessibility for this slice.
+- Dedicated UI interaction tests and browser-responsive verification remain desirable.
+- Out-of-range page behavior is corrected client-side after the response; a future slice may clamp it server-side.
+
+### Exact next task
+
+Read the authoritative roadmap, implementation plan, architecture, and this handoff. Verify source/branch/HEAD/worktree. Review the committed Phase 2 slice and then implement the next bounded Phase 2 packet: server-side filter and documented risk-first ordering support, targeted queue-service pagination/filter tests, and browser-level responsive/accessibility verification where existing tooling supports it. Do not add Bedrock, AI, merchant schema changes, bulk confirmation, or automatic booking. Do not push.

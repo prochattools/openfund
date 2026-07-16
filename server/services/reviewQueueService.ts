@@ -84,11 +84,26 @@ export type EvidenceRichReviewItem = {
   };
 };
 
+export type ReviewPagination = {
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+};
+
+export type ReviewQueueOptions = {
+  page: number;
+  pageSize: number;
+};
+
 export type EvidenceRichReviewQueue = {
   transactions: EvidenceRichReviewItem[];
   categories: ReviewCategoryOption[];
   projects: Project[];
   transactionTypes: TransactionType[];
+  pagination: ReviewPagination;
   message: string;
 };
 
@@ -451,31 +466,37 @@ const buildReviewItem = (transaction: ReviewTransaction): EvidenceRichReviewItem
 export const buildEvidenceRichReviewQueue = (
   transactions: ReviewTransaction[],
   dimensions: Pick<EvidenceRichReviewQueue, 'categories' | 'projects' | 'transactionTypes'>,
+  pagination: ReviewPagination,
 ): EvidenceRichReviewQueue => ({
   transactions: sortItems(transactions.map(buildReviewItem)),
   categories: dimensions.categories,
   projects: dimensions.projects,
   transactionTypes: dimensions.transactionTypes,
+  pagination,
   message: 'Beoordelingsrij geladen. Er zijn geen boekingen of periodeafsluitingen gemaakt.',
 });
 
 export const getEvidenceRichReviewQueue = async (
   db: ReviewQueueDbClient,
   userId: string,
+  options: ReviewQueueOptions,
 ): Promise<EvidenceRichReviewQueue> => {
-  const [transactions, categories, projects, transactionTypes] = await Promise.all([
+  const where: Prisma.TransactionWhereInput = {
+    userId,
+    OR: [
+      { transactionBooking: null },
+      { categoryId: null },
+      { projectId: null },
+      { transactionTypeId: null },
+      { classificationSource: 'none' },
+      { classificationSource: 'import' },
+    ],
+  };
+  const [transactions, totalItems, categories, projects, transactionTypes] = await Promise.all([
     db.transaction.findMany({
-      where: {
-        userId,
-        OR: [
-          { transactionBooking: null },
-          { categoryId: null },
-          { projectId: null },
-          { transactionTypeId: null },
-          { classificationSource: 'none' },
-          { classificationSource: 'import' },
-        ],
-      },
+      skip: (options.page - 1) * options.pageSize,
+      take: options.pageSize,
+      where,
       include: {
         account: true,
         project: true,
@@ -513,6 +534,7 @@ export const getEvidenceRichReviewQueue = async (
         { id: 'asc' },
       ],
     }),
+    db.transaction.count({ where }),
     db.category.findMany({
       select: {
         id: true,
@@ -532,7 +554,19 @@ export const getEvidenceRichReviewQueue = async (
     }),
   ]);
 
-  return buildEvidenceRichReviewQueue(transactions as ReviewTransaction[], { categories, projects, transactionTypes });
+  const totalPages = Math.max(1, Math.ceil(totalItems / options.pageSize));
+  return buildEvidenceRichReviewQueue(
+    transactions as ReviewTransaction[],
+    { categories, projects, transactionTypes },
+    {
+      page: options.page,
+      pageSize: options.pageSize,
+      totalItems,
+      totalPages,
+      hasPreviousPage: options.page > 1,
+      hasNextPage: options.page < totalPages,
+    },
+  );
 };
 
 /**

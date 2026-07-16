@@ -19,6 +19,22 @@ import {
 import { requireAuthenticatedRequest, requireAdmin } from '../auth/requestContext';
 import { readRouteParam } from './routeParams';
 
+const REVIEW_PAGE_SIZES = new Set([25, 50, 100]);
+
+const readPositiveInteger = (value: unknown, fallback: number): number => {
+  const raw = Array.isArray(value) ? value[0] : value;
+  const parsed = typeof raw === 'string' ? Number.parseInt(raw, 10) : Number.NaN;
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+const readReviewQueueOptions = (req: Request) => {
+  const query = req.query ?? {};
+  const page = readPositiveInteger(query.page, 1);
+  const requestedPageSize = readPositiveInteger(query.pageSize, 25);
+  const pageSize = REVIEW_PAGE_SIZES.has(requestedPageSize) ? requestedPageSize : 25;
+  return { page, pageSize };
+};
+
 const sendReviewDecisionError = (res: Response, error: unknown, fallback: string) => {
   if (error instanceof ReviewDecisionError || error instanceof RuleCreationError) {
     return res.status(error.statusCode).json({ error: error.message });
@@ -34,7 +50,7 @@ export const getReviewTransactions = async (req: Request, res: Response) => {
   }
 
   try {
-    return res.json(await getEvidenceRichReviewQueue(prisma, actor.userId));
+    return res.json(await getEvidenceRichReviewQueue(prisma, actor.userId, readReviewQueueOptions(req)));
   } catch (error) {
     console.error('Beoordelingsrij kon niet worden geladen', error);
     return res.status(500).json({ error: 'De beoordelingsrij kon niet worden geladen.' });

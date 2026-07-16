@@ -58,17 +58,20 @@ const makeResponse = () => {
 const makeRequest = ({
   body = {},
   params = { id: 'tx-1' },
+  query = {},
   role = 'admin',
   cookie = 'test-session',
 }: {
   body?: unknown;
   params?: Record<string, string>;
+  query?: Record<string, string>;
   role?: 'admin' | 'viewer';
   cookie?: string | null;
 }) => {
   const request = {
     body,
     params,
+    query,
     header: (name: string) => (name === 'cookie' ? cookie : undefined),
   };
   if (cookie !== null) {
@@ -145,10 +148,43 @@ describe('review routes', () => {
           },
         ],
       });
-      expect(serviceMocks.getEvidenceRichReviewQueue).toHaveBeenCalledWith(expect.anything(), 'user-1');
+      expect(serviceMocks.getEvidenceRichReviewQueue).toHaveBeenCalledWith(expect.anything(), 'user-1', {
+        page: 1,
+        pageSize: 25,
+      });
     } finally {
       process.env.NODE_ENV = originalNodeEnv;
     }
+  });
+
+  it('forwards supported review pagination parameters to the queue service', async () => {
+    serviceMocks.getEvidenceRichReviewQueue.mockResolvedValueOnce({
+      transactions: [],
+      categories: [],
+      projects: [],
+      transactionTypes: [],
+      pagination: {
+        page: 3,
+        pageSize: 50,
+        totalItems: 221,
+        totalPages: 5,
+        hasPreviousPage: true,
+        hasNextPage: true,
+      },
+      message: 'Beoordelingsrij geladen.',
+    });
+    const response = makeResponse();
+
+    await getReviewTransactions(makeRequest({
+      role: 'viewer',
+      query: { page: '3', pageSize: '50' },
+    }) as any, response as any);
+
+    expect(response.statusCode).toBe(200);
+    expect(serviceMocks.getEvidenceRichReviewQueue).toHaveBeenCalledWith(expect.anything(), 'user-1', {
+      page: 3,
+      pageSize: 50,
+    });
   });
 
   it('returns the production category contract as a flat id/name DTO', async () => {
