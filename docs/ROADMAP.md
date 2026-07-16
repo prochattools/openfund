@@ -453,3 +453,160 @@ These are not part of the current committed roadmap:
 - autonomous AI categorization.
 
 Adding any of these requires an explicit philosophy and strategy review before implementation planning.
+
+
+
+
+---
+
+## Transaction Review and Intelligence Program
+
+Status: **approved; documentation complete; Phase 2 is CURRENT**  
+Approved: 2026-07-16  
+Architecture: `docs/ACCOUNTING_INTEGRITY_AND_REVIEW_PREFILL.md`  
+Execution: `docs/IMPLEMENTATION_PLAN.md`  
+Handoff: `docs/finance-rebuild-run.md`
+
+This is a named sub-roadmap within the existing global roadmap. Its Phase 1–7 labels must always be qualified as `Transaction Review and Intelligence Program` phases so they cannot be confused with the repository's earlier global phases.
+
+Repository documentation is the authoritative project memory. Chat history is non-durable and must not govern execution. Future work begins only after reading the roadmap, implementation plan, architecture, and persistent handoff.
+
+### Program current position
+
+```text
+Program Phase 1 — Baseline and instrumentation       DOCUMENTED / NEXT SUPPORTING WORK
+Program Phase 2 — Review-table redesign/pagination   CURRENT
+Program Phase 3 — Merchant normalization             TODO
+Program Phase 4 — Confirmed-history retrieval        TODO
+Program Phase 5 — Bedrock Haiku classifier           TODO
+Program Phase 6 — Sonnet fallback                    TODO
+Program Phase 7 — Calibration and rollout            TODO
+```
+
+### Program Phase 1 — Baseline and instrumentation
+
+**Objective:** establish trustworthy measurements and prevent generated suggestions from contaminating history.
+
+**Scope:** verify the unresolved and suggestion counts; prove that only confirmed bookings are trusted history; preserve original suggestion and final decision; establish benchmark reporting for the 221 transactions.
+
+**Dependencies:** existing suggestion/booking separation and review-decision audit trail.
+
+**Exclusions:** no AI inference, no automatic booking, no merchant-schema change.
+
+**Expected changed areas:** evaluation/reporting services, review-decision instrumentation, documentation, and targeted tests only after an exact-source task is approved.
+
+**Validation:** reproducible benchmark counts; no read-side mutations; tests proving unconfirmed suggestions are excluded from trusted history.
+
+**Completion:** the 221-item benchmark is frozen after human fact-checking and dimension-level correction data is available.
+
+**Rollback/safety:** instrumentation must be removable without changing bank facts or final bookings.
+
+### Program Phase 2 — Review-table redesign and pagination
+
+**Status: CURRENT — next implementation phase.**
+
+**Objective:** make review of 221 and larger queues fast, clear, auditable, and accessible.
+
+**Scope:** server-side pagination; compact transaction rows; inline project, transaction-type, and category editing; per-row confirmation; reliability visualization; expandable evidence; filters and default risk-first sorting; responsive design; targeted validation.
+
+**Dependencies:** existing `GET /api/review`, review queue service, audited individual decision service, role enforcement, and locked-period controls.
+
+**Exclusions:** Bedrock, AI inference, merchant models, vector search, automatic booking, and bulk confirmation.
+
+**Expected changed areas, subject to exact-source verification:** `src/app/review/page.tsx`, `src/ui/FinanceReviewPage.tsx`, `src/helpers/review-page.ts`, `src/helpers/api-transaction-mapper.ts`, `src/context/ledger-context.tsx`, `src/libs/api.ts`, `server/routes/review.ts`, `server/services/reviewQueueService.ts`, `server/services/reviewDecisionService.ts`, and directly relevant tests. A file changes only when current source proves it is necessary.
+
+**Validation:** targeted queue, route, decision-integrity, UI/helper, API-shape, pagination-boundary, filter/sort, authorization, locked-period, and suggestion-versus-booking tests; affected TypeScript checks; responsive verification where repository tooling supports it.
+
+**Completion:** all 221 transactions are reachable across nine pages at page size 25; every row can be edited and individually confirmed through the existing audited booking path; reliability is understandable without color; mobile use is practical; no integrity guard is weakened.
+
+**Rollback/safety:** retain the prior review behavior until the new response contract and UI pass targeted validation; no data migration is required.
+
+### Program Phase 3 — Merchant normalization
+
+**Objective:** map variable bank descriptors to stable workspace-scoped merchant identities.
+
+**Scope:** merchant identities and aliases; deterministic normalization; dry-run backfill; auditable manual correction; matching from counterparty, IBAN, creditor ID, card descriptor, payment purpose, and recurring patterns.
+
+**Dependencies:** Phase 1 trusted-history rules and Phase 2 review feedback capture.
+
+**Exclusions:** no model classification and no mutation of raw bank facts.
+
+**Expected changed areas:** schema and migration only after explicit approval, normalization services, admin correction UI/API, and tests.
+
+**Validation:** workspace isolation, deterministic fixtures, immutable source facts, dry-run evidence, and auditability.
+
+**Completion:** recurring merchant variants resolve consistently and reviewer corrections become reusable aliases.
+
+**Rollback/safety:** alias disablement restores raw-descriptor behavior without deleting bank facts.
+
+### Program Phase 4 — Confirmed-history retrieval
+
+**Objective:** retrieve the strongest supporting and conflicting confirmed examples and score dimensions independently.
+
+**Scope:** confirmed bookings only; project/type/category distributions; recency and similarity scoring; restricted candidates; supporting and conflicting evidence.
+
+**Dependencies:** Phases 1 and 3.
+
+**Exclusions:** no Bedrock calls and no auto-booking.
+
+**Expected changed areas:** history/retrieval services, candidate generation, evidence contract, evaluation, and tests.
+
+**Validation:** deterministic retrieval; pending suggestions excluded; multi-project and multi-category merchants covered; workspace boundaries enforced.
+
+**Completion:** every eligible unresolved transaction receives a bounded candidate set with auditable evidence or an explicit abstention.
+
+**Rollback/safety:** existing deterministic suggestions remain available as fallback.
+
+### Program Phase 5 — Bedrock Haiku classifier
+
+**Objective:** add a constrained, server-side high-volume classifier in shadow mode.
+
+**Scope:** Amazon Bedrock client; Claude Haiku; schema-constrained output; valid-ID-only choices; abstention; prompt/model/retrieval/engine versioning; provenance, latency, and cost evidence.
+
+**Dependencies:** Phase 4 candidate and evidence contract.
+
+**Exclusions:** no direct booking, no client-side credentials, no Sonnet routing yet.
+
+**Expected changed areas:** server-side AI client and orchestration, configuration contract, inference provenance, evaluation, and tests.
+
+**Validation:** invalid IDs rejected; failures leave transactions reviewable; duplicate active suggestions prevented; no source mutation; secrets remain server-side.
+
+**Completion:** shadow predictions can be compared against human outcomes without influencing accounting truth.
+
+**Rollback/safety:** a feature switch disables AI while preserving manual and deterministic review.
+
+### Program Phase 6 — Sonnet fallback
+
+**Objective:** escalate only ambiguous, conflicting, novel, or materially important cases.
+
+**Scope:** deterministic fallback conditions, Claude Sonnet invocation, budget limits, provenance, and escalation metrics.
+
+**Dependencies:** Phase 5 operational evidence.
+
+**Exclusions:** Claude Opus for routine categorization and any bypass of human confirmation.
+
+**Expected changed areas:** routing policy, fallback client path, observability, evaluation, and tests.
+
+**Validation:** reproducible escalation rules; model versions recorded; budget enforced; fallback cannot book.
+
+**Completion:** measured fallback improves difficult-case precision enough to justify cost.
+
+**Rollback/safety:** disable Sonnet independently and retain Haiku/manual handling.
+
+### Program Phase 7 — Calibration and rollout
+
+**Objective:** turn model and rule signals into empirically calibrated reliability bands and introduce suggestions safely.
+
+**Scope:** benchmark scoring, calibration, shadow production comparison, green/amber/red/gray thresholds, gradual AI-prefill exposure, drift and cost monitoring.
+
+**Dependencies:** corrected 221-item benchmark and Phases 5–6 evidence.
+
+**Exclusions:** automatic booking before approximately 99% precision and an explicit owner-approved phase.
+
+**Expected changed areas:** calibration/evaluation services, review presentation, monitoring, documentation, and tests.
+
+**Validation:** precision by band, false-high-confidence audit, correction rate, review time, known/new merchant performance, escalation rate, and cost per transaction.
+
+**Completion:** green-band complete-classification accuracy is at least 95% before being presented as highly reliable; any later auto-booking proposal requires approximately 99% precision and separate approval.
+
+**Rollback/safety:** confidence thresholds and AI prefill can be disabled without affecting deterministic review or final bookings; sensitive, unusual, locked-period, or materially significant transactions may remain permanently human-reviewed.

@@ -1910,3 +1910,87 @@ Status: corrected locally for the next reviewed release; production administrato
 - Historical evaluation remains 681 samples, 679 covered, 489 top-one correct (72.02%), and 539 top-three correct (79.38%). Cash remains passed, classification remains pending, close remains blocked, and 221 transactions remain unresolved.
 
 Sensitive transaction details, account identifiers, credentials, session material, production URLs/hosts, and raw rows are not recorded in this evidence.
+
+
+
+
+---
+
+## 2026-07-16 — Transaction Review and Intelligence Program documentation handoff
+
+Status: **documentation aligned; Program Phase 2 implementation not started**  
+Active source: `yeshuaacademy-finance`  
+Branch verified before editing: `main`  
+Starting HEAD: `d1eb585` (`docs: remove final release status ambiguity`)  
+Starting worktree: clean  
+Push restriction: **do not push**
+
+### Durable memory rule
+
+This handoff, `docs/ROADMAP.md`, `docs/IMPLEMENTATION_PLAN.md`, and `docs/ACCOUNTING_INTEGRITY_AND_REVIEW_PREFILL.md` are the authoritative execution memory for this program. Chat history is non-durable and must not be used to reconstruct scope. A future agent must read these files before selecting or executing work.
+
+### Current problem
+
+There are 221 unresolved transactions requiring human review. Existing project/category prefills are frequently incorrect, and the current history-only approach is not reliable enough. The `Te beoordelen` screen uses large cards that create excessive scrolling and poor review throughput. Suggestions must remain separate from final bookings, and human confirmation remains accounting truth.
+
+### Approved architecture summary
+
+- Program Phase 2 redesigns `/review` as a compact server-paginated row list.
+- One row exposes date, counterparty, description, amount, project, transaction type, category, reliability, evidence, and an individual confirm action.
+- Inline edits continue through the existing administrator-only, transactional, audited decision path.
+- Reliability uses green/amber/red/gray plus text and a score; bands are provisional until calibrated.
+- Bulk confirmation remains disabled.
+- Later phases add merchant normalization, confirmed-history retrieval, Bedrock Claude Haiku in shadow mode, Claude Sonnet fallback, and empirical calibration.
+- Only human-confirmed bookings become trusted learning examples.
+- AI suggestions never create accounting truth directly.
+
+### Program phase status
+
+```text
+Repository inspection                           100%
+Documentation alignment                         100%
+Program Phase 1 baseline/instrumentation          0% implementation
+Program Phase 2 review redesign                   0% implementation — CURRENT
+Program Phase 2 validation                        0%
+Program Phase 3 merchant normalization             0%
+Program Phase 4 confirmed-history retrieval        0%
+Program Phase 5 Bedrock Haiku                      0%
+Program Phase 6 Sonnet fallback                    0%
+Program Phase 7 calibration/rollout                0%
+```
+
+### Documentation changed in this checkpoint
+
+- `docs/ACCOUNTING_INTEGRITY_AND_REVIEW_PREFILL.md` — governs immutable accounting controls, target review experience, reliability semantics, future hybrid architecture, feedback, and benchmark gates.
+- `docs/ROADMAP.md` — governs the named seven-phase Transaction Review and Intelligence Program, dependencies, exclusions, completion, and safety criteria.
+- `docs/IMPLEMENTATION_PLAN.md` — governs the executable Program Phase 2 API/UI/integrity contract, acceptance criteria, validation, and checkpoint rules.
+- `docs/finance-rebuild-run.md` — governs current execution state and exact resume instructions.
+
+No application source, Prisma schema, migration, test, or API behavior was changed in this documentation task. No Phase 2 implementation has started.
+
+### Phase 2 expected validation
+
+Locate exact tests and scripts before execution, then run the smallest relevant set covering review queue pagination, route/API response shape, decision integrity, filters/sorting, authorization, viewer read-only behavior, locked periods, suggestion-versus-booking separation, targeted UI/helpers, affected TypeScript checks, and responsive verification where supported. Perform at most one bounded repair attempt for a clear failure.
+
+### Blockers and open questions
+
+No architecture blocker is known. Exact filter parameter names, component choices for searchable selectors, and targeted test paths must be derived from current source during Phase 2; documentation intentionally does not invent unsupported names.
+
+### Exact Phase 2 resume point
+
+Resume from the four authoritative documents. Verify source, branch, HEAD, and worktree. Confirm Program Phase 2 is still `CURRENT`. Read the exact route, queue service, decision service, API types, review UI/helpers/context, and directly relevant tests. Implement the largest coherent validated Phase 2 slice only. Do not add Bedrock, AI inference, merchant schema changes, future retrieval phases, bulk confirmation, automatic booking, or push behavior.
+
+### Commit state
+
+At the time this handoff text was written, documentation changes were not yet committed. After validation, commit only the four explicit documentation paths if repository policy permits. Record the resulting commit in the final task report; no push is authorized.
+
+
+
+
+### Documentation validation evidence — 2026-07-16
+
+- `npm test -- --test-name-pattern "roadmap status"` — exit `0`; `tests/ops/roadmapStatusConsistency.test.ts`: 10 passed, 0 failed.
+- Diff scope before commit: exactly `docs/ACCOUNTING_INTEGRITY_AND_REVIEW_PREFILL.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/ROADMAP.md`, and `docs/finance-rebuild-run.md`.
+
+
+- `npm test -- --test-name-pattern "final docs consistency"` — exit `0`; 36 passed, 0 failed across the targeted consistency and contamination guards.

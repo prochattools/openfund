@@ -1660,3 +1660,159 @@ Remaining owner-gated decisions:
 
 See `docs/OWNER_DECISION_PACK_NL.md` for decision checkboxes and next-step prompts.
 See `docs/PRODUCTION_HISTORICAL_IMPORT_EVIDENCE_NL.md` for import evidence.
+
+
+
+
+---
+
+## Transaction Review and Intelligence Program — executable plan
+
+Status: **documentation approved; Program Phase 2 is CURRENT**  
+Architecture: `docs/ACCOUNTING_INTEGRITY_AND_REVIEW_PREFILL.md`  
+Roadmap: `docs/ROADMAP.md`  
+Persistent handoff: `docs/finance-rebuild-run.md`
+
+### Durable execution contract
+
+This repository is the source of truth. Chat history is not durable project memory. Before selecting or executing work, an agent must read the four documents above, verify source/branch/HEAD/worktree, and confirm the current task from the persistent handoff. After each coherent slice, update the handoff with changed paths, validation, commits, blockers, and the exact next task.
+
+The seven program phases and their dependencies are governed by `docs/ROADMAP.md`. This section governs exact Program Phase 2 execution.
+
+## CURRENT — Program Phase 2: server-paginated compact review table
+
+### Objective
+
+Redesign `/review` (`Te beoordelen`) so a reviewer can scan, edit, and individually confirm a large unresolved queue efficiently without weakening accounting integrity.
+
+### Verified current implementation areas
+
+Current source inspection has identified these existing surfaces:
+
+- `src/app/review/page.tsx` — route entry;
+- `src/ui/FinanceReviewPage.tsx` — current card-oriented review UI;
+- `src/helpers/review-page.ts` — review formatting and payload helpers;
+- `src/helpers/api-transaction-mapper.ts` — API-to-ledger mapping;
+- `src/context/ledger-context.tsx` — review/ledger client state;
+- `src/libs/api.ts` — `EvidenceRichReviewItem` and review client contract;
+- `server/routes/review.ts` — review read and individual decision routes;
+- `server/services/reviewQueueService.ts` — evidence-rich unresolved queue;
+- `server/services/reviewDecisionService.ts` — transactional audited confirmation.
+
+Relevant targeted tests must be located and read before editing. A listed file changes only when exact current source proves it necessary.
+
+### Required API contract
+
+The read route must accept server-side pagination:
+
+```http
+GET /api/review?page=1&pageSize=25
+```
+
+Allowed `pageSize` values are `25`, `50`, and `100`; default is `25`. Invalid values must be handled consistently with existing route-validation conventions.
+
+The response must retain the existing transaction and option data while adding:
+
+```json
+{
+  "pagination": {
+    "page": 1,
+    "pageSize": 25,
+    "totalItems": 221,
+    "totalPages": 9,
+    "hasPreviousPage": false,
+    "hasNextPage": true
+  }
+}
+```
+
+Filter and sort parameter names must follow current repository conventions after exact route inspection. Required Phase 2 capabilities are:
+
+- reliability/confidence band;
+- transaction direction;
+- project;
+- category;
+- unresolved or incomplete state;
+- default sort: lowest reliability, then highest absolute amount/materiality, then oldest unresolved date.
+
+`new merchant` and `conflicting history` are reserved for later phases because those first-class signals do not yet exist.
+
+### Required UI behavior
+
+Use one compact row per transaction. Every row visibly includes date, counterparty, description/payment purpose, amount, project, transaction type, category, reliability, and an individual confirmation action.
+
+Project, transaction type, and category are editable inline and searchable where supported by the existing component system. The primary action reads `Confirm` when unchanged and `Confirm changes` or an equivalent Dutch label after edits. A successful confirmation shows bounded success feedback, updates the remaining count and current page safely, and then removes or refreshes the row without making another unresolved transaction unreachable.
+
+Each row includes expandable evidence/details for proposal source, deterministic/history evidence, alternatives, supporting/conflicting evidence, and dimension confidence where available.
+
+Reliability presentation uses color plus text plus score:
+
+- green: very reliable, provisional `>=95%`;
+- amber: review carefully, provisional `75–94%`;
+- red: uncertain, provisional `<75%`;
+- gray: insufficient evidence.
+
+These are provisional product bands, not calibrated probabilities. The UI must not rely on color alone. Desktop uses a compact table or table-like list; mobile uses a responsive stacked-row treatment without losing the individual confirm action.
+
+### Integrity requirements
+
+- Reads remain side-effect free.
+- Suggestions remain distinct from `TransactionBooking`.
+- Individual confirmation continues through the existing audited manual-classification path.
+- Administrator authorization remains enforced.
+- Viewer access remains read-only.
+- Locked-period protections remain intact.
+- Confirmation remains transactional.
+- Bulk confirmation remains unavailable.
+- No Bedrock, AI inference, merchant schema, vector retrieval, or automatic booking is added.
+
+### Acceptance criteria
+
+1. With 221 unresolved records and page size 25, metadata reports nine pages.
+2. Every unresolved record is reachable exactly once under stable filters and sort.
+3. Pagination is applied in the server/service query, not by slicing a fully loaded client queue.
+4. One row represents one transaction and exposes all required visible fields.
+5. Every row has its own confirm action.
+6. Inline edits use the existing audited decision path.
+7. Reading a suggestion never creates a booking.
+8. Confirmation creates accounting truth transactionally and records audit evidence.
+9. Administrator, viewer, and unauthenticated behavior remain correct.
+10. Locked-period rejection remains correct.
+11. Bulk confirmation is absent or explicitly rejected.
+12. Reliability meaning is available without color.
+13. Mobile review remains usable.
+14. Confirmation updates page and remaining counts without skipping or duplicating unresolved records.
+15. Existing financial-integrity controls remain unchanged.
+
+### Smallest meaningful validation
+
+Before validation, locate exact package scripts and targeted tests. Run only the smallest relevant set unless repository policy requires more:
+
+- review queue service tests;
+- review route/API response-shape tests;
+- review decision/integrity tests;
+- pagination first/middle/last/out-of-range and page-size tests;
+- filter and default-sort tests;
+- authorization and viewer-read-only tests;
+- locked-period tests;
+- suggestion-versus-booking separation tests;
+- targeted review UI/component/helper tests;
+- affected TypeScript type checks;
+- responsive/mobile verification where existing tooling supports it.
+
+Perform at most one bounded repair attempt for a clear validation failure. Review the final diff and run the documentation/roadmap consistency guard if available.
+
+### Completion and checkpoint policy
+
+After the largest coherent validated Phase 2 slice:
+
+1. persist changed paths and exact behavior completed in `docs/finance-rebuild-run.md`;
+2. persist all validation commands and exit results;
+3. persist blockers and remaining acceptance criteria;
+4. write the exact next task so a new conversation can resume without chat context;
+5. commit only explicit Phase 2 paths if policy permits and validation passes;
+6. do not push.
+
+### Program Phase 1 and later phases
+
+Program Phase 1 benchmark/instrumentation supports later calibration and may be executed as a separately documented slice when it does not block Phase 2. Program Phases 3–7 remain `TODO` and are governed by the architecture and roadmap. They must not be pulled into Phase 2 opportunistically.

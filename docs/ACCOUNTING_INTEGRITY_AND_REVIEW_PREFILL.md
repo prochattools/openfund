@@ -276,3 +276,103 @@ Implementation is complete only when:
 - server and production builds pass;
 - documentation and implementation-plan statuses are updated;
 - no production mutation or deployment occurs without separate explicit approval.
+
+
+
+
+---
+
+## Transaction Review and Intelligence Program — approved architecture extension
+
+Status: **approved; documentation complete; implementation not started**  
+Approved: 2026-07-16  
+Roadmap: `docs/ROADMAP.md`  
+Executable plan: `docs/IMPLEMENTATION_PLAN.md`  
+Persistent handoff: `docs/finance-rebuild-run.md`
+
+### Durable source-of-truth rule
+
+Repository documentation is the durable project memory. Chat history is not an authoritative or persistent source. Significant work in this program must be selected from the roadmap, executed from the implementation plan, and checkpointed in the persistent handoff. Every completed slice must persist changed paths, validation evidence, commits, blockers, and the exact next task before another slice begins.
+
+### Current problem and immutable controls
+
+The production dataset currently contains 221 unresolved transactions requiring human review. Existing project and category prefills are frequently incorrect, which demonstrates that the current history-only recommendation path is not sufficiently refined. The current `Te beoordelen` card layout is inefficient at this queue size and causes excessive vertical scrolling.
+
+The approved solution must preserve these controls:
+
+- imported bank facts remain immutable;
+- suggestions remain separate from final `TransactionBooking` records;
+- suggestion reads never create bookings;
+- human confirmation remains the source of accounting truth;
+- confirmation remains individual, administrator-only, transactional, audited, and subject to locked-period protections;
+- bulk confirmation remains disabled;
+- generated or unresolved suggestions never become trusted training history.
+
+### Phase 2 target review experience
+
+Phase 2 replaces the large review cards with a compact server-paginated table or table-like responsive list. One row represents one transaction and visibly includes date, counterparty, description or payment purpose, amount, project, transaction type, category, reliability, and an individual confirm action.
+
+Project, transaction type, and category are editable inline. Searchable selectors should be used where the existing component system supports them. An unchanged proposal uses a clear `Confirm` action; after an edit the action must communicate `Confirm changes` or an equivalent Dutch label. Each row exposes expandable evidence showing proposal source, deterministic or historical evidence, alternatives, supporting and conflicting evidence, and dimension-level confidence when available.
+
+The layout must remain usable on mobile and must never depend on color alone.
+
+### Pagination, ordering, and filters
+
+`GET /api/review` will support server-side pagination with a default page size of 25 and allowed sizes of 25, 50, and 100. The response will expose:
+
+- `page`;
+- `pageSize`;
+- `totalItems`;
+- `totalPages`;
+- `hasPreviousPage`;
+- `hasNextPage`.
+
+Every unresolved transaction must remain reachable. Pagination controls should appear at both ends of a long result set where practical. Default ordering is:
+
+1. lowest reliability;
+2. highest financial materiality;
+3. oldest unresolved transaction.
+
+Phase 2 filters cover reliability band, transaction direction, project, category, and unresolved or incomplete state. New-merchant and conflicting-history filters belong to later phases once those signals exist.
+
+### Reliability presentation
+
+Reliability is shown with color, text, and a percentage or integer score where available:
+
+- green — `Very reliable`, initially at least 95%;
+- amber — `Review carefully`, initially 75% through 94%;
+- red — `Uncertain`, initially below 75%;
+- gray — `Insufficient evidence`.
+
+These are provisional product bands, not scientifically calibrated probabilities. Thresholds remain configurable until benchmark calibration is complete. Future confidence is dimension-specific for project, transaction type, category, and the combined recommendation.
+
+### Future hybrid categorization architecture
+
+Later phases implement this ordered decision path:
+
+1. deterministic accounting rules;
+2. merchant normalization;
+3. confirmed-history statistics;
+4. similar confirmed-transaction retrieval;
+5. restricted candidate generation;
+6. Claude Haiku classification through Amazon Bedrock;
+7. application-side confidence calibration;
+8. Claude Sonnet fallback for ambiguous cases;
+9. human confirmation;
+10. persistent learning from confirmed outcomes only.
+
+Only human-confirmed bookings may become trusted examples. Project, transaction type, and category are predicted and scored independently. Models may choose only supplied valid IDs and must be able to abstain. AI output remains a suggestion and never directly creates accounting truth. Bedrock calls are server-side only. Claude Haiku is the planned high-volume classifier; Claude Sonnet is the fallback for ambiguous, conflicting, novel, or materially important cases. Claude Opus is not planned for routine transaction classification. No Bedrock or AI inference work is part of Phase 2.
+
+### Merchant normalization requirements
+
+A later phase will normalize variable bank descriptors into stable workspace-scoped merchant identities while preserving raw facts unchanged. Matching may consider raw counterparty, IBAN, creditor identifier, card descriptor, payment purpose, and recurring-payment patterns. Manual corrections become reusable deterministic aliases. Merchant identity and alias records remain auditable and workspace-isolated.
+
+### Human feedback contract
+
+The system must preserve whether a reviewer accepted all dimensions, changed only project, changed only transaction type, changed only category, changed multiple dimensions, rejected the proposal, selected an alternative, supplied a reason, or requested a reusable rule. The original suggestion and final decision remain available together with actor, timestamps, provenance, evidence hash, confidence inputs, and version identifiers.
+
+### Benchmark and rollout gates
+
+After human fact-checking, the 221 unresolved transactions become a frozen benchmark. Required metrics are project accuracy, transaction-type accuracy, category accuracy, complete-classification accuracy, top-three accuracy, precision by confidence band, correction rate, average review time, known-merchant versus new-merchant accuracy, false high-confidence rate, Haiku-to-Sonnet escalation rate, and cost per transaction.
+
+The primary metric is **precision among transactions classified as very reliable**. Proposed gates are at least 95% complete-classification accuracy in the green suggestion band before treating that band as highly reliable, and approximately 99% precision before considering automatic booking. Sensitive, unusual, locked-period, or materially significant transactions may always require human review.
