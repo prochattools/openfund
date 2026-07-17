@@ -2226,3 +2226,153 @@ Adding Playwright, Puppeteer, or another browser framework remains outside this 
 ### Exact next task
 
 Open the deployed or approved local Yeshua Academy Finance environment in an authenticated browser. Execute the documented desktop, mobile, authorization, pagination, filter, inline-editing, evidence-expansion, and individual-confirmation acceptance checklist. Capture factual screenshots or written evidence, console/network findings, and any reproducible defects. Then update this handoff and apply only bounded Program Phase 2 fixes justified by observed evidence. Do not perform bulk or unsafe financial mutations. Do not add Bedrock, AI, merchant schema changes, automatic booking, or future phases. Do not push without explicit approval.
+
+## 2026-07-17 — Browser acceptance blocker on production review route
+
+Status: **BLOCKED — production `/review` redirected to `/sign-in` and no authenticated browser session was available to claim**  
+Verified source: `yeshuaacademy-finance`  
+Verified branch: `main`  
+Verified HEAD: `7acafa235f163f726b4aa90af1d8ea779421e855`  
+Starting worktree: clean  
+Push restriction: **do not push**
+
+### Environment facts
+
+- Environment URL: `https://finance.yeshua.academy/review`
+- Runtime: deployed production environment
+- Authenticated role: unavailable; browser redirected to sign-in before any authenticated read could be performed
+- Desktop viewport: not executed
+- Mobile viewport: not executed
+- Console-inspection capability: available in the browser surface via tab dev logs, but not exercised because the authenticated page was unreachable
+- Network-inspection capability: not available in the exposed browser surface, and no network trace was captured
+- Data shape: production-like, but not verified beyond the sign-in redirect
+
+### Browser evidence
+
+- Opening `https://finance.yeshua.academy/review` redirected to `https://finance.yeshua.academy/sign-in?redirect_url=http%3A%2F%2Ffinance.yeshua.academy%2Freview`
+- No browser tab with an authenticated finance session was open to claim
+- No desktop or mobile acceptance assertions were executed because the authenticated page was unreachable
+- No screenshots were captured
+- No console errors or network responses were inspected
+- No financial mutation, suggestion mutation, or confirmation action was attempted
+
+### Acceptance status
+
+- Desktop row layout: not executed
+- Desktop headers: not executed
+- Desktop clipping/overlap/accessibility: not executed
+- Page-size options 25/50/100: not executed
+- Previous/next pagination: not executed
+- Pagination text: not executed
+- Filters and page-reset behavior: not executed
+- Inline editing for project/type/category: not executed
+- Confirm / change-confirm labels: not executed
+- Evidence expansion: not executed
+- Reliability text and score: not executed
+- Individual confirmation actions: not executed
+- Bulk confirmation absence: not executed
+- Mobile row layout: not executed
+- Mobile labels and selector usability: not executed
+- Mobile confirmation reachability: not executed
+- Authorization split between viewer and admin: not executed
+- Locked-period behavior: not executed
+- Network request/response contract: not executed
+- Console inspection: not executed
+
+### Exact blocker
+
+The production page redirected immediately to the sign-in route, and this execution environment did not expose an already authenticated browser session for the finance app. Without an authenticated session, the acceptance checklist cannot be verified safely or factually.
+
+### Required next action
+
+Provide an authenticated browser session for the finance app, or an approved local/runtime URL that already has a valid viewer/admin session available for claim. Then rerun the browser acceptance checklist for `/review` with desktop and mobile viewports, record console and network evidence, and only then apply any bounded Phase 2 fixes justified by the observed behavior. Do not invent acceptance results, do not add a browser framework, and do not push.
+
+## 2026-07-17 — Authenticated browser acceptance evidence on live review route
+
+Status: **PARTIAL — authenticated admin browser access confirmed, but the live render diverges from current repo source on review labels and mobile action layout, and direct API header/status inspection was not available in this browser surface**  
+Verified source: `yeshuaacademy-finance`  
+Verified branch: `main`  
+Verified HEAD: `7acafa235f163f726b4aa90af1d8ea779421e855`  
+Starting worktree: clean  
+Push restriction: **do not push**
+
+### Environment facts
+
+- Environment URL: `https://finance.yeshua.academy`
+- Review URL: `https://finance.yeshua.academy/review`
+- Runtime: deployed production environment
+- Authenticated role: `ADMIN`
+- Derived application role: `admin`
+- Desktop viewport: `1440×900`
+- Mobile viewport: `390×844`
+- Console-inspection capability: available; no relevant errors were reported
+- Network-inspection capability: not directly available in this surface
+- Data shape: production-like live data
+
+### Safe session evidence
+
+- `https://finance.yeshua.academy/review` remained on `/review` and did not redirect to `/sign-in`
+- The browser tab was authenticated and stayed on the finance app domain
+- The review page rendered one visible review card for `Hr RA Schafer`
+- The visible card showed a reliability badge with text and score: `60% · Onzeker`
+- The visible card exposed inline selectors for `Klant / project`, `Transactietype`, and `Categorie`
+- The visible card exposed an evidence/details section with alternatives and audit text
+- The visible action area exposed `Suggestie goedkeuren` and `Boeking goedkeuren`
+- The mobile render kept the row readable and labels visible, but the confirm action was not full-width in the live browser render
+- No console errors were captured during the checks
+- No transaction was confirmed
+- No cookies, tokens, or secrets were inspected or recorded
+
+### Live render observations
+
+- The live page did not expose the `Bevestigen` / `Wijzigingen bevestigen` wording that the current repo helper logic expects
+- The live page did not expose standalone page-size, pagination, or filter controls in the browser-visible DOM during this pass
+- The live page did not show a bulk-confirmation control
+- The visible approval control remained enabled even while `Transactietype` was unset in the live render
+- The table/details area showed `Tabelweergave` content and the row list, but the browser surface did not expose a direct response-status/header read for `GET /api/review?page=1&pageSize=25`
+
+### Desktop evidence
+
+- The review card rendered compactly with date, counterparty, description, amount, project, type, category, reliability, and action areas visible in the same card
+- The row showed `01 jul 2026`, `Hr RA Schafer`, `€ 1.300,00`, and the proposed classification `kruispost in`
+- The reliability text was explicit and paired with a score, not color alone
+- The evidence section showed `3 alternatieven`
+- The inline selectors were editable in the browser
+
+### Mobile evidence
+
+- The row reflowed into a vertical card layout
+- The field labels remained visible on the mobile render
+- The evidence/alternatives content remained readable on the mobile render
+- The confirmation action was reachable, but it was not full-width in the live render
+- No horizontal clipping prevented reading the visible row content in the captured mobile render
+
+### Acceptance status
+
+- Desktop compact row: passed
+- Desktop headers: partially observed via table view; live page did not expose the full expected filter/pagination chrome in the browser-visible DOM
+- Clipping/overlap/accessibility: passed for the visible review card
+- Page-size options 25/50/100: not executed on the live render
+- Previous/next pagination: not executed on the live render
+- Pagination text: not executed on the live render
+- Filters for reliability/direction/project/category/incomplete: not executed on the live render
+- Filter resets page to 1: not executed
+- Inline project editing: passed
+- Inline transaction-type editing: passed
+- Inline category editing: passed
+- Unchanged complete proposal shows `Bevestigen`: not observed in the live render
+- Changed classification shows `Wijzigingen bevestigen`: not observed in the live render
+- Evidence/details expand and collapse: partially observed; evidence content was visible, but a separate expand/collapse interaction was not verified
+- Reliability text and score: passed
+- Individual confirmation action per transaction: passed for the visible card
+- Bulk-confirmation control absent: passed
+- Mobile vertical layout: passed
+- Mobile field labels: passed
+- Mobile confirmation full-width: failed in the live render
+- Browser console: passed, no relevant errors
+- Browser network contract for `/api/review`: not directly observable in this browser surface
+- Confirmation refresh after a real booking: not executed because no transaction was explicitly approved
+
+### Exact next action
+
+Either deploy the current repo source so the live environment reflects the `Bevestigen` / `Wijzigingen bevestigen` label logic and the mobile full-width action contract, or provide a browser surface with direct network/status inspection so `GET /api/review?page=1&pageSize=25` can be confirmed at the header level. No code changed in this pass, and no push was made.
