@@ -2477,3 +2477,47 @@ Status: **COMPLETE LOCALLY — the review row now blocks confirmation when a sel
 ### Explicit no-push restriction
 
 - Do not push
+
+
+
+
+---
+
+## 2026-07-17 — Documentation governance foundation checkpoint
+
+Status: **completed and validated; no document path migration performed**  
+Starting HEAD: `2ebddbd` (`fix: harden review selection visibility`)  
+Starting worktree: clean  
+Push restriction: **do not push**
+
+### Changed paths
+
+- `README.md`
+- `docs/README.md`
+- `docs/DOCUMENTATION_GOVERNANCE.md`
+- `docs/finance-rebuild-run.md`
+
+### Governance introduced
+
+- Added `docs/README.md` as the canonical documentation navigation index.
+- Added `docs/DOCUMENTATION_GOVERNANCE.md` as the canonical policy for documentation ownership, status vocabulary, cross-reference direction, compatibility stubs, archival, active-run updates, and migration validation.
+- Added one concise documentation-index link to the root `README.md` while preserving its existing authoritative reading order and all current canonical links.
+- Declared repository documentation durable project memory and chat history non-authoritative.
+- Declared the rule that one fact has one canonical home.
+- Confirmed `docs/finance-rebuild-run.md` remains the active handoff until a separately approved migration updates every consumer.
+- Confirmed the path-sensitive owner/release document suite must never be partially migrated.
+
+No existing document was moved, renamed, deleted, split, archived, superseded, or assigned a replacement canonical path. No application source, schema, migration, dependency, lockfile, workflow, environment, operational script, or existing canonical document was changed.
+
+### Validation evidence
+
+- Final documentation audit: `npm run audit:final-docs` — exit `0`; status `GESLAAGD`.
+- Focused final-docs consistency suite — exit `0`; 36 passed, 0 failed.
+- Focused roadmap-status consistency suite — exit `0`; 10 passed, 0 failed.
+- Focused release-evidence consistency suite — exit `0`; 11 passed, 0 failed.
+- Exact diff review confirmed the intended governance-only scope before this handoff append.
+- No new test was required because existing guards already accept the additive index and governance files.
+
+### Exact next migration-assessment task
+
+Review and classify the known historical duplicate documents without moving them. Prepare the second bounded documentation packet to add explicit `SUPERSEDED` or `ARCHIVED` metadata and canonical replacement links only where exact-path tests and scripts permit it. Before editing, locate every consumer of each candidate historical path. Do not move canonical documents, the active handoff, or any owner/release suite file. Do not push.

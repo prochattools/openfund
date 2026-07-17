@@ -12,6 +12,8 @@ This repository is not a SaaS product and is not intended for resale. It exists 
 
 ## Authoritative product documents
 
+The complete documentation map and governance rules are available in [`docs/README.md`](docs/README.md).
+
 Read these documents in order before changing product behavior:
 
 1. [`docs/PHILOSOPHY.md`](docs/PHILOSOPHY.md) — what the application is and how financial truth is handled.

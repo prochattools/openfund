@@ -1,0 +1,75 @@
+# Yeshua Academy Finance — Documentation Index
+
+Status: CURRENT  
+Owner: repository maintainers  
+Canonical for: documentation navigation and reading order  
+Last reviewed: 2026-07-17  
+Governance: `docs/DOCUMENTATION_GOVERNANCE.md`
+
+## Purpose
+
+Repository documentation is the durable project memory for Yeshua Academy Finance. It defines product intent, architecture, roadmap, implementation sequencing, operational procedures, release evidence, and the exact current execution state. Chat history is not an authoritative source.
+
+No documentation path migration has occurred yet. Existing root-level paths under `docs/` remain authoritative until a separately approved migration updates every script, test, workflow, cross-reference, and operational consumer.
+
+## Mandatory reading order
+
+Read these documents in order before changing product or accounting behavior:
+
+1. `docs/PHILOSOPHY.md` — product philosophy and treatment of financial truth.
+2. `docs/STRATEGY.md` — strategic goals, constraints, and success measures.
+3. `docs/ROADMAP.md` — ordered phases, dependencies, exclusions, and current position.
+4. `docs/IMPLEMENTATION_PLAN.md` — executable implementation tasks, acceptance criteria, and validation.
+5. `docs/finance-rebuild-run.md` — current execution evidence, blockers, commits, and exact resume point.
+
+For work that changes accounting, classification, review, or financial data contracts, also read:
+
+- `docs/DOMAIN_MODEL.md`
+- `docs/ACCOUNTING_INTEGRITY_AND_REVIEW_PREFILL.md`
+
+## Current canonical documents
+
+| Responsibility | Canonical path |
+|---|---|
+| Product philosophy and financial-truth principles | `docs/PHILOSOPHY.md` |
+| Strategy, constraints, and outcomes | `docs/STRATEGY.md` |
+| Roadmap and phase ordering | `docs/ROADMAP.md` |
+| Executable implementation planning | `docs/IMPLEMENTATION_PLAN.md` |
+| Approved financial domain model | `docs/DOMAIN_MODEL.md` |
+| Accounting integrity, review prefill, and current review-intelligence architecture | `docs/ACCOUNTING_INTEGRITY_AND_REVIEW_PREFILL.md` |
+| Active run, handoff, validation evidence, and exact next task | `docs/finance-rebuild-run.md` |
+| Documentation ownership, status, migration, and archival rules | `docs/DOCUMENTATION_GOVERNANCE.md` |
+
+The current architecture path for the Transaction Review and Intelligence Program remains `docs/ACCOUNTING_INTEGRITY_AND_REVIEW_PREFILL.md`. New domain architecture files may be introduced only through a separately approved documentation-migration packet.
+
+## Operational and owner-review document families
+
+Operational procedures include the administrator guide, infrastructure readiness, backup and restore, monthly reconciliation, safe-command inventory, authentication readiness, production cutover, push readiness, and post-push verification documents under `docs/`.
+
+The owner-review and release suite includes the `OWNER_*`, `FINAL_*`, `RELEASE_*`, `PUSH_*`, `POST_*`, `DECISION_BRIEF_*`, and production evidence documents. These files are path-sensitive and are validated as an interdependent family. They must never be partially migrated.
+
+## Historical and superseded material
+
+Older discovery documents, prototype briefs, dated handoffs, legacy roadmap and implementation files, model proposals, migration proposals, and completed production evidence remain available as historical context. Historical content is not authoritative unless a current canonical document explicitly references it.
+
+No historical document has been moved, renamed, archived, or newly marked superseded by this index.
+
+## Onboarding reading order
+
+A new engineer should read:
+
+1. root `README.md`;
+2. this documentation index;
+3. `docs/DOCUMENTATION_GOVERNANCE.md`;
+4. `docs/PHILOSOPHY.md`;
+5. `docs/STRATEGY.md`;
+6. `docs/DOMAIN_MODEL.md`;
+7. `docs/ROADMAP.md`;
+8. the relevant domain architecture document;
+9. `docs/IMPLEMENTATION_PLAN.md`;
+10. `docs/finance-rebuild-run.md`;
+11. the operational guide relevant to the task.
+
+## Change rule
+
+One fact has one canonical home. Other documents may summarize and link to that fact, but must not redefine it. See `docs/DOCUMENTATION_GOVERNANCE.md` before creating, splitting, moving, renaming, superseding, or archiving documentation.
