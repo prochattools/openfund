@@ -8,6 +8,7 @@ import {
   canConfirmReviewRow,
   getReviewConfirmLabel,
   getReviewReliability,
+  getReviewSelectionValidity,
   type ReviewConfidenceFilter,
 } from '@/helpers/review-ui';
 import {
@@ -30,6 +31,7 @@ const dateFormatter = new Intl.DateTimeFormat('nl-NL', {
   year: 'numeric',
 });
 const moneyFormatter = new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' });
+const INVALID_SELECT_VALUE = '__invalid-review-selection__';
 
 function EmptyReviewState() {
   return (
@@ -64,8 +66,40 @@ function ReviewRow({
   const admin = isClientAdmin();
   const reliability = getReviewReliability(item);
   const changed = projectId !== initialProjectId || transactionTypeId !== initialTypeId || categoryId !== initialCategoryId;
-  const canConfirm = canConfirmReviewRow({ admin, busy, projectId, transactionTypeId, categoryId });
   const compatibleTypes = transactionTypes.filter((type) => type.direction === item.direction);
+  const selectionValidity = getReviewSelectionValidity({
+    admin,
+    busy,
+    projectId,
+    transactionTypeId,
+    categoryId,
+    projects,
+    transactionTypes,
+    compatibleTransactionTypes: compatibleTypes,
+    categories,
+  });
+  const canConfirm = selectionValidity.canConfirm && canConfirmReviewRow({ admin, busy, projectId, transactionTypeId, categoryId });
+  const projectIssue = selectionValidity.issues.find((issue) => issue.field === 'project');
+  const transactionTypeIssue = selectionValidity.issues.find((issue) => issue.field === 'transactionType');
+  const categoryIssue = selectionValidity.issues.find((issue) => issue.field === 'category');
+  const projectValue = projectIssue?.code === 'unavailable-project' ? INVALID_SELECT_VALUE : projectId;
+  const transactionTypeValue = transactionTypeIssue?.code === 'unavailable-transaction-type'
+    || transactionTypeIssue?.code === 'wrong-direction-transaction-type'
+    ? INVALID_SELECT_VALUE
+    : transactionTypeId;
+  const categoryValue = categoryIssue?.code === 'unavailable-category' ? INVALID_SELECT_VALUE : categoryId;
+  const hasSelectionWarnings = selectionValidity.issues.length > 0;
+  const warningId = `review-selection-warning-${item.transactionId}`;
+  const projectWarningId = `${warningId}-project`;
+  const transactionTypeWarningId = `${warningId}-transaction-type`;
+  const categoryWarningId = `${warningId}-category`;
+
+  const renderSelectionWarning = (issue: typeof selectionValidity.issues[number], rawIdLabel: string, id: string) => (
+    <div id={id} className="mt-1 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900" aria-live="polite">
+      <div className="font-semibold">{issue.message}</div>
+      {issue.rawId ? <div className="mt-1 text-[11px] text-amber-800">{rawIdLabel}: {issue.rawId}</div> : null}
+    </div>
+  );
 
   const confirm = async () => {
     if (!canConfirm) return;
@@ -97,25 +131,50 @@ function ReviewRow({
           <p className="truncate text-xs text-[#7d6d5a]" title={item.paymentPurpose ?? ''}>{item.paymentPurpose ?? 'Geen extra omschrijving'}</p>
         </div>
         <div className={`font-semibold xl:text-right ${item.amount < 0 ? 'text-[#914f35]' : 'text-[#1f5f4a]'}`}><span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Bedrag</span>{moneyFormatter.format(item.amount)}</div>
-        <label className="grid gap-1"><span className="text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Project</span><select aria-label="Klant of project" disabled={!admin || busy} value={projectId} onChange={(event) => setProjectId(event.target.value)} className="w-full rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
-          <option value="">Kies project</option>
-          {projects.map((project) => <option key={project.id} value={project.id}>{project.code} · {project.name}</option>)}
-        </select></label>
-        <label className="grid gap-1"><span className="text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Type</span><select aria-label="Transactietype" disabled={!admin || busy} value={transactionTypeId} onChange={(event) => setTransactionTypeId(event.target.value)} className="w-full rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
-          <option value="">Kies type</option>
-          {compatibleTypes.map((type) => <option key={type.id} value={type.id}>{type.literalName}</option>)}
-        </select></label>
-        <label className="grid gap-1"><span className="text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Categorie</span><select aria-label="Categorie" disabled={!admin || busy} value={categoryId} onChange={(event) => setCategoryId(event.target.value)} className="w-full rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
-          <option value="">Kies categorie</option>
-          {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
-        </select></label>
+        <label className="grid gap-1" aria-describedby={projectIssue ? projectWarningId : undefined}>
+          <span className="text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Project</span>
+          <select aria-label="Klant of project" aria-invalid={Boolean(projectIssue)} disabled={!admin || busy} value={projectValue} onChange={(event) => setProjectId(event.target.value)} className="w-full rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
+            {projectIssue?.code === 'unavailable-project' ? <option value={INVALID_SELECT_VALUE} disabled>Ongeldig voorstel — kies opnieuw</option> : null}
+            <option value="">Kies project</option>
+            {projects.map((project) => <option key={project.id} value={project.id}>{project.code} · {project.name}</option>)}
+          </select>
+          {projectIssue ? renderSelectionWarning(projectIssue, 'Voorgestelde project-id', projectWarningId) : null}
+        </label>
+        <label className="grid gap-1" aria-describedby={transactionTypeIssue ? transactionTypeWarningId : undefined}>
+          <span className="text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Type</span>
+          <select aria-label="Transactietype" aria-invalid={Boolean(transactionTypeIssue)} disabled={!admin || busy} value={transactionTypeValue} onChange={(event) => setTransactionTypeId(event.target.value)} className="w-full rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
+            {transactionTypeIssue?.code === 'unavailable-transaction-type' || transactionTypeIssue?.code === 'wrong-direction-transaction-type'
+              ? <option value={INVALID_SELECT_VALUE} disabled>Ongeldig voorstel — kies opnieuw</option>
+              : null}
+            <option value="">Kies type</option>
+            {compatibleTypes.map((type) => <option key={type.id} value={type.id}>{type.literalName}</option>)}
+          </select>
+          {transactionTypeIssue ? renderSelectionWarning(transactionTypeIssue, 'Voorgestelde transactietype-id', transactionTypeWarningId) : null}
+        </label>
+        <label className="grid gap-1" aria-describedby={categoryIssue ? categoryWarningId : undefined}>
+          <span className="text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Categorie</span>
+          <select aria-label="Categorie" aria-invalid={Boolean(categoryIssue)} disabled={!admin || busy} value={categoryValue} onChange={(event) => setCategoryId(event.target.value)} className="w-full rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
+            {categoryIssue?.code === 'unavailable-category' ? <option value={INVALID_SELECT_VALUE} disabled>Ongeldig voorstel — kies opnieuw</option> : null}
+            <option value="">Kies categorie</option>
+            {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+          </select>
+          {categoryIssue ? renderSelectionWarning(categoryIssue, 'Voorgestelde categorie-id', categoryWarningId) : null}
+        </label>
         <div><span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Betrouwbaarheid</span><div className={`rounded-xl border px-3 py-2 text-xs font-semibold ${reliability.className}`}>
           <span aria-hidden="true">● </span>{reliability.score === null ? reliability.label : `${reliability.score}% · ${reliability.label}`}
         </div></div>
-        <button type="button" onClick={confirm} disabled={!canConfirm} className="w-full rounded-xl bg-[#1f5f4a] px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 xl:w-auto">
+        <button type="button" onClick={confirm} disabled={!canConfirm} aria-describedby={hasSelectionWarnings ? warningId : undefined} className="w-full rounded-xl bg-[#1f5f4a] px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 xl:w-auto">
           {getReviewConfirmLabel({ admin, busy, changed })}
         </button>
       </div>
+      {hasSelectionWarnings ? (
+        <div id={warningId} className="mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="status" aria-live="polite">
+          <p className="font-semibold">Controleer het voorstel opnieuw voordat je bevestigt.</p>
+          <ul className="mt-2 list-disc pl-5">
+            {selectionValidity.issues.map((issue) => <li key={issue.field}>{issue.message}</li>)}
+          </ul>
+        </div>
+      ) : null}
       <details className="mt-3 rounded-xl bg-[#f5f1ea] px-4 py-3 text-sm">
         <summary className="cursor-pointer font-semibold">Bewijs en details</summary>
         <div className="mt-3 grid gap-3 md:grid-cols-2">

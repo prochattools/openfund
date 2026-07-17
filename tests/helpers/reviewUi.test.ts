@@ -3,6 +3,7 @@ import {
   canConfirmReviewRow,
   getReviewConfirmLabel,
   getReviewReliability,
+  getReviewSelectionValidity,
 } from '../../src/helpers/review-ui';
 import type { EvidenceRichReviewItem } from '../../src/libs/api';
 
@@ -76,5 +77,169 @@ describe('review UI helpers', () => {
     expect(getReviewConfirmLabel({ admin: true, busy: true, changed: false })).toBe('Opslaan…');
     expect(getReviewConfirmLabel({ admin: true, busy: false, changed: false })).toBe('Bevestigen');
     expect(getReviewConfirmLabel({ admin: true, busy: false, changed: true })).toBe('Wijzigingen bevestigen');
+  });
+
+  it('requires visible project, type, and category options before confirmation is allowed', () => {
+    const validity = getReviewSelectionValidity({
+      admin: true,
+      busy: false,
+      projectId: 'project-1',
+      transactionTypeId: 'type-credit',
+      categoryId: 'category-1',
+      projects: [{ id: 'project-1', code: 'YA', name: 'Yeshua Academy' }],
+      transactionTypes: [
+        { id: 'type-credit', code: 'GIFT_IN', literalName: 'Schenking in', direction: 'credit' },
+        { id: 'type-debit', code: 'BANK_OUT', literalName: 'Bankkosten', direction: 'debit' },
+      ],
+      compatibleTransactionTypes: [
+        { id: 'type-credit', code: 'GIFT_IN', literalName: 'Schenking in', direction: 'credit' },
+      ],
+      categories: [{ id: 'category-1', name: 'Giften' }],
+    });
+
+    expect(validity.canConfirm).toBe(true);
+    expect(validity.projectVisible).toBe(true);
+    expect(validity.transactionTypeVisible).toBe(true);
+    expect(validity.categoryVisible).toBe(true);
+    expect(validity.issues).toEqual([]);
+  });
+
+  it('blocks missing project IDs with a deterministic warning', () => {
+    const validity = getReviewSelectionValidity({
+      admin: true,
+      busy: false,
+      projectId: '',
+      transactionTypeId: 'type-credit',
+      categoryId: 'category-1',
+      projects: [{ id: 'project-1', code: 'YA', name: 'Yeshua Academy' }],
+      transactionTypes: [{ id: 'type-credit', code: 'GIFT_IN', literalName: 'Schenking in', direction: 'credit' }],
+      compatibleTransactionTypes: [{ id: 'type-credit', code: 'GIFT_IN', literalName: 'Schenking in', direction: 'credit' }],
+      categories: [{ id: 'category-1', name: 'Giften' }],
+    });
+
+    expect(validity.canConfirm).toBe(false);
+    expect(validity.issues).toEqual([
+      expect.objectContaining({
+        field: 'project',
+        code: 'missing-project-id',
+        message: 'Kies een geldig project.',
+        rawId: null,
+      }),
+    ]);
+  });
+
+  it('blocks project IDs that are not available in the current project options', () => {
+    const validity = getReviewSelectionValidity({
+      admin: true,
+      busy: false,
+      projectId: 'project-missing',
+      transactionTypeId: 'type-credit',
+      categoryId: 'category-1',
+      projects: [{ id: 'project-1', code: 'YA', name: 'Yeshua Academy' }],
+      transactionTypes: [{ id: 'type-credit', code: 'GIFT_IN', literalName: 'Schenking in', direction: 'credit' }],
+      compatibleTransactionTypes: [{ id: 'type-credit', code: 'GIFT_IN', literalName: 'Schenking in', direction: 'credit' }],
+      categories: [{ id: 'category-1', name: 'Giften' }],
+    });
+
+    expect(validity.canConfirm).toBe(false);
+    expect(validity.issues[0]).toMatchObject({
+      field: 'project',
+      code: 'unavailable-project',
+      message: 'Het voorgestelde project is niet meer beschikbaar. Kies een geldig project.',
+      rawId: 'project-missing',
+    });
+  });
+
+  it('blocks category IDs that are not available in the current category options', () => {
+    const validity = getReviewSelectionValidity({
+      admin: true,
+      busy: false,
+      projectId: 'project-1',
+      transactionTypeId: 'type-credit',
+      categoryId: 'category-missing',
+      projects: [{ id: 'project-1', code: 'YA', name: 'Yeshua Academy' }],
+      transactionTypes: [{ id: 'type-credit', code: 'GIFT_IN', literalName: 'Schenking in', direction: 'credit' }],
+      compatibleTransactionTypes: [{ id: 'type-credit', code: 'GIFT_IN', literalName: 'Schenking in', direction: 'credit' }],
+      categories: [{ id: 'category-1', name: 'Giften' }],
+    });
+
+    expect(validity.canConfirm).toBe(false);
+    expect(validity.issues[0]).toMatchObject({
+      field: 'category',
+      code: 'unavailable-category',
+      message: 'De voorgestelde categorie is niet meer beschikbaar. Kies een geldige categorie.',
+      rawId: 'category-missing',
+    });
+  });
+
+  it('blocks transaction types that are missing from the compatible options', () => {
+    const validity = getReviewSelectionValidity({
+      admin: true,
+      busy: false,
+      projectId: 'project-1',
+      transactionTypeId: 'type-missing',
+      categoryId: 'category-1',
+      projects: [{ id: 'project-1', code: 'YA', name: 'Yeshua Academy' }],
+      transactionTypes: [{ id: 'type-credit', code: 'GIFT_IN', literalName: 'Schenking in', direction: 'credit' }],
+      compatibleTransactionTypes: [{ id: 'type-credit', code: 'GIFT_IN', literalName: 'Schenking in', direction: 'credit' }],
+      categories: [{ id: 'category-1', name: 'Giften' }],
+    });
+
+    expect(validity.canConfirm).toBe(false);
+    expect(validity.issues[0]).toMatchObject({
+      field: 'transactionType',
+      code: 'unavailable-transaction-type',
+      message: 'Het voorgestelde transactietype is niet meer beschikbaar. Kies een geldig transactietype.',
+      rawId: 'type-missing',
+    });
+  });
+
+  it('blocks transaction types that exist but are not compatible with the transaction direction', () => {
+    const validity = getReviewSelectionValidity({
+      admin: true,
+      busy: false,
+      projectId: 'project-1',
+      transactionTypeId: 'type-debit',
+      categoryId: 'category-1',
+      projects: [{ id: 'project-1', code: 'YA', name: 'Yeshua Academy' }],
+      transactionTypes: [
+        { id: 'type-credit', code: 'GIFT_IN', literalName: 'Schenking in', direction: 'credit' },
+        { id: 'type-debit', code: 'BANK_OUT', literalName: 'Bankkosten', direction: 'debit' },
+      ],
+      compatibleTransactionTypes: [{ id: 'type-credit', code: 'GIFT_IN', literalName: 'Schenking in', direction: 'credit' }],
+      categories: [{ id: 'category-1', name: 'Giften' }],
+    });
+
+    expect(validity.canConfirm).toBe(false);
+    expect(validity.issues[0]).toMatchObject({
+      field: 'transactionType',
+      code: 'wrong-direction-transaction-type',
+      message: 'Het voorgestelde transactietype is niet beschikbaar voor deze richting. Kies een geldig transactietype voordat je bevestigt.',
+      rawId: 'type-debit',
+    });
+  });
+
+  it('keeps viewer and busy rows blocked even when the visible options are valid', () => {
+    const validInput = {
+      projectId: 'project-1',
+      transactionTypeId: 'type-credit',
+      categoryId: 'category-1',
+      projects: [{ id: 'project-1', code: 'YA', name: 'Yeshua Academy' }],
+      transactionTypes: [{ id: 'type-credit', code: 'GIFT_IN', literalName: 'Schenking in', direction: 'credit' }],
+      compatibleTransactionTypes: [{ id: 'type-credit', code: 'GIFT_IN', literalName: 'Schenking in', direction: 'credit' }],
+      categories: [{ id: 'category-1', name: 'Giften' }],
+    };
+
+    expect(getReviewSelectionValidity({ admin: false, busy: false, ...validInput }).canConfirm).toBe(false);
+    expect(getReviewSelectionValidity({ admin: true, busy: true, ...validInput }).canConfirm).toBe(false);
+  });
+
+  it('keeps the changed label separate from confirmation eligibility and reliability', () => {
+    expect(getReviewConfirmLabel({ admin: true, busy: false, changed: false })).toBe('Bevestigen');
+    expect(getReviewConfirmLabel({ admin: true, busy: false, changed: true })).toBe('Wijzigingen bevestigen');
+    expect(getReviewReliability(makeItem({
+      deterministicStatus: 'conflict',
+      alternatives: [{ confidence: 'EXACT_FALLBACK' } as EvidenceRichReviewItem['alternatives'][number]],
+    }))).toMatchObject({ band: 'red', score: 60, label: 'Onzeker' });
   });
 });

@@ -1,4 +1,9 @@
-import type { EvidenceRichReviewItem } from '@/libs/api';
+import type {
+  EvidenceRichReviewItem,
+  ReviewCategoryOption,
+  ReviewProjectOption,
+  ReviewTransactionTypeOption,
+} from '@/libs/api';
 
 export type ReviewConfidenceFilter = 'all' | 'green' | 'amber' | 'red' | 'gray';
 
@@ -39,6 +44,116 @@ export const canConfirmReviewRow = (input: {
   && input.transactionTypeId
   && input.categoryId,
 );
+
+export type ReviewSelectionIssueCode =
+  | 'missing-project-id'
+  | 'unavailable-project'
+  | 'missing-transaction-type-id'
+  | 'unavailable-transaction-type'
+  | 'wrong-direction-transaction-type'
+  | 'missing-category-id'
+  | 'unavailable-category';
+
+export type ReviewSelectionIssue = {
+  field: 'project' | 'transactionType' | 'category';
+  code: ReviewSelectionIssueCode;
+  message: string;
+  rawId: string | null;
+};
+
+export type ReviewSelectionValidity = {
+  canConfirm: boolean;
+  projectVisible: boolean;
+  transactionTypeVisible: boolean;
+  categoryVisible: boolean;
+  issues: ReviewSelectionIssue[];
+};
+
+const hasId = (value: string) => value.trim().length > 0;
+
+const includesId = <T extends { id: string }>(items: T[], id: string): boolean =>
+  items.some((item) => item.id === id);
+
+export const getReviewSelectionValidity = (input: {
+  admin: boolean;
+  busy: boolean;
+  projectId: string;
+  transactionTypeId: string;
+  categoryId: string;
+  projects: ReviewProjectOption[];
+  transactionTypes: ReviewTransactionTypeOption[];
+  compatibleTransactionTypes: ReviewTransactionTypeOption[];
+  categories: ReviewCategoryOption[];
+}): ReviewSelectionValidity => {
+  const issues: ReviewSelectionIssue[] = [];
+
+  const projectVisible = hasId(input.projectId) && includesId(input.projects, input.projectId);
+  const transactionTypeVisible = hasId(input.transactionTypeId)
+    && includesId(input.compatibleTransactionTypes, input.transactionTypeId);
+  const transactionTypeExists = hasId(input.transactionTypeId)
+    && includesId(input.transactionTypes, input.transactionTypeId);
+  const categoryVisible = hasId(input.categoryId) && includesId(input.categories, input.categoryId);
+
+  if (!hasId(input.projectId)) {
+    issues.push({
+      field: 'project',
+      code: 'missing-project-id',
+      message: 'Kies een geldig project.',
+      rawId: null,
+    });
+  } else if (!projectVisible) {
+    issues.push({
+      field: 'project',
+      code: 'unavailable-project',
+      message: 'Het voorgestelde project is niet meer beschikbaar. Kies een geldig project.',
+      rawId: input.projectId,
+    });
+  }
+
+  if (!hasId(input.transactionTypeId)) {
+    issues.push({
+      field: 'transactionType',
+      code: 'missing-transaction-type-id',
+      message: 'Kies een geldig transactietype.',
+      rawId: null,
+    });
+  } else if (!transactionTypeVisible) {
+    issues.push({
+      field: 'transactionType',
+      code: transactionTypeExists
+        ? 'wrong-direction-transaction-type'
+        : 'unavailable-transaction-type',
+      message: transactionTypeExists
+        ? 'Het voorgestelde transactietype is niet beschikbaar voor deze richting. Kies een geldig transactietype voordat je bevestigt.'
+        : 'Het voorgestelde transactietype is niet meer beschikbaar. Kies een geldig transactietype.',
+      rawId: input.transactionTypeId,
+    });
+  }
+
+  if (!hasId(input.categoryId)) {
+    issues.push({
+      field: 'category',
+      code: 'missing-category-id',
+      message: 'Kies een geldige categorie.',
+      rawId: null,
+    });
+  } else if (!categoryVisible) {
+    issues.push({
+      field: 'category',
+      code: 'unavailable-category',
+      message: 'De voorgestelde categorie is niet meer beschikbaar. Kies een geldige categorie.',
+      rawId: input.categoryId,
+    });
+  }
+
+  return {
+    canConfirm: Boolean(input.admin && !input.busy && issues.length === 0),
+    projectVisible,
+    transactionTypeVisible,
+    categoryVisible,
+    issues,
+  };
+};
 
 export const getReviewConfirmLabel = (input: {
   admin: boolean;

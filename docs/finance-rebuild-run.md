@@ -2376,3 +2376,104 @@ Push restriction: **do not push**
 ### Exact next action
 
 Either deploy the current repo source so the live environment reflects the `Bevestigen` / `Wijzigingen bevestigen` label logic and the mobile full-width action contract, or provide a browser surface with direct network/status inspection so `GET /api/review?page=1&pageSize=25` can be confirmed at the header level. No code changed in this pass, and no push was made.
+
+## 2026-07-17 — Post-redeploy live mismatch check
+
+Status: **PARTIAL — the compact review UI and browser authentication are live, but the first visible incomplete row still renders an enabled confirm button after a cache-busting reload, so the live browser state does not fully match the repo guardrail for incomplete rows**
+
+### Safe session evidence
+
+- Current URL remained on `/review`
+- The live page still showed the compact review layout with the desktop headers, filters, page-size controls, and pagination
+- Desktop and mobile viewport checks both showed the row-based review interface and visible labels
+- A cache-busting reload of `https://finance.yeshua.academy/review?refresh=1` still rendered the first visible row with `Type` unset and the confirm button text `Bevestigen`
+- The first visible row button was not disabled in the live DOM even though the row’s transaction type remained blank
+- The row details panel rendered `Status: Conflict, handmatig beoordelen`, `Reden: Er zijn meerdere complete alternatieven. Kies handmatig de juiste Klant, Type en Categorie.`, `Alternatieven: 3`, and `Historische records: 0`
+- Browser console inspection returned no relevant errors or warnings
+- Direct browser navigation to `https://finance.yeshua.academy/api/review?page=1&pageSize=25` remained blocked by the browser surface with `net::ERR_BLOCKED_BY_CLIENT`
+
+### Verified UI facts
+
+- Desktop headers were visible: `Datum`, `Tegenpartij`, `Omschrijving`, `Bedrag`, `Project`, `Type`, `Categorie`, `Betrouwbaarheid`, `Actie`
+- Filter controls were visible for reliability, direction, project, category, status, and page size
+- Page-size options `25`, `50`, and `100` were visible
+- Pagination showed `Pagina 2 van 9 · 221 transacties` after advancing, then returned to `Pagina 1 van 9 · 221 transacties` after a filter change
+- The reliability filter reset the page back to 1
+- The mobile row kept labels visible and the confirm button used the `w-full ... xl:w-auto` contract in the live DOM
+- The browser surface still did not expose direct header/status evidence for `GET /api/review?page=1&pageSize=25`
+
+### Interpretation
+
+The browser-visible product behavior is now mostly aligned with the Phase 2 compact review contract, but the incomplete-row enablement and direct API-status limitation remain unresolved in this verification surface. No transaction was submitted, no confirmation was executed, and no secrets were inspected or recorded.
+
+## 2026-07-17 — Visible-option review hardening
+
+Status: **COMPLETE LOCALLY — the review row now blocks confirmation when a selected project, transaction type, or category is not visibly represented by the current permitted options**
+
+### Starting state
+
+- Starting HEAD: `3901e24d9f2b304236b2e1fb02ea4aa4b6c5d1dc`
+- Starting branch: `main`
+- Starting worktree state: only `docs/finance-rebuild-run.md` was already modified from the prior browser evidence handoff
+- Prior browser finding: a row could show a blank transaction-type selector while the hidden `transactionTypeId` state still enabled confirmation
+
+### Root cause
+
+- The formal three-ID completeness contract was correct, but the UI only checked non-empty `projectId`, `transactionTypeId`, and `categoryId` strings before enabling confirmation
+- The UI did not verify that those selected IDs were still present in the currently visible option lists
+- A stale or incompatible transaction type could remain in component state while the select rendered blank because the value was not in the compatible option list
+
+### Hardening behavior
+
+- Added `getReviewSelectionValidity()` in `src/helpers/review-ui.ts`
+- Confirmation now requires:
+  - non-empty project, type, and category IDs;
+  - the selected project to exist in the current project list;
+  - the selected category to exist in the current category list;
+  - the selected transaction type to exist in the current compatible transaction-type list;
+  - the selected transaction type to be distinguishable as wrong-direction vs unavailable when it exists outside the compatible list
+- `src/ui/FinanceReviewPage.tsx` now:
+  - disables confirmation when any selected value is missing or not visibly available;
+  - shows explicit Dutch warnings for stale or incompatible selections;
+  - renders an explicit `Ongeldig voorstel — kies opnieuw` placeholder when the selected value is not present in the visible options;
+  - preserves the raw selected ID in the warning text for audit/debug visibility;
+  - keeps the existing `Bevestigen` / `Wijzigingen bevestigen` labels, mobile full-width action, evidence expansion, and viewer disable behavior intact
+
+### Changed paths
+
+- `src/helpers/review-ui.ts`
+- `src/ui/FinanceReviewPage.tsx`
+- `tests/helpers/reviewUi.test.ts`
+
+### Validation
+
+- Focused review UI helper tests: passed (`12` tests in `tests/helpers/reviewUi.test.ts`)
+- Focused review queue tests: passed (`4` tests in `tests/services/reviewQueueService.test.ts`)
+- Focused review decision tests: passed (`8` tests in `tests/services/reviewDecisionService.test.ts`)
+- Focused review response mapper tests: passed (`2` tests in `tests/helpers/reviewResponseMapper.test.ts`)
+- Focused review route tests: passed (`12` tests in `tests/routes/review.test.ts`)
+- Full build: passed via `npm run build`
+- Build note: Next emitted lockfile/SWC patch warnings during build, but the build completed successfully
+
+### Browser verification
+
+- Not performed in this turn
+- No deployment or push was requested or performed
+
+### Remaining limitations
+
+- The prior authenticated browser evidence from the previous checkpoint remains the only live-session evidence in this handoff
+- This change hardens the UI gate only; no API contract or booking-service change was required
+
+### Commit state
+
+- Changes are local and uncommitted at this checkpoint
+- No push was made
+
+### Exact next task
+
+- Review the final diff for scope, stage only the intended paths, and decide whether to create a local commit under the repository’s no-push restriction
+
+### Explicit no-push restriction
+
+- Do not push
