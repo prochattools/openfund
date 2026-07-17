@@ -5,6 +5,12 @@ import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { FinanceAppFrame } from '@/ui/FinanceAppFrame';
 import {
+  canConfirmReviewRow,
+  getReviewConfirmLabel,
+  getReviewReliability,
+  type ReviewConfidenceFilter,
+} from '@/helpers/review-ui';
+import {
   fetchReview,
   isClientAdmin,
   updateCategory,
@@ -17,7 +23,6 @@ import {
 
 const PAGE_SIZES = [25, 50, 100] as const;
 type PageSize = (typeof PAGE_SIZES)[number];
-type ConfidenceFilter = 'all' | 'green' | 'amber' | 'red' | 'gray';
 
 const dateFormatter = new Intl.DateTimeFormat('nl-NL', {
   day: '2-digit',
@@ -25,30 +30,6 @@ const dateFormatter = new Intl.DateTimeFormat('nl-NL', {
   year: 'numeric',
 });
 const moneyFormatter = new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' });
-
-type Reliability = {
-  band: Exclude<ConfidenceFilter, 'all'>;
-  score: number | null;
-  label: string;
-  className: string;
-};
-
-const reliabilityFor = (item: EvidenceRichReviewItem): Reliability => {
-  const first = item.alternatives[0];
-  if (item.deterministicStatus === 'conflict') {
-    return { band: 'red' as const, score: 60, label: 'Onzeker', className: 'border-rose-300 bg-rose-50 text-rose-800' };
-  }
-  if (item.deterministicStatus === 'finalized' || first?.confidence === 'EXACT_FALLBACK') {
-    return { band: 'green' as const, score: 97, label: 'Zeer betrouwbaar', className: 'border-emerald-300 bg-emerald-50 text-emerald-800' };
-  }
-  if (first?.confidence === 'OVERALL') {
-    return { band: 'amber' as const, score: 85, label: 'Controleer zorgvuldig', className: 'border-amber-300 bg-amber-50 text-amber-900' };
-  }
-  if (first?.confidence === 'FUZZY') {
-    return { band: 'red' as const, score: 60, label: 'Onzeker', className: 'border-rose-300 bg-rose-50 text-rose-800' };
-  }
-  return { band: 'gray' as const, score: null, label: 'Onvoldoende bewijs', className: 'border-stone-300 bg-stone-100 text-stone-700' };
-};
 
 function EmptyReviewState() {
   return (
@@ -81,13 +62,13 @@ function ReviewRow({
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const admin = isClientAdmin();
-  const reliability = reliabilityFor(item);
+  const reliability = getReviewReliability(item);
   const changed = projectId !== initialProjectId || transactionTypeId !== initialTypeId || categoryId !== initialCategoryId;
-  const complete = Boolean(projectId && transactionTypeId && categoryId);
+  const canConfirm = canConfirmReviewRow({ admin, busy, projectId, transactionTypeId, categoryId });
   const compatibleTypes = transactionTypes.filter((type) => type.direction === item.direction);
 
   const confirm = async () => {
-    if (!admin || !complete) return;
+    if (!canConfirm) return;
     setBusy(true);
     try {
       await updateCategory(item.transactionId, { projectId, transactionTypeId, categoryId, reason: reason.trim() || null });
@@ -104,33 +85,35 @@ function ReviewRow({
   return (
     <article className="border-b border-[#ded5c8] bg-[#fbf8f2] p-4 last:border-b-0">
       <div className="grid gap-3 xl:grid-cols-[110px_minmax(190px,1.2fr)_minmax(220px,1.5fr)_110px_minmax(170px,1fr)_minmax(170px,1fr)_minmax(180px,1fr)_145px_140px] xl:items-center">
-        <div className="text-sm text-[#6f6253]">{dateFormatter.format(new Date(item.displayDate))}</div>
+        <div className="text-sm text-[#6f6253]"><span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Datum</span>{dateFormatter.format(new Date(item.displayDate))}</div>
         <div>
+          <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Tegenpartij</span>
           <p className="font-semibold">{item.counterparty ?? 'Onbekende tegenpartij'}</p>
           <p className="text-xs text-[#7d6d5a]">{item.counterpartyIban ?? item.accountIdentifier ?? ''}</p>
         </div>
         <div className="min-w-0">
+          <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Omschrijving</span>
           <p className="truncate font-medium" title={item.description}>{item.description}</p>
           <p className="truncate text-xs text-[#7d6d5a]" title={item.paymentPurpose ?? ''}>{item.paymentPurpose ?? 'Geen extra omschrijving'}</p>
         </div>
-        <div className={`text-right font-semibold ${item.amount < 0 ? 'text-[#914f35]' : 'text-[#1f5f4a]'}`}>{moneyFormatter.format(item.amount)}</div>
-        <select aria-label="Klant of project" disabled={!admin || busy} value={projectId} onChange={(event) => setProjectId(event.target.value)} className="w-full rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
+        <div className={`font-semibold xl:text-right ${item.amount < 0 ? 'text-[#914f35]' : 'text-[#1f5f4a]'}`}><span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Bedrag</span>{moneyFormatter.format(item.amount)}</div>
+        <label className="grid gap-1"><span className="text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Project</span><select aria-label="Klant of project" disabled={!admin || busy} value={projectId} onChange={(event) => setProjectId(event.target.value)} className="w-full rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
           <option value="">Kies project</option>
           {projects.map((project) => <option key={project.id} value={project.id}>{project.code} · {project.name}</option>)}
-        </select>
-        <select aria-label="Transactietype" disabled={!admin || busy} value={transactionTypeId} onChange={(event) => setTransactionTypeId(event.target.value)} className="w-full rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
+        </select></label>
+        <label className="grid gap-1"><span className="text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Type</span><select aria-label="Transactietype" disabled={!admin || busy} value={transactionTypeId} onChange={(event) => setTransactionTypeId(event.target.value)} className="w-full rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
           <option value="">Kies type</option>
           {compatibleTypes.map((type) => <option key={type.id} value={type.id}>{type.literalName}</option>)}
-        </select>
-        <select aria-label="Categorie" disabled={!admin || busy} value={categoryId} onChange={(event) => setCategoryId(event.target.value)} className="w-full rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
+        </select></label>
+        <label className="grid gap-1"><span className="text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Categorie</span><select aria-label="Categorie" disabled={!admin || busy} value={categoryId} onChange={(event) => setCategoryId(event.target.value)} className="w-full rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
           <option value="">Kies categorie</option>
           {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
-        </select>
-        <div className={`rounded-xl border px-3 py-2 text-xs font-semibold ${reliability.className}`}>
+        </select></label>
+        <div><span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Betrouwbaarheid</span><div className={`rounded-xl border px-3 py-2 text-xs font-semibold ${reliability.className}`}>
           <span aria-hidden="true">● </span>{reliability.score === null ? reliability.label : `${reliability.score}% · ${reliability.label}`}
-        </div>
-        <button type="button" onClick={confirm} disabled={!admin || busy || !complete} className="rounded-xl bg-[#1f5f4a] px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
-          {!admin ? 'Alleen beheerder' : busy ? 'Opslaan…' : changed ? 'Wijzigingen bevestigen' : 'Bevestigen'}
+        </div></div>
+        <button type="button" onClick={confirm} disabled={!canConfirm} className="w-full rounded-xl bg-[#1f5f4a] px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 xl:w-auto">
+          {getReviewConfirmLabel({ admin, busy, changed })}
         </button>
       </div>
       <details className="mt-3 rounded-xl bg-[#f5f1ea] px-4 py-3 text-sm">
@@ -151,7 +134,7 @@ export default function FinanceReviewPage() {
   const [data, setData] = useState<EvidenceRichReviewResponse | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<PageSize>(25);
-  const [confidence, setConfidence] = useState<ConfidenceFilter>('all');
+  const [confidence, setConfidence] = useState<ReviewConfidenceFilter>('all');
   const [direction, setDirection] = useState<'all' | 'credit' | 'debit'>('all');
   const [projectFilter, setProjectFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -195,7 +178,7 @@ export default function FinanceReviewPage() {
       </header>
 
       <section className="mb-4 grid gap-3 rounded-2xl border border-[#ded5c8] bg-[#fbf8f2] p-4 md:grid-cols-2 xl:grid-cols-6">
-        <select aria-label="Betrouwbaarheid filter" value={confidence} onChange={(event) => { setConfidence(event.target.value as ConfidenceFilter); setPage(1); }} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm"><option value="all">Alle betrouwbaarheid</option><option value="green">Zeer betrouwbaar</option><option value="amber">Controleer zorgvuldig</option><option value="red">Onzeker</option><option value="gray">Onvoldoende bewijs</option></select>
+        <select aria-label="Betrouwbaarheid filter" value={confidence} onChange={(event) => { setConfidence(event.target.value as ReviewConfidenceFilter); setPage(1); }} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm"><option value="all">Alle betrouwbaarheid</option><option value="green">Zeer betrouwbaar</option><option value="amber">Controleer zorgvuldig</option><option value="red">Onzeker</option><option value="gray">Onvoldoende bewijs</option></select>
         <select aria-label="Richting filter" value={direction} onChange={(event) => { setDirection(event.target.value as typeof direction); setPage(1); }} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm"><option value="all">Alle richtingen</option><option value="debit">Afschrijvingen</option><option value="credit">Bijschrijvingen</option></select>
         <select aria-label="Project filter" value={projectFilter} onChange={(event) => { setProjectFilter(event.target.value); setPage(1); }} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm"><option value="">Alle projecten</option>{data?.projects.map((project) => <option key={project.id} value={project.id}>{project.code} · {project.name}</option>)}</select>
         <select aria-label="Categorie filter" value={categoryFilter} onChange={(event) => { setCategoryFilter(event.target.value); setPage(1); }} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm"><option value="">Alle categorieën</option>{data?.categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select>

@@ -149,7 +149,7 @@ export const fetchLedger = async () => {
   return response.json();
 };
 
-export const fetchReview = async ({
+export const buildReviewQueryString = ({
   page = 1,
   pageSize = 25,
   confidence = null,
@@ -157,7 +157,7 @@ export const fetchReview = async ({
   projectId = null,
   categoryId = null,
   state = 'all',
-}: ReviewQuery = {}): Promise<EvidenceRichReviewResponse> => {
+}: ReviewQuery = {}): string => {
   const query = new URLSearchParams({
     page: String(page),
     pageSize: String(pageSize),
@@ -167,7 +167,11 @@ export const fetchReview = async ({
   if (projectId) query.set('projectId', projectId);
   if (categoryId) query.set('categoryId', categoryId);
   if (state !== 'all') query.set('state', state);
-  const response = await fetch(getApiUrl(`/api/review?${query.toString()}`), withUserHeader({ cache: 'no-store' }));
+  return query.toString();
+};
+
+export const fetchReview = async (query: ReviewQuery = {}): Promise<EvidenceRichReviewResponse> => {
+  const response = await fetch(getApiUrl(`/api/review?${buildReviewQueryString(query)}`), withUserHeader({ cache: 'no-store' }));
 
   if (!response.ok) {
     throw new Error('De beoordelingsrij kon niet worden geladen.');

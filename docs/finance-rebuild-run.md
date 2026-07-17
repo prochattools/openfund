@@ -2111,3 +2111,60 @@ Push restriction: **do not push**
 ### Exact next task
 
 Read the authoritative roadmap, implementation plan, architecture, and this handoff. Verify source, branch, HEAD, and worktree. Complete browser-level responsive/accessibility verification of `/review` and add the smallest targeted UI interaction coverage available in the repository. Preserve all accounting and authorization controls. Do not add Bedrock, AI, merchant schema changes, bulk confirmation, automatic booking, or future phases. Do not push.
+
+
+
+
+---
+
+## 2026-07-17 — Program Phase 2 UI accessibility and testability checkpoint
+
+Status: **third coherent Phase 2 slice implemented and validated**  
+Starting HEAD: `fee4b1a` (`feat: add server-side review filtering`)  
+Push restriction: **do not push**
+
+### Completed behavior
+
+- Review reliability and confirmation-state logic were extracted into `src/helpers/review-ui.ts` for deterministic unit testing.
+- Conflicting suggestions remain red/uncertain even when the first alternative is exact.
+- Reliability remains understandable through Dutch text and a score in addition to color.
+- Viewer, busy, and incomplete rows cannot confirm.
+- Confirmation labels now have tested states for viewer, saving, unchanged, and changed classifications.
+- Mobile rows now expose visible labels for date, counterparty, description, amount, project, transaction type, category, and reliability below the `xl` breakpoint.
+- The individual confirmation action is full-width and reachable on mobile while the desktop compact-grid headers remain intact.
+- Evidence/details remain available through the existing expandable `details` element.
+- Review query-string construction was extracted into `buildReviewQueryString()` and retains existing request semantics.
+- No bulk-confirmation control, accounting mutation change, AI behavior, schema change, or future-phase work was introduced.
+
+### Changed paths
+
+- `src/helpers/review-ui.ts`
+- `src/ui/FinanceReviewPage.tsx`
+- `src/libs/api.ts`
+- `tests/helpers/reviewUi.test.ts`
+- `tests/helpers/reviewApiQuery.test.ts`
+- `docs/finance-rebuild-run.md`
+
+### Validation evidence
+
+- `npm test -- --test-name-pattern "review UI helpers"` — exit `0`; 4 passed, 0 failed.
+- `npm test -- --test-name-pattern "review API query construction"` — exit `0`; 3 passed, 0 failed.
+- Initial full `npm run build` found one stale `ConfidenceFilter` type reference after helper extraction.
+- One bounded repair changed the handler cast to `ReviewConfidenceFilter`.
+- Repaired full `npm run build` — exit `0`; Prisma generation, server TypeScript, Next.js compilation, type validation, static generation, and `/review` production bundling completed successfully.
+
+### Browser-tooling limitation
+
+The repository currently has Vitest but no Playwright, Puppeteer, browser automation dependency, or browser verification script. Therefore, no live browser, viewport, browser-console, or browser-network verification was performed in this slice, and no such claim should be inferred. Adding a new browser framework was explicitly outside this bounded task.
+
+Manual browser verification remains required for desktop and mobile viewport behavior, real filter changes, pagination controls, inline editing, evidence expansion, viewer/admin behavior, and individual confirmation against a running authenticated environment.
+
+### Remaining Phase 2 work
+
+- Perform manual or separately approved browser-level verification in a running authenticated environment.
+- Consider searchable comboboxes only as a separately approved bounded UI enhancement.
+- Reliability scores remain provisional display values and are not calibrated probabilities.
+
+### Exact next task
+
+Read the authoritative roadmap, implementation plan, architecture, and this handoff. Verify source, branch, HEAD, and worktree. Perform manual browser-level acceptance verification of `/review` in an authenticated environment when supported, capture factual evidence and issues, and apply only bounded Phase 2 fixes clearly justified by that evidence. Do not add a browser framework, Bedrock, AI, merchant schema changes, bulk confirmation, automatic booking, or future phases. Do not push.
