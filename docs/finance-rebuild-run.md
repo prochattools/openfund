@@ -2168,3 +2168,61 @@ Manual browser verification remains required for desktop and mobile viewport beh
 ### Exact next task
 
 Read the authoritative roadmap, implementation plan, architecture, and this handoff. Verify source, branch, HEAD, and worktree. Perform manual browser-level acceptance verification of `/review` in an authenticated environment when supported, capture factual evidence and issues, and apply only bounded Phase 2 fixes clearly justified by that evidence. Do not add a browser framework, Bedrock, AI, merchant schema changes, bulk confirmation, automatic booking, or future phases. Do not push.
+
+
+
+
+---
+
+## 2026-07-17 — Program Phase 2 manual browser acceptance attempt
+
+Status: **BLOCKED — no approved browser runtime is available in this execution environment**  
+Verified source: `yeshuaacademy-finance`  
+Verified branch: `main`  
+Verified HEAD: `0878e2e` (`test: harden review UI accessibility`)  
+Starting worktree: clean  
+Push restriction: **do not push**
+
+### Verification performed
+
+- Re-read the authoritative roadmap, implementation plan, accounting/review architecture, and this persistent handoff.
+- Confirmed Program Phase 2 remains the documented current program task.
+- Inspected repository package scripts and dependencies.
+- Confirmed the repository provides Vitest and normal Next.js development/build scripts, but no Playwright, Puppeteer, browser automation dependency, browser acceptance script, or other repository-approved browser runner.
+- Confirmed this Workbench execution surface does not expose a running authenticated browser session or an approved runtime connector for desktop/mobile viewport, browser-console, or browser-network inspection.
+- Confirmed the task explicitly prohibits adding a browser framework in this slice.
+
+### Browser evidence not obtained
+
+No factual live-browser evidence was obtained for:
+
+- desktop or mobile viewport rendering;
+- overlapping or clipped columns;
+- real pagination/filter interactions;
+- inline editing and confirmation labels in a running session;
+- expandable evidence behavior in a running session;
+- viewer/admin authorization presentation;
+- browser console output;
+- browser network requests and responses;
+- successful confirmation refresh behavior.
+
+No financial mutation was attempted. No unsafe or bulk action was performed.
+
+### Code and validation state
+
+- No application, test, schema, migration, or configuration file changed in this attempt.
+- No build or test rerun was necessary because the repository remained at the previously validated commit `0878e2e` with a clean worktree.
+- The only changed path in this checkpoint is `docs/finance-rebuild-run.md`.
+
+### Required external precondition
+
+Manual acceptance can proceed only when one of these is explicitly available and approved:
+
+1. a running authenticated finance environment plus a human reviewer who can inspect desktop/mobile viewports, console, and network behavior; or
+2. an already-approved browser automation/runtime connector exposed to the execution environment.
+
+Adding Playwright, Puppeteer, or another browser framework remains outside this task and requires separate approval.
+
+### Exact next task
+
+Open the deployed or approved local Yeshua Academy Finance environment in an authenticated browser. Execute the documented desktop, mobile, authorization, pagination, filter, inline-editing, evidence-expansion, and individual-confirmation acceptance checklist. Capture factual screenshots or written evidence, console/network findings, and any reproducible defects. Then update this handoff and apply only bounded Program Phase 2 fixes justified by observed evidence. Do not perform bulk or unsafe financial mutations. Do not add Bedrock, AI, merchant schema changes, automatic booking, or future phases. Do not push without explicit approval.
