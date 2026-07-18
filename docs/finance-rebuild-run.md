@@ -2600,3 +2600,55 @@ No file was moved, renamed, deleted, split, or replaced by a compatibility stub.
 ### Exact next migration task
 
 Prepare the third bounded documentation packet to introduce the first new canonical architecture documents without moving or splitting existing canonical paths. Draft only `docs/architecture/ARCHITECTURAL_INVARIANTS.md`, `docs/architecture/SYSTEM_ARCHITECTURE.md`, `docs/architecture/MERCHANT_KNOWLEDGE_ARCHITECTURE.md`, and `docs/architecture/DECISION_ENGINE_ARCHITECTURE.md`; update `docs/README.md` and the active handoff; preserve `docs/ACCOUNTING_INTEGRITY_AND_REVIEW_PREFILL.md` as the current canonical architecture entrypoint until a later approved split. Validate all new cross-links and do not push.
+
+
+
+
+---
+
+## 2026-07-18 — Finance intelligence architecture foundation checkpoint
+
+Status: **completed and validated; existing canonical paths preserved**  
+Starting HEAD: `4420806` (`docs: classify historical finance documents`)  
+Starting worktree: clean  
+Push restriction: **do not push**
+
+### Files created
+
+- `docs/architecture/ARCHITECTURAL_INVARIANTS.md`
+- `docs/architecture/SYSTEM_ARCHITECTURE.md`
+- `docs/architecture/MERCHANT_KNOWLEDGE_ARCHITECTURE.md`
+- `docs/architecture/DECISION_ENGINE_ARCHITECTURE.md`
+
+### Architecture responsibilities introduced
+
+- Architectural invariants define durable financial, workspace, learning, provenance, calibration, abstention, and automation constraints.
+- System architecture defines long-term boundaries, data flow, event flow, synchronous/asynchronous separation, observability, security, and failure behavior.
+- Merchant Knowledge architecture defines workspace-scoped merchant identity, aliases, fingerprints, matching precedence, conflict handling, merge/split safety, audit, retrieval anchoring, additive migration, and rollback.
+- Decision Engine architecture defines contributor responsibilities, orchestration order, restricted candidates, conceptual Decision content, abstention, escalation, calibration, evidence, reproducibility, performance, cost, and failure behavior.
+
+### Authority and scope
+
+`docs/ACCOUNTING_INTEGRITY_AND_REVIEW_PREFILL.md` remains the current canonical architecture entrypoint for implemented accounting integrity and transaction review. The new documents are `APPROVED` target architecture and explicitly distinguish implemented behavior from future Phase 3–7 work. No existing canonical document was moved, renamed, split, archived, superseded, or edited.
+
+No application code, Prisma schema, migration, dependency, lockfile, workflow, environment file, script, operational document, owner/release document, or production behavior changed.
+
+### Additional changed paths
+
+- `docs/README.md` — indexed the architecture folder, preserved the current accounting/review entrypoint, and updated onboarding order.
+- `docs/finance-rebuild-run.md` — this checkpoint.
+
+Root `README.md` did not require a change. No new test was added because existing link and consistency guards cover the additive architecture documents.
+
+### Validation evidence
+
+- `npm run audit:final-docs` — exit `0`; status `GESLAAGD`.
+- Focused final-docs consistency suite — exit `0`; 36 passed, 0 failed.
+- Focused roadmap-status consistency suite — exit `0`; 10 passed, 0 failed.
+- Focused release-evidence consistency suite — exit `0`; 11 passed, 0 failed.
+- Focused link-integrity suite — exit `0`; 85 passed, 0 failed.
+- New documents use `Status: APPROVED`; no duplicate `CURRENT` architecture responsibility was introduced.
+
+### Exact next documentation task
+
+Prepare the fourth bounded documentation packet to reconcile the roadmap and implementation plan with the approved architecture set. Update only `docs/ROADMAP.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/README.md`, and the active handoff as needed. Preserve all completed historical phases and current production evidence. Add explicit future Transaction Review and Intelligence Program Phase 3–7 references to Merchant Knowledge, retrieval/candidate foundations, Decision Engine inference, evaluation/calibration/observability, and controlled rollout. Do not implement code, move documents, change the current accounting/review canonical entrypoint, or push.

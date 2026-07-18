@@ -37,10 +37,14 @@ For work that changes accounting, classification, review, or financial data cont
 | Executable implementation planning | `docs/IMPLEMENTATION_PLAN.md` |
 | Approved financial domain model | `docs/DOMAIN_MODEL.md` |
 | Accounting integrity, review prefill, and current review-intelligence architecture | `docs/ACCOUNTING_INTEGRITY_AND_REVIEW_PREFILL.md` |
+| Durable finance-intelligence invariants | `docs/architecture/ARCHITECTURAL_INVARIANTS.md` |
+| Long-term system boundaries and high-level data/event flow | `docs/architecture/SYSTEM_ARCHITECTURE.md` |
+| Approved target merchant identity and matching architecture | `docs/architecture/MERCHANT_KNOWLEDGE_ARCHITECTURE.md` |
+| Approved target decision orchestration and provenance architecture | `docs/architecture/DECISION_ENGINE_ARCHITECTURE.md` |
 | Active run, handoff, validation evidence, and exact next task | `docs/finance-rebuild-run.md` |
 | Documentation ownership, status, migration, and archival rules | `docs/DOCUMENTATION_GOVERNANCE.md` |
 
-The current architecture path for the Transaction Review and Intelligence Program remains `docs/ACCOUNTING_INTEGRITY_AND_REVIEW_PREFILL.md`. New domain architecture files may be introduced only through a separately approved documentation-migration packet.
+The current architecture entrypoint for implemented accounting integrity and transaction review remains `docs/ACCOUNTING_INTEGRITY_AND_REVIEW_PREFILL.md`. The approved documents under `docs/architecture/` define durable invariants and target Phase 3–7 boundaries; they do not claim those future capabilities are implemented and do not supersede the current accounting/review contract.
 
 ## Operational and owner-review document families
 
@@ -78,11 +82,14 @@ A new engineer should read:
 4. `docs/PHILOSOPHY.md`;
 5. `docs/STRATEGY.md`;
 6. `docs/DOMAIN_MODEL.md`;
-7. `docs/ROADMAP.md`;
-8. the relevant domain architecture document;
-9. `docs/IMPLEMENTATION_PLAN.md`;
-10. `docs/finance-rebuild-run.md`;
-11. the operational guide relevant to the task.
+7. `docs/architecture/ARCHITECTURAL_INVARIANTS.md`;
+8. `docs/architecture/SYSTEM_ARCHITECTURE.md`;
+9. `docs/ACCOUNTING_INTEGRITY_AND_REVIEW_PREFILL.md`;
+10. the relevant target architecture document, including Merchant Knowledge or Decision Engine where applicable;
+11. `docs/ROADMAP.md`;
+12. `docs/IMPLEMENTATION_PLAN.md`;
+13. `docs/finance-rebuild-run.md`;
+14. the operational guide relevant to the task.
 
 ## Change rule
 
