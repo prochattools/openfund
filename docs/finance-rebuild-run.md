@@ -2959,3 +2959,89 @@ No blocker prevents Phase 3.3 deterministic fingerprint extraction. Creditor ide
 ### Exact Phase 3.3 task
 
 Implement deterministic merchant fingerprint extraction only, without creating the proposed schema or migration yet. Add a pure, side-effect-free extractor over current immutable transaction facts for the proven signal types: IBAN/account evidence, normalized counterparty, payment purpose when available, and recurring-pattern input components where they can be represented deterministically. Preserve import-fingerprint separation, workspace scope in every caller contract, version each extraction result, hash privacy-sensitive values, abstain on missing/malformed inputs, and add targeted fixtures covering the 221-transaction evidence shapes. Do not persist merchant knowledge, mutate transactions/bookings/reviews, add UI, Bedrock, or AI. Do not push.
+
+
+
+
+---
+
+## 2026-07-18 — Program Phase 3.3 deterministic merchant fingerprint extraction checkpoint
+
+Status: **completed and validated; no persistence, schema, migration, booking, suggestion, or review mutation introduced**  
+Starting HEAD: `1497373` (`docs: design merchant knowledge schema`)  
+Starting worktree: clean  
+Push restriction: **do not push**
+
+### Exact source inspected
+
+- `server/services/transactionSuggestionFacts.ts`
+- `server/services/transactionFingerprint.ts`
+- `server/services/historySuggestionService.ts`
+- `lib/import/normalizers.ts`
+- `lib/import/csv_ING.ts`
+- `lib/import/xlsx.ts`
+- current ING and historical parser fixtures
+- existing import-fingerprint, parser, history-suggestion, and suggestion-backfill tests
+
+### Extractor contract
+
+Created `server/services/merchantFingerprintExtractor.ts` as a pure, deterministic, side-effect-free extractor requiring caller-supplied `workspaceId` and `transactionId` context without any database or workspace lookup.
+
+The typed contract returns:
+
+- signal type;
+- normalized value where allowed;
+- SHA-256 value hash;
+- strength;
+- extraction version `merchant-fingerprint-v1`;
+- source field;
+- evidence-safe display value;
+- explicit abstention reason when extraction cannot produce a signal.
+
+Output is stably ordered and deterministic for identical immutable input. The extractor has no network, database, filesystem, clock, persistence, or mutation dependency.
+
+### Supported signals
+
+- validated counterparty IBAN/account evidence — `STRONG`, normalized and masked for display;
+- normalized counterparty — `MEDIUM`;
+- payment purpose from supported direct/nested raw-row shapes or immutable reference fallback — `WEAK`;
+- deterministic recurring-pattern input components from account ID, direction, absolute amount, and UTC month-day — `WEAK` and never a merchant assignment.
+
+### Abstaining and excluded signals
+
+- malformed or missing IBAN;
+- empty or placeholder counterparty/purpose values;
+- incomplete recurring-pattern components;
+- creditor identifiers and stable card/payment descriptors, because current imports do not yet expose reliable first-class values;
+- amount or text similarity alone never becomes a strong fingerprint.
+
+Merchant fingerprints remain semantically and technically separate from `server/services/transactionFingerprint.ts`, which continues to own import deduplication.
+
+### Changed paths
+
+- `server/services/merchantFingerprintExtractor.ts`
+- `tests/services/merchantFingerprintExtractor.test.ts`
+- `docs/IMPLEMENTATION_PLAN.md`
+- `docs/finance-rebuild-run.md`
+
+No Prisma model, migration, merchant persistence, API, UI, booking, categorization suggestion, review decision, raw transaction, Bedrock integration, AI inference, or automatic booking changed.
+
+### Validation evidence
+
+- Focused merchant fingerprint extractor suite — exit `0`; 12 passed, 0 failed.
+- Existing transaction import fingerprint suite — exit `0`; 4 passed, 0 failed.
+- `npm run build:server` — exit `0`.
+- Full `npm run build` — exit `0`; Prisma generation, server type check, Next production compilation, type validation, static generation, and trace collection completed successfully.
+- Full build emitted only the repository's existing Prisma update notice and missing-SWC-lockfile warnings; no build failure occurred and no lockfile changed.
+
+### Limitations
+
+- The extractor is not yet wired into alias resolution or retrieval.
+- It deliberately performs no persistence.
+- Counterparty and payment-purpose normalized values remain in-memory outputs; future persistence must follow the approved privacy/minimization contract.
+- Recurring-pattern output contains only deterministic input components and does not infer recurrence or merchant identity.
+- Creditor/card signals remain unsupported until parser evidence exists.
+
+### Exact Phase 3.4 task
+
+Implement workspace-scoped alias resolution only over caller-supplied approved alias records and pure Phase 3.3 fingerprints. The resolver must be deterministic, side-effect free, precedence ordered, and explicitly abstain on collisions, conflicting active aliases, missing workspace context, unsupported signals, or no trusted match. Do not create the proposed Prisma schema or migration yet; use typed in-memory contracts and focused tests only. Do not persist merchant knowledge, mutate transactions/bookings/reviews, add APIs/UI, Bedrock, AI, or automatic booking. Do not push.
