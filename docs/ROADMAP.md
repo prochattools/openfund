@@ -463,7 +463,11 @@ Adding any of these requires an explicit philosophy and strategy review before i
 
 Status: **approved; documentation complete; Phase 2 is CURRENT**  
 Approved: 2026-07-16  
-Architecture: `docs/ACCOUNTING_INTEGRITY_AND_REVIEW_PREFILL.md`  
+Implemented accounting/review architecture: `docs/ACCOUNTING_INTEGRITY_AND_REVIEW_PREFILL.md`  
+Approved invariants: `docs/architecture/ARCHITECTURAL_INVARIANTS.md`  
+Approved system architecture: `docs/architecture/SYSTEM_ARCHITECTURE.md`  
+Approved Merchant Knowledge architecture: `docs/architecture/MERCHANT_KNOWLEDGE_ARCHITECTURE.md`  
+Approved Decision Engine architecture: `docs/architecture/DECISION_ENGINE_ARCHITECTURE.md`  
 Execution: `docs/IMPLEMENTATION_PLAN.md`  
 Handoff: `docs/finance-rebuild-run.md`
 
@@ -476,11 +480,11 @@ Repository documentation is the authoritative project memory. Chat history is no
 ```text
 Program Phase 1 — Baseline and instrumentation       DOCUMENTED / NEXT SUPPORTING WORK
 Program Phase 2 — Review-table redesign/pagination   CURRENT
-Program Phase 3 — Merchant normalization             TODO
-Program Phase 4 — Confirmed-history retrieval        TODO
-Program Phase 5 — Bedrock Haiku classifier           TODO
-Program Phase 6 — Sonnet fallback                    TODO
-Program Phase 7 — Calibration and rollout            TODO
+Program Phase 3 — Merchant Knowledge Layer                    TODO
+Program Phase 4 — Retrieval and Decision Foundation            TODO
+Program Phase 5 — AI Decision Engine                           TODO
+Program Phase 6 — Evaluation, Calibration, and Observability   TODO
+Program Phase 7 — Controlled Rollout                           TODO
 ```
 
 ### Program Phase 1 — Baseline and instrumentation
@@ -521,92 +525,102 @@ Program Phase 7 — Calibration and rollout            TODO
 
 **Rollback/safety:** retain the prior review behavior until the new response contract and UI pass targeted validation; no data migration is required.
 
-### Program Phase 3 — Merchant normalization
+### Program Phase 3 — Merchant Knowledge Layer
 
-**Objective:** map variable bank descriptors to stable workspace-scoped merchant identities.
+**Objective:** introduce workspace-scoped merchant identity, aliases, fingerprints, deterministic matching, conflict handling, merge/split safety, auditability, dry-run backfill, and retrieval anchoring so the 221-transaction categorization benchmark can use stable merchant evidence.
 
-**Scope:** merchant identities and aliases; deterministic normalization; dry-run backfill; auditable manual correction; matching from counterparty, IBAN, creditor ID, card descriptor, payment purpose, and recurring patterns.
+**Dependencies:** Program Phase 2 review workflow complete; `docs/architecture/ARCHITECTURAL_INVARIANTS.md` approved; `docs/architecture/MERCHANT_KNOWLEDGE_ARCHITECTURE.md` approved.
 
-**Dependencies:** Phase 1 trusted-history rules and Phase 2 review feedback capture.
+**Scope:** merchant-domain and data-contract design; additive migration planning; deterministic fingerprint extraction from IBAN, creditor identifier, card descriptor, normalized counterparty, payment purpose, and recurring patterns; workspace-scoped alias resolution; explicit conflict states; audited merge/split controls; dry-run backfill; retrieval-anchor integration; separately approved administrator tooling.
 
-**Exclusions:** no model classification and no mutation of raw bank facts.
+**Exclusions:** no Bedrock; no AI inference; no automatic booking; no mutation of raw bank facts; no uncontrolled or destructive backfill.
 
-**Expected changed areas:** schema and migration only after explicit approval, normalization services, admin correction UI/API, and tests.
+**Expected changed areas:** domain and schema proposals subject to exact-source approval, additive migrations, merchant/fingerprint/alias services, dry-run/backfill tooling, audit and conflict handling, optional admin UI/API, and directly relevant tests.
 
-**Validation:** workspace isolation, deterministic fixtures, immutable source facts, dry-run evidence, and auditability.
+**Validation requirements:** workspace-isolation tests; deterministic matching fixtures; alias and fingerprint collision tests; merge/split audit and rollback tests; immutable-source-fact checks; idempotent dry-run/backfill evidence; retrieval-anchor correctness; no booking side effects.
 
-**Completion:** recurring merchant variants resolve consistently and reviewer corrections become reusable aliases.
+**Completion criteria:** approved merchant variants resolve consistently or abstain with explicit conflicts; reviewer corrections can become audited reusable aliases; the dry-run backfill is reproducible and safe; retrieval can anchor only to workspace-scoped merchant knowledge.
 
-**Rollback/safety:** alias disablement restores raw-descriptor behavior without deleting bank facts.
+**Rollback/safety:** merchant-assisted resolution and aliases can be disabled independently; knowledge links can be restored from audit history; raw transactions and confirmed bookings remain unchanged.
 
-### Program Phase 4 — Confirmed-history retrieval
+**Architecture references:** `docs/architecture/ARCHITECTURAL_INVARIANTS.md`, `docs/architecture/SYSTEM_ARCHITECTURE.md`, and `docs/architecture/MERCHANT_KNOWLEDGE_ARCHITECTURE.md`.
 
-**Objective:** retrieve the strongest supporting and conflicting confirmed examples and score dimensions independently.
+### Program Phase 4 — Retrieval and Decision Foundation
 
-**Scope:** confirmed bookings only; project/type/category distributions; recency and similarity scoring; restricted candidates; supporting and conflicting evidence.
+**Objective:** retrieve only eligible human-confirmed history, generate restricted valid candidates, evaluate deterministic rules and merchant evidence, assemble supporting and conflicting evidence, and introduce the side-effect-free Decision Engine without model inference.
 
-**Dependencies:** Phases 1 and 3.
+**Dependencies:** Program Phase 3 validated; confirmed-history eligibility rules established; `docs/architecture/ARCHITECTURAL_INVARIANTS.md` and `docs/architecture/DECISION_ENGINE_ARCHITECTURE.md` approved.
 
-**Exclusions:** no Bedrock calls and no auto-booking.
+**Scope:** confirmed-booking eligibility contract; bounded workspace-scoped retrieval; independent project/type/category statistics; recency and similarity scoring; supporting and conflicting examples; valid-ID candidate generation; deterministic Decision response or persistence contract; benchmark baseline for the corrected 221 transactions.
 
-**Expected changed areas:** history/retrieval services, candidate generation, evidence contract, evaluation, and tests.
+**Exclusions:** no Bedrock inference; no Sonnet; no automatic booking; no learning from suggestions or generated decisions.
 
-**Validation:** deterministic retrieval; pending suggestions excluded; multi-project and multi-category merchants covered; workspace boundaries enforced.
+**Expected changed areas:** retrieval and history services, candidate generation, deterministic orchestration, evidence contracts, versioned Decision representation, benchmark reporting, and directly relevant tests, subject to exact-source verification.
 
-**Completion:** every eligible unresolved transaction receives a bounded candidate set with auditable evidence or an explicit abstention.
+**Validation requirements:** pending and rejected suggestions excluded; workspace isolation enforced; deterministic bounded queries; candidate IDs validated; supporting and conflicting evidence preserved; side-effect-free generation proven; benchmark output reproducible; multi-project and multi-category merchants covered.
 
-**Rollback/safety:** existing deterministic suggestions remain available as fallback.
+**Completion criteria:** every eligible unresolved transaction receives a bounded, auditable deterministic Decision with valid candidates or an explicit abstention, and the 221-item benchmark has a reproducible pre-AI baseline.
 
-### Program Phase 5 — Bedrock Haiku classifier
+**Rollback/safety:** the Decision Engine can be disabled while existing deterministic suggestions and manual review remain available; no raw fact or confirmed booking is changed.
 
-**Objective:** add a constrained, server-side high-volume classifier in shadow mode.
+**Architecture references:** `docs/architecture/ARCHITECTURAL_INVARIANTS.md`, `docs/architecture/SYSTEM_ARCHITECTURE.md`, `docs/architecture/MERCHANT_KNOWLEDGE_ARCHITECTURE.md`, and `docs/architecture/DECISION_ENGINE_ARCHITECTURE.md`.
 
-**Scope:** Amazon Bedrock client; Claude Haiku; schema-constrained output; valid-ID-only choices; abstention; prompt/model/retrieval/engine versioning; provenance, latency, and cost evidence.
+### Program Phase 5 — AI Decision Engine
 
-**Dependencies:** Phase 4 candidate and evidence contract.
+**Objective:** introduce server-side Bedrock Claude Haiku as the constrained default classifier, enforce schema-constrained valid-ID output, permit abstention, version every inference dependency, and operate initially in shadow mode.
 
-**Exclusions:** no direct booking, no client-side credentials, no Sonnet routing yet.
+**Dependencies:** Program Phase 4 deterministic retrieval and candidates validated; approved privacy, security, provider, and cost design; `docs/architecture/DECISION_ENGINE_ARCHITECTURE.md` approved.
 
-**Expected changed areas:** server-side AI client and orchestration, configuration contract, inference provenance, evaluation, and tests.
+**Scope:** trusted server-side Bedrock boundary; structured request and response contracts; supplied-valid-ID enforcement; Haiku shadow inference; prompt, model, retrieval, candidate-set, Decision Engine, calibration-input, and evidence versioning; bounded timeout, retry, budget, and abstention behavior; provenance, latency, and cost evidence.
 
-**Validation:** invalid IDs rejected; failures leave transactions reviewable; duplicate active suggestions prevented; no source mutation; secrets remain server-side.
+**Exclusions:** no direct booking; no learning from unconfirmed suggestions; no client-side credentials; no routine Opus use; no Sonnet fallback until Program Phase 6 policy is approved.
 
-**Completion:** shadow predictions can be compared against human outcomes without influencing accounting truth.
+**Expected changed areas:** server-side inference boundary, configuration validation, Decision Engine orchestration, schema validation, provenance and observability records, shadow evaluation, and directly relevant tests, subject to exact-source verification.
 
-**Rollback/safety:** a feature switch disables AI while preserving manual and deterministic review.
+**Validation requirements:** out-of-set IDs rejected; malformed output fails closed; provider failures leave transactions reviewable; no duplicate active decisions; no source or booking mutation; workspace context isolated; secrets remain server-side; shadow results cannot influence trusted history.
 
-### Program Phase 6 — Sonnet fallback
+**Completion criteria:** versioned Haiku shadow decisions can be evaluated against human-corrected outcomes for the 221 transactions without influencing accounting truth or reviewer defaults.
 
-**Objective:** escalate only ambiguous, conflicting, novel, or materially important cases.
+**Rollback/safety:** a server-side disable switch removes AI contribution while deterministic retrieval, manual review, and final booking behavior continue unchanged.
 
-**Scope:** deterministic fallback conditions, Claude Sonnet invocation, budget limits, provenance, and escalation metrics.
+**Architecture references:** `docs/architecture/ARCHITECTURAL_INVARIANTS.md`, `docs/architecture/SYSTEM_ARCHITECTURE.md`, and `docs/architecture/DECISION_ENGINE_ARCHITECTURE.md`.
 
-**Dependencies:** Phase 5 operational evidence.
+### Program Phase 6 — Evaluation, Calibration, and Observability
 
-**Exclusions:** Claude Opus for routine categorization and any bypass of human confirmation.
+**Objective:** evaluate the corrected 221-transaction benchmark, calibrate project, transaction-type, category, and combined confidence, establish precision by confidence band, track operational quality and cost, and define deterministic Sonnet fallback conditions.
 
-**Expected changed areas:** routing policy, fallback client path, observability, evaluation, and tests.
+**Dependencies:** Program Phase 5 shadow-inference data; benchmark labels frozen and separated from training or retrieval tuning where required; approved Decision Engine and invariants.
 
-**Validation:** reproducible escalation rules; model versions recorded; budget enforced; fallback cannot book.
+**Scope:** benchmark finalization; per-dimension and complete-classification metrics; top-three accuracy; calibration; false-high-confidence analysis; known/new merchant analysis; correction and review-time measurement; latency, provider failure, token, cost, and escalation metrics; deterministic Sonnet escalation policy for ambiguous, conflicting, novel, or materially significant cases.
 
-**Completion:** measured fallback improves difficult-case precision enough to justify cost.
+**Exclusions:** no automatic booking; no broad reviewer rollout before calibration gates pass; no routine Opus use; no Sonnet invocation outside approved escalation and budget policy.
 
-**Rollback/safety:** disable Sonnet independently and retain Haiku/manual handling.
+**Expected changed areas:** evaluation and calibration services, benchmark fixtures, observability and cost reporting, escalation policy, shadow-mode reports, and directly relevant tests, subject to exact-source verification.
 
-### Program Phase 7 — Calibration and rollout
+**Validation requirements:** reproducible benchmark splits; per-dimension metrics; calibration error and precision by band; false-high-confidence audit; deterministic escalation fixtures; version and budget enforcement; Sonnet fallback remains suggestion-only; privacy-safe observability.
 
-**Objective:** turn model and rule signals into empirically calibrated reliability bands and introduce suggestions safely.
+**Completion criteria:** confidence bands have measured precision; green-band complete-classification precision meets the approved gate; false-high-confidence cases are understood; Sonnet escalation shows measurable value and bounded cost or remains disabled.
 
-**Scope:** benchmark scoring, calibration, shadow production comparison, green/amber/red/gray thresholds, gradual AI-prefill exposure, drift and cost monitoring.
+**Rollback/safety:** calibration profiles, observability exposure, and Sonnet routing can be disabled independently while Haiku shadow output, deterministic retrieval, and manual review remain intact.
 
-**Dependencies:** corrected 221-item benchmark and Phases 5–6 evidence.
+**Architecture references:** `docs/architecture/ARCHITECTURAL_INVARIANTS.md`, `docs/architecture/SYSTEM_ARCHITECTURE.md`, and `docs/architecture/DECISION_ENGINE_ARCHITECTURE.md`.
 
-**Exclusions:** automatic booking before approximately 99% precision and an explicit owner-approved phase.
+### Program Phase 7 — Controlled Rollout
 
-**Expected changed areas:** calibration/evaluation services, review presentation, monitoring, documentation, and tests.
+**Objective:** expose calibrated AI suggestions progressively, retain human confirmation, apply budget and escalation controls, monitor reviewer trust and correction rates, and consider automation only under separately approved safety gates.
 
-**Validation:** precision by band, false-high-confidence audit, correction rate, review time, known/new merchant performance, escalation rate, and cost per transaction.
+**Dependencies:** Program Phase 6 calibration and observability complete; green-band precision gate satisfied; production rollback and disable switches verified; current accounting/review integrity controls unchanged.
 
-**Completion:** green-band complete-classification accuracy is at least 95% before being presented as highly reliable; any later auto-booking proposal requires approximately 99% precision and separate approval.
+**Scope:** controlled reviewer exposure; calibrated confidence-band presentation; safe enable/disable controls where supported; budget and escalation monitoring; production acceptance; correction and review-time monitoring; rollback rehearsal; roadmap and handoff closeout.
 
-**Rollback/safety:** confidence thresholds and AI prefill can be disabled without affecting deterministic review or final bookings; sensitive, unusual, locked-period, or materially significant transactions may remain permanently human-reviewed.
+**Exclusions:** automatic booking is not included by default; no bypass of accounting integrity, human authorization, workspace isolation, audit, or locked-period protections.
+
+**Expected changed areas:** review suggestion presentation, feature/configuration controls, observability dashboards or reports, production-verification procedures, rollout documentation, and directly relevant tests, subject to exact-source verification.
+
+**Validation requirements:** calibrated precision by band; false-high-confidence audit; administrator and viewer behavior; no-booking integrity; safe disable behavior; budget and escalation enforcement; production acceptance; reviewer correction and trust metrics; rollback rehearsal.
+
+**Completion criteria:** calibrated suggestions are exposed only within approved bands; reviewer correction rates and operational metrics remain within accepted limits; safe disable and rollback are proven; any future automation proposal is separately approved and requires approximately 99% precision plus explicit safety, audit, authorization, monitoring, locked-period, and rollback gates.
+
+**Rollback/safety:** AI presentation, Sonnet routing, and calibrated confidence exposure can be disabled independently without affecting deterministic review or final bookings; sensitive, unusual, locked-period, or materially significant transactions may remain permanently human-reviewed.
+
+**Architecture references:** `docs/architecture/ARCHITECTURAL_INVARIANTS.md`, `docs/architecture/SYSTEM_ARCHITECTURE.md`, and `docs/architecture/DECISION_ENGINE_ARCHITECTURE.md`.

@@ -2652,3 +2652,94 @@ Root `README.md` did not require a change. No new test was added because existin
 ### Exact next documentation task
 
 Prepare the fourth bounded documentation packet to reconcile the roadmap and implementation plan with the approved architecture set. Update only `docs/ROADMAP.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/README.md`, and the active handoff as needed. Preserve all completed historical phases and current production evidence. Add explicit future Transaction Review and Intelligence Program Phase 3–7 references to Merchant Knowledge, retrieval/candidate foundations, Decision Engine inference, evaluation/calibration/observability, and controlled rollout. Do not implement code, move documents, change the current accounting/review canonical entrypoint, or push.
+
+
+
+
+---
+
+## 2026-07-18 — Intelligence roadmap alignment checkpoint
+
+Status: **completed and validated; categorization-intelligence scope preserved**  
+Starting HEAD: `e31f5ff` (`docs: define finance intelligence architecture`)  
+Starting worktree: clean  
+Push restriction: **do not push**
+
+### Objective preserved
+
+This packet remains strictly focused on improving categorization intelligence, evidence, calibration, and reviewer accuracy for the 221 unresolved transactions and future review queues. No unrelated documentation migration, product expansion, operational work, or application implementation was introduced.
+
+### Roadmap refinements
+
+Updated only the future Transaction Review and Intelligence Program phases:
+
+- Program Phase 3 — Merchant Knowledge Layer
+- Program Phase 4 — Retrieval and Decision Foundation
+- Program Phase 5 — AI Decision Engine
+- Program Phase 6 — Evaluation, Calibration, and Observability
+- Program Phase 7 — Controlled Rollout
+
+Each future phase now records objective, dependencies, scope, exclusions, expected changed areas, validation requirements, completion criteria, rollback/safety, and references to the approved architecture documents.
+
+Program Phase 1 and Program Phase 2 names, status, evidence, and history were preserved. Program Phase 2 remains `CURRENT`.
+
+### Implementation-plan refinements
+
+Added bounded future implementation slices:
+
+- Phase 3: 9 slices for merchant contracts, additive migration planning, fingerprints, aliases, conflicts/merge/split, dry-run backfill, retrieval anchoring, separately approved admin tooling, and validation.
+- Phase 4: 8 slices for confirmed-history eligibility, bounded retrieval, supporting/conflicting evidence, restricted candidates, Decision contracts, deterministic orchestration, integrity/isolation, and the 221-item pre-AI benchmark baseline.
+- Phase 5: 8 slices for server-side Bedrock boundaries, structured contracts, valid-ID enforcement, Haiku shadow mode, versioning, timeout/retry/budget/abstention, security/privacy, and no-booking integrity.
+- Phase 6: 8 slices for benchmark finalization, per-dimension metrics, confidence calibration, false-high-confidence analysis, Sonnet escalation policy, observability/cost, shadow reporting, and rollout gates.
+- Phase 7: 7 slices for controlled reviewer exposure, confidence presentation, safe disable controls, budget monitoring, production acceptance, rollback rehearsal, and closeout.
+
+Every slice includes objective/prerequisites, anticipated areas subject to exact-source verification, tests/validation, completion evidence, and rollback behavior. No exact Prisma fields, API routes, prompts, AWS SDK implementation, credentials, or unverified source paths were invented.
+
+### Architecture references added
+
+Both roadmap and implementation plan now reference:
+
+- `docs/architecture/ARCHITECTURAL_INVARIANTS.md`
+- `docs/architecture/SYSTEM_ARCHITECTURE.md`
+- `docs/architecture/MERCHANT_KNOWLEDGE_ARCHITECTURE.md`
+- `docs/architecture/DECISION_ENGINE_ARCHITECTURE.md`
+
+`docs/ACCOUNTING_INTEGRITY_AND_REVIEW_PREFILL.md` remains the implemented accounting/review architecture entrypoint.
+
+### Integrity preserved
+
+- suggestions remain separate from bookings;
+- confirmation remains administrator-only and individual;
+- locked-period protections remain authoritative;
+- only confirmed outcomes may become trusted learning data;
+- automatic booking remains outside the default Program Phase 3–7 scope.
+
+### Test added
+
+- `tests/ops/intelligenceProgramDocsConsistency.test.ts`
+
+The test guards Phase 2 status, approved Phase 3–7 names, architecture references, the 221-transaction benchmark objective, human confirmation, and exclusion of default automatic booking.
+
+### Validation evidence
+
+- `npm run audit:final-docs` — exit `0`; status `GESLAAGD`.
+- Focused final-docs consistency suite — exit `0`; 36 passed, 0 failed.
+- Focused roadmap-status consistency suite — exit `0`; 10 passed, 0 failed.
+- Focused release-evidence consistency suite — exit `0`; 11 passed, 0 failed.
+- Focused link-integrity suite — exit `0`; 85 passed, 0 failed.
+- Intelligence-program documentation consistency suite — exit `0`; 6 passed, 0 failed.
+- Search for superseded Phase 3–7 names returned no matches.
+- Focused secret-material scan on the pre-handoff changed paths returned no findings.
+
+### Changed paths
+
+- `docs/ROADMAP.md`
+- `docs/IMPLEMENTATION_PLAN.md`
+- `tests/ops/intelligenceProgramDocsConsistency.test.ts`
+- `docs/finance-rebuild-run.md`
+
+No application source, schema, migration, dependency, lockfile, workflow, environment file, script, architecture document, historical document, operational document, or owner/release document changed.
+
+### Exact next task
+
+Start the smallest executable Program Phase 3 task that directly advances categorization accuracy for the 221 transactions: perform Phase 3.1 domain and data-contract design only. Inspect the exact current Prisma schema, transaction/import models, workspace boundaries, review DTOs, categorization/history services, and relevant tests. Produce an implementation-ready merchant identity, alias, fingerprint, conflict, audit, and dry-run backfill contract grounded in current source. Update only the authoritative architecture/implementation/handoff documents needed for that contract. Do not implement schema, migrations, services, UI, Bedrock, or AI yet. Do not push.

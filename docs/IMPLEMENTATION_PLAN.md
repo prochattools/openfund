@@ -1813,6 +1813,126 @@ After the largest coherent validated Phase 2 slice:
 5. commit only explicit Phase 2 paths if policy permits and validation passes;
 6. do not push.
 
-### Program Phase 1 and later phases
+### Program Phase 1 and future phases
 
-Program Phase 1 benchmark/instrumentation supports later calibration and may be executed as a separately documented slice when it does not block Phase 2. Program Phases 3–7 remain `TODO` and are governed by the architecture and roadmap. They must not be pulled into Phase 2 opportunistically.
+Program Phase 1 benchmark/instrumentation supports later calibration and may be executed as a separately documented slice when it does not block Phase 2. Program Phase 2 status, evidence, and accounting-integrity controls remain unchanged. Program Phases 3–7 remain `TODO` and exist only to improve the accuracy, evidence, calibration, and reviewer experience for the 221 unresolved transactions and future review queues. They must not be pulled into Phase 2 opportunistically.
+
+Future work is governed by:
+
+- implemented accounting/review entrypoint: `docs/ACCOUNTING_INTEGRITY_AND_REVIEW_PREFILL.md`;
+- invariants: `docs/architecture/ARCHITECTURAL_INVARIANTS.md`;
+- system boundaries: `docs/architecture/SYSTEM_ARCHITECTURE.md`;
+- Merchant Knowledge: `docs/architecture/MERCHANT_KNOWLEDGE_ARCHITECTURE.md`;
+- Decision Engine: `docs/architecture/DECISION_ENGINE_ARCHITECTURE.md`;
+- phase order and gates: `docs/ROADMAP.md`.
+
+For every future slice, exact files, symbols, schema surfaces, APIs, and commands must be verified from current source before editing. The functional areas below are anticipated boundaries, not claims that specific files must change.
+
+## TODO — Program Phase 3: Merchant Knowledge Layer
+
+**Phase objective:** create stable workspace-scoped merchant evidence that improves deterministic categorization and confirmed-history retrieval without changing raw bank facts or creating bookings.
+
+**Phase prerequisites:** Program Phase 2 complete; invariants and Merchant Knowledge architecture approved; current source and workspace model verified.
+
+**Phase exclusions:** no Bedrock, no AI inference, no automatic booking, no destructive backfill, and no silent merchant merge.
+
+### Phase 3 bounded slices
+
+| Slice | Objective and prerequisites | Anticipated areas, tests, and validation | Completion evidence and rollback |
+|---|---|---|---|
+| 3.1 Domain and data-contract design | Define merchant identity, alias, fingerprint, conflict, merge/split, and audit contracts after verifying current workspace and transaction models. | Domain documentation and schema proposal only; contract and workspace-isolation review; no migration or runtime code. | Approved additive contract with raw-fact separation. Rollback by withdrawing the proposal before schema work. |
+| 3.2 Additive schema and migration planning | Plan additive persistence only after 3.1 approval and exact Prisma inspection. | Schema/migration plan, indexes, uniqueness, audit, idempotency, and rollback rehearsal; migration tests when implementation is separately approved. | Reviewed migration and backfill plan with no destructive operation. Rollback restores prior schema usage without touching transactions. |
+| 3.3 Deterministic fingerprint extraction | Extract versioned fingerprints from approved bank signals without altering source fields. | Normalization/fingerprint services subject to source verification; fixtures for IBAN, creditor ID, card descriptor, counterparty, purpose, and recurring patterns; determinism and collision tests. | Reproducible fingerprints with evidence and version identifiers. Disable extraction to return to raw-descriptor behavior. |
+| 3.4 Workspace-scoped alias resolution | Resolve approved aliases within one workspace using precedence rules. | Merchant/alias lookup boundaries; workspace-isolation, precedence, inactive/deprecated alias, and cache-key tests. | Deterministic match or explicit abstention with no cross-workspace result. Disable aliases independently. |
+| 3.5 Conflict, merge, and split controls | Preserve ambiguity and make identity maintenance authorized and audited. | Conflict representation, administrator-only maintenance boundaries, audit records, merge/split dry-run and rollback tests; no booking rewrite. | Reproducible conflict and reversible knowledge changes. Rollback restores prior knowledge links from audit history. |
+| 3.6 Dry-run backfill | Measure coverage, collisions, conflicts, and proposed aliases against existing data before writes. | Bounded backfill/planning services; idempotency, pagination, workspace, no-write, and evidence-hash tests. | Reviewable dry-run report for the 221 transactions and historical corpus. Rollback is deletion of generated planning output only. |
+| 3.7 Retrieval-anchor integration | Expose merchant resolution as optional versioned evidence for future retrieval. | Read-side merchant evidence contract; missing/conflicting merchant tests; no side effects and no trusted-history expansion. | Retrieval can consume a merchant anchor or abstain. Feature disable returns retrieval to non-merchant evidence. |
+| 3.8 UI/admin tooling, separately approved | Let administrators inspect aliases, conflicts, and proposed merge/split actions only when a dedicated UI task is approved. | Existing UI/API surfaces must be verified; role, accessibility, audit, no-bulk-mutation, and mobile tests. | Safe, individual, audited maintenance workflow. Rollback hides tooling without deleting knowledge. |
+| 3.9 Validation and rollback evidence | Prove Phase 3 improves identity consistency without weakening accounting. | Targeted domain, service, workspace, audit, migration, backfill, and no-booking tests; affected type checks and builds; secret scan and diff review. | Signed Phase 3 validation, dry-run evidence, disable path, and exact Phase 4 handoff. |
+
+## TODO — Program Phase 4: Retrieval and Decision Foundation
+
+**Phase objective:** build a deterministic, side-effect-free Decision foundation that retrieves only confirmed history and generates valid candidates for the 221-transaction benchmark.
+
+**Phase prerequisites:** Phase 3 validated; confirmed-history eligibility rules approved; Decision Engine architecture approved.
+
+**Phase exclusions:** no Bedrock, no Sonnet, no automatic booking, and no learning from suggestions.
+
+### Phase 4 bounded slices
+
+| Slice | Objective and prerequisites | Anticipated areas, tests, and validation | Completion evidence and rollback |
+|---|---|---|---|
+| 4.1 Confirmed-history eligibility contract | Define exactly which human-confirmed bookings may be retrieved and which suggestions, rejections, or generated decisions are excluded. | Booking/review data contracts subject to source verification; eligibility, workspace, lock, supersession, and contamination tests. | Reproducible eligible-history set. Rollback uses the current confirmed-booking query. |
+| 4.2 Retrieval scoring and bounded queries | Rank relevant confirmed examples using deterministic merchant, direction, text, amount, recency, and recurrence evidence. | Retrieval services and indexes subject to source verification; bounded-query, deterministic ranking, tie-breaking, latency, and pagination tests. | Versioned retrieval output with stable ranking and limits. Disable new scorer to restore prior history suggestions. |
+| 4.3 Supporting and conflicting evidence | Return both evidence for and against each dimensional candidate. | Evidence contract; multi-project, multi-type, multi-category, contradiction, sparse-history, and serialization tests. | Every retrieved candidate exposes traceable support/conflict or abstains. Rollback omits the new evidence layer. |
+| 4.4 Restricted candidate generation | Generate only active, workspace-scoped, direction-compatible project/type/category IDs. | Candidate services subject to source verification; stale, inactive, incompatible, empty-set, and valid-ID tests. | Bounded versioned candidate sets; no invalid ID can enter a Decision. Rollback uses manual selection. |
+| 4.5 Conceptual Decision contract | Define the response or persistence contract without changing booking truth. | Decision DTO/domain contract subject to source verification; schema validation, provenance, version, staleness, and serialization tests. | Auditable Decision representation with per-dimension confidence placeholders and abstention. Rollback leaves existing suggestions intact. |
+| 4.6 Deterministic orchestration | Combine rules, merchant evidence, retrieval, candidates, alternatives, and abstention without model inference. | Orchestration service subject to source verification; contributor failure, conflict, timeout, deterministic replay, and no-write tests. | Side-effect-free deterministic Decisions for eligible benchmark items. Disable orchestration to restore current suggestions. |
+| 4.7 Isolation and integrity validation | Prove every Decision is workspace-scoped and cannot book, mutate facts, or bypass locks. | Authorization, workspace, read-side mutation, suggestion-versus-booking, locked-period, and audit tests; affected type checks/builds. | Integrity report showing zero write side effects. Rollback removes the new read path. |
+| 4.8 Benchmark baseline | Evaluate deterministic Phase 4 output against the corrected 221-transaction labels. | Evaluation/reporting boundaries subject to source verification; per-dimension, complete, top-three, coverage, abstention, and reproducibility tests. | Frozen pre-AI baseline and exact Phase 5 improvement target. Rollback deletes derived benchmark output only. |
+
+## TODO — Program Phase 5: AI Decision Engine
+
+**Phase objective:** add constrained Bedrock Claude Haiku shadow inference to the Decision Engine while preserving human confirmation and trusted-history purity.
+
+**Phase prerequisites:** Phase 4 retrieval, candidate, and Decision contracts validated; privacy, security, provider, and cost design approved.
+
+**Phase exclusions:** no direct booking, no client-side model access, no learning from unconfirmed output, no Sonnet fallback, and no routine Opus use.
+
+### Phase 5 bounded slices
+
+| Slice | Objective and prerequisites | Anticipated areas, tests, and validation | Completion evidence and rollback |
+|---|---|---|---|
+| 5.1 Server-side Bedrock boundary | Define a trusted server-only inference adapter after verifying runtime and configuration conventions. | Configuration/client boundary subject to source verification; missing config, disabled provider, secret isolation, workspace, and no-browser-credential tests. | Provider adapter can be disabled without affecting review. Rollback removes its contribution. |
+| 5.2 Structured request and response contracts | Send minimum approved context and require schema-constrained structured output. | Decision/inference DTOs subject to source verification; schema, payload minimization, size-limit, malformed-output, and privacy tests. | Versioned safe contract with no secret or unrelated data exposure. Rollback returns deterministic-only Decisions. |
+| 5.3 Valid-ID enforcement | Reject every model selection outside supplied candidate sets. | Output validator; project/type/category membership, direction compatibility, stale candidate, and abstention tests. | Out-of-set IDs never reach review. Rollback disables model contribution. |
+| 5.4 Haiku shadow inference | Run Haiku only in shadow mode over approved benchmark and eligible review items. | Inference orchestration subject to source verification; no-prefill/no-booking, idempotency, duplicate-decision, workspace, and side-effect tests. | Shadow results stored or reported separately from reviewer-visible truth. Rollback deletes derived shadow output. |
+| 5.5 Versioning | Record model, prompt, retrieval, candidate-set, Decision Engine, evidence, and configuration versions. | Provenance/version contracts; missing-version, stale-decision, reproducibility, and serialization tests. | Every shadow decision is attributable and comparable. Rollback marks prior decisions stale. |
+| 5.6 Timeout, retry, budget, and abstention | Fail closed under provider or budget pressure. | Bounded retry/timeouts, rate and budget controls, invalid response, partial failure, and fallback-to-review tests. | Failures yield abstention or deterministic-only Decisions. Disable switch is verified. |
+| 5.7 Security and privacy verification | Prove server-only access, least-data payloads, safe logs, and workspace isolation. | Security review, secret scan, log-redaction, cross-workspace, retention, and provider-request evidence. | Approved privacy/security checkpoint. Rollback disables provider access. |
+| 5.8 No-booking integrity | Prove model output cannot create accounting truth or trusted learning data. | Booking, review-decision, locked-period, audit, and trusted-history contamination tests; affected builds/type checks. | Zero AI-created bookings and zero unconfirmed learning examples. Rollback leaves manual review unchanged. |
+
+## TODO — Program Phase 6: Evaluation, Calibration, and Observability
+
+**Phase objective:** prove whether the new intelligence improves the 221 categorizations, calibrate confidence, define Sonnet escalation, and make quality, latency, and cost observable.
+
+**Phase prerequisites:** Phase 5 shadow output; corrected benchmark labels frozen; benchmark separation rules approved.
+
+**Phase exclusions:** no automatic booking, no broad rollout, and no Sonnet use outside the approved fallback policy.
+
+### Phase 6 bounded slices
+
+| Slice | Objective and prerequisites | Anticipated areas, tests, and validation | Completion evidence and rollback |
+|---|---|---|---|
+| 6.1 Benchmark finalization | Freeze corrected labels, inclusion rules, versions, and leakage controls for the 221 transactions. | Benchmark fixtures/reporting subject to source verification; completeness, version, leakage, and reproducibility tests. | Immutable benchmark version and data-quality report. Rollback creates a new benchmark version rather than rewriting history. |
+| 6.2 Per-dimension metrics | Measure project, type, category, complete classification, top-three, coverage, and abstention. | Evaluation services; metric-definition, denominator, edge-case, and reproducibility tests. | Comparable deterministic, Haiku, and later Sonnet scorecards. Rollback removes derived reports. |
+| 6.3 Confidence calibration | Convert rule/retrieval/model signals into calibrated per-dimension and combined confidence. | Calibration services subject to source verification; holdout, calibration error, monotonicity, sparse-band, and version tests. | Versioned calibration profiles with measured precision. Rollback reverts to uncalibrated/gray presentation. |
+| 6.4 False-high-confidence measurement | Identify and explain wrong green-band decisions. | Evaluation/evidence reporting; band-boundary, false-positive, materiality, and conflict tests. | Auditable list and rate of false high-confidence cases. Rollback tightens or disables the band. |
+| 6.5 Sonnet escalation policy | Define deterministic triggers for ambiguity, conflict, novelty, or materiality. | Routing policy subject to source verification; trigger, non-trigger, budget, model-version, and no-booking tests. | Reproducible fallback policy with measured incremental value. Disable Sonnet independently. |
+| 6.6 Observability and cost metrics | Track latency, failures, tokens, cost, cache behavior, escalation, and correction outcomes safely. | Observability boundaries; metric semantics, privacy, workspace aggregation, missing-event, and alert tests. | Operational dashboard/report contract with no secret or sensitive-detail leakage. Rollback disables telemetry consumers. |
+| 6.7 Shadow-mode reporting | Compare deterministic, Haiku, and approved Sonnet outcomes against human truth. | Reporting/evaluation boundaries; version comparison, drift, known/new merchant, correction-rate, and cost tests. | Repeatable shadow report for rollout review. Rollback deletes derived reports only. |
+| 6.8 Rollout gate review | Decide whether precision, calibration, safety, cost, and rollback criteria permit Phase 7. | Architecture, accounting, privacy, and owner review; consistency guards and evidence checklist. | Explicit go/no-go decision and thresholds. No-go leaves all AI in shadow mode. |
+
+## TODO — Program Phase 7: Controlled Rollout
+
+**Phase objective:** expose only calibrated, evidence-backed suggestions to reviewers while retaining individual human confirmation and safe disable/rollback controls.
+
+**Phase prerequisites:** Phase 6 go decision; green-band precision gate satisfied; production disable and rollback controls verified.
+
+**Phase exclusions:** automatic booking is not included by default and no integrity or authorization control may be bypassed.
+
+### Phase 7 bounded slices
+
+| Slice | Objective and prerequisites | Anticipated areas, tests, and validation | Completion evidence and rollback |
+|---|---|---|---|
+| 7.1 Controlled reviewer exposure | Enable approved suggestions for a bounded reviewer cohort or workspace scope. | Review/feature-control surfaces subject to source verification; authorization, cohort, no-booking, and disable tests. | Limited exposure with explicit provenance. Disable returns to deterministic/manual review. |
+| 7.2 Confidence-band presentation | Present calibrated per-dimension and combined confidence with evidence and no color-only meaning. | Existing review UI/helpers subject to source verification; accessibility, stale-profile, conflict, mobile, and viewer tests. | Reviewers can distinguish reliable, uncertain, and abstained dimensions. Rollback shows gray/unavailable confidence. |
+| 7.3 Safe disable controls | Provide server-side controls that stop Haiku, Sonnet, calibration exposure, or all AI contributions independently. | Configuration/feature boundaries; default-off, failure, authorization, and restoration tests. | Verified kill switches with documented state. Rollback activates deterministic-only mode. |
+| 7.4 Budget and escalation monitoring | Enforce approved cost and Sonnet limits in production. | Budget/routing observability; limit, alert, overrun, retry, and degraded-mode tests. | No unbounded inference spend; exceeded budgets degrade safely. |
+| 7.5 Production acceptance | Verify desktop/mobile review, API behavior, console/network, authorization, evidence, and no-booking integrity. | Existing approved browser/runtime tooling; targeted tests and build when code changes. | Factual production evidence with unsafe confirmation left unexecuted unless explicitly approved. Rollback disables AI exposure. |
+| 7.6 Rollback rehearsal | Demonstrate removal of AI contribution without loss of review availability or accounting state. | Deployment/configuration rehearsal; state, cache, stale-decision, and recovery checks. | Reproducible rollback evidence and recovery time. |
+| 7.7 Roadmap and handoff closeout | Record outcomes, residual risks, metrics, commits, and exact next task. | Documentation consistency, release evidence, secret scan, and diff review. | Phase 7 status reflects factual production evidence. Any automation proposal requires a separate approved roadmap phase. |
+
+## Future-program completion rule
+
+No future phase is complete merely because code exists. Completion requires validated improvement against the 221-transaction benchmark, preserved suggestion-versus-booking separation, administrator-only confirmation, locked-period enforcement, workspace isolation, confirmed-outcomes-only learning, operational rollback evidence, and an updated persistent handoff. Automatic booking remains outside the default Program Phase 3–7 scope.
