@@ -364,3 +364,23 @@ The following remain intentionally deferred to Phase 3.2 exact schema design:
 - which source-bank fields provide stable creditor/card identifiers across supported imports;
 - exact inactive/merged uniqueness strategy in PostgreSQL;
 - whether administrator merchant-maintenance UI belongs in Phase 3 or a later separately approved slice.
+
+
+
+
+## Program Phase 3.2 — Approved schema and migration design
+
+The implementation-ready additive schema and migration plan is canonical in `docs/MERCHANT_KNOWLEDGE_SCHEMA_PROPOSAL.md`.
+
+Resolved decisions:
+
+- dedicated append-only, workspace-scoped `MerchantAuditEvent` persistence rather than extending the current user-scoped generic audit table;
+- immutable historical `MerchantResolution` rows with current state derived from the latest valid version, rather than a mutable current pointer;
+- normalized alias values plus hashes and source-transaction references, with no unrestricted raw alias examples stored by default;
+- current first-class reliable signals are IBAN/account evidence, normalized counterparty, payment purpose when available, and derived recurring patterns; creditor and stable card identifiers remain supported signal types but require later extraction evidence;
+- PostgreSQL partial unique indexes are required for active aliases, active strong fingerprints, and open conflicts because standard Prisma attributes cannot express the predicates;
+- future merchant-maintenance UI needs do not add presentation state to the initial schema;
+- dry-run/backfill run and result persistence is justified for reproducible 221-item benchmark measurement and idempotency;
+- the future migration is additive, seeds no merchant knowledge, rewrites no transactions/bookings/review decisions, and remains safe while all merchant services are disabled.
+
+This section does not authorize schema edits, migration creation, migration application, service implementation, or data backfill.

@@ -2845,3 +2845,117 @@ No application source, Prisma schema, migration, service, API, UI, dependency, l
 ### Exact Phase 3.2 task
 
 Design the additive Merchant Knowledge schema and migration plan only. Resolve the deferred audit, resolution-persistence, privacy, source-field, and uniqueness decisions through exact Prisma and PostgreSQL analysis. Produce proposed models, relations, indexes, constraints, migration ordering, dry-run/backfill boundaries, workspace-isolation guarantees, disposable-database replay validation, safe-disable behavior, and rollback evidence. Do not apply a migration, implement services, mutate transactions/bookings, add Bedrock/AI, or push.
+
+
+
+
+---
+
+## 2026-07-18 — Program Phase 3.2 Merchant Knowledge schema-design checkpoint
+
+Status: **completed and validated; no Prisma schema or migration created**  
+Starting HEAD: `1b9dde0` (`docs: define merchant knowledge contracts`)  
+Starting worktree: clean  
+Push restriction: **do not push**
+
+### Prisma and migration sources inspected
+
+- complete `prisma/schema.prisma`
+- active normalized migration chain and migration SQL conventions
+- archived/baseline migration conventions
+- workspace, user, transaction, suggestion, booking, review-decision, and audit relations
+- enum, index, uniqueness, referential-action, status, and timestamp patterns
+- static schema/migration guard tests
+- disposable local PostgreSQL replay and drift-check tooling documented in current tests and implementation evidence
+
+### Exact schema and migration findings
+
+- current models use UUID string IDs, additive workspace-scoped relations, explicit indexes, and restrictive deletes for accounting/evidence records;
+- current generic `AuditLog` is user-scoped and unsuitable as the sole merchant provenance store;
+- no existing migration uses the required active-state partial unique indexes;
+- Prisma schema attributes cannot express the required predicates, so later raw SQL migration and static tests are required;
+- current imports reliably expose IBAN/account evidence, normalized counterparty, payment purpose where present, and derivable recurrence; creditor and stable card identifiers are not yet consistently first-class parsed fields;
+- the normalized active migration chain and disposable PostgreSQL replay pattern support a later additive merchant migration.
+
+### Resolved Phase 3.1 decisions
+
+- dedicated append-only workspace-scoped `MerchantAuditEvent`;
+- immutable historical `MerchantResolution` rows with current state derived from the latest valid row;
+- normalized alias values plus hashes and source-transaction links, with unrestricted raw examples excluded by default;
+- supported-but-abstaining signal types for creditor/card identifiers until extraction is proven;
+- raw SQL partial uniqueness for active aliases, strong matched fingerprints, and open conflicts;
+- no UI presentation state in the initial schema;
+- persisted dry-run/backfill runs and results for reproducible 221-item benchmark measurement.
+
+### Proposed models and enums
+
+`docs/MERCHANT_KNOWLEDGE_SCHEMA_PROPOSAL.md` defines conceptual Prisma contracts for:
+
+- `Merchant`
+- `MerchantAlias`
+- `MerchantFingerprint`
+- `MerchantResolution`
+- `MerchantConflict`
+- `MerchantIdentityDecision`
+- `MerchantAuditEvent`
+- `MerchantBackfillRun`
+- `MerchantBackfillResult`
+
+Supporting enums cover merchant status, signal type, alias status, fingerprint status/strength, resolution status, conflict status, identity-decision action, and backfill-run status.
+
+### Partial-index and Prisma limitations
+
+The later SQL migration must add predicate-based unique indexes for:
+
+- approved/trusted aliases by workspace, signal type, and normalized value;
+- strong matched fingerprints by workspace, signal type, and hash;
+- open conflicts by workspace, transaction, and conflict key.
+
+These predicates are not representable through ordinary Prisma `@@unique` declarations. Migration SQL and static tests must therefore remain authoritative for them.
+
+### Migration sequence
+
+1. enums;
+2. core merchant identity;
+3. aliases and fingerprints;
+4. conflicts and identity decisions;
+5. immutable resolution history;
+6. merchant audit/provenance;
+7. raw SQL partial unique indexes;
+8. dry-run/backfill run and result structures.
+
+The future migration is additive, performs no migration-time data backfill, seeds no merchant knowledge from suggestions, and rewrites no `Transaction`, `TransactionBooking`, `ReviewDecision`, or `CategorizationSuggestion` record. It remains compatible while all new tables are empty and no merchant service consumes them.
+
+### 221-transaction measurement support
+
+The proposal supports known merchant coverage, new merchant rate, alias consolidation, fingerprint collision rate, conflict and unresolved rates, correction reuse, known-versus-new categorization accuracy, false merchant merge rate, and retrieval-anchor coverage without adding accounting defaults to Merchant.
+
+### Changed paths
+
+- `docs/MERCHANT_KNOWLEDGE_SCHEMA_PROPOSAL.md`
+- `docs/architecture/MERCHANT_KNOWLEDGE_ARCHITECTURE.md`
+- `docs/IMPLEMENTATION_PLAN.md`
+- `tests/ops/merchantKnowledgeSchemaProposalDocs.test.ts`
+- `tests/ops/merchantKnowledgeContractDocs.test.ts`
+- `docs/finance-rebuild-run.md`
+
+No Prisma schema, migration, application source, service, API, UI, dependency, lockfile, workflow, environment file, operational document, deployment document, owner/release document, Bedrock integration, or AI inference changed.
+
+### Validation evidence
+
+- Merchant Knowledge schema proposal documentation guard — exit `0`; 7 passed, 0 failed.
+- Final documentation audit — passed.
+- Final-docs consistency — 36 passed, 0 failed.
+- Roadmap-status consistency — 10 passed, 0 failed.
+- Intelligence-program documentation consistency — 6 passed, 0 failed.
+- Merchant Knowledge contract documentation guard — 6 passed, 0 failed after one bounded assertion update from Phase 3.2 to Phase 3.3.
+- Link-integrity suite — 85 passed, 0 failed.
+- The only repair changed outdated test wording; the approved schema design did not change.
+
+### Unresolved blockers
+
+No blocker prevents Phase 3.3 deterministic fingerprint extraction. Creditor identifier and stable card descriptor extraction remain intentionally abstaining until source evidence supports them.
+
+### Exact Phase 3.3 task
+
+Implement deterministic merchant fingerprint extraction only, without creating the proposed schema or migration yet. Add a pure, side-effect-free extractor over current immutable transaction facts for the proven signal types: IBAN/account evidence, normalized counterparty, payment purpose when available, and recurring-pattern input components where they can be represented deterministically. Preserve import-fingerprint separation, workspace scope in every caller contract, version each extraction result, hash privacy-sensitive values, abstain on missing/malformed inputs, and add targeted fixtures covering the 221-transaction evidence shapes. Do not persist merchant knowledge, mutate transactions/bookings/reviews, add UI, Bedrock, or AI. Do not push.
