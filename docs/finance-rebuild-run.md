@@ -3045,3 +3045,63 @@ No Prisma model, migration, merchant persistence, API, UI, booking, categorizati
 ### Exact Phase 3.4 task
 
 Implement workspace-scoped alias resolution only over caller-supplied approved alias records and pure Phase 3.3 fingerprints. The resolver must be deterministic, side-effect free, precedence ordered, and explicitly abstain on collisions, conflicting active aliases, missing workspace context, unsupported signals, or no trusted match. Do not create the proposed Prisma schema or migration yet; use typed in-memory contracts and focused tests only. Do not persist merchant knowledge, mutate transactions/bookings/reviews, add APIs/UI, Bedrock, AI, or automatic booking. Do not push.
+
+
+
+
+---
+
+## 2026-07-18 — Program Phase 3.4 workspace-scoped alias resolution checkpoint
+
+Status: **completed and validated; pure in-memory resolution only**  
+Starting HEAD: `758c8f7` (`feat: extract merchant fingerprints`)  
+Starting worktree: clean  
+Push restriction: **do not push**
+
+### Resolver contract
+
+Created `server/services/merchantAliasResolver.ts` as a pure, deterministic, side-effect-free resolver over caller-supplied Phase 3.3 fingerprints and caller-supplied alias records.
+
+The resolver:
+
+- requires explicit workspace context;
+- rejects the entire request when any supplied alias belongs to another workspace;
+- considers only `APPROVED` or `TRUSTED` aliases;
+- uses explicit signal precedence: IBAN before normalized counterparty, payment purpose, and recurring-pattern evidence;
+- resolves only when the strongest matching precedence points unambiguously to one merchant;
+- returns `CONFLICTED` for strongest-signal collisions;
+- preserves weaker supporting and conflicting evidence without allowing weaker signals to override the strongest match;
+- returns explicit abstentions for missing workspace context, no fingerprints, no trusted match, or cross-workspace input;
+- returns stable deterministic evidence ordering;
+- performs no database, network, filesystem, clock, cache, or persistence operation;
+- does not mutate fingerprints or alias records.
+
+Resolution version: `merchant-alias-resolution-v1`.
+
+### Changed paths
+
+- `server/services/merchantAliasResolver.ts`
+- `tests/services/merchantAliasResolver.test.ts`
+- `docs/IMPLEMENTATION_PLAN.md`
+- `docs/finance-rebuild-run.md`
+
+No Prisma model, migration, merchant persistence, API, UI, transaction, booking, categorization suggestion, review decision, Bedrock integration, AI inference, or automatic booking changed.
+
+### Validation evidence
+
+- Focused merchant alias resolver suite — exit `0`; 10 passed, 0 failed.
+- `npm run build:server` — exit `0`.
+- Full `npm run build` — exit `0`; Prisma generation, server type checking, Next production compilation, type validation, static generation, and build traces completed successfully.
+- Full build emitted only the repository's existing Prisma update notice and missing-SWC-lockfile warnings; no build failure or lockfile change occurred.
+
+### Limitations
+
+- Alias records remain caller-supplied typed in-memory data; no schema or persistence exists yet.
+- The resolver intentionally performs no fuzzy matching and no history retrieval.
+- Strongest-signal collisions abstain rather than selecting by popularity or record order.
+- Lower-precedence conflicts are preserved as evidence but do not override a unique stronger match.
+- Unsupported creditor/card identifiers remain absent until source extraction is proven.
+
+### Exact Phase 3.5 task
+
+Implement pure conflict, merge, and split planning controls only over caller-supplied merchant identities, alias records, fingerprints, and Phase 3.4 resolution evidence. Produce deterministic, side-effect-free plan objects with before/after state, explicit administrator-intent inputs, collision detection, affected alias/fingerprint IDs, evidence hashes, and reversible rollback plans. Do not create or apply Prisma schema/migrations, persist knowledge, mutate merchants, transactions, bookings, suggestions, reviews, or audit logs, add APIs/UI, Bedrock, AI, or automatic booking. Do not push.
