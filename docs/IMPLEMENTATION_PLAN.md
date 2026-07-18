@@ -1830,6 +1830,8 @@ For every future slice, exact files, symbols, schema surfaces, APIs, and command
 
 ## TODO — Program Phase 3: Merchant Knowledge Layer
 
+**Design progress:** Phase 3.1 domain and data-contract design is complete; Phase 3.2 additive schema and migration planning is the exact next task. Program Phase 2 remains the roadmap `CURRENT` phase until its documented production closeout is complete.
+
 **Phase objective:** create stable workspace-scoped merchant evidence that improves deterministic categorization and confirmed-history retrieval without changing raw bank facts or creating bookings.
 
 **Phase prerequisites:** Program Phase 2 complete; invariants and Merchant Knowledge architecture approved; current source and workspace model verified.
@@ -1840,7 +1842,7 @@ For every future slice, exact files, symbols, schema surfaces, APIs, and command
 
 | Slice | Objective and prerequisites | Anticipated areas, tests, and validation | Completion evidence and rollback |
 |---|---|---|---|
-| 3.1 Domain and data-contract design | Define merchant identity, alias, fingerprint, conflict, merge/split, and audit contracts after verifying current workspace and transaction models. | Domain documentation and schema proposal only; contract and workspace-isolation review; no migration or runtime code. | Approved additive contract with raw-fact separation. Rollback by withdrawing the proposal before schema work. |
+| 3.1 Domain and data-contract design — COMPLETE | Define merchant identity, alias, fingerprint, resolution result, conflict, merge/split, audit/provenance, workspace isolation, retrieval anchor, and dry-run backfill contracts after verifying current workspace, transaction, suggestion, booking, review, history, fingerprint, and audit models. | Completed in `docs/architecture/MERCHANT_KNOWLEDGE_ARCHITECTURE.md` under “Program Phase 3.1 — Source-grounded domain and data contracts”; no schema, migration, service, API, UI, backfill, Bedrock, or AI code changed. | Approved source-grounded additive contract with raw-fact separation, confirmed-history-only retrieval, explicit abstention, no booking side effects, and exact Phase 3.2 design questions. Rollback by reverting documentation before schema work. |
 | 3.2 Additive schema and migration planning | Plan additive persistence only after 3.1 approval and exact Prisma inspection. | Schema/migration plan, indexes, uniqueness, audit, idempotency, and rollback rehearsal; migration tests when implementation is separately approved. | Reviewed migration and backfill plan with no destructive operation. Rollback restores prior schema usage without touching transactions. |
 | 3.3 Deterministic fingerprint extraction | Extract versioned fingerprints from approved bank signals without altering source fields. | Normalization/fingerprint services subject to source verification; fixtures for IBAN, creditor ID, card descriptor, counterparty, purpose, and recurring patterns; determinism and collision tests. | Reproducible fingerprints with evidence and version identifiers. Disable extraction to return to raw-descriptor behavior. |
 | 3.4 Workspace-scoped alias resolution | Resolve approved aliases within one workspace using precedence rules. | Merchant/alias lookup boundaries; workspace-isolation, precedence, inactive/deprecated alias, and cache-key tests. | Deterministic match or explicit abstention with no cross-workspace result. Disable aliases independently. |

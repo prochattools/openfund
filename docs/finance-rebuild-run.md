@@ -2743,3 +2743,105 @@ No application source, schema, migration, dependency, lockfile, workflow, enviro
 ### Exact next task
 
 Start the smallest executable Program Phase 3 task that directly advances categorization accuracy for the 221 transactions: perform Phase 3.1 domain and data-contract design only. Inspect the exact current Prisma schema, transaction/import models, workspace boundaries, review DTOs, categorization/history services, and relevant tests. Produce an implementation-ready merchant identity, alias, fingerprint, conflict, audit, and dry-run backfill contract grounded in current source. Update only the authoritative architecture/implementation/handoff documents needed for that contract. Do not implement schema, migrations, services, UI, Bedrock, or AI yet. Do not push.
+
+
+
+
+---
+
+## 2026-07-18 — Program Phase 3.1 Merchant Knowledge contract checkpoint
+
+Status: **completed and validated; no schema or runtime implementation performed**  
+Starting HEAD: `94e6cbe` (`docs: align intelligence roadmap with architecture`)  
+Starting worktree: clean  
+Push restriction: **do not push**
+
+### Source inspected
+
+- `prisma/schema.prisma`
+- `server/auth/requestContext.ts`
+- `server/services/reviewQueueService.ts`
+- `server/services/reviewDecisionService.ts`
+- `server/services/historySuggestionService.ts`
+- `server/services/deterministicCategorizationService.ts`
+- `server/services/suggestionBackfillService.ts`
+- `server/services/transactionSuggestionFacts.ts`
+- `server/services/transactionFingerprint.ts`
+- `server/services/auditLogService.ts`
+- `tests/services/model002DomainSchema.test.ts`
+- directly relevant review, history, fingerprint, workspace, and audit tests located during source inspection
+
+### Exact current data-model findings
+
+- Raw bank facts remain on `Transaction`, including `rawRow`, description, counterparty, reference, amount, direction, account, hash, and import fingerprint.
+- `TransactionBooking` remains workspace-scoped confirmed accounting truth.
+- `CategorizationSuggestion` remains separate pending/resolved suggestion evidence.
+- `ReviewDecision` preserves before/after dimensions, actor, reason, evidence, and resulting booking linkage.
+- `FinanceWorkspace` and server-side request context establish the workspace and role boundary.
+- Confirmed-history suggestion logic already consumes approved booking history and scores IBAN, counterparty, description, purpose, amount, account, recurrence, and token similarity.
+- Import deduplication fingerprints are semantically separate from future merchant fingerprints.
+- Existing dry-run suggestion backfill provides a reusable pattern for idempotent no-booking/no-bank-fact planning.
+- The generic audit model is user-scoped; exact workspace-scoped merchant audit persistence remains a Phase 3.2 design decision.
+
+### Approved Merchant Knowledge contract
+
+`docs/architecture/MERCHANT_KNOWLEDGE_ARCHITECTURE.md` now defines:
+
+1. Merchant identity
+2. Merchant alias
+3. Merchant fingerprint
+4. Merchant-resolution result
+5. Merchant conflict
+6. Merge and split decision
+7. Audit and provenance
+8. Workspace isolation
+9. Retrieval-anchor contract
+10. Dry-run backfill result
+
+It also defines deterministic matching precedence, signal support/conflict representation, abstention rules, human-review requirements, reusable correction rules, immutable raw facts, additive migration constraints, future source interactions, rollback, and the direct connection to categorization quality for the corrected 221-transaction benchmark.
+
+### Anticipated future changed areas
+
+Likely or optional later interactions are documented for:
+
+- `prisma/schema.prisma`
+- `server/auth/requestContext.ts`
+- `server/services/transactionSuggestionFacts.ts`
+- `server/services/historySuggestionService.ts`
+- `server/services/deterministicCategorizationService.ts`
+- `server/services/suggestionBackfillService.ts`
+- `server/services/reviewQueueService.ts`
+- `server/services/auditLogService.ts`
+
+`server/services/reviewDecisionService.ts` remains the booking authority and does not need merchant-driven booking changes. `server/services/transactionFingerprint.ts` remains dedicated to import deduplication.
+
+### Unresolved Phase 3.2 design questions
+
+- extend generic audit with workspace ownership or introduce dedicated merchant audit persistence;
+- persist resolution results or initially compute them read-through;
+- privacy and retention of raw alias examples;
+- exact stable creditor/card identifiers available across supported imports;
+- PostgreSQL uniqueness strategy for inactive and merged records;
+- whether merchant-maintenance UI remains in Phase 3 or a later separately approved slice.
+
+### Changed paths
+
+- `docs/architecture/MERCHANT_KNOWLEDGE_ARCHITECTURE.md`
+- `docs/IMPLEMENTATION_PLAN.md`
+- `tests/ops/merchantKnowledgeContractDocs.test.ts`
+- `docs/finance-rebuild-run.md`
+
+No application source, Prisma schema, migration, service, API, UI, dependency, lockfile, workflow, environment file, operational document, deployment document, owner/release document, Bedrock integration, or AI inference changed.
+
+### Validation evidence
+
+- Merchant Knowledge contract documentation guard — exit `0`; 6 passed, 0 failed.
+- `npm run audit:final-docs` — exit `0`; status `GESLAAGD`.
+- Focused final-docs consistency suite — exit `0`; 36 passed, 0 failed.
+- Focused roadmap-status consistency suite — exit `0`; 10 passed, 0 failed.
+- Intelligence-program documentation consistency suite — exit `0`; 6 passed, 0 failed.
+- Focused link-integrity suite — exit `0`; 85 passed, 0 failed.
+
+### Exact Phase 3.2 task
+
+Design the additive Merchant Knowledge schema and migration plan only. Resolve the deferred audit, resolution-persistence, privacy, source-field, and uniqueness decisions through exact Prisma and PostgreSQL analysis. Produce proposed models, relations, indexes, constraints, migration ordering, dry-run/backfill boundaries, workspace-isolation guarantees, disposable-database replay validation, safe-disable behavior, and rollback evidence. Do not apply a migration, implement services, mutate transactions/bookings, add Bedrock/AI, or push.
