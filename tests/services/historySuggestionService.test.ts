@@ -4,6 +4,10 @@ import {
   type ApprovedHistoryBooking,
   type HistorySuggestionFacts,
 } from '../../server/services/historySuggestionService';
+import {
+  MERCHANT_RETRIEVAL_ANCHOR_VERSION,
+  type MerchantRetrievalAnchor,
+} from '../../server/services/merchantRetrievalAnchor';
 
 const target = (overrides: Partial<HistorySuggestionFacts> = {}): HistorySuggestionFacts => ({
   transactionId: 'target-1',
@@ -32,6 +36,22 @@ const history = (
   transactionTypeId: triple[1],
   categoryId: triple[2],
   bookingEvidenceHash: `hash-${id}`,
+  ...overrides,
+});
+
+const readyAnchor = (overrides: Partial<MerchantRetrievalAnchor> = {}): MerchantRetrievalAnchor => ({
+  workspaceId: 'workspace-1',
+  transactionId: 'target-1',
+  merchantId: 'merchant-1',
+  anchorVersion: MERCHANT_RETRIEVAL_ANCHOR_VERSION,
+  resolutionVersion: 'merchant-alias-resolution-v1',
+  evidenceHash: 'anchor-evidence-1',
+  sourceState: 'RESOLVED',
+  supportingEvidence: [],
+  conflictingEvidence: [],
+  stale: false,
+  expired: false,
+  readiness: 'READY',
   ...overrides,
 });
 
@@ -155,5 +175,147 @@ describe('history suggestion service', () => {
     expect(result).toHaveLength(1);
     expect(result[0]!.projectId).toBe('project-other');
     expect(result[0]!.evidence.matchedHistoricalTransactionIds).toEqual(['other']);
+  });
+
+  it('boosts only the matching confirmed-booking merchant candidate', () => {
+    const records = [
+      history('merchant-match', ['project-b', 'type-b', 'category-b'], {
+        merchantId: 'merchant-1',
+        counterparty: 'Andere partij',
+        counterpartyIban: null,
+        description: 'Andere tekst',
+        paymentPurpose: null,
+        amountMinor: 7000n,
+      }),
+      history('non-match', ['project-a', 'type-a', 'category-a'], {
+        merchantId: 'merchant-2',
+        counterparty: 'Andere partij',
+        counterpartyIban: null,
+        description: 'Andere tekst',
+        paymentPurpose: null,
+        amountMinor: 7000n,
+      }),
+    ];
+    const withoutAnchor = rankHistorySuggestions(target(), records);
+    const withAnchor = rankHistorySuggestions(target(), records, {
+      workspaceId: 'workspace-1',
+      merchantAnchor: readyAnchor(),
+    });
+
+    expect(withoutAnchor.map((item) => item.projectId)).toEqual(['project-a', 'project-b']);
+    expect(withAnchor[0]).toMatchObject({ projectId: 'project-b' });
+    expect(withAnchor[0]!.scoreBasisPoints - withoutAnchor[1]!.scoreBasisPoints).toBe(1200);
+    expect(withAnchor[1]!.scoreBasisPoints).toBe(withoutAnchor[0]!.scoreBasisPoints);
+    expect(withAnchor[0]!.evidence.features).toMatchObject({
+      merchantAnchorMatches: 1,
+      maximumMerchantAnchorContributionBasisPoints: 1200,
+    });
+    expect(withAnchor[0]!.evidence.merchantAnchor).toMatchObject({
+      state: 'READY',
+      anchorVersion: MERCHANT_RETRIEVAL_ANCHOR_VERSION,
+      resolutionVersion: 'merchant-alias-resolution-v1',
+      evidenceHash: 'anchor-evidence-1',
+    });
+  });
+
+  it('gives no merchant boost to non-matching merchant history', () => {
+    const records = [
+      history('only', ['project-a', 'type-a', 'category-a'], { merchantId: 'merchant-2' }),
+    ];
+    const baseline = rankHistorySuggestions(target(), records);
+    const anchored = rankHistorySuggestions(target(), records, {
+      workspaceId: 'workspace-1',
+      merchantAnchor: readyAnchor(),
+    });
+
+    expect(anchored[0]!.scoreBasisPoints).toBe(baseline[0]!.scoreBasisPoints);
+    expect(anchored[0]!.evidence.features.merchantAnchorMatches).toBe(0);
+  });
+
+  it('preserves prior scoring for missing, disabled, unresolved, conflicted, stale, and cross-workspace anchors', () => {
+    const records = [
+      history('a', ['project-a', 'type-a', 'category-a'], { merchantId: 'merchant-1' }),
+      history('b', ['project-b', 'type-b', 'category-b'], { merchantId: 'merchant-2' }),
+    ];
+    const baseline = rankHistorySuggestions(target(), records);
+    const variants = [
+      {},
+      { workspaceId: 'workspace-1', merchantAnchor: readyAnchor(), merchantAnchorEnabled: false },
+      { workspaceId: 'workspace-1', merchantAnchor: readyAnchor({ merchantId: null, sourceState: 'UNRESOLVED' }) },
+      { workspaceId: 'workspace-1', merchantAnchor: readyAnchor({ sourceState: 'CONFLICTED', conflictingEvidence: [{
+        aliasId: 'alias-x', merchantId: 'merchant-2', signalType: 'IBAN', fingerprintHash: 'fingerprint-x', aliasStatus: 'TRUSTED', precedence: 10, evidenceHash: 'evidence-x',
+      }] }) },
+      { workspaceId: 'workspace-1', merchantAnchor: readyAnchor({ stale: true }) },
+      { workspaceId: 'workspace-1', merchantAnchor: readyAnchor({ workspaceId: 'workspace-2' }) },
+    ];
+
+    for (const options of variants) {
+      const result = rankHistorySuggestions(target(), records, options);
+      expect(result.map((item) => ({
+        projectId: item.projectId,
+        scoreBasisPoints: item.scoreBasisPoints,
+        matcher: item.matcher,
+        confidence: item.confidence,
+        reason: item.evidence.reason,
+        matched: item.evidence.matchedHistoricalTransactionIds,
+      }))).toEqual(baseline.map((item) => ({
+        projectId: item.projectId,
+        scoreBasisPoints: item.scoreBasisPoints,
+        matcher: item.matcher,
+        confidence: item.confidence,
+        reason: item.evidence.reason,
+        matched: item.evidence.matchedHistoricalTransactionIds,
+      })));
+    }
+  });
+
+  it('does not let merchant anchors bypass direction or future-date eligibility', () => {
+    const result = rankHistorySuggestions(target(), [
+      history('debit', ['project-debit', 'type-debit', 'category-debit'], {
+        direction: 'debit',
+        merchantId: 'merchant-1',
+      }),
+      history('future', ['project-future', 'type-future', 'category-future'], {
+        date: new Date('2027-01-01T00:00:00.000Z'),
+        merchantId: 'merchant-1',
+      }),
+      history('valid', ['project-valid', 'type-valid', 'category-valid'], {
+        merchantId: 'merchant-2',
+      }),
+    ], {
+      workspaceId: 'workspace-1',
+      merchantAnchor: readyAnchor(),
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0]!.projectId).toBe('project-valid');
+    expect(result[0]!.evidence.matchedHistoricalTransactionIds).toEqual(['valid']);
+    expect(result[0]!.evidence.features.merchantAnchorMatches).toBe(0);
+  });
+
+  it('preserves supporting and conflicting anchor evidence provenance without financial side effects', () => {
+    const anchor = readyAnchor({
+      supportingEvidence: [{
+        aliasId: 'alias-support', merchantId: 'merchant-1', signalType: 'IBAN', fingerprintHash: 'fingerprint-support', aliasStatus: 'TRUSTED', precedence: 10, evidenceHash: 'support-hash',
+      }],
+      conflictingEvidence: [],
+    });
+    const result = rankHistorySuggestions(target(), [
+      history('match', ['project-a', 'type-a', 'category-a'], { merchantId: 'merchant-1' }),
+    ], {
+      workspaceId: 'workspace-1',
+      merchantAnchor: anchor,
+    });
+
+    expect(result[0]!.evidence.merchantAnchor).toMatchObject({
+      supportingEvidenceCount: 1,
+      conflictingEvidenceCount: 0,
+    });
+    expect(result[0]!.evidence.safeguards).toEqual({
+      completeTriple: true,
+      directionCompatible: true,
+      createsTransactionBooking: false,
+      requiresAdministratorApproval: true,
+    });
   });
 });

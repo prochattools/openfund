@@ -3309,3 +3309,106 @@ No Prisma model, migration, persisted run/result, merchant record, transaction, 
 ### Exact Phase 3.7 task
 
 Implement read-side retrieval-anchor integration only. Define a pure versioned Merchant Retrieval Anchor contract from Phase 3.4/3.6 results and integrate it as optional caller-supplied evidence into confirmed-history retrieval without changing eligibility rules. Confirmed `TransactionBooking` outcomes remain the only trusted history. Missing, unresolved, conflicted, stale, or cross-workspace anchors must abstain and preserve the current non-merchant retrieval path. Add focused tests for workspace isolation, resolved-anchor ranking contribution, conflict abstention, no suggestion contamination, deterministic evidence/versioning, and zero writes. Do not create/apply schema or migrations, persist anchors, mutate financial records, add APIs/UI, Bedrock, AI, or automatic booking. Do not push.
+
+
+
+
+---
+
+## 2026-07-18 — Program Phase 3.7 Merchant Retrieval Anchor checkpoint
+
+Status: **completed and validated; read-side scoring evidence only**  
+Phase 3.6 commit: `7c3d8df` (`feat: plan merchant backfill`)  
+Starting HEAD: `7c3d8df`  
+Starting worktree: clean except the intended Phase 3.7 runtime/test paths  
+Push restriction: **do not push**
+
+### Exact source inspected
+
+- `server/services/historySuggestionService.ts`
+- `server/services/merchantAliasResolver.ts`
+- `server/services/merchantBackfillPlanner.ts`
+- `server/services/transactionSuggestionFacts.ts`
+- `tests/services/historySuggestionService.test.ts`
+- `tests/services/merchantBackfillPlanner.test.ts`
+- the confirmed-booking eligibility, direction, date, grouping, and workspace contracts already enforced by the current history-suggestion service
+
+### Anchor contract and states
+
+Created `server/services/merchantRetrievalAnchor.ts` as a pure, deterministic, versioned evaluator.
+
+Supported states:
+
+- `READY`
+- `MISSING`
+- `UNRESOLVED`
+- `CONFLICTED`
+- `STALE`
+- `CROSS_WORKSPACE`
+
+The contract preserves workspace ID, transaction ID, merchant ID, anchor version, alias-resolution version, evidence hash, source state, supporting evidence, conflicting evidence, readiness, caller-supplied stale/expiry state, and a deterministic evaluation hash.
+
+Expiry is represented only by caller-supplied `expired?: boolean`; no clock or `Date.now()` access exists.
+
+### Retrieval-scoring integration
+
+`server/services/historySuggestionService.ts` now evaluates the optional anchor once per ranking request and reuses that evaluation for every eligible historical-booking score and every candidate evidence object.
+
+A merchant anchor contributes exactly **1,200 basis points** only when:
+
+- its state is `READY`;
+- its workspace and transaction match the request;
+- it is conflict-free, current, and not expired;
+- the eligible caller-supplied confirmed booking contains the same optional merchant ID.
+
+Missing, disabled, unresolved, conflicted, stale, expired, cross-workspace, and non-matching anchors contribute zero.
+
+Suggestion evidence now records anchor state, anchor/resolution versions, evidence hash, deterministic evaluation hash, supporting/conflicting evidence counts, merchant-anchor match count, and maximum contribution.
+
+### Confirmed-booking-only safeguards
+
+The existing history filter remains authoritative:
+
+- direction must match;
+- the historical transaction must differ from the target;
+- historical date may not be later than the target date;
+- only caller-supplied eligible confirmed bookings enter the history input;
+- project, transaction-type, and category candidates remain complete and unchanged;
+- merchant evidence cannot create a candidate from invalid or unconfirmed history;
+- merchant evidence cannot create or modify a booking.
+
+Disabling Merchant Retrieval Anchors preserves the prior non-merchant scores, ranking, candidates, confidence, matcher, reason, supporting history, grouping, ordering, and tie-breaking. Explicit zero-state provenance may remain in evidence.
+
+### Changed paths
+
+- `server/services/merchantRetrievalAnchor.ts`
+- `server/services/historySuggestionService.ts`
+- `tests/services/merchantRetrievalAnchor.test.ts`
+- `tests/services/historySuggestionService.test.ts`
+- `docs/IMPLEMENTATION_PLAN.md`
+- `docs/finance-rebuild-run.md`
+
+No Prisma schema, migration, anchor persistence, database query/write, API, UI, transaction, booking, categorization suggestion, review decision, audit record, dependency, lockfile, Bedrock integration, AI inference, or automatic booking changed.
+
+### Validation evidence
+
+- Focused Merchant Retrieval Anchor suite — exit `0`; 9 passed, 0 failed.
+- Focused history-suggestion suite — exit `0`; 11 passed, 0 failed.
+- Focused Phase 3.6 merchant-backfill planner suite — exit `0`; 13 passed, 0 failed.
+- `npm run build:server` — exit `0`.
+- Full `npm run build` — exit `0`; Prisma generation, server type checking, Next production compilation, type validation, static generation, and trace collection completed successfully.
+- Full build emitted only the repository's existing missing-SWC-lockfile warnings; no build failure or lockfile change occurred.
+
+### Limitations
+
+- anchors remain caller-supplied and unpersisted;
+- optional merchant IDs on history inputs remain caller-supplied evidence;
+- no database retrieval or workspace lookup occurs inside the anchor helper;
+- non-ready anchors preserve the prior retrieval path;
+- merchant scoring cannot override direction, date, target-self, or complete-candidate restrictions;
+- the anchor score is not yet calibrated against the corrected 221-transaction benchmark;
+- no categorization-accuracy claim is made in this phase.
+
+### Exact Phase 3.8 task
+
+Perform a source-grounded design and implementation-readiness assessment for separately approved Merchant Knowledge administrator tooling only. Inspect existing authorization, API, review, settings, audit, accessibility, responsive/mobile, individual-mutation, and no-bulk-mutation patterns. Produce the smallest bounded implementation plan for inspecting aliases/conflicts and individually confirming merge/split/reassignment plans. Do not implement UI or APIs until exact administrator-only authorization, transactional mutation, audit, locked-period interaction, accessibility, responsive behavior, and rollback requirements are verified. Do not add Bedrock, AI, automatic booking, or push.

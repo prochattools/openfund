@@ -4,6 +4,12 @@ import type {
   SuggestionMatcher,
   TransactionDirection,
 } from '@prisma/client';
+import {
+  evaluateMerchantRetrievalAnchor,
+  merchantAnchorContribution,
+  type EvaluatedMerchantRetrievalAnchor,
+  type MerchantRetrievalAnchor,
+} from './merchantRetrievalAnchor';
 
 export const HISTORY_SUGGESTION_ALGORITHM_VERSION = 'history-v1';
 
@@ -25,6 +31,7 @@ export type ApprovedHistoryBooking = HistorySuggestionFacts & {
   transactionTypeId: string;
   categoryId: string;
   bookingEvidenceHash: string;
+  merchantId?: string | null;
 };
 
 export type HistorySuggestionEvidence = {
@@ -44,6 +51,17 @@ export type HistorySuggestionEvidence = {
     recurringMonthMatches: number;
     maximumTokenSimilarityBasisPoints: number;
     compatibleHistoryCount: number;
+    merchantAnchorMatches: number;
+    maximumMerchantAnchorContributionBasisPoints: number;
+  };
+  merchantAnchor: {
+    state: EvaluatedMerchantRetrievalAnchor['state'];
+    anchorVersion: string;
+    resolutionVersion: string;
+    evidenceHash: string;
+    evaluationHash: string;
+    supportingEvidenceCount: number;
+    conflictingEvidenceCount: number;
   };
   safeguards: {
     completeTriple: true;
@@ -76,6 +94,7 @@ type ScoredHistory = {
   exactAmount: boolean;
   sameAccount: boolean;
   recurringMonth: boolean;
+  merchantAnchorContributionBasisPoints: number;
 };
 
 type CandidateGroup = {
@@ -148,6 +167,7 @@ const tripleKey = (booking: Pick<ApprovedHistoryBooking, 'projectId' | 'transact
 const scoreHistory = (
   target: HistorySuggestionFacts,
   history: ApprovedHistoryBooking,
+  merchantAnchor: EvaluatedMerchantRetrievalAnchor,
 ): ScoredHistory => {
   const targetIban = normalizeIban(target.counterpartyIban);
   const historyIban = normalizeIban(history.counterpartyIban);
@@ -170,6 +190,10 @@ const scoreHistory = (
   );
   const ageDays = Math.max(0, Math.floor((target.date.getTime() - history.date.getTime()) / 86400000));
   const recency = target.date >= history.date ? Math.max(0, 400 - Math.min(400, ageDays)) : 0;
+  const merchantAnchorContributionBasisPoints = merchantAnchorContribution({
+    anchor: merchantAnchor,
+    historicalMerchantId: history.merchantId,
+  });
 
   let score = 0;
   if (exactIban) score += 3600;
@@ -181,6 +205,7 @@ const scoreHistory = (
   if (exactAmount) score += 450;
   if (recurringMonth) score += 150;
   score += recency;
+  score += merchantAnchorContributionBasisPoints;
 
   return {
     history,
@@ -193,6 +218,7 @@ const scoreHistory = (
     exactAmount,
     sameAccount,
     recurringMonth,
+    merchantAnchorContributionBasisPoints,
   };
 };
 
@@ -244,6 +270,7 @@ const buildCandidate = (
   group: CandidateGroup,
   rank: number,
   algorithmVersion: string,
+  merchantAnchor: EvaluatedMerchantRetrievalAnchor,
 ): RankedHistorySuggestion => {
   const sorted = [...group.scored].sort((left, right) => {
     if (left.scoreBasisPoints !== right.scoreBasisPoints) return right.scoreBasisPoints - left.scoreBasisPoints;
@@ -273,6 +300,20 @@ const buildCandidate = (
       recurringMonthMatches: sorted.filter((item) => item.recurringMonth).length,
       maximumTokenSimilarityBasisPoints: Math.max(...sorted.map((item) => item.tokenSimilarityBasisPoints)),
       compatibleHistoryCount: sorted.length,
+      merchantAnchorMatches: sorted.filter((item) => item.merchantAnchorContributionBasisPoints > 0).length,
+      maximumMerchantAnchorContributionBasisPoints: Math.max(
+        0,
+        ...sorted.map((item) => item.merchantAnchorContributionBasisPoints),
+      ),
+    },
+    merchantAnchor: {
+      state: merchantAnchor.state,
+      anchorVersion: merchantAnchor.anchorVersion,
+      resolutionVersion: merchantAnchor.resolutionVersion,
+      evidenceHash: merchantAnchor.evidenceHash,
+      evaluationHash: merchantAnchor.evaluationHash,
+      supportingEvidenceCount: merchantAnchor.supportingEvidence.length,
+      conflictingEvidenceCount: merchantAnchor.conflictingEvidence.length,
     },
     safeguards: {
       completeTriple: true,
@@ -309,17 +350,29 @@ const buildCandidate = (
 export const rankHistorySuggestions = (
   target: HistorySuggestionFacts,
   approvedHistory: ApprovedHistoryBooking[],
-  options: { algorithmVersion?: string; limit?: number } = {},
+  options: {
+    algorithmVersion?: string;
+    limit?: number;
+    workspaceId?: string;
+    merchantAnchor?: MerchantRetrievalAnchor | null;
+    merchantAnchorEnabled?: boolean;
+  } = {},
 ): RankedHistorySuggestion[] => {
   const algorithmVersion = options.algorithmVersion ?? HISTORY_SUGGESTION_ALGORITHM_VERSION;
   const limit = Math.max(1, Math.min(3, options.limit ?? 3));
+  const merchantAnchor = evaluateMerchantRetrievalAnchor({
+    workspaceId: options.workspaceId ?? '',
+    transactionId: target.transactionId,
+    anchor: options.merchantAnchor,
+    enabled: options.merchantAnchorEnabled,
+  });
   const compatible = approvedHistory
     .filter((history) =>
       history.direction === target.direction
       && history.transactionId !== target.transactionId
       && history.date.getTime() <= target.date.getTime(),
     )
-    .map((history) => scoreHistory(target, history));
+    .map((history) => scoreHistory(target, history, merchantAnchor));
 
   const groups = new Map<string, CandidateGroup>();
   for (const scored of compatible) {
@@ -335,7 +388,7 @@ export const rankHistorySuggestions = (
   }
 
   return Array.from(groups.values())
-    .map((group) => buildCandidate(target, group, 0, algorithmVersion))
+    .map((group) => buildCandidate(target, group, 0, algorithmVersion, merchantAnchor))
     .sort((left, right) => {
       if (left.scoreBasisPoints !== right.scoreBasisPoints) return right.scoreBasisPoints - left.scoreBasisPoints;
       const leftKey = `${left.projectId}|${left.transactionTypeId}|${left.categoryId}`;
