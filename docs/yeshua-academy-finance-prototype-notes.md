@@ -1,5 +1,8 @@
 # Yeshua Academy Finance — Prototype Notes
 
+Status: ARCHIVED  
+This document is retained as historical prototype evidence and must not govern new implementation.
+
 Status: initial isolated prototype created  
 Date: 2026-05-14
 

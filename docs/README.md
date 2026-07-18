@@ -52,7 +52,21 @@ The owner-review and release suite includes the `OWNER_*`, `FINAL_*`, `RELEASE_*
 
 Older discovery documents, prototype briefs, dated handoffs, legacy roadmap and implementation files, model proposals, migration proposals, and completed production evidence remain available as historical context. Historical content is not authoritative unless a current canonical document explicitly references it.
 
-No historical document has been moved, renamed, archived, or newly marked superseded by this index.
+Classified as `SUPERSEDED` and retained in place:
+
+- `docs/yeshua-academy-finance-roadmap.md`
+- `docs/yeshua-academy-finance-implementation-plan.md`
+- `docs/yeshua-academy-finance-implementation-progress.md`
+- `docs/yeshua-academy-finance-handoff-2026-05-15.md`
+- `docs/yeshua-academy-finance-handoff-2026-05-16.md`
+
+Classified as `ARCHIVED` and retained in place:
+
+- `docs/yeshua-academy-finance-prototype-notes.md`
+- `docs/yeshua-academy-finance-prototype-execution-brief.md`
+- `docs/yeshua-academy-finance-bloat-map.md`
+
+The discovery plan, requirements baseline, and UI design brief remain unchanged because current canonical documentation still references them. No historical file has been moved, renamed, deleted, or replaced by a compatibility stub.
 
 ## Onboarding reading order
 

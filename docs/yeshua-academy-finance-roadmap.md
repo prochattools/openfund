@@ -1,5 +1,9 @@
 # Yeshua Academy Finance — Roadmap
 
+Status: SUPERSEDED  
+Canonical replacement: `docs/ROADMAP.md`  
+This document must not govern new implementation and is retained for historical context.
+
 Status: roadmap baseline after interview  
 Date: 2026-05-14  
 Product name remains: **Yeshua Academy Finance**  

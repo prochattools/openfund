@@ -1,5 +1,9 @@
 # Yeshua Academy Finance — Implementation Plan
 
+Status: SUPERSEDED  
+Canonical replacement: `docs/IMPLEMENTATION_PLAN.md`  
+This document must not govern new implementation and is retained for historical context.
+
 Status: implementation planning baseline, not yet execution approval  
 Date: 2026-05-14  
 Depends on: `docs/yeshua-ledger-lite-requirements.md` and `docs/yeshua-academy-finance-roadmap.md`

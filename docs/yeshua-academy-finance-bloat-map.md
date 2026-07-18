@@ -1,5 +1,8 @@
 # Yeshua Academy Finance — Bloat Map
 
+Status: ARCHIVED  
+This document is retained as historical cleanup-planning evidence and must not govern new implementation.
+
 Status: inventory and cleanup planning, no deletion performed  
 Date: 2026-05-14  
 Depends on: `PRODUCT.md`, `DESIGN.md`, `docs/yeshua-ledger-lite-requirements.md`, `docs/yeshua-academy-finance-roadmap.md`

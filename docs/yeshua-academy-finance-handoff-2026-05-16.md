@@ -1,5 +1,9 @@
 # Yeshua Academy Finance — Handoff for New Chat
 
+Status: SUPERSEDED  
+Canonical replacement: `docs/finance-rebuild-run.md`  
+This document must not govern new implementation and is retained for historical context.
+
 Date: 2026-05-16  
 Repo/source id: `yeshuaacademy-finance`  
 Local repo path seen by BuildFlow: `/Users/Office/Repos/yeshuaacademy/web/finance`  

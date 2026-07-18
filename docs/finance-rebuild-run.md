@@ -2521,3 +2521,82 @@ No existing document was moved, renamed, deleted, split, archived, superseded, o
 ### Exact next migration-assessment task
 
 Review and classify the known historical duplicate documents without moving them. Prepare the second bounded documentation packet to add explicit `SUPERSEDED` or `ARCHIVED` metadata and canonical replacement links only where exact-path tests and scripts permit it. Before editing, locate every consumer of each candidate historical path. Do not move canonical documents, the active handoff, or any owner/release suite file. Do not push.
+
+
+
+
+---
+
+## 2026-07-17 — Historical documentation classification checkpoint
+
+Status: **completed and validated; no document moved**  
+Starting HEAD: `58a2187` (`docs: establish documentation governance`)  
+Starting worktree: clean  
+Push restriction: **do not push**
+
+### Files inspected
+
+- `docs/yeshua-academy-finance-roadmap.md`
+- `docs/yeshua-academy-finance-implementation-plan.md`
+- `docs/yeshua-academy-finance-implementation-progress.md`
+- `docs/yeshua-academy-finance-handoff-2026-05-15.md`
+- `docs/yeshua-academy-finance-handoff-2026-05-16.md`
+- `docs/yeshua-ledger-lite-discovery-plan.md`
+- `docs/yeshua-ledger-lite-requirements.md`
+- `docs/yeshua-academy-finance-prototype-notes.md`
+- `docs/yeshua-academy-finance-prototype-execution-brief.md`
+- `docs/yeshua-academy-finance-ui-design-brief.md`
+- `docs/yeshua-academy-finance-bloat-map.md`
+
+### Classified as `SUPERSEDED`
+
+- `docs/yeshua-academy-finance-roadmap.md` → canonical replacement `docs/ROADMAP.md`
+- `docs/yeshua-academy-finance-implementation-plan.md` → canonical replacement `docs/IMPLEMENTATION_PLAN.md`
+- `docs/yeshua-academy-finance-implementation-progress.md` → canonical replacements `docs/IMPLEMENTATION_PLAN.md` and `docs/finance-rebuild-run.md`
+- `docs/yeshua-academy-finance-handoff-2026-05-15.md` → canonical replacement `docs/finance-rebuild-run.md`
+- `docs/yeshua-academy-finance-handoff-2026-05-16.md` → canonical replacement `docs/finance-rebuild-run.md`
+
+Each file received only a minimal metadata banner. Historical body content was not rewritten.
+
+### Classified as `ARCHIVED`
+
+- `docs/yeshua-academy-finance-prototype-notes.md`
+- `docs/yeshua-academy-finance-prototype-execution-brief.md`
+- `docs/yeshua-academy-finance-bloat-map.md`
+
+Each file remains in place as historical prototype or cleanup-planning evidence and must not govern new implementation.
+
+### Intentionally left unchanged
+
+- `docs/yeshua-ledger-lite-discovery-plan.md` — still referenced by the canonical implementation plan.
+- `docs/yeshua-ledger-lite-requirements.md` — still referenced by current product/domain documentation and remains useful as the original requirements baseline.
+- `docs/yeshua-academy-finance-ui-design-brief.md` — still referenced by current documentation and remains an active design reference.
+
+### Exact-path consumer findings
+
+- No candidate path is referenced by application source, tests, scripts, or workflows.
+- Candidate references are documentation-only.
+- The legacy implementation plan references the old roadmap and UI brief.
+- The old roadmap references the requirements baseline and discovery plan.
+- Current canonical documentation still references the discovery plan, requirements baseline, and UI design brief, so those files were not classified.
+
+### Changed paths
+
+- the eight classified historical documents listed above;
+- `docs/README.md`;
+- `docs/finance-rebuild-run.md`.
+
+No file was moved, renamed, deleted, split, or replaced by a compatibility stub. No application source, schema, migration, dependency, lockfile, workflow, environment file, script, canonical product document, active handoff path, or owner/release suite file was changed.
+
+### Validation evidence
+
+- `npm run audit:final-docs` — exit `0`; status `GESLAAGD`.
+- Focused final-docs consistency suite — exit `0`; 36 passed, 0 failed.
+- Focused roadmap-status consistency suite — exit `0`; 10 passed, 0 failed.
+- Focused release-evidence consistency suite — exit `0`; 11 passed, 0 failed.
+- Exact-path reference searches confirmed documentation-only consumers for the changed historical files.
+- No new test was required.
+
+### Exact next migration task
+
+Prepare the third bounded documentation packet to introduce the first new canonical architecture documents without moving or splitting existing canonical paths. Draft only `docs/architecture/ARCHITECTURAL_INVARIANTS.md`, `docs/architecture/SYSTEM_ARCHITECTURE.md`, `docs/architecture/MERCHANT_KNOWLEDGE_ARCHITECTURE.md`, and `docs/architecture/DECISION_ENGINE_ARCHITECTURE.md`; update `docs/README.md` and the active handoff; preserve `docs/ACCOUNTING_INTEGRITY_AND_REVIEW_PREFILL.md` as the current canonical architecture entrypoint until a later approved split. Validate all new cross-links and do not push.

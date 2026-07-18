@@ -1,5 +1,9 @@
 # Yeshua Academy Finance — Implementation Progress
 
+Status: SUPERSEDED  
+Canonical replacement: `docs/IMPLEMENTATION_PLAN.md` and `docs/finance-rebuild-run.md`  
+This document must not govern new implementation and is retained for historical context.
+
 Status: active implementation progress log  
 Date: 2026-05-14
 

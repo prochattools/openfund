@@ -1,5 +1,8 @@
 # Yeshua Academy Finance — Prototype Execution Brief
 
+Status: ARCHIVED  
+This document is retained as historical prototype-planning evidence and must not govern new implementation.
+
 Status: ready for prototype execution  
 Date: 2026-05-14  
 Purpose: guide the next implementation/prototype agent without starting cleanup or production migration.
