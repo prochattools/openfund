@@ -3188,3 +3188,124 @@ No Prisma model, migration, merchant persistence, transaction, booking, categori
 ### Exact Phase 3.6 task
 
 Implement deterministic dry-run merchant backfill planning only over caller-supplied transactions, Phase 3.3 fingerprints, Phase 3.4 alias resolution, and Phase 3.5 conflict/planning outcomes. Produce a bounded, paginated, idempotent, side-effect-free report for the 221 unresolved transactions with known/new merchant coverage, alias consolidation, collisions, conflict/unresolved rates, correction-reuse candidates, retrieval-anchor readiness, evidence hashes, and stable run/result ordering. Do not create/apply schema or migrations, persist results, mutate merchant knowledge or financial records, add APIs/UI, Bedrock, AI, or automatic booking. Do not push.
+
+
+
+
+---
+
+## 2026-07-18 — Program Phase 3.6 deterministic merchant backfill planning checkpoint
+
+Status: **completed and validated; dry-run report only, with no writes or trusted-history changes**  
+Starting HEAD: `5054e98` (`feat: plan merchant identity changes`)  
+Starting worktree: clean  
+Push restriction: **do not push**
+
+### Exact source inspected
+
+- `server/services/merchantFingerprintExtractor.ts`
+- `server/services/merchantAliasResolver.ts`
+- `server/services/merchantIdentityPlanService.ts`
+- `docs/MERCHANT_KNOWLEDGE_SCHEMA_PROPOSAL.md`
+- `docs/architecture/MERCHANT_KNOWLEDGE_ARCHITECTURE.md`
+- the Program Phase 3 section of `docs/IMPLEMENTATION_PLAN.md`
+- focused Phase 3.3–3.5 tests
+
+### Planner and result contracts
+
+Created `server/services/merchantBackfillPlanner.ts` as a pure, deterministic, bounded, paginated, idempotent planner over caller-supplied unresolved transactions, merchant identities, approved/trusted aliases, explicit approved correction knowledge, and optional prior result IDs.
+
+The report contains:
+
+- workspace ID and stable run key;
+- planner version `merchant-backfill-plan-v1`;
+- fingerprint extraction version;
+- alias-resolution version;
+- source snapshot hash;
+- parameters hash;
+- total transaction count;
+- current-page results;
+- complete-input aggregate metrics;
+- pagination metadata;
+- explicit side-effect flags proving no merchant write, booking creation, bank-fact mutation, or trusted-history change.
+
+Each transaction result contains a deterministic result ID and evidence hash, state, resolved merchant when eligible, known/new/conflicted/unresolved flags, alias-consolidation opportunity, fingerprint-collision flag, approved-correction reuse, retrieval-anchor readiness, signal coverage, abstention reasons, and preserved supporting/conflicting evidence.
+
+### Pagination behavior
+
+- default page size: 25;
+- supported page sizes: 25, 50, and 100;
+- unsupported sizes fall back to 25;
+- stable ordering: transaction date, then transaction ID;
+- page clamping for out-of-range requests;
+- metadata: page, pageSize, totalItems, totalPages, hasPreviousPage, hasNextPage;
+- verified first, middle, final, empty, and out-of-range behavior;
+- every supplied transaction remains reachable across pages.
+
+### Supported result states
+
+- `KNOWN_MERCHANT` only when a trusted alias resolves to an active caller-supplied merchant;
+- `NEW_MERCHANT_CANDIDATE` only when usable deterministic fingerprints exist, no trusted alias resolves, and no strongest-signal conflict exists;
+- `CONFLICTED` when strongest alias evidence collides;
+- `UNRESOLVED` for no-fingerprint or other abstaining outcomes.
+
+No result creates a merchant, alias, booking, suggestion, review decision, or trusted-history example.
+
+### Metrics
+
+The planner calculates deterministically over the complete supplied input:
+
+- processed count;
+- known merchant coverage;
+- new merchant candidate rate;
+- alias consolidation count/rate;
+- fingerprint collision count/rate;
+- merchant conflict count/rate;
+- unresolved merchant count/rate;
+- approved correction-reuse candidate count/rate;
+- retrieval-anchor coverage;
+- abstention-reason distribution;
+- fingerprint signal coverage by type.
+
+Categorization accuracy is intentionally excluded because this slice receives no confirmed benchmark labels.
+
+### Idempotency and safety guarantees
+
+- identical workspace, run key, engine versions, parameters, aliases, corrections, prior IDs, and immutable source transactions produce identical hashes and output;
+- caller transaction order does not affect report ordering or hashes;
+- duplicate transaction IDs are rejected;
+- cross-workspace transactions, merchants, aliases, or corrections are rejected;
+- duplicate prior-result IDs are rejected;
+- no clock, random ID, network, database, filesystem, cache, or persistence dependency exists;
+- caller inputs are not mutated;
+- correction reuse uses only explicit `APPROVED` caller-supplied correction knowledge;
+- unconfirmed suggestion-shaped input is ignored and cannot become trusted knowledge.
+
+### Changed paths
+
+- `server/services/merchantBackfillPlanner.ts`
+- `tests/services/merchantBackfillPlanner.test.ts`
+- `docs/IMPLEMENTATION_PLAN.md`
+- `docs/finance-rebuild-run.md`
+
+No Prisma model, migration, persisted run/result, merchant record, transaction, booking, categorization suggestion, review decision, audit record, API, UI, dependency, Bedrock integration, AI inference, or automatic booking changed.
+
+### Validation evidence
+
+- Focused merchant backfill planner suite — exit `0`; 13 passed, 0 failed.
+- `npm run build:server` — exit `0`.
+- Full `npm run build` — exit `0`; Prisma generation, server type checking, Next production compilation, type validation, static generation, and trace collection completed successfully.
+- Full build emitted only the repository's existing Prisma update notice and missing-SWC-lockfile warnings; no build failure or lockfile change occurred.
+
+### Limitations
+
+- Transactions, merchants, aliases, corrections, and prior IDs remain caller-supplied typed values.
+- No persisted backfill run/result schema is used yet.
+- Alias consolidation is a planning opportunity based on unmatched usable fingerprints after a known merchant resolution; it does not create aliases.
+- Fingerprint collision currently reflects strongest-signal alias collision evidence.
+- Categorization accuracy and known-versus-new categorization accuracy require confirmed benchmark labels in a later evaluation phase.
+- Retrieval-anchor readiness is report evidence only and is not yet consumed by history retrieval.
+
+### Exact Phase 3.7 task
+
+Implement read-side retrieval-anchor integration only. Define a pure versioned Merchant Retrieval Anchor contract from Phase 3.4/3.6 results and integrate it as optional caller-supplied evidence into confirmed-history retrieval without changing eligibility rules. Confirmed `TransactionBooking` outcomes remain the only trusted history. Missing, unresolved, conflicted, stale, or cross-workspace anchors must abstain and preserve the current non-merchant retrieval path. Add focused tests for workspace isolation, resolved-anchor ranking contribution, conflict abstention, no suggestion contamination, deterministic evidence/versioning, and zero writes. Do not create/apply schema or migrations, persist anchors, mutate financial records, add APIs/UI, Bedrock, AI, or automatic booking. Do not push.
