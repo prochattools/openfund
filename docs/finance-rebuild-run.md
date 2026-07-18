@@ -3105,3 +3105,86 @@ No Prisma model, migration, merchant persistence, API, UI, transaction, booking,
 ### Exact Phase 3.5 task
 
 Implement pure conflict, merge, and split planning controls only over caller-supplied merchant identities, alias records, fingerprints, and Phase 3.4 resolution evidence. Produce deterministic, side-effect-free plan objects with before/after state, explicit administrator-intent inputs, collision detection, affected alias/fingerprint IDs, evidence hashes, and reversible rollback plans. Do not create or apply Prisma schema/migrations, persist knowledge, mutate merchants, transactions, bookings, suggestions, reviews, or audit logs, add APIs/UI, Bedrock, AI, or automatic booking. Do not push.
+
+
+
+
+---
+
+## 2026-07-18 — Program Phase 3.5 merchant identity planning checkpoint
+
+Status: **completed and validated; plans are never applied or persisted**  
+Starting HEAD: `ed7f6e9` (`feat: resolve merchant aliases`)  
+Starting worktree: clean  
+Push restriction: **do not push**
+
+### Exact source inspected
+
+- `server/services/merchantFingerprintExtractor.ts`
+- `server/services/merchantAliasResolver.ts`
+- `docs/MERCHANT_KNOWLEDGE_SCHEMA_PROPOSAL.md`
+- `docs/architecture/MERCHANT_KNOWLEDGE_ARCHITECTURE.md`
+- the Program Phase 3 section of `docs/IMPLEMENTATION_PLAN.md`
+- focused Phase 3.3 and Phase 3.4 tests
+
+### Planner contracts
+
+Created `server/services/merchantIdentityPlanService.ts` as a pure, deterministic, side-effect-free planner over caller-supplied merchant identities, approved/trusted aliases, fingerprint ownership records, and Phase 3.4 resolution evidence.
+
+Supported plan actions:
+
+- `RESOLVE_CONFLICT`
+- `MERGE_MERCHANTS`
+- `SPLIT_MERCHANT`
+- `REASSIGN_KNOWLEDGE`
+- `DEPRECATE_ALIAS`
+- `DEPRECATE_MERCHANT`
+
+Every plan includes workspace ID, actor ID, request key, reason, plan version `merchant-identity-plan-v1`, stable SHA-256 plan hash, source/target merchant IDs, explicit alias/fingerprint IDs, before and proposed after snapshots, supporting/conflicting evidence, warnings, blocking errors, reversible rollback steps, and `administratorConfirmationRequired: true`.
+
+### Safety and rejection rules
+
+The planner rejects or blocks:
+
+- missing workspace, actor, request key, or reason;
+- cross-workspace merchants, aliases, or fingerprints;
+- duplicate merchant identities or duplicate merge sources;
+- same merge source and target;
+- missing source/target merchants;
+- merge cycles;
+- unknown or implicit affected alias/fingerprint records;
+- unresolved active alias collisions;
+- unresolved strong matched-fingerprint collisions;
+- split records that are unassigned or multiply assigned;
+- selected conflict merchants absent from preserved evidence;
+- conflict evidence that would be silently discarded.
+
+The planner is deterministic and input-order independent. It does not infer administrator intent, select by popularity/amount/record order, rewrite historical resolution/review evidence, mutate caller inputs, or apply any plan.
+
+### Changed paths
+
+- `server/services/merchantIdentityPlanService.ts`
+- `tests/services/merchantIdentityPlanService.test.ts`
+- `docs/IMPLEMENTATION_PLAN.md`
+- `docs/finance-rebuild-run.md`
+
+No Prisma model, migration, merchant persistence, transaction, booking, categorization suggestion, review decision, audit record, API, UI, dependency, Bedrock integration, AI inference, or automatic booking changed.
+
+### Validation evidence
+
+- Focused merchant identity plan service suite — exit `0`; 14 passed, 0 failed.
+- `npm run build:server` — exit `0`.
+- Full `npm run build` — exit `0`; Prisma generation, server type checking, Next production compilation, type validation, static generation, and trace collection completed successfully.
+- Full build emitted only the repository's existing Prisma update notice and missing-SWC-lockfile warnings; no build failure or lockfile change occurred.
+
+### Limitations
+
+- Plans remain typed in-memory values and are not persisted or applied.
+- No administrator authorization lookup occurs inside the pure planner; explicit actor/workspace intent is caller-supplied and later application must enforce authorization.
+- Planned merchant IDs for splits are caller-supplied stable IDs; the planner does not generate IDs or inspect the database.
+- Collision checks operate only over the complete caller-supplied alias/fingerprint set; future callers must supply the full relevant workspace candidate set.
+- No audit event is written; rollback steps are planning evidence only.
+
+### Exact Phase 3.6 task
+
+Implement deterministic dry-run merchant backfill planning only over caller-supplied transactions, Phase 3.3 fingerprints, Phase 3.4 alias resolution, and Phase 3.5 conflict/planning outcomes. Produce a bounded, paginated, idempotent, side-effect-free report for the 221 unresolved transactions with known/new merchant coverage, alias consolidation, collisions, conflict/unresolved rates, correction-reuse candidates, retrieval-anchor readiness, evidence hashes, and stable run/result ordering. Do not create/apply schema or migrations, persist results, mutate merchant knowledge or financial records, add APIs/UI, Bedrock, AI, or automatic booking. Do not push.
