@@ -57,6 +57,6 @@ describe('merchant knowledge contract documentation', () => {
     expect(architecture).toContain('Connection to the corrected 221-transaction benchmark');
     expect(architecture).toContain('improved, measurable categorization precision');
     expect(plan).toContain('3.1 Domain and data-contract design — COMPLETE');
-    expect(plan).toContain('Phase 3.3 deterministic fingerprint extraction is the exact next task');
+    expect(plan).toContain('Phase 3.8 application implementation is blocked until the approved additive Merchant Knowledge schema/migration and dedicated workspace-scoped audit persistence exist.');
   });
 });

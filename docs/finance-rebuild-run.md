@@ -3412,3 +3412,183 @@ No Prisma schema, migration, anchor persistence, database query/write, API, UI, 
 ### Exact Phase 3.8 task
 
 Perform a source-grounded design and implementation-readiness assessment for separately approved Merchant Knowledge administrator tooling only. Inspect existing authorization, API, review, settings, audit, accessibility, responsive/mobile, individual-mutation, and no-bulk-mutation patterns. Produce the smallest bounded implementation plan for inspecting aliases/conflicts and individually confirming merge/split/reassignment plans. Do not implement UI or APIs until exact administrator-only authorization, transactional mutation, audit, locked-period interaction, accessibility, responsive behavior, and rollback requirements are verified. Do not add Bedrock, AI, automatic booking, or push.
+
+
+
+
+---
+
+## 2026-07-19 — Program Phase 3.8 Merchant Knowledge administrator-tooling readiness checkpoint
+
+Status: **design complete and validated; application implementation blocked on persistence prerequisites**  
+Starting HEAD: `28074a9` (`feat: integrate merchant retrieval anchors`)  
+Starting worktree: clean  
+Push restriction: **do not push**
+
+### Exact source inspected
+
+- `server/auth/requestContext.ts`
+- `server/services/reviewDecisionService.ts`
+- `server/services/auditLogService.ts`
+- `server/routes/review.ts`
+- `server/routes/rules.ts`
+- `server/routes/emailRecipients.ts`
+- `src/app/api/review/route.ts`
+- `src/libs/api.ts`
+- `src/ui/FinanceReviewPage.tsx`
+- `src/ui/FinanceSettingsPage.tsx`
+- `src/ui/FinanceAppFrame.tsx`
+- `src/helpers/navigation.ts`
+- `src/helpers/review-ui.ts`
+- `src/components/ui/dialog.tsx`
+- `src/components/ui/sheet.tsx`
+- focused route, service, authorization, settings, review, accessibility, and helper tests
+- Phase 3.3–3.7 Merchant Knowledge services and tests
+
+### Authorization and mutation findings
+
+- server request context resolves authenticated workspace membership and authoritative `admin` or `viewer` role;
+- client role hints are not authorization;
+- existing administrator mutations use `requireAdmin`, individual routes, transactional services, and audit writes;
+- viewer access patterns support authenticated read-only settings data;
+- review confirmation is a separate booking-truth workflow and must not host merchant identity mutations;
+- current generic `AuditLog` is insufficient as the only merchant-domain audit history; dedicated workspace-scoped `MerchantAuditEvent` remains required.
+
+### Route and page decision
+
+Merchant Knowledge administration belongs at:
+
+- `/settings/merchant-knowledge`
+
+It must be linked from Settings, not added as a new top-level navigation item and not embedded in `/review`.
+
+The design permits:
+
+- authenticated administrator and viewer reads;
+- viewer read-only evidence inspection with privacy redaction;
+- administrator-only individual plan preview and confirmation;
+- no bulk merge, split, reassignment, approval, deprecation, or conflict resolution.
+
+### Proposed API and service boundaries
+
+Conceptual authenticated reads:
+
+- summary;
+- paginated merchant list;
+- merchant detail;
+- conflict detail;
+- plan detail.
+
+Conceptual administrator-only operations:
+
+- deterministic single-plan preview;
+- transactional confirmation of one exact plan hash.
+
+Proposed service boundaries:
+
+- `merchantKnowledgeQueryService` — workspace-scoped, redacted, read-only;
+- existing pure `merchantIdentityPlanService` — deterministic planning only;
+- future `merchantKnowledgeDecisionService` — administrator-only transactional revalidation and application;
+- future `merchantKnowledgeAuditService` — append-only workspace-scoped merchant audit persistence.
+
+### Individual confirmation and no-bulk rules
+
+Every mutation must:
+
+1. load one current merchant/conflict context;
+2. require one explicit action, affected IDs, actor intent, and non-empty reason;
+3. preview before/after state, supporting/conflicting evidence, versions, hashes, warnings, blocking errors, and rollback;
+4. require an accessible confirmation dialog;
+5. reload and revalidate every referenced record inside one transaction;
+6. reject stale, conflicting, cross-workspace, or invalid plans with no write;
+7. write one decision and dedicated audit evidence atomically;
+8. refresh only affected detail and counts.
+
+No checkbox selection, multi-select, apply-all, merge-selected, bulk approval, or bulk deprecation is permitted.
+
+### Audit and rollback requirements
+
+Persist workspace, actor, request key, action, reason, versions, plan/evidence hashes, before/after snapshots, source/target merchants, affected alias/fingerprint IDs, supporting/conflicting evidence, warnings, rollback plan/reference, and explicit no-booking/no-bank-fact declarations.
+
+Rollback must be a new individually confirmed and audited reversal plan. Original history remains immutable.
+
+### Locked-period decision
+
+Merchant-only knowledge maintenance may be allowed for evidence associated with locked periods only when it does not change a booking, transaction classification, ledger, report snapshot, close, or period state. Any attempted financial mutation must be rejected and use the existing accounting workflow.
+
+### Accessibility and responsive requirements
+
+- compact desktop table and labeled mobile cards;
+- evidence sheet/dialog using existing Radix primitives;
+- full-width reachable confirmation on mobile;
+- no clipped warnings or confirmation controls;
+- text and icons in addition to color;
+- visible focus, keyboard cancellation, labelled title/description, `aria-busy`, and duplicate-submit blocking;
+- explicit Dutch action labels and viewer read-only explanation.
+
+### Safe-disable behavior
+
+Proposed server-authoritative feature flag:
+
+- `MERCHANT_KNOWLEDGE_ADMIN_ENABLED`
+- default `false`
+
+Disabling it must remove or mark unavailable the Settings capability and stop merchant read/mutation routes without affecting `/review`, imports, bookings, reports, or current retrieval behavior.
+
+### Approved bounded implementation slices
+
+- 3.8A — read-only capability and query contracts;
+- 3.8B — read-only administrator/viewer page;
+- 3.8C — administrator-only plan preview;
+- 3.8D — individual transactional confirmation;
+- 3.8E — authenticated production acceptance and rollback rehearsal.
+
+### Persistence blockers
+
+Phase 3.8 application implementation remains blocked until:
+
+- the additive Merchant Knowledge Prisma schema and migration are implemented and replay-validated;
+- dedicated workspace-scoped merchant audit persistence exists;
+- persisted merchants, aliases, fingerprints, resolutions, conflicts, decisions, and evidence versions exist;
+- workspace isolation and privacy-redaction query contracts are testable;
+- feature-disabled behavior and administrator mutation policy coverage are approved.
+
+### Changed paths
+
+- `docs/MERCHANT_ADMIN_TOOLING_DESIGN.md`
+- `docs/architecture/MERCHANT_KNOWLEDGE_ARCHITECTURE.md`
+- `docs/IMPLEMENTATION_PLAN.md`
+- `tests/ops/merchantAdminToolingDesignDocs.test.ts`
+- `tests/ops/merchantKnowledgeContractDocs.test.ts`
+- `tests/ops/merchantKnowledgeSchemaProposalDocs.test.ts`
+- `docs/finance-rebuild-run.md`
+
+The two existing Merchant Knowledge guards were updated only because they still asserted that Phase 3.3 was the next task. No application source, API, UI, Prisma schema, migration, runtime service, dependency, lockfile, workflow, environment file, Bedrock integration, AI inference, booking, or automatic action changed.
+
+### Validation evidence
+
+- `npm run audit:final-docs` — passed.
+- final-docs consistency — 36 passed, 0 failed.
+- Merchant Knowledge contract documentation — 6 passed, 0 failed after one stale-next-task assertion update.
+- Merchant Knowledge schema-proposal documentation — 7 passed, 0 failed after one stale-next-task assertion update.
+- transaction intelligence program documentation consistency — 6 passed, 0 failed.
+- roadmap-status consistency — 10 passed, 0 failed.
+- link-integrity validation — 85 passed, 0 failed.
+- Merchant administrator-tooling readiness documentation — 7 passed, 0 failed.
+
+### Exact next executable task
+
+Phase 3.8 application code remains blocked while Merchant Knowledge persistence is absent.
+
+The next repository implementation is the separately approved additive Merchant Knowledge schema and migration defined by `docs/MERCHANT_KNOWLEDGE_SCHEMA_PROPOSAL.md`:
+
+- schema and migration only;
+- additive tables, enums, relations, indexes, and raw-SQL partial unique indexes;
+- keep every new table unused by application services;
+- perform no backfill;
+- mutate no transactions, bookings, review decisions, suggestions, or audit history;
+- validate fresh disposable PostgreSQL replay, migration status, Prisma validation/generation, and database-to-schema drift;
+- preserve safe disablement by leaving all new tables empty and unconsumed;
+- do not push.
+
+Only after that migration is replay-validated may Slice 3.8A read-only capability/query contracts begin.

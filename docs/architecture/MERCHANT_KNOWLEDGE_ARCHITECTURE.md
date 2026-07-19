@@ -384,3 +384,23 @@ Resolved decisions:
 - the future migration is additive, seeds no merchant knowledge, rewrites no transactions/bookings/review decisions, and remains safe while all merchant services are disabled.
 
 This section does not authorize schema edits, migration creation, migration application, service implementation, or data backfill.
+
+
+
+
+## Program Phase 3.8 — Administrator tooling readiness design
+
+The source-grounded implementation-readiness design is canonical in `docs/MERCHANT_ADMIN_TOOLING_DESIGN.md`.
+
+Approved decisions:
+
+- Merchant Knowledge administration belongs on a separate `/settings/merchant-knowledge` route, not inside the `/review` booking-confirmation workflow.
+- Authenticated viewers may inspect redacted evidence in read-only mode; every preview or mutation action remains server-authoritative administrator-only.
+- All merge, split, reassignment, conflict resolution, and deprecation actions remain individual, explicitly confirmed, transactionally revalidated, and audited.
+- No bulk mutation endpoint or UI control is permitted.
+- Merchant-only knowledge changes do not rewrite bookings or raw bank facts; locked-period protections remain authoritative for any financial mutation.
+- Supporting/conflicting evidence, before/after state, versions, hashes, and reversible rollback plans must be visible before confirmation.
+- Exposure must be controlled by a server-authoritative feature flag that defaults disabled until schema, persistence, audit, authorization, tests, and production verification pass.
+- Phase 3.8 application code is blocked until the additive Merchant Knowledge schema/migration and dedicated workspace-scoped audit persistence exist.
+
+This section does not authorize UI, API, schema, migration, persistence, or mutation implementation.
