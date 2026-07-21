@@ -9,19 +9,26 @@ datasource db {
 }
 
 model User {
-  id                  String                @id @default(uuid())
-  email               String                @unique
-  isActive            Boolean               @default(true)
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @default(now()) @updatedAt
-  memberships         WorkspaceMembership[]
-  accounts            Account[]
-  auditLogs           AuditLog[]
-  categorizationRules CategorizationRule[]
-  emailRecipients     EmailRecipient[]
-  importBatches       ImportBatch[]
-  ledgers             Ledger[]
-  transactions        Transaction[]
+  id                          String                     @id @default(uuid())
+  email                       String                     @unique
+  isActive                    Boolean                    @default(true)
+  createdAt                   DateTime                   @default(now())
+  updatedAt                   DateTime                   @default(now()) @updatedAt
+  memberships                 WorkspaceMembership[]
+  accounts                    Account[]
+  auditLogs                   AuditLog[]
+  categorizationRules         CategorizationRule[]
+  emailRecipients             EmailRecipient[]
+  importBatches               ImportBatch[]
+  ledgers                     Ledger[]
+  transactions                Transaction[]
+  merchantsCreated            Merchant[]                 @relation("MerchantCreatedBy")
+  merchantsUpdated            Merchant[]                 @relation("MerchantUpdatedBy")
+  merchantAliasesApproved     MerchantAlias[]
+  merchantConflictsResolved   MerchantConflict[]
+  merchantIdentityDecisions   MerchantIdentityDecision[]
+  merchantAuditEvents         MerchantAuditEvent[]
+  merchantBackfillRunsCreated MerchantBackfillRun[]
 }
 
 model FinanceWorkspace {
@@ -44,8 +51,16 @@ model FinanceWorkspace {
   statementPeriods          StatementPeriod[]
   periodCloses              PeriodClose[]
   reportSnapshots           ReportSnapshot[]
+  merchants                 Merchant[]
+  merchantAliases           MerchantAlias[]
+  merchantFingerprints      MerchantFingerprint[]
+  merchantResolutions       MerchantResolution[]
+  merchantConflicts         MerchantConflict[]
+  merchantIdentityDecisions MerchantIdentityDecision[]
+  merchantAuditEvents       MerchantAuditEvent[]
+  merchantBackfillRuns      MerchantBackfillRun[]
+  merchantBackfillResults   MerchantBackfillResult[]
 }
-
 
 model WorkspaceMembership {
   id          String           @id @default(uuid())
@@ -148,17 +163,17 @@ model Ledger {
 }
 
 model Account {
-  id              String           @id @default(uuid())
-  userId          String
-  name            String
-  identifier      String
-  currency        String           @default("EUR")
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @default(now())
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  openingBalances OpeningBalance[]
-  transactions    Transaction[]
-  bankStatements  BankStatement[]
+  id               String            @id @default(uuid())
+  userId           String
+  name             String
+  identifier       String
+  currency         String            @default("EUR")
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @default(now())
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  openingBalances  OpeningBalance[]
+  transactions     Transaction[]
+  bankStatements   BankStatement[]
   statementPeriods StatementPeriod[]
 
   @@unique([userId, identifier])
@@ -257,6 +272,11 @@ model Transaction {
   historicalSourceBookings  TransactionBooking[]            @relation("HistoricalSourceTransaction")
   categorizationSuggestions CategorizationSuggestion[]
   reviewDecisions           ReviewDecision[]
+  merchantAliases           MerchantAlias[]
+  merchantFingerprints      MerchantFingerprint[]
+  merchantResolutions       MerchantResolution[]
+  merchantConflicts         MerchantConflict[]
+  merchantBackfillResults   MerchantBackfillResult[]
 
   @@unique([userId, importFingerprint])
   @@index([userId, date])
@@ -379,7 +399,7 @@ model ReviewDecision {
 }
 
 model SourceFile {
-  id                   String          @id @default(uuid())
+  id                   String           @id @default(uuid())
   workspaceId          String
   filename             String
   mediaType            String
@@ -387,10 +407,10 @@ model SourceFile {
   sha256               String
   content              Bytes
   uploadedBy           String?
-  createdAt            DateTime        @default(now())
+  createdAt            DateTime         @default(now())
   workspace            FinanceWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
-  sourceStatements     BankStatement[] @relation("BankStatementSourceFile")
-  supportingStatements BankStatement[] @relation("BankStatementSupportingPdf")
+  sourceStatements     BankStatement[]  @relation("BankStatementSourceFile")
+  supportingStatements BankStatement[]  @relation("BankStatementSupportingPdf")
 
   @@unique([workspaceId, sha256])
   @@index([workspaceId, createdAt])
@@ -432,58 +452,58 @@ model BankStatement {
 }
 
 model StatementPeriod {
-  id                   String                  @id @default(uuid())
-  workspaceId          String
-  statementId          String
-  accountId            String
-  periodStart          DateTime
-  periodEnd            DateTime
-  coverageStatus       StatementCoverageStatus
-  openingBalanceMinor  BigInt
-  incomeMinor          BigInt
-  expenseMinor         BigInt
-  netMinor             BigInt
-  closingBalanceMinor  BigInt
-  transactionCount     Int
-  createdAt            DateTime                @default(now())
-  workspace            FinanceWorkspace        @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
-  statement            BankStatement           @relation(fields: [statementId], references: [id], onDelete: Restrict)
-  account              Account                 @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  periodCloses         PeriodClose[]
+  id                  String                  @id @default(uuid())
+  workspaceId         String
+  statementId         String
+  accountId           String
+  periodStart         DateTime
+  periodEnd           DateTime
+  coverageStatus      StatementCoverageStatus
+  openingBalanceMinor BigInt
+  incomeMinor         BigInt
+  expenseMinor        BigInt
+  netMinor            BigInt
+  closingBalanceMinor BigInt
+  transactionCount    Int
+  createdAt           DateTime                @default(now())
+  workspace           FinanceWorkspace        @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  statement           BankStatement           @relation(fields: [statementId], references: [id], onDelete: Restrict)
+  account             Account                 @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  periodCloses        PeriodClose[]
 
   @@unique([statementId, accountId, periodStart, periodEnd])
   @@index([workspaceId, accountId, periodStart, periodEnd])
 }
 
 model PeriodClose {
-  id                   String            @id @default(uuid())
-  workspaceId          String
-  ledgerId             String
-  statementId          String
-  statementPeriodId    String
-  version              Int
-  status               PeriodCloseStatus @default(CLOSED)
-  periodStart          DateTime
-  periodEnd            DateTime
-  openingBalanceMinor  BigInt
-  incomeMinor          BigInt
-  expenseMinor         BigInt
-  netMinor             BigInt
-  closingBalanceMinor  BigInt
-  transactionCount     Int
-  classificationHash   String
-  sourceDataHash       String
-  closedBy             String
-  closedAt             DateTime          @default(now())
-  reopenedBy           String?
-  reopenedAt           DateTime?
-  reopenReason         String?
+  id                     String                      @id @default(uuid())
+  workspaceId            String
+  ledgerId               String
+  statementId            String
+  statementPeriodId      String
+  version                Int
+  status                 PeriodCloseStatus           @default(CLOSED)
+  periodStart            DateTime
+  periodEnd              DateTime
+  openingBalanceMinor    BigInt
+  incomeMinor            BigInt
+  expenseMinor           BigInt
+  netMinor               BigInt
+  closingBalanceMinor    BigInt
+  transactionCount       Int
+  classificationHash     String
+  sourceDataHash         String
+  closedBy               String
+  closedAt               DateTime                    @default(now())
+  reopenedBy             String?
+  reopenedAt             DateTime?
+  reopenReason           String?
   reconciliationEvidence Json
-  workspace            FinanceWorkspace  @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
-  ledger               Ledger            @relation(fields: [ledgerId], references: [id], onDelete: Restrict)
-  statement            BankStatement     @relation(fields: [statementId], references: [id], onDelete: Restrict)
-  statementPeriod      StatementPeriod   @relation(fields: [statementPeriodId], references: [id], onDelete: Restrict)
-  reportSnapshotLinks  ReportSnapshotPeriodClose[]
+  workspace              FinanceWorkspace            @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  ledger                 Ledger                      @relation(fields: [ledgerId], references: [id], onDelete: Restrict)
+  statement              BankStatement               @relation(fields: [statementId], references: [id], onDelete: Restrict)
+  statementPeriod        StatementPeriod             @relation(fields: [statementPeriodId], references: [id], onDelete: Restrict)
+  reportSnapshotLinks    ReportSnapshotPeriodClose[]
 
   @@unique([ledgerId, version])
   @@index([workspaceId, periodStart, periodEnd, status])
@@ -491,7 +511,7 @@ model PeriodClose {
 }
 
 model ReportSnapshot {
-  id                  String       @id @default(uuid())
+  id                  String                      @id @default(uuid())
   workspaceId         String
   kind                ReportKind
   year                Int
@@ -505,8 +525,8 @@ model ReportSnapshot {
   transactionCount    Int
   snapshotHash        String
   generatedBy         String
-  generatedAt         DateTime     @default(now())
-  workspace           FinanceWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  generatedAt         DateTime                    @default(now())
+  workspace           FinanceWorkspace            @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
   periodCloseLinks    ReportSnapshotPeriodClose[]
   lines               ReportSnapshotLine[]
   artifacts           ReportArtifact[]
@@ -530,7 +550,7 @@ model ReportSnapshotPeriodClose {
 }
 
 model ReportSnapshotLine {
-  id                   String               @id @default(uuid())
+  id                   String                @id @default(uuid())
   reportSnapshotId     String
   lineKind             ReportLineKind
   projectId            String?
@@ -544,10 +564,10 @@ model ReportSnapshotLine {
   amountMinor          BigInt
   transactionCount     Int
   sortOrder            Int
-  reportSnapshot       ReportSnapshot       @relation(fields: [reportSnapshotId], references: [id], onDelete: Cascade)
-  project              Project?             @relation(fields: [projectId], references: [id], onDelete: Restrict)
-  transactionType      TransactionType?     @relation(fields: [transactionTypeId], references: [id], onDelete: Restrict)
-  category             Category?            @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  reportSnapshot       ReportSnapshot        @relation(fields: [reportSnapshotId], references: [id], onDelete: Cascade)
+  project              Project?              @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  transactionType      TransactionType?      @relation(fields: [transactionTypeId], references: [id], onDelete: Restrict)
+  category             Category?             @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
   @@index([reportSnapshotId, lineKind, sortOrder])
   @@index([projectId])
@@ -588,22 +608,22 @@ model ReportApproval {
 }
 
 model ReportDispatch {
-  id                 String                    @id @default(uuid())
-  reportSnapshotId   String
-  reportApprovalId   String
-  status             DispatchStatus            @default(PENDING)
-  fromAddress        String
-  subject            String
-  recipientHash      String
-  contentHash        String
-  providerMessageId  String?
-  sentBy             String
-  sentAt             DateTime?
-  errorMessage       String?
-  createdAt          DateTime                  @default(now())
-  reportSnapshot     ReportSnapshot            @relation(fields: [reportSnapshotId], references: [id], onDelete: Restrict)
-  reportApproval     ReportApproval            @relation(fields: [reportApprovalId], references: [id], onDelete: Restrict)
-  recipients         ReportDispatchRecipient[]
+  id                String                    @id @default(uuid())
+  reportSnapshotId  String
+  reportApprovalId  String
+  status            DispatchStatus            @default(PENDING)
+  fromAddress       String
+  subject           String
+  recipientHash     String
+  contentHash       String
+  providerMessageId String?
+  sentBy            String
+  sentAt            DateTime?
+  errorMessage      String?
+  createdAt         DateTime                  @default(now())
+  reportSnapshot    ReportSnapshot            @relation(fields: [reportSnapshotId], references: [id], onDelete: Restrict)
+  reportApproval    ReportApproval            @relation(fields: [reportApprovalId], references: [id], onDelete: Restrict)
+  recipients        ReportDispatchRecipient[]
 
   @@index([reportSnapshotId, createdAt])
   @@index([reportApprovalId])
@@ -787,4 +807,325 @@ enum DispatchStatus {
   PENDING
   SENT
   FAILED
+}
+
+enum MerchantStatus {
+  PROPOSED
+  ACTIVE
+  CONFLICTED
+  MERGED
+  DEPRECATED
+}
+
+enum MerchantKnowledgeSignalType {
+  IBAN
+  CREDITOR_IDENTIFIER
+  CARD_DESCRIPTOR
+  APPROVED_ALIAS
+  NORMALIZED_COUNTERPARTY
+  PAYMENT_PURPOSE
+  RECURRING_PATTERN
+}
+
+enum MerchantAliasStatus {
+  OBSERVED
+  PROPOSED
+  APPROVED
+  TRUSTED
+  DEPRECATED
+  REJECTED
+}
+
+enum MerchantFingerprintStatus {
+  OBSERVED
+  MATCHED
+  CONFLICTED
+  DEPRECATED
+}
+
+enum MerchantFingerprintStrength {
+  STRONG
+  MEDIUM
+  WEAK
+}
+
+enum MerchantResolutionStatus {
+  RESOLVED
+  CONFLICTED
+  ABSTAINED
+}
+
+enum MerchantConflictStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
+enum MerchantIdentityDecisionAction {
+  CREATE_MERCHANT
+  MERGE_MERCHANTS
+  SPLIT_MERCHANT
+  ASSIGN_ALIAS
+  REASSIGN_ALIAS
+  DEPRECATE_ALIAS
+  DEPRECATE_MERCHANT
+  RESOLVE_CONFLICT
+}
+
+enum MerchantBackfillRunStatus {
+  PLANNED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model Merchant {
+  id                      String         @id @default(uuid())
+  workspaceId             String
+  canonicalName           String
+  normalizedCanonicalName String
+  status                  MerchantStatus @default(PROPOSED)
+  mergedIntoMerchantId    String?
+  version                 Int            @default(1)
+  createdById             String?
+  updatedById             String?
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @default(now()) @updatedAt
+  deprecatedAt            DateTime?
+
+  workspace             FinanceWorkspace           @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  mergedIntoMerchant    Merchant?                  @relation("MerchantMergeTarget", fields: [mergedIntoMerchantId], references: [id], onDelete: Restrict)
+  mergedSourceMerchants Merchant[]                 @relation("MerchantMergeTarget")
+  createdBy             User?                      @relation("MerchantCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy             User?                      @relation("MerchantUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  aliases               MerchantAlias[]
+  fingerprints          MerchantFingerprint[]
+  resolutions           MerchantResolution[]
+  sourceDecisions       MerchantIdentityDecision[] @relation("MerchantDecisionSource")
+  targetDecisions       MerchantIdentityDecision[] @relation("MerchantDecisionTarget")
+  backfillResults       MerchantBackfillResult[]
+
+  @@index([workspaceId, status, normalizedCanonicalName])
+  @@index([workspaceId, mergedIntoMerchantId])
+}
+
+model MerchantAlias {
+  id                    String                      @id @default(uuid())
+  workspaceId           String
+  merchantId            String?
+  sourceTransactionId   String?
+  signalType            MerchantKnowledgeSignalType
+  normalizedValue       String
+  valueHash             String
+  status                MerchantAliasStatus         @default(OBSERVED)
+  confidenceBasisPoints Int?
+  normalizationVersion  String
+  evidenceHash          String
+  approvedById          String?
+  approvedAt            DateTime?
+  createdAt             DateTime                    @default(now())
+  updatedAt             DateTime                    @default(now()) @updatedAt
+  deprecatedAt          DateTime?
+
+  workspace         FinanceWorkspace           @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  merchant          Merchant?                  @relation(fields: [merchantId], references: [id], onDelete: Restrict)
+  sourceTransaction Transaction?               @relation(fields: [sourceTransactionId], references: [id], onDelete: Restrict)
+  approvedBy        User?                      @relation(fields: [approvedById], references: [id], onDelete: SetNull)
+  decisions         MerchantIdentityDecision[]
+
+  @@index([workspaceId, signalType, normalizedValue, status])
+  @@index([workspaceId, merchantId, status])
+  @@index([sourceTransactionId])
+  @@index([valueHash])
+}
+
+model MerchantFingerprint {
+  id                  String                      @id @default(uuid())
+  workspaceId         String
+  merchantId          String?
+  sourceTransactionId String
+  signalType          MerchantKnowledgeSignalType
+  normalizedValue     String?
+  valueHash           String
+  status              MerchantFingerprintStatus   @default(OBSERVED)
+  strength            MerchantFingerprintStrength
+  extractionVersion   String
+  evidenceHash        String
+  createdAt           DateTime                    @default(now())
+  updatedAt           DateTime                    @default(now()) @updatedAt
+  deprecatedAt        DateTime?
+
+  workspace         FinanceWorkspace           @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  merchant          Merchant?                  @relation(fields: [merchantId], references: [id], onDelete: Restrict)
+  sourceTransaction Transaction                @relation(fields: [sourceTransactionId], references: [id], onDelete: Restrict)
+  decisions         MerchantIdentityDecision[]
+
+  @@unique([workspaceId, sourceTransactionId, signalType, extractionVersion, valueHash])
+  @@index([workspaceId, signalType, valueHash, status])
+  @@index([workspaceId, merchantId, status])
+  @@index([sourceTransactionId])
+}
+
+model MerchantResolution {
+  id                    String                   @id @default(uuid())
+  workspaceId           String
+  transactionId         String
+  merchantId            String?
+  status                MerchantResolutionStatus
+  engineVersion         String
+  inputHash             String
+  evidence              Json
+  evidenceHash          String
+  confidenceBasisPoints Int?
+  abstentionCode        String?
+  generatedAt           DateTime                 @default(now())
+  validUntil            DateTime?
+  backfillRunId         String?
+
+  workspace   FinanceWorkspace     @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  transaction Transaction          @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+  merchant    Merchant?            @relation(fields: [merchantId], references: [id], onDelete: Restrict)
+  backfillRun MerchantBackfillRun? @relation(fields: [backfillRunId], references: [id], onDelete: Restrict)
+  conflicts   MerchantConflict[]
+
+  @@unique([workspaceId, transactionId, engineVersion, inputHash])
+  @@index([workspaceId, transactionId, generatedAt])
+  @@index([workspaceId, merchantId, status, generatedAt])
+  @@index([backfillRunId])
+}
+
+model MerchantConflict {
+  id                   String                 @id @default(uuid())
+  workspaceId          String
+  transactionId        String
+  resolutionId         String?
+  conflictKey          String
+  status               MerchantConflictStatus @default(OPEN)
+  candidateMerchantIds Json
+  supportingSignals    Json
+  conflictingSignals   Json
+  evidenceHash         String
+  openedAt             DateTime               @default(now())
+  resolvedAt           DateTime?
+  resolvedById         String?
+  resolutionReason     String?
+
+  workspace   FinanceWorkspace           @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  transaction Transaction                @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+  resolution  MerchantResolution?        @relation(fields: [resolutionId], references: [id], onDelete: Restrict)
+  resolvedBy  User?                      @relation(fields: [resolvedById], references: [id], onDelete: SetNull)
+  decisions   MerchantIdentityDecision[]
+
+  @@index([workspaceId, status, openedAt])
+  @@index([workspaceId, transactionId, status])
+  @@index([resolutionId])
+}
+
+model MerchantIdentityDecision {
+  id               String                         @id @default(uuid())
+  workspaceId      String
+  action           MerchantIdentityDecisionAction
+  sourceMerchantId String?
+  targetMerchantId String?
+  aliasId          String?
+  fingerprintId    String?
+  conflictId       String?
+  actorId          String?
+  reason           String
+  beforeState      Json
+  afterState       Json
+  evidence         Json
+  evidenceHash     String
+  decisionVersion  String
+  decidedAt        DateTime                       @default(now())
+
+  workspace      FinanceWorkspace     @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  sourceMerchant Merchant?            @relation("MerchantDecisionSource", fields: [sourceMerchantId], references: [id], onDelete: Restrict)
+  targetMerchant Merchant?            @relation("MerchantDecisionTarget", fields: [targetMerchantId], references: [id], onDelete: Restrict)
+  alias          MerchantAlias?       @relation(fields: [aliasId], references: [id], onDelete: Restrict)
+  fingerprint    MerchantFingerprint? @relation(fields: [fingerprintId], references: [id], onDelete: Restrict)
+  conflict       MerchantConflict?    @relation(fields: [conflictId], references: [id], onDelete: Restrict)
+  actor          User?                @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, action, decidedAt])
+  @@index([sourceMerchantId])
+  @@index([targetMerchantId])
+  @@index([conflictId])
+}
+
+model MerchantAuditEvent {
+  id            String   @id @default(uuid())
+  workspaceId   String
+  entityType    String
+  entityId      String
+  action        String
+  actorId       String?
+  requestId     String?
+  beforeState   Json
+  afterState    Json
+  evidenceHash  String
+  schemaVersion String
+  createdAt     DateTime @default(now())
+
+  workspace FinanceWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  actor     User?            @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, entityType, entityId, createdAt])
+  @@index([workspaceId, actorId, createdAt])
+  @@index([requestId])
+}
+
+model MerchantBackfillRun {
+  id                 String                    @id @default(uuid())
+  workspaceId        String
+  runKey             String
+  status             MerchantBackfillRunStatus @default(PLANNED)
+  dryRun             Boolean                   @default(true)
+  sourceSnapshotHash String
+  engineVersion      String
+  parameters         Json
+  summary            Json
+  createdById        String?
+  startedAt          DateTime?
+  completedAt        DateTime?
+  createdAt          DateTime                  @default(now())
+
+  workspace   FinanceWorkspace         @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  createdBy   User?                    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  results     MerchantBackfillResult[]
+  resolutions MerchantResolution[]
+
+  @@unique([workspaceId, runKey])
+  @@index([workspaceId, status, createdAt])
+}
+
+model MerchantBackfillResult {
+  id                   String                       @id @default(uuid())
+  runId                String
+  workspaceId          String
+  transactionId        String
+  proposedMerchantId   String?
+  resolutionStatus     MerchantResolutionStatus
+  matchedSignalType    MerchantKnowledgeSignalType?
+  knownMerchant        Boolean
+  aliasConsolidated    Boolean                      @default(false)
+  fingerprintCollision Boolean                      @default(false)
+  conflictDetected     Boolean                      @default(false)
+  retrievalAnchorReady Boolean                      @default(false)
+  correctionReusable   Boolean                      @default(false)
+  evidence             Json
+  evidenceHash         String
+  createdAt            DateTime                     @default(now())
+
+  run              MerchantBackfillRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  workspace        FinanceWorkspace    @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  transaction      Transaction         @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+  proposedMerchant Merchant?           @relation(fields: [proposedMerchantId], references: [id], onDelete: Restrict)
+
+  @@unique([runId, transactionId])
+  @@index([workspaceId, resolutionStatus, knownMerchant])
+  @@index([workspaceId, conflictDetected, fingerprintCollision])
+  @@index([workspaceId, retrievalAnchorReady])
+  @@index([proposedMerchantId])
 }

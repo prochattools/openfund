@@ -1,6 +1,8 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
+import { spawnSync } from 'node:child_process';
 import dotenv from 'dotenv';
 import pg from 'pg';
 import { describe, expect, it } from 'vitest';
@@ -29,21 +31,30 @@ const sha256File = (relativePath: string): string =>
 const loadLocalAdminUrl = (): string | null => {
   dotenv.config({ path: path.join(process.cwd(), '.env'), override: false });
 
-  const configuredUrl = process.env.SYSTEM_DATABASE_URL ?? process.env.DATABASE_URL;
+  const defaultUser = process.env.USER || process.env.LOGNAME || os.userInfo().username;
+  const configuredUrl =
+    process.env.MIGRATE001_ADMIN_DATABASE_URL
+    ?? process.env.SYSTEM_DATABASE_URL
+    ?? process.env.DATABASE_URL;
   const candidate =
-    configuredUrl ??
-    (process.env.POSTGRES_USER &&
-    process.env.POSTGRES_PASSWORD &&
-    process.env.POSTGRES_DBNAME
+    configuredUrl
+    ?? (process.env.POSTGRES_USER && process.env.POSTGRES_PASSWORD
       ? `postgresql://${encodeURIComponent(process.env.POSTGRES_USER)}:${encodeURIComponent(
           process.env.POSTGRES_PASSWORD,
-        )}@localhost:5432/${encodeURIComponent(process.env.POSTGRES_DBNAME)}`
-      : null);
+        )}@localhost/postgres`
+      : defaultUser
+        ? `postgresql://${encodeURIComponent(defaultUser)}@localhost/postgres?host=/tmp`
+        : null);
   if (!candidate) return null;
 
   const parsed = new URL(candidate);
   const localHosts = new Set(['localhost', '127.0.0.1', '::1']);
+  const allowedSockets = new Set(['/tmp', '/var/run/postgresql']);
+  if (parsed.protocol !== 'postgresql:' && parsed.protocol !== 'postgres:') return null;
   if (!localHosts.has(parsed.hostname)) return null;
+  if (parsed.pathname !== '/postgres') return null;
+  const socket = parsed.searchParams.get('host');
+  if (socket && !allowedSockets.has(socket)) return null;
 
   return candidate;
 };
@@ -53,7 +64,10 @@ const quoteIdentifier = (value: string): string => `"${value.replaceAll('"', '""
 const migrationDirectories = (): string[] =>
   fs
     .readdirSync(path.join(process.cwd(), 'prisma/migrations'), { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
+    .filter((entry) =>
+      entry.isDirectory()
+      && fs.existsSync(path.join(process.cwd(), 'prisma/migrations', entry.name, 'migration.sql')),
+    )
     .map((entry) => entry.name)
     .sort();
 
@@ -64,11 +78,46 @@ const applyMigrationFile = async (client: pg.Client, directory: string): Promise
   }
 };
 
+const runPrisma = (args: string[], databaseUrl: string): string => {
+  const result = spawnSync(
+    process.execPath,
+    [path.join(process.cwd(), 'node_modules/prisma/build/index.js'), ...args],
+    {
+      cwd: process.cwd(),
+      env: { ...process.env, DATABASE_URL: databaseUrl },
+      encoding: 'utf8',
+    },
+  );
+  if (result.status !== 0) {
+    throw new Error(`Prisma command failed: ${result.stderr || result.stdout}`);
+  }
+  return `${result.stdout}${result.stderr}`;
+};
+
 const createDisposableDatabaseUrl = (adminUrl: string, databaseName: string): string => {
   const disposableUrl = new URL(adminUrl);
   disposableUrl.pathname = `/${databaseName}`;
-  disposableUrl.search = '';
   return disposableUrl.toString();
+};
+
+const createPrismaReplayWorkspace = (): { root: string; schemaPath: string } => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'merchant-knowledge-replay-'));
+  const prismaRoot = path.join(root, 'prisma');
+  const migrationsRoot = path.join(prismaRoot, 'migrations');
+  fs.mkdirSync(migrationsRoot, { recursive: true });
+  fs.copyFileSync(path.join(process.cwd(), 'prisma/schema.prisma'), path.join(prismaRoot, 'schema.prisma'));
+  fs.copyFileSync(
+    path.join(process.cwd(), 'prisma/migrations/migration_lock.toml'),
+    path.join(migrationsRoot, 'migration_lock.toml'),
+  );
+  for (const directory of migrationDirectories()) {
+    fs.cpSync(
+      path.join(process.cwd(), 'prisma/migrations', directory),
+      path.join(migrationsRoot, directory),
+      { recursive: true },
+    );
+  }
+  return { root, schemaPath: path.join(prismaRoot, 'schema.prisma') };
 };
 
 describe('MODEL-002 additive domain schema', () => {
@@ -107,6 +156,7 @@ describe('MODEL-002 additive domain schema', () => {
       '20260703001200_add_workspace_dimensions',
       '20260703193000_add_classification_records',
       '20260704143000_add_statement_close_report_models',
+      '20260719095000_add_merchant_knowledge',
     ]);
     expect(sha256File(migrationPath)).toBe(model002ExpectedHash);
   });
@@ -152,6 +202,102 @@ describe('MODEL-002 additive domain schema', () => {
 
   const localAdminUrl = loadLocalAdminUrl();
   const databaseValidation = localAdminUrl ? it : it.skip;
+
+  databaseValidation(
+    'validates the current migration chain through Prisma deploy status and drift',
+    async () => {
+      const suffix = `${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+      const databaseName = `merchant_knowledge_validate_${suffix}`;
+      const databaseIdentifier = quoteIdentifier(databaseName);
+      const admin = new Client({ connectionString: localAdminUrl! });
+      const disposableUrl = createDisposableDatabaseUrl(localAdminUrl!, databaseName);
+      const replayWorkspace = createPrismaReplayWorkspace();
+      let disposable: pg.Client | null = null;
+
+      await admin.connect();
+      try {
+        await admin.query(`CREATE DATABASE ${databaseIdentifier}`);
+
+        expect(runPrisma(['validate', '--schema', 'prisma/schema.prisma'], disposableUrl))
+          .toContain('is valid');
+        expect(runPrisma(['generate', '--schema', 'prisma/schema.prisma'], disposableUrl))
+          .toContain('Generated Prisma Client');
+        expect(runPrisma(['migrate', 'deploy', '--schema', replayWorkspace.schemaPath], disposableUrl))
+          .toContain('All migrations have been successfully applied');
+        expect(runPrisma(['migrate', 'status', '--schema', replayWorkspace.schemaPath], disposableUrl))
+          .toContain('Database schema is up to date');
+        const drift = runPrisma([
+          'migrate',
+          'diff',
+          '--from-schema-datasource',
+          replayWorkspace.schemaPath,
+          '--to-schema-datamodel',
+          replayWorkspace.schemaPath,
+          '--exit-code',
+        ], disposableUrl);
+        expect(drift).toContain('No difference detected');
+
+        disposable = new Client({ connectionString: disposableUrl });
+        await disposable.connect();
+
+        const merchantTables = [
+          'Merchant',
+          'MerchantAlias',
+          'MerchantFingerprint',
+          'MerchantResolution',
+          'MerchantConflict',
+          'MerchantIdentityDecision',
+          'MerchantAuditEvent',
+          'MerchantBackfillRun',
+          'MerchantBackfillResult',
+        ];
+        const tables = await disposable.query(
+          `SELECT tablename FROM pg_tables
+            WHERE schemaname = 'public' AND tablename = ANY($1::text[])
+            ORDER BY tablename`,
+          [merchantTables],
+        );
+        expect(tables.rows.map((row) => row.tablename)).toEqual([...merchantTables].sort());
+
+        for (const table of merchantTables) {
+          const count = await disposable.query(
+            `SELECT COUNT(*)::int AS count FROM ${quoteIdentifier(table)}`,
+          );
+          expect(count.rows[0].count).toBe(0);
+        }
+
+        const partialIndexes = await disposable.query(
+          `SELECT indexname FROM pg_indexes
+            WHERE indexname = ANY($1::text[])
+            ORDER BY indexname`,
+          [[
+            'MerchantAlias_active_workspace_signal_value_key',
+            'MerchantConflict_open_workspace_transaction_key',
+            'MerchantFingerprint_active_strong_workspace_signal_value_key',
+          ]],
+        );
+        expect(partialIndexes.rowCount).toBe(3);
+
+        const workspaceForeignKeys = await disposable.query(
+          `SELECT conname, pg_get_constraintdef(oid) AS definition
+             FROM pg_constraint
+            WHERE contype = 'f' AND conname LIKE 'Merchant%_workspaceId_fkey'
+            ORDER BY conname`,
+        );
+        expect(workspaceForeignKeys.rowCount).toBe(9);
+        for (const row of workspaceForeignKeys.rows) {
+          expect(row.definition).toContain('REFERENCES "FinanceWorkspace"');
+          expect(row.definition).toContain('ON DELETE RESTRICT');
+        }
+      } finally {
+        if (disposable) await disposable.end();
+        await admin.query(`DROP DATABASE IF EXISTS ${databaseIdentifier} WITH (FORCE)`);
+        await admin.end();
+        fs.rmSync(replayWorkspace.root, { recursive: true, force: true });
+      }
+    },
+    120_000,
+  );
 
   databaseValidation(
     'applies the full migration history to an isolated local PostgreSQL database',
@@ -294,6 +440,100 @@ describe('MODEL-002 additive domain schema', () => {
             )`,
         );
         expect(indexes.rowCount).toBe(5);
+
+        for (const directory of directories.slice(targetIndex + 1)) {
+          await applyMigrationFile(disposable, directory);
+        }
+
+        const merchantTables = [
+          'Merchant',
+          'MerchantAlias',
+          'MerchantFingerprint',
+          'MerchantResolution',
+          'MerchantConflict',
+          'MerchantIdentityDecision',
+          'MerchantAuditEvent',
+          'MerchantBackfillRun',
+          'MerchantBackfillResult',
+        ];
+        const tableResult = await disposable.query(
+          `SELECT tablename
+             FROM pg_tables
+            WHERE schemaname = 'public'
+              AND tablename = ANY($1::text[])
+            ORDER BY tablename`,
+          [merchantTables],
+        );
+        expect(tableResult.rows.map((row) => row.tablename)).toEqual([...merchantTables].sort());
+
+        const merchantEnums = [
+          'MerchantStatus',
+          'MerchantKnowledgeSignalType',
+          'MerchantAliasStatus',
+          'MerchantFingerprintStatus',
+          'MerchantFingerprintStrength',
+          'MerchantResolutionStatus',
+          'MerchantConflictStatus',
+          'MerchantIdentityDecisionAction',
+          'MerchantBackfillRunStatus',
+        ];
+        const enumResult = await disposable.query(
+          `SELECT typname
+             FROM pg_type
+            WHERE typname = ANY($1::text[])
+            ORDER BY typname`,
+          [merchantEnums],
+        );
+        expect(enumResult.rows.map((row) => row.typname)).toEqual([...merchantEnums].sort());
+
+        const partialIndexes = await disposable.query(
+          `SELECT indexname, indexdef
+             FROM pg_indexes
+            WHERE indexname = ANY($1::text[])
+            ORDER BY indexname`,
+          [[
+            'MerchantAlias_active_workspace_signal_value_key',
+            'MerchantConflict_open_workspace_transaction_key',
+            'MerchantFingerprint_active_strong_workspace_signal_value_key',
+          ]],
+        );
+        expect(partialIndexes.rowCount).toBe(3);
+        for (const row of partialIndexes.rows) expect(row.indexdef).toContain(' WHERE ');
+
+        const workspaceForeignKeys = await disposable.query(
+          `SELECT conname, pg_get_constraintdef(oid) AS definition
+             FROM pg_constraint
+            WHERE contype = 'f'
+              AND conname LIKE 'Merchant%_workspaceId_fkey'
+            ORDER BY conname`,
+        );
+        expect(workspaceForeignKeys.rowCount).toBe(9);
+        for (const row of workspaceForeignKeys.rows) {
+          expect(row.definition).toContain('REFERENCES "FinanceWorkspace"');
+          expect(row.definition).toContain('ON DELETE RESTRICT');
+        }
+
+        for (const table of merchantTables) {
+          const count = await disposable.query(
+            `SELECT COUNT(*)::int AS count FROM ${quoteIdentifier(table)}`,
+          );
+          expect(count.rows[0].count).toBe(0);
+        }
+
+        const accountingTables = await disposable.query(
+          `SELECT tablename
+             FROM pg_tables
+            WHERE schemaname = 'public'
+              AND tablename = ANY($1::text[])
+            ORDER BY tablename`,
+          [['Transaction', 'TransactionBooking', 'ReviewDecision', 'CategorizationSuggestion']],
+        );
+        expect(accountingTables.rows.map((row) => row.tablename)).toEqual([
+          'CategorizationSuggestion',
+          'ReviewDecision',
+          'Transaction',
+          'TransactionBooking',
+        ]);
       } finally {
         if (disposable) {
           await disposable.end();

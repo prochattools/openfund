@@ -3592,3 +3592,235 @@ The next repository implementation is the separately approved additive Merchant 
 - do not push.
 
 Only after that migration is replay-validated may Slice 3.8A read-only capability/query contracts begin.
+
+## 2026-07-21 — Merchant Knowledge schema packet committed and validated
+
+Status: **validated locally and committed; no push authorized**
+Starting HEAD: `d66f618`
+Database scope: localhost PostgreSQL peer-auth socket only
+
+### Local database shape used by the tests
+
+- constructed URL shape: `postgresql://<current-os-user>@localhost/postgres?host=/tmp`
+- parsed protocol: `postgresql:`
+- parsed hostname: `localhost`
+- parsed pathname: `/postgres`
+- parsed socket query param: `/tmp`
+- no password, remote host, or non-local database was used
+
+### Disposable replay workspace and database names
+
+- disposable validation database pattern: `merchant_knowledge_validate_<timestamp>_<random>`
+- disposable replay workspace pattern: `merchant-knowledge-replay-*`
+- migration replay workspace copies `prisma/schema.prisma` and `prisma/migrations/migration_lock.toml`
+- migration replay workspace filters directories to ones that still contain `migration.sql`, so the absent `20260719094000_add_merchant_knowledge` duplicate is ignored
+
+### Migration-test availability repair
+
+- `tests/services/model002DomainSchema.test.ts` now treats migration directories without `migration.sql` as non-active
+- the current migration chain assertions include `20260719095000_add_merchant_knowledge`
+- the focused migration-chain test passed, so the chain remained replayable after the duplicate-directory cleanup
+
+### PostgreSQL-safe index-name drift repair
+
+- six invalid overlength Prisma `map:` values were removed from the schema packet
+- the ordinary migration index identifiers were aligned with Prisma-generated PostgreSQL-safe names
+- indexed fields, ordering, uniqueness, predicates, and referential behavior were preserved
+- the focused schema test now locks the Prisma declaration strings to the migration index names
+
+### Prisma deploy, status, and drift evidence
+
+- `npx prisma validate --schema prisma/schema.prisma` passed
+- `npx prisma generate --schema prisma/schema.prisma` passed
+- `tests/services/model002DomainSchema.test.ts` passed the migration-chain test that asserts `prisma migrate deploy` reports `All migrations have been successfully applied`
+- the same test asserts `prisma migrate status` reports `Database schema is up to date`
+- the same test asserts `prisma migrate diff` reports `No difference detected`
+
+### Schema contents validated by the focused tests
+
+- all nine Merchant Knowledge tables are present:
+  - `Merchant`
+  - `MerchantAlias`
+  - `MerchantFingerprint`
+  - `MerchantResolution`
+  - `MerchantConflict`
+  - `MerchantIdentityDecision`
+  - `MerchantAuditEvent`
+  - `MerchantBackfillRun`
+  - `MerchantBackfillResult`
+- all nine Merchant Knowledge enums are present:
+  - `MerchantStatus`
+  - `MerchantKnowledgeSignalType`
+  - `MerchantAliasStatus`
+  - `MerchantFingerprintStatus`
+  - `MerchantFingerprintStrength`
+  - `MerchantResolutionStatus`
+  - `MerchantConflictStatus`
+  - `MerchantIdentityDecisionAction`
+  - `MerchantBackfillRunStatus`
+- ordinary indexes are present on the new models as declared in the schema and migration
+- all three approved partial unique indexes are present:
+  - `MerchantAlias_active_workspace_signal_value_key`
+  - `MerchantFingerprint_active_strong_workspace_signal_value_key`
+  - `MerchantConflict_open_workspace_transaction_key`
+- workspace-scoped foreign keys are present for the Merchant Knowledge tables
+- referential actions remain restrictive where the packet approved them
+- every Merchant Knowledge table was verified empty in the disposable database
+- the existing accounting tables were preserved:
+  - `Transaction`
+  - `TransactionBooking`
+  - `ReviewDecision`
+  - `CategorizationSuggestion`
+
+### Validation and build results
+
+- `tests/services/merchantKnowledgeSchema.test.ts` passed: 8 tests
+- `tests/services/model002DomainSchema.test.ts` passed: 8 tests
+- `npm run build:server` passed
+- `npm run build` passed
+- the full build emitted the repository's existing Next.js SWC lockfile warnings, but the command exited successfully
+
+### Cleanup evidence
+
+- the disposable replay database was dropped with `DROP DATABASE ... WITH (FORCE)`
+- the temporary replay workspace was removed with `fs.rmSync(..., { recursive: true, force: true })`
+
+### Scan results
+
+- focused high-risk scan over the six approved paths found no new destructive runtime logic, upload logic, or deployment changes in application code; the only destructive-command match was the disposable database cleanup in the test harness
+- focused secret-material scan over the six approved paths found no private keys, tokens, or committed credential values; the only pattern match was the localhost socket URL construction in the test harness
+- expected documentation matches were limited to longstanding references to secrets, deployment, push restrictions, and cleanup evidence
+
+### Limitations
+
+- no backfill
+- no application consumption
+- no API or UI
+- no production or remote database validation
+- no push authorized
+
+
+
+
+---
+
+## 2026-07-19 — Additive Merchant Knowledge schema implementation checkpoint
+
+Status: **implemented and statically validated; uncommitted pending disposable localhost PostgreSQL replay**
+Starting HEAD: `d66f618` (`docs: design merchant admin tooling`)
+Push restriction: **do not push**
+
+### Exact schema and migration sources inspected
+
+- complete `prisma/schema.prisma`;
+- all active migrations under `prisma/migrations`;
+- normalized baseline and additive migration conventions;
+- workspace, user, transaction, booking, suggestion, review-decision, and audit relations;
+- `docs/MERCHANT_KNOWLEDGE_SCHEMA_PROPOSAL.md`;
+- `tests/services/model002DomainSchema.test.ts`;
+- `tests/services/merchantKnowledgeSchema.test.ts`;
+- localhost-gated disposable PostgreSQL validation in the MODEL-002 schema test;
+- Prisma generation and repository build scripts.
+
+### Schema implemented
+
+Added these enums:
+
+- `MerchantStatus`;
+- `MerchantKnowledgeSignalType`;
+- `MerchantAliasStatus`;
+- `MerchantFingerprintStatus`;
+- `MerchantFingerprintStrength`;
+- `MerchantResolutionStatus`;
+- `MerchantConflictStatus`;
+- `MerchantIdentityDecisionAction`;
+- `MerchantBackfillRunStatus`.
+
+Added these workspace-scoped models:
+
+- `Merchant`;
+- `MerchantAlias`;
+- `MerchantFingerprint`;
+- `MerchantResolution`;
+- `MerchantConflict`;
+- `MerchantIdentityDecision`;
+- `MerchantAuditEvent`;
+- `MerchantBackfillRun`;
+- `MerchantBackfillResult`.
+
+Added only inverse relation collections to existing `User`, `FinanceWorkspace`, and `Transaction` models. No existing transaction, booking, review, suggestion, audit, or accounting scalar field was changed or rewritten.
+
+`Merchant` contains no project, transaction-type, or category defaults and is not accounting truth.
+
+### Canonical migration
+
+Canonical migration:
+
+- `prisma/migrations/20260719095000_add_merchant_knowledge/migration.sql`
+
+The duplicate untracked `20260719094000_add_merchant_knowledge/migration.sql` was deleted with explicit user approval. Its now-empty directory is ignored by the migration-chain guard because active Prisma migrations are defined by the presence of `migration.sql`.
+
+The canonical migration contains only additive enums, tables, indexes, and foreign keys. Static guards verify that it contains no `DROP`, `RENAME`, data `INSERT`, `UPDATE`, `DELETE`, migration-time backfill, or rewrite of `Transaction`, `TransactionBooking`, `ReviewDecision`, or `CategorizationSuggestion`.
+
+### PostgreSQL partial unique indexes
+
+The canonical migration contains raw-SQL partial unique indexes for:
+
+- approved/trusted, non-deprecated aliases within one workspace and signal/value key;
+- strong matched, non-deprecated fingerprints within one workspace and signal/value hash;
+- open conflicts for one workspace, transaction, and conflict key.
+
+These predicates remain explicit SQL because Prisma schema syntax cannot represent the approved partial-index predicates.
+
+### Application compatibility
+
+- all new tables are intended to remain empty until separately approved services exist;
+- no current runtime service, route, client API, or UI consumes the new models;
+- `/review` behavior remains unchanged;
+- confirmed-history retrieval remains unchanged;
+- no Merchant Knowledge route or UI is exposed;
+- no backfill occurred;
+- no transaction, booking, review decision, suggestion, or existing audit history was rewritten;
+- no trusted knowledge was seeded from suggestions.
+
+### Validation evidence
+
+Completed:
+
+- Prisma format — passed;
+- Prisma Client generation and relation validation — passed;
+- focused `Merchant Knowledge additive schema` guard — 7 passed, 0 failed;
+- focused `MODEL-002 additive domain schema` guard — 6 passed, 0 failed, 1 localhost database test skipped;
+- `npm run build:server` — passed;
+- full `npm run build` — passed, including Prisma generation, server type checking, Next compilation, type validation, static generation, and trace collection;
+- full build changed no protected path or lockfile.
+
+Not completed:
+
+- fresh disposable PostgreSQL `prisma migrate deploy`;
+- `prisma migrate status` against that disposable database;
+- database-to-current-schema drift comparison;
+- database inspection of all expected Merchant Knowledge tables, enums, indexes, partial indexes, and foreign keys;
+- proof from the disposable database that all Merchant Knowledge tables are empty;
+- disposable database cleanup evidence.
+
+Reason: the repository test correctly requires an approved localhost PostgreSQL administrator URL, but this Workbench session has no local `DATABASE_URL`, `SYSTEM_DATABASE_URL`, or complete localhost `POSTGRES_*` configuration. No production or remote database was contacted.
+
+### Current changed paths
+
+- `prisma/schema.prisma`;
+- `prisma/migrations/20260719095000_add_merchant_knowledge/migration.sql`;
+- `tests/services/merchantKnowledgeSchema.test.ts`;
+- `tests/services/model002DomainSchema.test.ts`;
+- `docs/IMPLEMENTATION_PLAN.md`;
+- `docs/finance-rebuild-run.md`.
+
+### Commit state
+
+No commit was created because the explicitly required disposable PostgreSQL replay, status, drift, object, empty-table, and cleanup validation has not run. The schema packet must not be treated as migration-complete or as authorization to begin Phase 3.8A.
+
+### Exact next task
+
+Provide or start an approved disposable localhost PostgreSQL instance and expose a localhost administrator connection through `SYSTEM_DATABASE_URL`, `DATABASE_URL`, or the repository-supported `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DBNAME` variables. Then rerun the localhost database test and Prisma deploy/status/drift/object/empty-table/cleanup checks. If and only if all checks pass, review the final diff, run high-risk and secret scans, commit the six explicit schema/migration/test/documentation paths with `feat: add merchant knowledge schema`, verify a clean worktree, and do not push.
+
+Program Phase 3.8A may begin only after that commit exists and the handoff records successful disposable replay evidence.
