@@ -3824,3 +3824,99 @@ No commit was created because the explicitly required disposable PostgreSQL repl
 Provide or start an approved disposable localhost PostgreSQL instance and expose a localhost administrator connection through `SYSTEM_DATABASE_URL`, `DATABASE_URL`, or the repository-supported `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DBNAME` variables. Then rerun the localhost database test and Prisma deploy/status/drift/object/empty-table/cleanup checks. If and only if all checks pass, review the final diff, run high-risk and secret scans, commit the six explicit schema/migration/test/documentation paths with `feat: add merchant knowledge schema`, verify a clean worktree, and do not push.
 
 Program Phase 3.8A may begin only after that commit exists and the handoff records successful disposable replay evidence.
+
+
+
+## Program Phase 3.8A — read-only Merchant Knowledge contracts
+
+Starting commit: `e907b8864224c1aac002d6092dd48f05cdf12246` (`feat: add merchant knowledge schema`).
+
+### Scope and changed paths
+
+Phase 3.8A adds only disabled-by-default, authenticated, workspace-scoped read contracts:
+
+- `server/services/merchantKnowledgeCapability.ts`;
+- `server/services/merchantKnowledgeQueryService.ts`;
+- `server/routes/merchantKnowledge.ts`;
+- `server/index.ts`;
+- `src/app/api/merchant-knowledge/summary/route.ts`;
+- `src/app/api/merchant-knowledge/merchants/route.ts`;
+- `src/app/api/merchant-knowledge/merchants/[id]/route.ts`;
+- `src/libs/api.ts`;
+- `tests/services/merchantKnowledgeQueryService.test.ts`;
+- `docs/IMPLEMENTATION_PLAN.md`;
+- `docs/finance-rebuild-run.md`.
+
+No Prisma schema or migration changed. No page, component, navigation item, mutation endpoint, plan preview, backfill, AI call, booking, alias write, fingerprint write, resolution write, conflict write, decision write, or audit-event write was added.
+
+### Capability and authorization
+
+- Merchant Knowledge reads are disabled by default.
+- Server-side opt-in requires `MERCHANT_KNOWLEDGE_READS_ENABLED=true`.
+- The capability does not use a public client environment variable for authorization.
+- Workspace scope is derived from server-controlled `DEFAULT_WORKSPACE_ID`; request query parameters, route payloads, headers, and bodies cannot select an authoritative workspace.
+- The service verifies an active `WorkspaceMembership` for the authenticated local user and an active workspace before reading Merchant Knowledge data.
+- Both authenticated administrators and viewers may read; missing, inactive, or cross-workspace membership is rejected.
+- Disabled requests short-circuit before membership or Merchant Knowledge table queries.
+
+### Read contracts
+
+Three GET-only contracts exist:
+
+- `/api/merchant-knowledge/summary`;
+- `/api/merchant-knowledge/merchants`;
+- `/api/merchant-knowledge/merchants/:id`.
+
+The summary returns workspace-scoped merchant, alias, fingerprint, and open-conflict counts. The merchant list uses deterministic ordering by normalized canonical name and merchant ID, defaults to page 1, accepts only page sizes 25, 50, or 100, falls back to 25 for invalid page sizes, bounds and trims text queries to 100 characters, enum-validates merchant status filters, and returns stable zero-row or out-of-range pages. Merchant detail is workspace-scoped and returns a stable not-found result for missing or cross-workspace entities.
+
+Read responses explicitly declare:
+
+- `readOnly: true`;
+- `createsTransactionBooking: false`;
+- `mutatesBankFacts: false`.
+
+### Privacy controls
+
+- unrestricted alias and fingerprint normalized source values are not returned;
+- IBAN evidence is masked to a limited prefix/suffix display;
+- non-IBAN source values remain hidden;
+- safe hashes, versions, statuses, timestamps, strengths, confidence values, and counts are retained;
+- raw JSON evidence is not returned.
+
+### Validation evidence
+
+Completed successfully:
+
+- focused Phase 3.8A service/contract tests — 9 passed, 0 failed;
+- combined affected authentication and route regression set — 20 passed, 0 failed across four files;
+- `npm run build:server` — passed;
+- full `npm run build` — passed after one bounded TypeScript repair;
+- Prisma Client generation inside the full build — passed;
+- Next.js compilation, type validation, route generation, and trace collection — passed;
+- all three Merchant Knowledge GET routes appeared in the build manifest;
+- only the repository's existing Next.js SWC lockfile warnings remained.
+
+The first full build found one new TypeScript defect in `src/libs/api.ts`: the JSON-error `catch` callback had an implicit return type. The single bounded repair changed it to an explicitly typed `(): null => null` callback. The next full build passed.
+
+Focused tests prove disabled-by-default short-circuiting, administrator and viewer reads, active membership enforcement, workspace isolation, deterministic ordering, page sizes 25/50/100, invalid pagination fallback, bounded and enum-validated filters, zero-row and not-found behavior, alias/fingerprint redaction, IBAN masking, retained safe metadata, no raw JSON evidence, no create/update/delete/upsert/transaction operation, explicit no-booking/no-bank-fact declarations, exactly three GET endpoints, and no Merchant Knowledge mutation route or bridge.
+
+### Limitations and rollback
+
+- Phase 3.8B is unstarted; there is no administrator page or other UI.
+- The feature remains disabled until the server-side capability flag is explicitly enabled.
+- No production or remote database validation was performed for Phase 3.8A.
+- No Merchant Knowledge backfill or data mutation occurred; existing Merchant Knowledge tables remain unchanged by this slice.
+- Rollback is limited to reverting the Phase 3.8A application/test/documentation commit or leaving `MERCHANT_KNOWLEDGE_READS_ENABLED` unset/false. No database rollback is required.
+- No push is authorized or performed.
+
+
+
+### Final Phase 3.8A review and scans
+
+- formal `git diff --check` passed after removing one documentation-only extra blank line at EOF;
+- the final changed-path review matched the intended Phase 3.8A application, test, and documentation packet;
+- an exact route/bridge search found no Merchant Knowledge `POST`, `PATCH`, `PUT`, or `DELETE` handler;
+- the focused secret-material scan reported zero findings;
+- the focused executable runtime-risk scan reported zero findings across the application paths;
+- the focused server/bridge upload-network scan reported zero findings;
+- the broader all-risk lexical scan reported only expected read-only browser `fetch` calls in `src/libs/api.ts`, historical scan wording in this handoff, and the test assertion that forbids mutation exports; review confirmed these are not destructive runtime, upload, deployment, secret, or remote-service additions.

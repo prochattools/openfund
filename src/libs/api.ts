@@ -632,3 +632,108 @@ export const fetchImportBatches = async (limit = 25): Promise<ImportBatchSummary
 
 export const getImportBatchDownloadUrl = (id: string): string =>
   getApiUrl(`/api/import-batches/${encodeApiPathSegment(id)}/download`);
+
+
+
+
+export type MerchantKnowledgeSideEffects = {
+  readOnly: true;
+  createsTransactionBooking: false;
+  mutatesBankFacts: false;
+};
+
+export type MerchantKnowledgeSummaryResponse = MerchantKnowledgeSideEffects & {
+  workspaceId: string;
+  counts: {
+    merchants: number;
+    aliases: number;
+    fingerprints: number;
+    openConflicts: number;
+  };
+};
+
+export type MerchantKnowledgeMerchantListItem = {
+  id: string;
+  canonicalName: string;
+  status: 'PROPOSED' | 'ACTIVE' | 'CONFLICTED' | 'MERGED' | 'DEPRECATED';
+  version: number;
+  mergedIntoMerchantId: string | null;
+  counts: { aliases: number; fingerprints: number; resolutions: number };
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type MerchantKnowledgeMerchantListResponse = MerchantKnowledgeSideEffects & {
+  merchants: MerchantKnowledgeMerchantListItem[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    totalItems: number;
+    totalPages: number;
+    hasPreviousPage: boolean;
+    hasNextPage: boolean;
+  };
+  filters: { status: string | null; query: string | null };
+};
+
+export type MerchantKnowledgeEvidenceItem = {
+  id: string;
+  signalType: string;
+  status: string;
+  valueHash: string;
+  evidenceHash: string;
+  displayValue: string | null;
+  createdAt: string;
+  normalizationVersion?: string;
+  extractionVersion?: string;
+  confidenceBasisPoints?: number | null;
+  strength?: string;
+};
+
+export type MerchantKnowledgeMerchantDetailResponse = MerchantKnowledgeSideEffects & {
+  merchant: null | {
+    id: string;
+    canonicalName: string;
+    status: string;
+    version: number;
+    mergedIntoMerchantId: string | null;
+    createdAt: string;
+    updatedAt: string;
+    aliases: MerchantKnowledgeEvidenceItem[];
+    fingerprints: MerchantKnowledgeEvidenceItem[];
+  };
+};
+
+const readJson = async <T>(response: Response): Promise<T> => {
+  if (!response.ok) {
+    const payload = await response.json().catch((): null => null) as { error?: string } | null;
+    throw new Error(payload?.error ?? 'API request failed.');
+  }
+  return response.json() as Promise<T>;
+};
+
+export const fetchMerchantKnowledgeSummary = async (): Promise<MerchantKnowledgeSummaryResponse> =>
+  readJson(await fetch(getApiUrl('/api/merchant-knowledge/summary'), withUserHeader({ cache: 'no-store' })));
+
+export const fetchMerchantKnowledgeMerchants = async (input: {
+  page?: number;
+  pageSize?: 25 | 50 | 100;
+  status?: MerchantKnowledgeMerchantListItem['status'] | null;
+  query?: string | null;
+} = {}): Promise<MerchantKnowledgeMerchantListResponse> => {
+  const params = new URLSearchParams();
+  if (input.page !== undefined) params.set('page', String(input.page));
+  if (input.pageSize !== undefined) params.set('pageSize', String(input.pageSize));
+  if (input.status) params.set('status', input.status);
+  if (input.query) params.set('query', input.query);
+  const suffix = params.size ? `?${params.toString()}` : '';
+  return readJson(await fetch(getApiUrl(`/api/merchant-knowledge/merchants${suffix}`), withUserHeader({ cache: 'no-store' })));
+};
+
+export const fetchMerchantKnowledgeMerchantDetail = async (
+  merchantId: string,
+): Promise<MerchantKnowledgeMerchantDetailResponse> =>
+  readJson(await fetch(
+    getApiUrl(`/api/merchant-knowledge/merchants/${encodeApiPathSegment(merchantId)}`),
+    withUserHeader({ cache: 'no-store' }),
+  ));

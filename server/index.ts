@@ -22,6 +22,11 @@ import { getSuggestionEvaluation } from './routes/suggestionEvaluation';
 import { listAuditLogs } from './routes/audit';
 import { downloadImportBatchFile, listImportBatches } from './routes/importBatches';
 import { deactivateEmailRecipient, listEmailRecipients, upsertEmailRecipient } from './routes/emailRecipients';
+import {
+  getMerchantKnowledgeMerchantDetailRoute,
+  getMerchantKnowledgeSummaryRoute,
+  listMerchantKnowledgeMerchantsRoute,
+} from './routes/merchantKnowledge';
 import { getRules, postRule, patchRule, removeRule, previewRule, applyRule } from './routes/rules';
 import { getStatementReconciliationPreview } from './routes/statementReconciliationPreview';
 import { postStrictPeriodClose } from './routes/strictPeriodClose';
@@ -70,6 +75,9 @@ app.get('/api/audit-log', listAuditLogs);
 app.get('/api/import-batches', listImportBatches);
 app.get('/api/import-batches/:id/download', downloadImportBatchFile);
 app.get('/api/email-recipients', listEmailRecipients);
+app.get('/api/merchant-knowledge/summary', getMerchantKnowledgeSummaryRoute);
+app.get('/api/merchant-knowledge/merchants', listMerchantKnowledgeMerchantsRoute);
+app.get('/api/merchant-knowledge/merchants/:id', getMerchantKnowledgeMerchantDetailRoute);
 app.post('/api/email-recipients', upsertEmailRecipient);
 app.delete('/api/email-recipients/:id', deactivateEmailRecipient);
 app.post('/api/ledger/:ledgerId/lock', lockLedger);
