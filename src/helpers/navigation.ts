@@ -45,6 +45,11 @@ export const FINANCE_NAV_ITEMS: FinanceNavItem[] = [
     workflowHint: 'Maand- en jaarrapporten op basis van gesloten perioden.',
   },
   {
+    label: 'Merchant Knowledge',
+    href: '/merchant-knowledge',
+    workflowHint: 'Bekijk read-only handelaarsidentiteiten en privacyveilige bewijsmetadata.',
+  },
+  {
     label: 'Instellingen',
     href: '/settings',
     workflowHint: 'Categorisatieregels, e-mailontvangers en rekening-instellingen.',

@@ -3920,3 +3920,66 @@ Focused tests prove disabled-by-default short-circuiting, administrator and view
 - the focused executable runtime-risk scan reported zero findings across the application paths;
 - the focused server/bridge upload-network scan reported zero findings;
 - the broader all-risk lexical scan reported only expected read-only browser `fetch` calls in `src/libs/api.ts`, historical scan wording in this handoff, and the test assertion that forbids mutation exports; review confirmed these are not destructive runtime, upload, deployment, secret, or remote-service additions.
+
+
+
+## Program Phase 3.8B — read-only Merchant Knowledge administrator page
+
+Starting commit: `2cfbac2` (`feat: add merchant knowledge read contracts`).
+
+### Scope and changed paths
+
+Phase 3.8B adds only the authenticated read-only page consuming the committed Phase 3.8A contracts:
+
+- `src/helpers/merchantKnowledgeAdmin.ts`;
+- `src/ui/MerchantKnowledgeAdminPage.tsx`;
+- `src/app/merchant-knowledge/page.tsx`;
+- `src/helpers/navigation.ts`;
+- `tests/ui/merchantKnowledgeAdminPage.test.ts`;
+- `docs/IMPLEMENTATION_PLAN.md`;
+- `docs/finance-rebuild-run.md`.
+
+The route is `/merchant-knowledge` inside the existing `FinanceAppFrame` authenticated shell and canonical finance navigation. Both administrator and viewer reads remain possible because the page adds no client-side role gate and delegates authorization to the Phase 3.8A server contract.
+
+### Page behavior
+
+- stable loading, feature-disabled, unavailable, empty, out-of-range, list, detail, and detail-not-found states;
+- summary cards for merchants, aliases, fingerprints, and open conflicts;
+- deterministic pagination over the Phase 3.8A list contract;
+- page sizes limited to 25, 50, or 100, with invalid values normalized to 25;
+- status filters limited to the approved merchant status union plus the empty all-status option;
+- text queries trimmed and limited to 100 characters;
+- privacy-safe evidence display using only the Phase 3.8A `displayValue`, hashes, versions, statuses, timestamps, confidence/strength metadata, and counts;
+- masked IBAN evidence remains preserved; unrestricted alias/fingerprint normalized values and raw evidence JSON are never rendered;
+- explicit read-only, no-transaction-booking, and no-bank-fact-mutation messaging;
+- native keyboard-operable controls, accessible labels for filters, pagination, list, and detail actions, plus polite loading announcements;
+- no create, edit, merge, split, approve, reject, retry, resolve, or delete control;
+- no mutation request, mutation route, mutation bridge, direct Prisma access, API change, server-service change, schema change, backfill, AI call, or booking.
+
+### Validation evidence
+
+Completed successfully:
+
+- focused Phase 3.8B page/helper tests — 8 passed, 0 failed;
+- affected navigation, Dutch-text, authentication, and API-client regression tests — 42 passed, 0 failed across four files;
+- `npm run build:server` — passed;
+- full `npm run build` — passed;
+- Prisma Client generation inside the full build — passed;
+- Next.js compilation, type validation, static generation, route manifest, and trace collection — passed;
+- `/merchant-knowledge` appeared in the build manifest;
+- `git diff --check` — passed;
+- focused high-risk scan — zero findings;
+- focused secret-material scan — zero findings;
+- only the repository's existing Next.js SWC lockfile warnings remained.
+
+The first full build found that the page status state was inferred as plain `string`. A bounded repair constrained it to the Phase 3.8A merchant-status union plus the empty filter value. The next build identified the native `<select>` value as plain `string`; the proven defect was resolved with a runtime-safe `normalizeMerchantKnowledgeStatus` helper derived from `MERCHANT_KNOWLEDGE_STATUS_OPTIONS`. Focused tests and the full build then passed.
+
+Two untracked alternate Phase 3.8B files were investigated before deletion: `src/helpers/merchant-knowledge-page.ts` and `src/ui/FinanceMerchantKnowledgePage.tsx`. Exact reference search proved they formed an unreferenced duplicate implementation and were not imported by the routed page or tests. They were deleted only after explicit user approval, and a follow-up search confirmed no references remained.
+
+### Limitations and rollback
+
+- Phase 3.8C and later Merchant Knowledge administrator actions remain unstarted.
+- The page remains dependent on the disabled-by-default Phase 3.8A server capability and shows a stable disabled state until server opt-in.
+- No production or remote-database validation was performed for this UI slice.
+- Rollback is limited to reverting the Phase 3.8B page/navigation/test/documentation commit; no database rollback is required.
+- No push is authorized or performed.
