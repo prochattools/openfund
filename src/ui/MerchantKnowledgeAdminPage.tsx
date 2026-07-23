@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { FinanceAppFrame } from '@/ui/FinanceAppFrame';
+import { MerchantKnowledgePreviewPanel } from '@/ui/MerchantKnowledgePreviewPanel';
 import {
   fetchMerchantKnowledgeMerchantDetail,
   fetchMerchantKnowledgeMerchants,
@@ -222,6 +223,7 @@ export default function MerchantKnowledgeAdminPage() {
               </section>
               <DetailPanel detail={detail} loading={detailLoading} />
             </div>
+            <MerchantKnowledgePreviewPanel />
           </>
         ) : null}
       </div>

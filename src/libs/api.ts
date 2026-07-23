@@ -737,3 +737,59 @@ export const fetchMerchantKnowledgeMerchantDetail = async (
     getApiUrl(`/api/merchant-knowledge/merchants/${encodeApiPathSegment(merchantId)}`),
     withUserHeader({ cache: 'no-store' }),
   ));
+
+export type MerchantKnowledgePreviewAction =
+  | 'MERGE_MERCHANTS'
+  | 'SPLIT_MERCHANT'
+  | 'RESOLVE_CONFLICT'
+  | 'REASSIGN_KNOWLEDGE'
+  | 'DEPRECATE_ALIAS'
+  | 'DEPRECATE_MERCHANT';
+
+export type MerchantKnowledgePreviewRequest = {
+  action: MerchantKnowledgePreviewAction;
+  reason: string;
+  requestKey: string;
+  targetMerchantId?: string;
+  sourceMerchantIds?: string[];
+  sourceMerchantId?: string;
+  plannedMerchantIds?: string[];
+  affectedAliasIds?: string[];
+  affectedFingerprintIds?: string[];
+  assignments?: Array<{ merchantId: string; aliasIds: string[]; fingerprintIds: string[] }>;
+  conflictId?: string;
+  intent?: 'SELECT_MERCHANT' | 'ABSTAIN' | 'DISMISS';
+  selectedMerchantId?: string;
+  aliasId?: string;
+  merchantId?: string;
+};
+
+export type MerchantKnowledgePreviewResponse = {
+  action: MerchantKnowledgePreviewAction;
+  planVersion: string;
+  planHash: string;
+  beforeState: unknown;
+  afterState: unknown;
+  affectedEntityIds: string[];
+  warnings: string[];
+  blockingErrors: Array<{ code: string; message: string }>;
+  rollbackSteps: Array<{
+    recordType: 'MERCHANT' | 'ALIAS' | 'FINGERPRINT' | 'CONFLICT';
+    recordId: string;
+    restore: Record<string, string | null>;
+  }>;
+  previewOnly: true;
+  readOnly: true;
+  createsTransactionBooking: false;
+  mutatesBankFacts: false;
+  persistsMerchantKnowledge: false;
+};
+
+export const previewMerchantKnowledgePlan = async (
+  request: MerchantKnowledgePreviewRequest,
+): Promise<MerchantKnowledgePreviewResponse> =>
+  readJson(await fetch(getApiUrl('/api/merchant-knowledge/plans/preview'), withUserHeader({
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  })));

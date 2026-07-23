@@ -26,6 +26,7 @@ import {
   getMerchantKnowledgeMerchantDetailRoute,
   getMerchantKnowledgeSummaryRoute,
   listMerchantKnowledgeMerchantsRoute,
+  previewMerchantKnowledgePlanRoute,
 } from './routes/merchantKnowledge';
 import { getRules, postRule, patchRule, removeRule, previewRule, applyRule } from './routes/rules';
 import { getStatementReconciliationPreview } from './routes/statementReconciliationPreview';
@@ -78,6 +79,7 @@ app.get('/api/email-recipients', listEmailRecipients);
 app.get('/api/merchant-knowledge/summary', getMerchantKnowledgeSummaryRoute);
 app.get('/api/merchant-knowledge/merchants', listMerchantKnowledgeMerchantsRoute);
 app.get('/api/merchant-knowledge/merchants/:id', getMerchantKnowledgeMerchantDetailRoute);
+app.post('/api/merchant-knowledge/plans/preview', previewMerchantKnowledgePlanRoute);
 app.post('/api/email-recipients', upsertEmailRecipient);
 app.delete('/api/email-recipients/:id', deactivateEmailRecipient);
 app.post('/api/ledger/:ledgerId/lock', lockLedger);

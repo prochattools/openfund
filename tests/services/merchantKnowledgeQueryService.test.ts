@@ -127,7 +127,9 @@ describe('Merchant Knowledge Phase 3.8A read contracts', () => {
       'src/app/api/merchant-knowledge/merchants/[id]/route.ts',
     ].map((file) => fs.readFileSync(path.join(process.cwd(), file), 'utf8')).join('\n');
     expect(server.match(/app\.get\('\/api\/merchant-knowledge/g)).toHaveLength(3);
-    expect(server).not.toMatch(/app\.(post|patch|put|delete)\('\/api\/merchant-knowledge/);
+    expect(server.match(/app\.post\('\/api\/merchant-knowledge\/plans\/preview/g)).toHaveLength(1);
+    expect(server).not.toMatch(/app\.(patch|put|delete)\('\/api\/merchant-knowledge/);
+    expect(server).not.toMatch(/app\.post\('\/api\/merchant-knowledge\/(?!plans\/preview)/);
     expect(routeFiles).not.toMatch(/export async function (POST|PATCH|PUT|DELETE)/);
   });
 });

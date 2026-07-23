@@ -1,11 +1,16 @@
 import type { Request, Response } from 'express';
-import { requireAuthenticatedRequest } from '../auth/requestContext';
+import { requireAdmin, requireAuthenticatedRequest } from '../auth/requestContext';
 import {
   MerchantKnowledgeAccessError,
   getMerchantKnowledgeMerchantDetail,
   getMerchantKnowledgeSummary,
   listMerchantKnowledgeMerchants,
 } from '../services/merchantKnowledgeQueryService';
+import {
+  MerchantKnowledgePreviewError,
+  previewMerchantKnowledgePlan,
+  type MerchantKnowledgePreviewRequest,
+} from '../services/merchantKnowledgePreviewService';
 import { readRouteParam } from './routeParams';
 
 const sendMerchantKnowledgeError = (res: Response, error: unknown) => {
@@ -59,5 +64,31 @@ export const getMerchantKnowledgeMerchantDetailRoute = async (req: Request, res:
     return res.json(result);
   } catch (error) {
     return sendMerchantKnowledgeError(res, error);
+  }
+};
+
+export const previewMerchantKnowledgePlanRoute = async (req: Request, res: Response) => {
+  const actor = await requireAdmin(req, res);
+  if (!actor) return;
+  try {
+    return res.json(await previewMerchantKnowledgePlan(actor, req.body as MerchantKnowledgePreviewRequest));
+  } catch (error) {
+    if (error instanceof MerchantKnowledgePreviewError) {
+      const status = error.code === 'invalid_input' ? 400
+        : error.code === 'not_found' ? 404
+          : error.code === 'forbidden' ? 403
+            : 503;
+      return res.status(status).json({
+        error: error.message,
+        code: error.code,
+        previewOnly: true,
+        readOnly: true,
+        createsTransactionBooking: false,
+        mutatesBankFacts: false,
+        persistsMerchantKnowledge: false,
+      });
+    }
+    console.error('Merchant Knowledge-planpreview kon niet worden opgebouwd', error);
+    return res.status(500).json({ error: 'Merchant Knowledge-planpreview kon niet worden opgebouwd.' });
   }
 };

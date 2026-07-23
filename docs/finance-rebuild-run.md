@@ -3983,3 +3983,100 @@ Two untracked alternate Phase 3.8B files were investigated before deletion: `src
 - No production or remote-database validation was performed for this UI slice.
 - Rollback is limited to reverting the Phase 3.8B page/navigation/test/documentation commit; no database rollback is required.
 - No push is authorized or performed.
+
+## Program Phase 3.8C — administrator-only Merchant Knowledge plan previews
+
+Starting commit: `907d045` (`feat: add merchant knowledge admin page`).
+
+### Scope and changed paths
+
+Phase 3.8C adds one disabled-by-default, administrator-only, side-effect-free preview boundary over the existing pure `merchantIdentityPlanService`:
+
+- `server/services/merchantKnowledgeCapability.ts`;
+- `server/services/merchantKnowledgePreviewService.ts`;
+- `server/routes/merchantKnowledge.ts`;
+- `server/index.ts`;
+- `src/app/api/merchant-knowledge/plans/preview/route.ts`;
+- `src/libs/api.ts`;
+- `src/ui/MerchantKnowledgePreviewPanel.tsx`;
+- `src/ui/MerchantKnowledgeAdminPage.tsx`;
+- `tests/services/merchantKnowledgePreviewService.test.ts`;
+- `tests/services/merchantKnowledgeQueryService.test.ts`;
+- `docs/IMPLEMENTATION_PLAN.md`;
+- `docs/finance-rebuild-run.md`.
+
+Exactly one preview endpoint exists: `POST /api/merchant-knowledge/plans/preview`. No bulk, confirmation, execution, apply, save, transactional mutation, or audit-write endpoint was added.
+
+### Approved preview operations
+
+The preview boundary supports only the six existing pure-planner actions:
+
+- `MERGE_MERCHANTS`;
+- `SPLIT_MERCHANT`;
+- `RESOLVE_CONFLICT`;
+- `REASSIGN_KNOWLEDGE`;
+- `DEPRECATE_ALIAS`;
+- `DEPRECATE_MERCHANT`.
+
+The service accepts ID-only requests, requires an explicit reason and an 8–80-character bounded request key, derives workspace authority from server-controlled `DEFAULT_WORKSPACE_ID`, verifies active workspace membership, hydrates authoritative workspace-owned merchants, aliases, fingerprints, and conflicts, rejects unsupported persisted signal types rather than coercing them, and delegates all planning to `planMerchantIdentityChange`.
+
+### Capability, authorization, and side effects
+
+- previews are disabled by default;
+- server-side opt-in requires `MERCHANT_KNOWLEDGE_PREVIEWS_ENABLED=true`;
+- disabled previews short-circuit before membership, hydration, or planning;
+- `requireAdmin` is the server-authoritative authorization boundary;
+- viewers retain the unchanged Phase 3.8A/3.8B read-only page and cannot invoke preview routes successfully;
+- the UI-only administrator indicator controls presentation but is not an authorization boundary;
+- every response declares `previewOnly: true`, `readOnly: true`, `createsTransactionBooking: false`, `mutatesBankFacts: false`, and `persistsMerchantKnowledge: false`;
+- no create, update, delete, upsert, transaction, audit write, booking, bank-fact mutation, backfill, AI call, schema change, or migration change exists.
+
+### Preview response and privacy contract
+
+A narrow privacy-safe adapter preserves the pure planner as the sole planning implementation:
+
+- `planVersion` and `planHash` are preserved;
+- `beforeState` maps directly from `beforeState`;
+- `afterState` maps directly from `proposedAfterState`;
+- `warnings` maps directly from `validationWarnings`;
+- `blockingErrors` preserves structured planner issue codes and messages;
+- `rollbackSteps` preserves structured `rollbackPlan` metadata;
+- `affectedEntityIds` is the sorted union of source merchant, target merchant, alias, and fingerprint IDs;
+- no separate input hash is exposed because the pure planner does not define one;
+- no rollback instruction, evidence, or hash is invented;
+- unrestricted normalized values and raw evidence JSON are not returned or rendered.
+
+The `/merchant-knowledge` page adds an administrator-visible preview-only panel with six approved actions, ID-only inputs, explicit reason/request-key fields, stable loading and error states, hashes, affected IDs, blockers, warnings, and rollback metadata. It contains no confirm, apply, execute, save, retry-write, or mutation control and preserves existing viewer read behavior, privacy controls, pagination, and accessibility.
+
+### Validation evidence
+
+Completed successfully:
+
+- focused Phase 3.8C preview tests — 8 passed, 0 failed;
+- pure planner, Phase 3.8A read-contract, Phase 3.8B page/navigation, and authentication regressions — 49 passed, 0 failed across five files;
+- focused preview plus API-client tests — 12 passed, 0 failed across two files;
+- `npm run build:server` — passed;
+- full `npm run build` — passed;
+- Prisma Client generation inside the full build — passed;
+- Next.js compilation, type validation, static generation, route manifest, and trace collection — passed;
+- `/api/merchant-knowledge/plans/preview` and `/merchant-knowledge` appeared in the build manifest;
+- final `git diff --check` after documentation update — passed;
+- focused executable runtime-risk scan over application paths — zero findings;
+- comprehensive high-risk scan over the new executable preview files — zero findings;
+- final focused secret-material scan over all twelve Phase 3.8C paths — zero findings;
+- broader lexical scans flagged only same-origin API `fetch` calls in the existing client module and test regexes that explicitly forbid mutation methods; review confirmed no upload, external-network, destructive-runtime, or deployment behavior was introduced.
+
+Bounded repairs completed during validation:
+
+- persisted Prisma signal enums were narrowed at runtime to the pure planner's supported signal union;
+- the preview response was adapted to the exact existing planner contract instead of inventing top-level fields;
+- the Phase 3.8A regression guard was narrowed to permit only the approved preview POST while continuing to forbid Merchant Knowledge mutation, confirmation, and execution routes;
+- the thin Next preview bridge's relative import depth was corrected after the first full build exposed the module-resolution defect.
+
+### Limitations and rollback
+
+- Phase 3.8D individual transactional confirmation remains unstarted and separately blocked.
+- Preview inputs are intentionally ID-only and do not yet provide richer entity pickers or persisted draft state.
+- No production, remote-database, or mutation validation was performed because this slice is preview-only.
+- Rollback is limited to reverting the Phase 3.8C preview/application/test/documentation commit or leaving `MERCHANT_KNOWLEDGE_PREVIEWS_ENABLED` unset/false; no database rollback is required.
+- No push is authorized or performed.

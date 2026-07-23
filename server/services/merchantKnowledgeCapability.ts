@@ -12,3 +12,15 @@ export const merchantKnowledgeCapability = (env: NodeJS.ProcessEnv = process.env
   enabled: isMerchantKnowledgeReadEnabled(env),
   ...MERCHANT_KNOWLEDGE_READ_ONLY_EFFECTS,
 });
+
+export const MERCHANT_KNOWLEDGE_PREVIEW_EFFECTS = Object.freeze({
+  previewOnly: true as const,
+  readOnly: true as const,
+  createsTransactionBooking: false as const,
+  mutatesBankFacts: false as const,
+  persistsMerchantKnowledge: false as const,
+});
+
+export const isMerchantKnowledgePreviewEnabled = (
+  env: NodeJS.ProcessEnv = process.env,
+): boolean => env.MERCHANT_KNOWLEDGE_PREVIEWS_ENABLED?.trim().toLowerCase() === 'true';
