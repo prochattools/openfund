@@ -119,7 +119,7 @@ describe('Merchant Knowledge Phase 3.8A read contracts', () => {
     }
   });
 
-  it('exposes only GET routes and no mutation bridge', () => {
+  it('preserves the three read bridges and allows only the approved preview and alias-confirmation POST routes', () => {
     const server = fs.readFileSync(path.join(process.cwd(), 'server/index.ts'), 'utf8');
     const routeFiles = [
       'src/app/api/merchant-knowledge/summary/route.ts',
@@ -127,9 +127,11 @@ describe('Merchant Knowledge Phase 3.8A read contracts', () => {
       'src/app/api/merchant-knowledge/merchants/[id]/route.ts',
     ].map((file) => fs.readFileSync(path.join(process.cwd(), file), 'utf8')).join('\n');
     expect(server.match(/app\.get\('\/api\/merchant-knowledge/g)).toHaveLength(3);
-    expect(server.match(/app\.post\('\/api\/merchant-knowledge\/plans\/preview/g)).toHaveLength(1);
+    expect(server.match(/app\.post\('\/api\/merchant-knowledge\/[^']+'/g)).toEqual([
+      "app.post('/api/merchant-knowledge/plans/preview'",
+      "app.post('/api/merchant-knowledge/aliases/:aliasId/deprecate/confirm'",
+    ]);
     expect(server).not.toMatch(/app\.(patch|put|delete)\('\/api\/merchant-knowledge/);
-    expect(server).not.toMatch(/app\.post\('\/api\/merchant-knowledge\/(?!plans\/preview)/);
     expect(routeFiles).not.toMatch(/export async function (POST|PATCH|PUT|DELETE)/);
   });
 });

@@ -42,6 +42,11 @@ export type MerchantKnowledgePreviewResponse = {
   beforeState: MerchantOwnershipSnapshot;
   afterState: MerchantOwnershipSnapshot;
   affectedEntityIds: string[];
+  evidenceRefs: Array<{
+    recordType: 'ALIAS' | 'FINGERPRINT';
+    recordId: string;
+    evidenceHash: string;
+  }>;
   warnings: string[];
   blockingErrors: MerchantIdentityPlanIssue[];
   rollbackSteps: MerchantRollbackStep[];
@@ -154,6 +159,14 @@ export const previewMerchantKnowledgePlan = async (
       ...plan.affectedAliasIds,
       ...plan.affectedFingerprintIds,
     ])].sort(),
+    evidenceRefs: [
+      ...aliasRows
+        .filter((row) => plan.affectedAliasIds.includes(row.id))
+        .map((row) => ({ recordType: 'ALIAS' as const, recordId: row.id, evidenceHash: row.evidenceHash })),
+      ...fingerprintRows
+        .filter((row) => plan.affectedFingerprintIds.includes(row.id))
+        .map((row) => ({ recordType: 'FINGERPRINT' as const, recordId: row.id, evidenceHash: row.evidenceHash })),
+    ].sort((left, right) => `${left.recordType}:${left.recordId}`.localeCompare(`${right.recordType}:${right.recordId}`)),
     warnings: plan.validationWarnings,
     blockingErrors: plan.blockingErrors,
     rollbackSteps: plan.rollbackPlan,

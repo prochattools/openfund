@@ -109,13 +109,16 @@ describe('Merchant Knowledge Phase 3.8C plan previews', () => {
     expect(bridge).not.toMatch(/export async function (PUT|PATCH|DELETE)/);
   });
 
-  it('keeps preview UI administrator-only and contains no execution control or raw evidence rendering', () => {
+  it('keeps preview UI administrator-only and exposes only the bounded alias-deprecation confirmation', () => {
     const panel = fs.readFileSync(path.join(process.cwd(), 'src/ui/MerchantKnowledgePreviewPanel.tsx'), 'utf8');
     const page = fs.readFileSync(path.join(process.cwd(), 'src/ui/MerchantKnowledgeAdminPage.tsx'), 'utf8');
     expect(panel).toContain('if (!isClientAdmin()) return null');
-    expect(page).toContain('<MerchantKnowledgePreviewPanel />');
+    expect(page).toContain('<MerchantKnowledgePreviewPanel onConfirmed={refreshAfterAliasDeprecation} />');
     expect(panel).toContain('Preview-only · niet opgeslagen · geen uitvoering');
-    expect(panel).not.toMatch(/>\s*(Bevestig|Uitvoeren|Opslaan|Toepassen)\s*</i);
+    expect(panel).toContain("preview.action === 'DEPRECATE_ALIAS'");
+    expect(panel).toContain('Open bevestiging voor aliasdeprecatie');
+    expect(panel).not.toMatch(/>\s*(Uitvoeren|Opslaan|Toepassen)\s*</i);
+    expect(panel).not.toMatch(/Bevestig (merge|split|conflict|reassign|merchant)/i);
     expect(panel).not.toContain('normalizedValue');
     expect(panel).not.toContain('rawEvidence');
     expect(panel).not.toContain('prisma');

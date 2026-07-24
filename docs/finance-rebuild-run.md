@@ -4080,3 +4080,141 @@ Bounded repairs completed during validation:
 - No production, remote-database, or mutation validation was performed because this slice is preview-only.
 - Rollback is limited to reverting the Phase 3.8C preview/application/test/documentation commit or leaving `MERCHANT_KNOWLEDGE_PREVIEWS_ENABLED` unset/false; no database rollback is required.
 - No push is authorized or performed.
+
+
+## Program Phase 3.8D — individual `DEPRECATE_ALIAS` confirmation
+
+Starting commit: `b47f72f` (`feat: add merchant knowledge plan previews`).
+
+### Verified source and bounded scope
+
+The slice was implemented only after verifying the governing roadmap/design, Merchant Knowledge architecture and invariants, the existing pure `merchantIdentityPlanService`, Phase 3.8C preview boundary, `requireAdmin`, transaction conventions, canonical evidence hashing, and the existing Prisma fields for `MerchantAlias`, `MerchantIdentityDecision`, `MerchantAuditEvent`, workspace membership, and actors.
+
+Changed implementation and test paths:
+
+- `server/services/merchantKnowledgeCapability.ts`;
+- `server/services/merchantKnowledgePreviewService.ts`;
+- `server/services/merchantKnowledgeAuditService.ts`;
+- `server/services/merchantAliasDeprecationDecisionService.ts`;
+- `server/routes/merchantKnowledge.ts`;
+- `server/index.ts`;
+- `src/app/api/merchant-knowledge/aliases/[aliasId]/deprecate/confirm/route.ts`;
+- `src/libs/api.ts`;
+- `src/ui/MerchantKnowledgePreviewPanel.tsx`;
+- `src/ui/MerchantKnowledgeAdminPage.tsx`;
+- `tests/services/merchantAliasDeprecationDecisionService.test.ts`;
+- `tests/routes/merchantAliasDeprecationRoute.test.ts`;
+- `tests/services/merchantKnowledgePreviewService.test.ts`;
+- `tests/services/merchantKnowledgeQueryService.test.ts`;
+- `docs/IMPLEMENTATION_PLAN.md`;
+- `docs/finance-rebuild-run.md`.
+
+No schema, migration, backfill, AI, deployment, booking, bank-fact, review, suggestion, ledger, period, report, or other Phase 3.8D action was added.
+
+### Confirmation contract
+
+Exactly one dedicated transactional route exists:
+
+`POST /api/merchant-knowledge/aliases/:aliasId/deprecate/confirm`
+
+The route:
+
+- requires server-authoritative `requireAdmin`;
+- uses the route parameter as authoritative alias identity and ignores a conflicting client body alias ID;
+- accepts only `DEPRECATE_ALIAS`, plan version, plan hash, expected alias evidence hash, explicit reason, and an 8–80-character request key;
+- derives workspace authority only from server-controlled `DEFAULT_WORKSPACE_ID`;
+- exposes no generic, bulk, merge, split, conflict, reassignment, or merchant-deprecation confirmation surface;
+- returns explicit zero-financial-side-effect fields.
+
+A separate server-only capability, `MERCHANT_ALIAS_DEPRECATION_CONFIRMATION_ENABLED`, defaults to disabled. Disabled requests stop before transaction, membership lookup, hydration, planning, or write. Phase 3.8A reads, Phase 3.8B UI, and Phase 3.8C previews remain independently controlled.
+
+### Atomic revalidation and persistence
+
+Inside one Prisma transaction, the decision service:
+
+1. verifies active user/workspace membership;
+2. checks deterministic request-key idempotency before new writes;
+3. reloads the alias and all planner-owned merchants, aliases, and fingerprints from the authorized workspace;
+4. rejects missing, cross-workspace, already-deprecated, unsupported-signal, or evidence-hash-changed aliases;
+5. regenerates the exact `DEPRECATE_ALIAS` plan through `planMerchantIdentityChange`;
+6. compares action, workspace, alias ID, plan version, plan hash, and the privacy-safe alias evidence hash;
+7. rejects blocking planner errors and stale identity with zero writes;
+8. soft-deprecates exactly one alias by setting `status = DEPRECATED` and `deprecatedAt` while preserving value hash, evidence hash, source transaction, normalization version, approvals, creation history, and all other immutable fields;
+9. creates one append-only `MerchantIdentityDecision` containing actor, reason, before/after snapshots, plan version, plan hash, request identity, evidence/provenance hashes, warnings, blockers, supporting/conflicting evidence, and rollback metadata;
+10. appends one workspace-scoped `MerchantAuditEvent` with matching evidence hash and before/after state.
+
+Alias update, decision creation, and audit creation are atomic. Decision or audit failure rolls the alias update back. No hard delete, `updateMany`, or `deleteMany` exists.
+
+### Idempotency and evidence identity
+
+Deterministic decision and audit IDs are derived from workspace plus request key. The persisted evidence contains a canonical request hash binding:
+
+- workspace;
+- action;
+- alias ID;
+- plan version;
+- plan hash;
+- expected alias evidence hash;
+- reason;
+- request key.
+
+The same request key and identical content returns idempotent success without duplicate update, decision, or audit writes. The same request key with different plan, evidence, alias, reason, or request content rejects. Partial prior persistence is treated as an integrity error rather than silently repaired.
+
+Phase 3.8C preview responses now expose only deterministic affected evidence references: record type, record ID, and existing evidence hash. No raw evidence JSON, unrestricted normalized value, or source evidence content is exposed.
+
+### Administrator UI and accessibility
+
+The existing `/merchant-knowledge` preview panel remains administrator-visible only. Confirmation appears only after a successful, blocker-free `DEPRECATE_ALIAS` preview with the exact affected alias evidence reference.
+
+The individual dialog shows:
+
+- alias ID;
+- before and proposed after state;
+- plan version and plan hash;
+- alias evidence hash;
+- explicit reason and request key;
+- blocker, warning, and rollback-record counts;
+- a statement that only Merchant Knowledge changes and no booking or bank fact changes.
+
+The dialog has labelled title/description relationships, explicit checkbox acknowledgement, safe cancel focus, disabled duplicate submission while loading, stable error, success, and idempotent-success states, and no automatic retry. After success, only the existing read-side summary, list, and selected merchant detail are refreshed. Viewers retain the unchanged read-only page.
+
+### Validation evidence
+
+Completed successfully:
+
+- focused alias decision-service tests — 11 passed, 0 failed;
+- focused route/UI administrator authorization tests — 4 passed, 0 failed;
+- combined decision, audit, rollback, authorization, and route tests — 15 passed, 0 failed;
+- pure planner, Phase 3.8A read contracts, Phase 3.8B page/navigation, Phase 3.8C previews, API client, authentication, and administrator-mutation policy regressions — 84 passed, 0 failed across eight files;
+- `npm run build:server` — passed;
+- full `npm run build` — passed;
+- Prisma Client generation inside the full build — passed;
+- Next.js compilation, type checking, static generation, route manifest, and trace collection — passed;
+- `/api/merchant-knowledge/aliases/[aliasId]/deprecate/confirm`, `/api/merchant-knowledge/plans/preview`, and `/merchant-knowledge` appeared in the build manifest;
+- final `git diff --check` after documentation update — passed;
+- executable runtime-risk scan over implementation paths — zero findings;
+- focused comprehensive high-risk scan over the executable alias-confirmation boundary — zero findings;
+- final secret-material scan over all sixteen bounded implementation, test, and documentation paths — zero findings;
+- a broader lexical scan flagged existing same-origin `fetch` calls in `src/libs/api.ts`, including the new internal confirmation request; review confirmed no upload, external-network, arbitrary-execution, deployment, or secret-handling behavior was introduced.
+
+Standalone `pnpm exec prisma validate` reached the unchanged schema but could not complete because the bounded command session did not expose `DATABASE_URL`. No environment file was changed or synthesized. The repository's normal full build loaded its configured build environment, generated Prisma Client successfully, compiled all server Prisma usage, and completed the production Next.js build.
+
+Bounded validation repairs:
+
+- invalid test evidence-hash placeholders were replaced with stable, distinct SHA-256-shaped hexadecimal fixtures without weakening production validation;
+- the service now captures the true pre-mutation alias status;
+- confirmation is bound to the exact privacy-safe evidence hash returned by preview, so evidence-only changes reject as stale;
+- Phase 3.8A/3.8C regression guards were narrowed to allow exactly the existing preview endpoint and dedicated alias-deprecation confirmation while still forbidding all other Merchant Knowledge mutation surfaces.
+
+### Explicit non-effects, limitations, and rollback
+
+The service references no `Transaction`, `TransactionBooking`, `ReviewDecision`, `CategorizationSuggestion`, ledger, period-close, report-snapshot, backfill, or AI mutation. It creates no booking, mutates no bank fact, changes no financial record, bypasses no locked-period protection, and derives no trusted knowledge from unconfirmed suggestions.
+
+Remaining limitations:
+
+- confirmation for merchant merge, merchant split, conflict resolution, knowledge reassignment, and merchant deprecation remains unstarted;
+- Phase 3.8E remains unstarted;
+- production/remote-database execution was not performed;
+- richer entity pickers and persisted confirmation drafts remain out of scope.
+
+Rollback is limited to reverting the bounded alias-confirmation commit or leaving `MERCHANT_ALIAS_DEPRECATION_CONFIRMATION_ENABLED` unset/false. The schema and migration remain unchanged. No push is authorized or performed.

@@ -158,6 +158,20 @@ export default function MerchantKnowledgeAdminPage() {
     }
   };
 
+  const refreshAfterAliasDeprecation = async () => {
+    await loadPage();
+    const selectedMerchantId = detail?.merchant?.id;
+    if (!selectedMerchantId) return;
+    setDetailLoading(true);
+    try {
+      setDetail(await fetchMerchantKnowledgeMerchantDetail(selectedMerchantId));
+    } catch {
+      setDetail({ readOnly: true, createsTransactionBooking: false, mutatesBankFacts: false, merchant: null });
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
   const applyQuery = () => {
     setPage(1);
     setQuery(normalizeMerchantKnowledgeQuery(queryInput));
@@ -223,7 +237,7 @@ export default function MerchantKnowledgeAdminPage() {
               </section>
               <DetailPanel detail={detail} loading={detailLoading} />
             </div>
-            <MerchantKnowledgePreviewPanel />
+            <MerchantKnowledgePreviewPanel onConfirmed={refreshAfterAliasDeprecation} />
           </>
         ) : null}
       </div>

@@ -771,6 +771,11 @@ export type MerchantKnowledgePreviewResponse = {
   beforeState: unknown;
   afterState: unknown;
   affectedEntityIds: string[];
+  evidenceRefs: Array<{
+    recordType: 'ALIAS' | 'FINGERPRINT';
+    recordId: string;
+    evidenceHash: string;
+  }>;
   warnings: string[];
   blockingErrors: Array<{ code: string; message: string }>;
   rollbackSteps: Array<{
@@ -793,3 +798,50 @@ export const previewMerchantKnowledgePlan = async (
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),
   })));
+
+export type MerchantAliasDeprecationConfirmationRequest = {
+  action: 'DEPRECATE_ALIAS';
+  planVersion: string;
+  planHash: string;
+  expectedEvidenceHash: string;
+  reason: string;
+  requestKey: string;
+};
+
+export type MerchantAliasDeprecationConfirmationResponse = {
+  decisionId: string;
+  auditEventId: string;
+  aliasId: string;
+  priorStatus: string;
+  newStatus: 'DEPRECATED';
+  deprecatedAt: string;
+  planVersion: string;
+  planHash: string;
+  evidenceHash: string;
+  rollbackReference: {
+    decisionId: string;
+    steps: MerchantKnowledgePreviewResponse['rollbackSteps'];
+  };
+  idempotent: boolean;
+  confirmed: true;
+  action: 'DEPRECATE_ALIAS';
+  persistsMerchantKnowledge: true;
+  writesMerchantIdentityDecision: true;
+  writesMerchantAuditEvent: true;
+  createsTransactionBooking: false;
+  mutatesBankFacts: false;
+  mutatesFinancialRecords: false;
+};
+
+export const confirmMerchantAliasDeprecation = async (
+  aliasId: string,
+  request: MerchantAliasDeprecationConfirmationRequest,
+): Promise<MerchantAliasDeprecationConfirmationResponse> =>
+  readJson(await fetch(
+    getApiUrl(`/api/merchant-knowledge/aliases/${encodeApiPathSegment(aliasId)}/deprecate/confirm`),
+    withUserHeader({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    }),
+  ));

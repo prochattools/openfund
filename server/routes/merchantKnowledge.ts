@@ -11,6 +11,11 @@ import {
   previewMerchantKnowledgePlan,
   type MerchantKnowledgePreviewRequest,
 } from '../services/merchantKnowledgePreviewService';
+import {
+  MerchantAliasDeprecationError,
+  confirmMerchantAliasDeprecation,
+  type MerchantAliasDeprecationConfirmationRequest,
+} from '../services/merchantAliasDeprecationDecisionService';
 import { readRouteParam } from './routeParams';
 
 const sendMerchantKnowledgeError = (res: Response, error: unknown) => {
@@ -90,5 +95,46 @@ export const previewMerchantKnowledgePlanRoute = async (req: Request, res: Respo
     }
     console.error('Merchant Knowledge-planpreview kon niet worden opgebouwd', error);
     return res.status(500).json({ error: 'Merchant Knowledge-planpreview kon niet worden opgebouwd.' });
+  }
+};
+
+export const confirmMerchantAliasDeprecationRoute = async (req: Request, res: Response) => {
+  const actor = await requireAdmin(req, res);
+  if (!actor) return;
+
+  const aliasId = readRouteParam(req, 'aliasId');
+  if (!aliasId) return res.status(400).json({ error: 'Alias-ID ontbreekt.', code: 'invalid_input' });
+
+  try {
+    const result = await confirmMerchantAliasDeprecation(actor, {
+      ...(req.body as MerchantAliasDeprecationConfirmationRequest),
+      aliasId,
+    });
+    return res.status(200).json({
+      ...result,
+      deprecatedAt: result.deprecatedAt.toISOString(),
+    });
+  } catch (error) {
+    if (error instanceof MerchantAliasDeprecationError) {
+      return res.status(error.statusCode).json({
+        error: error.message,
+        code: error.code,
+        action: 'DEPRECATE_ALIAS',
+        confirmed: false,
+        persistsMerchantKnowledge: false,
+        createsTransactionBooking: false,
+        mutatesBankFacts: false,
+        mutatesFinancialRecords: false,
+      });
+    }
+    console.error('Aliasdeprecatie kon niet worden bevestigd', error);
+    return res.status(500).json({
+      error: 'Aliasdeprecatie kon niet worden bevestigd.',
+      code: 'internal_error',
+      confirmed: false,
+      createsTransactionBooking: false,
+      mutatesBankFacts: false,
+      mutatesFinancialRecords: false,
+    });
   }
 };
