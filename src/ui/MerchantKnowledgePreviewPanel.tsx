@@ -3,9 +3,11 @@
 import { useState } from 'react';
 import {
   confirmMerchantAliasDeprecation,
+  confirmMerchantDeprecation,
   isClientAdmin,
   previewMerchantKnowledgePlan,
   type MerchantAliasDeprecationConfirmationResponse,
+  type MerchantDeprecationConfirmationResponse,
   type MerchantKnowledgePreviewAction,
   type MerchantKnowledgePreviewRequest,
   type MerchantKnowledgePreviewResponse,
@@ -55,11 +57,19 @@ export function MerchantKnowledgePreviewPanel({ onConfirmed }: { onConfirmed?: (
   const [confirmationLoading, setConfirmationLoading] = useState(false);
   const [confirmationError, setConfirmationError] = useState<string | null>(null);
   const [confirmationResult, setConfirmationResult] = useState<MerchantAliasDeprecationConfirmationResponse | null>(null);
+  const [merchantConfirmationOpen, setMerchantConfirmationOpen] = useState(false);
+  const [merchantConfirmationAcknowledged, setMerchantConfirmationAcknowledged] = useState(false);
+  const [merchantConfirmationLoading, setMerchantConfirmationLoading] = useState(false);
+  const [merchantConfirmationError, setMerchantConfirmationError] = useState<string | null>(null);
+  const [merchantConfirmationResult, setMerchantConfirmationResult] = useState<MerchantDeprecationConfirmationResponse | null>(null);
 
   if (!isClientAdmin()) return null;
 
   const aliasEvidenceRef = preview?.action === 'DEPRECATE_ALIAS'
     ? preview.evidenceRefs.find((item) => item.recordType === 'ALIAS' && item.recordId === primaryId.trim())
+    : undefined;
+  const merchantStateRef = preview?.action === 'DEPRECATE_MERCHANT'
+    ? preview.merchantStateRefs.find((item) => item.merchantId === primaryId.trim())
     : undefined;
 
   const submitPreview = async () => {
@@ -70,6 +80,10 @@ export function MerchantKnowledgePreviewPanel({ onConfirmed }: { onConfirmed?: (
     setConfirmationAcknowledged(false);
     setConfirmationError(null);
     setConfirmationResult(null);
+    setMerchantConfirmationOpen(false);
+    setMerchantConfirmationAcknowledged(false);
+    setMerchantConfirmationError(null);
+    setMerchantConfirmationResult(null);
     try {
       const nextPreview = await previewMerchantKnowledgePlan(buildRequest(action, reason, requestKey, primaryId, secondaryIds, intent));
       setPreview(nextPreview);
@@ -101,6 +115,30 @@ export function MerchantKnowledgePreviewPanel({ onConfirmed }: { onConfirmed?: (
       setConfirmationError(caught instanceof Error ? caught.message : 'Aliasdeprecatie kon niet worden bevestigd.');
     } finally {
       setConfirmationLoading(false);
+    }
+  };
+
+  const submitMerchantDeprecationConfirmation = async () => {
+    if (!preview || preview.action !== 'DEPRECATE_MERCHANT' || preview.blockingErrors.length > 0 || !merchantStateRef || !merchantConfirmationAcknowledged) return;
+    setMerchantConfirmationLoading(true);
+    setMerchantConfirmationError(null);
+    try {
+      const result = await confirmMerchantDeprecation(primaryId.trim(), {
+        action: 'DEPRECATE_MERCHANT',
+        planVersion: preview.planVersion,
+        planHash: preview.planHash,
+        expectedStateHash: merchantStateRef.stateHash,
+        reason: reason.trim(),
+        requestKey: requestKey.trim(),
+      });
+      setMerchantConfirmationResult(result);
+      setMerchantConfirmationOpen(false);
+      setMerchantConfirmationAcknowledged(false);
+      await onConfirmed?.();
+    } catch (caught) {
+      setMerchantConfirmationError(caught instanceof Error ? caught.message : 'Merchantdeprecatie kon niet worden bevestigd.');
+    } finally {
+      setMerchantConfirmationLoading(false);
     }
   };
 
@@ -156,6 +194,9 @@ export function MerchantKnowledgePreviewPanel({ onConfirmed }: { onConfirmed?: (
           {preview.action === 'DEPRECATE_ALIAS' && preview.blockingErrors.length === 0 && aliasEvidenceRef ? (
             <button type="button" onClick={() => { setConfirmationError(null); setConfirmationOpen(true); }} className="mt-4 rounded-xl bg-[#8f3f2d] px-5 py-2.5 text-sm font-semibold text-white">Open bevestiging voor aliasdeprecatie</button>
           ) : null}
+          {preview.action === 'DEPRECATE_MERCHANT' && preview.blockingErrors.length === 0 && merchantStateRef ? (
+            <button type="button" onClick={() => { setMerchantConfirmationError(null); setMerchantConfirmationOpen(true); }} className="mt-4 rounded-xl bg-[#8f3f2d] px-5 py-2.5 text-sm font-semibold text-white">Open bevestiging voor merchantdeprecatie</button>
+          ) : null}
         </div>
       ) : null}
       {confirmationError ? <p role="alert" className="mt-4 rounded-xl bg-[#f6e8e3] p-3 text-sm">{confirmationError}</p> : null}
@@ -193,6 +234,44 @@ export function MerchantKnowledgePreviewPanel({ onConfirmed }: { onConfirmed?: (
           <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <button autoFocus type="button" onClick={() => { if (!confirmationLoading) { setConfirmationOpen(false); setConfirmationAcknowledged(false); } }} disabled={confirmationLoading} className="rounded-xl border border-[#8a7965] px-5 py-2.5 text-sm font-semibold">Annuleren</button>
             <button type="button" onClick={() => void submitAliasDeprecationConfirmation()} disabled={confirmationLoading || !confirmationAcknowledged} className="rounded-xl bg-[#8f3f2d] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{confirmationLoading ? 'Alias deprecëren…' : 'Alias deprecëren'}</button>
+          </div>
+        </dialog>
+      ) : null}
+      {merchantConfirmationError ? <p role="alert" className="mt-4 rounded-xl bg-[#f6e8e3] p-3 text-sm">{merchantConfirmationError}</p> : null}
+      {merchantConfirmationResult ? (
+        <p role="status" className="mt-4 rounded-xl bg-[#e5f0e9] p-3 text-sm">
+          {merchantConfirmationResult.idempotent ? 'Merchantdeprecatie was al bevestigd; er zijn geen dubbele records gemaakt.' : 'Merchant is gedeactiveerd en de beslissing en audit zijn atomair vastgelegd.'}
+          {' '}Versie {merchantConfirmationResult.priorVersion} → {merchantConfirmationResult.newVersion} · Beslissing: {merchantConfirmationResult.decisionId} · Audit: {merchantConfirmationResult.auditEventId}
+        </p>
+      ) : null}
+      {merchantConfirmationOpen && preview?.action === 'DEPRECATE_MERCHANT' && merchantStateRef ? (
+        <dialog open aria-labelledby="merchant-deprecation-title" aria-describedby="merchant-deprecation-description" aria-busy={merchantConfirmationLoading} onCancel={(event) => { event.preventDefault(); if (!merchantConfirmationLoading) setMerchantConfirmationOpen(false); }} className="fixed inset-0 z-50 m-auto max-h-[90vh] w-[min(92vw,760px)] overflow-auto rounded-3xl border border-[#b9aa98] bg-[#fbf8f2] p-6 shadow-2xl backdrop:bg-black/40">
+          <h3 id="merchant-deprecation-title" className="text-2xl font-semibold">Merchant individueel deprecëren</h3>
+          <p id="merchant-deprecation-description" className="mt-2 text-sm text-[#6f6253]">Deze bevestiging wijzigt alleen de Merchant Knowledge-status van deze merchant. Aliassen en vingerafdrukken worden niet automatisch gewijzigd. Er ontstaat geen boeking en geen bankfeit of financieel record wordt aangepast.</p>
+          <dl className="mt-5 grid gap-2 text-sm sm:grid-cols-[180px_1fr]">
+            <dt className="font-semibold">Merchant-ID</dt><dd className="break-all">{primaryId.trim()}</dd>
+            <dt className="font-semibold">Planversie</dt><dd>{preview.planVersion}</dd>
+            <dt className="font-semibold">Plan-hash</dt><dd className="break-all">{preview.planHash}</dd>
+            <dt className="font-semibold">State-hash</dt><dd className="break-all">{merchantStateRef.stateHash}</dd>
+            <dt className="font-semibold">Reden</dt><dd>{reason.trim()}</dd>
+            <dt className="font-semibold">Request key</dt><dd className="break-all">{requestKey.trim()}</dd>
+          </dl>
+          <details className="mt-4 rounded-xl border border-[#d8cdbf] bg-white p-3">
+            <summary className="cursor-pointer font-semibold">Voor- en voorgestelde nastatus</summary>
+            <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap break-words text-xs">{JSON.stringify({ beforeState: preview.beforeState, afterState: preview.afterState }, null, 2)}</pre>
+          </details>
+          <div className="mt-4 grid gap-3 text-sm md:grid-cols-3">
+            <div><p className="font-semibold">Blokkers</p><p>{preview.blockingErrors.length}</p></div>
+            <div><p className="font-semibold">Waarschuwingen</p><p>{preview.warnings.length}</p></div>
+            <div><p className="font-semibold">Rollback-records</p><p>{preview.rollbackSteps.length}</p></div>
+          </div>
+          <label className="mt-5 flex items-start gap-3 rounded-xl border border-[#d8cdbf] bg-white p-3 text-sm">
+            <input type="checkbox" aria-label="Bevestig merchantdeprecatie" checked={merchantConfirmationAcknowledged} onChange={(event) => setMerchantConfirmationAcknowledged(event.target.checked)} className="mt-1" />
+            <span>Ik bevestig dat deze individuele actie alleen de merchant deprecieert, geen alias of vingerafdruk cascadeert en geen financiële boeking of banktransactie verandert.</span>
+          </label>
+          <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <button autoFocus type="button" onClick={() => { if (!merchantConfirmationLoading) { setMerchantConfirmationOpen(false); setMerchantConfirmationAcknowledged(false); } }} disabled={merchantConfirmationLoading} className="rounded-xl border border-[#8a7965] px-5 py-2.5 text-sm font-semibold">Annuleren</button>
+            <button type="button" onClick={() => void submitMerchantDeprecationConfirmation()} disabled={merchantConfirmationLoading || !merchantConfirmationAcknowledged} className="rounded-xl bg-[#8f3f2d] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{merchantConfirmationLoading ? 'Merchant deprecëren…' : 'Merchant deprecëren'}</button>
           </div>
         </dialog>
       ) : null}

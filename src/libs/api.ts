@@ -776,6 +776,10 @@ export type MerchantKnowledgePreviewResponse = {
     recordId: string;
     evidenceHash: string;
   }>;
+  merchantStateRefs: Array<{
+    merchantId: string;
+    stateHash: string;
+  }>;
   warnings: string[];
   blockingErrors: Array<{ code: string; message: string }>;
   rollbackSteps: Array<{
@@ -839,6 +843,58 @@ export const confirmMerchantAliasDeprecation = async (
 ): Promise<MerchantAliasDeprecationConfirmationResponse> =>
   readJson(await fetch(
     getApiUrl(`/api/merchant-knowledge/aliases/${encodeApiPathSegment(aliasId)}/deprecate/confirm`),
+    withUserHeader({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    }),
+  ));
+
+export type MerchantDeprecationConfirmationRequest = {
+  action: 'DEPRECATE_MERCHANT';
+  planVersion: string;
+  planHash: string;
+  expectedStateHash: string;
+  reason: string;
+  requestKey: string;
+};
+
+export type MerchantDeprecationConfirmationResponse = {
+  decisionId: string;
+  auditEventId: string;
+  merchantId: string;
+  priorStatus: string;
+  newStatus: 'DEPRECATED';
+  priorVersion: number;
+  newVersion: number;
+  deprecatedAt: string;
+  planVersion: string;
+  planHash: string;
+  stateHash: string;
+  evidenceHash: string;
+  rollbackReference: {
+    decisionId: string;
+    steps: MerchantKnowledgePreviewResponse['rollbackSteps'];
+  };
+  idempotent: boolean;
+  confirmed: true;
+  action: 'DEPRECATE_MERCHANT';
+  persistsMerchantKnowledge: true;
+  writesMerchantIdentityDecision: true;
+  writesMerchantAuditEvent: true;
+  cascadesAliases: false;
+  cascadesFingerprints: false;
+  createsTransactionBooking: false;
+  mutatesBankFacts: false;
+  mutatesFinancialRecords: false;
+};
+
+export const confirmMerchantDeprecation = async (
+  merchantId: string,
+  request: MerchantDeprecationConfirmationRequest,
+): Promise<MerchantDeprecationConfirmationResponse> =>
+  readJson(await fetch(
+    getApiUrl(`/api/merchant-knowledge/merchants/${encodeApiPathSegment(merchantId)}/deprecate/confirm`),
     withUserHeader({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

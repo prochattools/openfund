@@ -18,8 +18,8 @@ const createClient = () => {
     workspaceMembership: { findFirst: vi.fn().mockResolvedValue({ id: 'membership-1' }) },
     merchant: {
       findMany: vi.fn().mockResolvedValue([
-        { id: 'm1', workspaceId, status: 'ACTIVE', mergedIntoMerchantId: null },
-        { id: 'm2', workspaceId, status: 'ACTIVE', mergedIntoMerchantId: null },
+        { id: 'm1', workspaceId, status: 'ACTIVE', mergedIntoMerchantId: null, version: 2, updatedById: 'admin-user', updatedAt: new Date('2026-07-22T10:00:00.000Z'), deprecatedAt: null },
+        { id: 'm2', workspaceId, status: 'ACTIVE', mergedIntoMerchantId: null, version: 1, updatedById: null, updatedAt: new Date('2026-07-21T10:00:00.000Z'), deprecatedAt: null },
       ]),
       create: vi.fn(), update: vi.fn(), delete: vi.fn(), upsert: vi.fn(),
     },
@@ -63,6 +63,8 @@ describe('Merchant Knowledge Phase 3.8C plan previews', () => {
     expect(first.afterState).toEqual(second.afterState);
     expect(first).toMatchObject({ previewOnly: true, readOnly: true, createsTransactionBooking: false, mutatesBankFacts: false, persistsMerchantKnowledge: false });
     expect(first.rollbackSteps.length).toBeGreaterThan(0);
+    expect(first.merchantStateRefs).toEqual(second.merchantStateRefs);
+    expect(first.merchantStateRefs.every((item) => /^[a-f0-9]{64}$/.test(item.stateHash))).toBe(true);
   });
 
   it('enforces active workspace membership and excludes cross-workspace entities', async () => {
@@ -109,16 +111,18 @@ describe('Merchant Knowledge Phase 3.8C plan previews', () => {
     expect(bridge).not.toMatch(/export async function (PUT|PATCH|DELETE)/);
   });
 
-  it('keeps preview UI administrator-only and exposes only the bounded alias-deprecation confirmation', () => {
+  it('keeps preview UI administrator-only and exposes only the two bounded deprecation confirmations', () => {
     const panel = fs.readFileSync(path.join(process.cwd(), 'src/ui/MerchantKnowledgePreviewPanel.tsx'), 'utf8');
     const page = fs.readFileSync(path.join(process.cwd(), 'src/ui/MerchantKnowledgeAdminPage.tsx'), 'utf8');
     expect(panel).toContain('if (!isClientAdmin()) return null');
     expect(page).toContain('<MerchantKnowledgePreviewPanel onConfirmed={refreshAfterAliasDeprecation} />');
     expect(panel).toContain('Preview-only · niet opgeslagen · geen uitvoering');
     expect(panel).toContain("preview.action === 'DEPRECATE_ALIAS'");
+    expect(panel).toContain("preview.action === 'DEPRECATE_MERCHANT'");
     expect(panel).toContain('Open bevestiging voor aliasdeprecatie');
+    expect(panel).toContain('Open bevestiging voor merchantdeprecatie');
     expect(panel).not.toMatch(/>\s*(Uitvoeren|Opslaan|Toepassen)\s*</i);
-    expect(panel).not.toMatch(/Bevestig (merge|split|conflict|reassign|merchant)/i);
+    expect(panel).not.toMatch(/Bevestig (merge|split|conflict|reassign)/i);
     expect(panel).not.toContain('normalizedValue');
     expect(panel).not.toContain('rawEvidence');
     expect(panel).not.toContain('prisma');

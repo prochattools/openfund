@@ -24,6 +24,7 @@ import { downloadImportBatchFile, listImportBatches } from './routes/importBatch
 import { deactivateEmailRecipient, listEmailRecipients, upsertEmailRecipient } from './routes/emailRecipients';
 import {
   confirmMerchantAliasDeprecationRoute,
+  confirmMerchantDeprecationRoute,
   getMerchantKnowledgeMerchantDetailRoute,
   getMerchantKnowledgeSummaryRoute,
   listMerchantKnowledgeMerchantsRoute,
@@ -82,6 +83,7 @@ app.get('/api/merchant-knowledge/merchants', listMerchantKnowledgeMerchantsRoute
 app.get('/api/merchant-knowledge/merchants/:id', getMerchantKnowledgeMerchantDetailRoute);
 app.post('/api/merchant-knowledge/plans/preview', previewMerchantKnowledgePlanRoute);
 app.post('/api/merchant-knowledge/aliases/:aliasId/deprecate/confirm', confirmMerchantAliasDeprecationRoute);
+app.post('/api/merchant-knowledge/merchants/:merchantId/deprecate/confirm', confirmMerchantDeprecationRoute);
 app.post('/api/email-recipients', upsertEmailRecipient);
 app.delete('/api/email-recipients/:id', deactivateEmailRecipient);
 app.post('/api/ledger/:ledgerId/lock', lockLedger);

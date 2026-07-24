@@ -16,6 +16,11 @@ import {
   confirmMerchantAliasDeprecation,
   type MerchantAliasDeprecationConfirmationRequest,
 } from '../services/merchantAliasDeprecationDecisionService';
+import {
+  MerchantDeprecationError,
+  confirmMerchantDeprecation,
+  type MerchantDeprecationConfirmationRequest,
+} from '../services/merchantDeprecationDecisionService';
 import { readRouteParam } from './routeParams';
 
 const sendMerchantKnowledgeError = (res: Response, error: unknown) => {
@@ -132,6 +137,51 @@ export const confirmMerchantAliasDeprecationRoute = async (req: Request, res: Re
       error: 'Aliasdeprecatie kon niet worden bevestigd.',
       code: 'internal_error',
       confirmed: false,
+      createsTransactionBooking: false,
+      mutatesBankFacts: false,
+      mutatesFinancialRecords: false,
+    });
+  }
+};
+
+export const confirmMerchantDeprecationRoute = async (req: Request, res: Response) => {
+  const actor = await requireAdmin(req, res);
+  if (!actor) return;
+
+  const merchantId = readRouteParam(req, 'merchantId') || readRouteParam(req, 'id');
+  if (!merchantId) return res.status(400).json({ error: 'Merchant-ID ontbreekt.', code: 'invalid_input' });
+
+  try {
+    const result = await confirmMerchantDeprecation(actor, {
+      ...(req.body as MerchantDeprecationConfirmationRequest),
+      merchantId,
+    });
+    return res.status(200).json({
+      ...result,
+      deprecatedAt: result.deprecatedAt.toISOString(),
+    });
+  } catch (error) {
+    if (error instanceof MerchantDeprecationError) {
+      return res.status(error.statusCode).json({
+        error: error.message,
+        code: error.code,
+        action: 'DEPRECATE_MERCHANT',
+        confirmed: false,
+        persistsMerchantKnowledge: false,
+        cascadesAliases: false,
+        cascadesFingerprints: false,
+        createsTransactionBooking: false,
+        mutatesBankFacts: false,
+        mutatesFinancialRecords: false,
+      });
+    }
+    console.error('Merchantdeprecatie kon niet worden bevestigd', error);
+    return res.status(500).json({
+      error: 'Merchantdeprecatie kon niet worden bevestigd.',
+      code: 'internal_error',
+      confirmed: false,
+      cascadesAliases: false,
+      cascadesFingerprints: false,
       createsTransactionBooking: false,
       mutatesBankFacts: false,
       mutatesFinancialRecords: false,

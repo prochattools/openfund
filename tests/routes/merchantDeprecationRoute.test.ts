@@ -7,9 +7,9 @@ const decisionMocks = vi.hoisted(() => ({
   confirm: vi.fn(),
 }));
 
-vi.mock('../../server/services/merchantAliasDeprecationDecisionService', () => ({
-  confirmMerchantAliasDeprecation: decisionMocks.confirm,
-  MerchantAliasDeprecationError: class MerchantAliasDeprecationError extends Error {
+vi.mock('../../server/services/merchantDeprecationDecisionService', () => ({
+  confirmMerchantDeprecation: decisionMocks.confirm,
+  MerchantDeprecationError: class MerchantDeprecationError extends Error {
     constructor(
       public readonly code: string,
       message: string,
@@ -20,12 +20,16 @@ vi.mock('../../server/services/merchantAliasDeprecationDecisionService', () => (
   },
 }));
 
-import { confirmMerchantAliasDeprecationRoute } from '../../server/routes/merchantKnowledge';
+import { confirmMerchantDeprecationRoute } from '../../server/routes/merchantKnowledge';
 
-const makeRequest = (role: 'admin' | 'viewer', body: Record<string, unknown> = {}) => {
+const makeRequest = (
+  role: 'admin' | 'viewer',
+  body: Record<string, unknown> = {},
+  params: Record<string, string> = { merchantId: 'merchant-route-1' },
+) => {
   const request = {
     body,
-    params: { aliasId: 'alias-route-1' },
+    params,
     query: {} as Record<string, string>,
     header: () => undefined,
   };
@@ -46,82 +50,88 @@ const makeResponse = () => ({
   send() { return this; },
 });
 
-describe('Phase 3.8D alias-deprecation confirmation route', () => {
+describe('Phase 3.8D merchant-deprecation confirmation route', () => {
   beforeEach(() => {
     decisionMocks.confirm.mockReset();
   });
 
   it('rejects viewers through server-authoritative requireAdmin before service invocation', async () => {
     const response = makeResponse();
-    await confirmMerchantAliasDeprecationRoute(makeRequest('viewer') as any, response as any);
+    await confirmMerchantDeprecationRoute(makeRequest('viewer') as any, response as any);
     expect(response.statusCode).toBe(403);
     expect(response.body).toEqual({ error: 'Alleen beheerders mogen deze actie uitvoeren.' });
     expect(decisionMocks.confirm).not.toHaveBeenCalled();
   });
 
-  it('passes the authenticated administrator and route-authoritative alias ID to the dedicated service', async () => {
+  it('passes the authenticated administrator and route-authoritative merchant ID to the dedicated service', async () => {
     decisionMocks.confirm.mockResolvedValue({
-      decisionId: 'decision-1',
-      auditEventId: 'audit-1',
-      aliasId: 'alias-route-1',
-      priorStatus: 'TRUSTED',
+      decisionId: 'decision-merchant-1',
+      auditEventId: 'audit-merchant-1',
+      merchantId: 'merchant-route-1',
+      priorStatus: 'ACTIVE',
       newStatus: 'DEPRECATED',
+      priorVersion: 4,
+      newVersion: 5,
       deprecatedAt: new Date('2026-07-24T10:00:00.000Z'),
       planVersion: 'merchant-identity-plan-v1',
       planHash: 'a'.repeat(64),
-      evidenceHash: 'b'.repeat(64),
-      rollbackReference: { decisionId: 'decision-1', steps: [] },
+      stateHash: 'b'.repeat(64),
+      evidenceHash: 'c'.repeat(64),
+      rollbackReference: { decisionId: 'decision-merchant-1', steps: [] },
       idempotent: false,
       confirmed: true,
-      action: 'DEPRECATE_ALIAS',
+      action: 'DEPRECATE_MERCHANT',
       persistsMerchantKnowledge: true,
       writesMerchantIdentityDecision: true,
       writesMerchantAuditEvent: true,
+      cascadesAliases: false,
+      cascadesFingerprints: false,
       createsTransactionBooking: false,
       mutatesBankFacts: false,
       mutatesFinancialRecords: false,
     });
     const response = makeResponse();
     const request = makeRequest('admin', {
-      action: 'DEPRECATE_ALIAS',
-      aliasId: 'client-supplied-alias',
+      action: 'DEPRECATE_MERCHANT',
+      merchantId: 'client-supplied-merchant',
       planVersion: 'merchant-identity-plan-v1',
       planHash: 'a'.repeat(64),
-      expectedEvidenceHash: 'b'.repeat(64),
-      reason: 'Verified alias deprecation.',
-      requestKey: 'alias-confirm-001',
-    });
+      expectedStateHash: 'b'.repeat(64),
+      reason: 'Verified merchant deprecation.',
+      requestKey: 'merchant-confirm-001',
+    }, { id: 'merchant-route-1' });
 
-    await confirmMerchantAliasDeprecationRoute(request as any, response as any);
+    await confirmMerchantDeprecationRoute(request as any, response as any);
 
     expect(response.statusCode).toBe(200);
-    expect(response.body).toMatchObject({ aliasId: 'alias-route-1', deprecatedAt: '2026-07-24T10:00:00.000Z' });
+    expect(response.body).toMatchObject({ merchantId: 'merchant-route-1', deprecatedAt: '2026-07-24T10:00:00.000Z' });
     expect(decisionMocks.confirm).toHaveBeenCalledWith(
       expect.objectContaining({ role: 'admin', actorId: 'admin-user' }),
-      expect.objectContaining({ aliasId: 'alias-route-1', action: 'DEPRECATE_ALIAS' }),
+      expect.objectContaining({ merchantId: 'merchant-route-1', action: 'DEPRECATE_MERCHANT' }),
     );
   });
 
-  it('preserves one alias route and permits only the separately approved merchant-deprecation confirmation', () => {
+  it('registers one merchant and one alias confirmation route, with no generic, bulk, merge, split, conflict, or reassignment route', () => {
     const server = fs.readFileSync(path.join(process.cwd(), 'server/index.ts'), 'utf8');
-    const bridge = fs.readFileSync(path.join(process.cwd(), 'src/app/api/merchant-knowledge/aliases/[aliasId]/deprecate/confirm/route.ts'), 'utf8');
-    expect(server.match(/app\.post\('\/api\/merchant-knowledge\/aliases\/:aliasId\/deprecate\/confirm'/g)).toHaveLength(1);
+    const bridge = fs.readFileSync(path.join(process.cwd(), 'src/app/api/merchant-knowledge/merchants/[id]/deprecate/confirm/route.ts'), 'utf8');
     expect(server.match(/app\.post\('\/api\/merchant-knowledge\/merchants\/:merchantId\/deprecate\/confirm'/g)).toHaveLength(1);
+    expect(server.match(/app\.post\('\/api\/merchant-knowledge\/aliases\/:aliasId\/deprecate\/confirm'/g)).toHaveLength(1);
     expect(server).not.toMatch(/merchant-knowledge\/(plans\/confirm|confirm|bulk)/);
     expect(server).not.toMatch(/(merge|split|conflicts|reassign).*confirm/i);
     expect(bridge).toContain('export async function POST');
     expect(bridge).not.toMatch(/export async function (GET|PUT|PATCH|DELETE)/);
   });
 
-  it('keeps the confirmation UI administrator-only, individual, accessible, and free of other action controls', () => {
+  it('keeps merchant confirmation administrator-only, individual, accessible, and explicit about no cascades or financial effects', () => {
     const panel = fs.readFileSync(path.join(process.cwd(), 'src/ui/MerchantKnowledgePreviewPanel.tsx'), 'utf8');
     expect(panel).toContain('if (!isClientAdmin()) return null');
-    expect(panel).toContain("preview.action === 'DEPRECATE_ALIAS'");
-    expect(panel).toContain('aria-labelledby="alias-deprecation-title"');
-    expect(panel).toContain('aria-describedby="alias-deprecation-description"');
-    expect(panel).toContain('aria-label="Bevestig aliasdeprecatie"');
+    expect(panel).toContain("preview.action === 'DEPRECATE_MERCHANT'");
+    expect(panel).toContain('aria-labelledby="merchant-deprecation-title"');
+    expect(panel).toContain('aria-describedby="merchant-deprecation-description"');
+    expect(panel).toContain('aria-label="Bevestig merchantdeprecatie"');
+    expect(panel).toContain('Aliassen en vingerafdrukken worden niet automatisch gewijzigd');
     expect(panel).toContain('geen boeking');
-    expect(panel).toContain('wijzigt geen bankfeit');
+    expect(panel).toContain('geen bankfeit');
     expect(panel).not.toMatch(/bulk|alles selecteren/i);
     expect(panel).not.toMatch(/Bevestig (merge|split|conflict|reassign)/i);
     expect(panel).not.toContain('prisma');

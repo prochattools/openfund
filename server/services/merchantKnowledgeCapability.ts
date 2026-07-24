@@ -39,3 +39,20 @@ export const MERCHANT_ALIAS_DEPRECATION_CONFIRMATION_EFFECTS = Object.freeze({
 export const isMerchantAliasDeprecationConfirmationEnabled = (
   env: NodeJS.ProcessEnv = process.env,
 ): boolean => env.MERCHANT_ALIAS_DEPRECATION_CONFIRMATION_ENABLED?.trim().toLowerCase() === 'true';
+
+export const MERCHANT_DEPRECATION_CONFIRMATION_EFFECTS = Object.freeze({
+  confirmed: true as const,
+  action: 'DEPRECATE_MERCHANT' as const,
+  persistsMerchantKnowledge: true as const,
+  writesMerchantIdentityDecision: true as const,
+  writesMerchantAuditEvent: true as const,
+  cascadesAliases: false as const,
+  cascadesFingerprints: false as const,
+  createsTransactionBooking: false as const,
+  mutatesBankFacts: false as const,
+  mutatesFinancialRecords: false as const,
+});
+
+export const isMerchantDeprecationConfirmationEnabled = (
+  env: NodeJS.ProcessEnv = process.env,
+): boolean => env.MERCHANT_DEPRECATION_CONFIRMATION_ENABLED?.trim().toLowerCase() === 'true';

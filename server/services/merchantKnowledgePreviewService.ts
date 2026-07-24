@@ -18,6 +18,7 @@ import {
   MERCHANT_KNOWLEDGE_PREVIEW_EFFECTS,
   isMerchantKnowledgePreviewEnabled,
 } from './merchantKnowledgeCapability';
+import { hashMerchantConfirmationState } from './merchantKnowledgeStateHash';
 
 const SUPPORTED_SIGNALS = new Set<MerchantFingerprintSignalType>(['IBAN', 'NORMALIZED_COUNTERPARTY', 'PAYMENT_PURPOSE', 'RECURRING_PATTERN']);
 const isSupportedSignal = (value: string): value is MerchantFingerprintSignalType =>
@@ -46,6 +47,10 @@ export type MerchantKnowledgePreviewResponse = {
     recordType: 'ALIAS' | 'FINGERPRINT';
     recordId: string;
     evidenceHash: string;
+  }>;
+  merchantStateRefs: Array<{
+    merchantId: string;
+    stateHash: string;
   }>;
   warnings: string[];
   blockingErrors: MerchantIdentityPlanIssue[];
@@ -108,7 +113,19 @@ export const previewMerchantKnowledgePlan = async (
   const workspaceId = await resolveWorkspaceId(actor, client, env);
   const { reason, requestKey } = parseCommon(request);
   const [merchantRows, aliasRows, fingerprintRows] = await Promise.all([
-    client.merchant.findMany({ where: { workspaceId }, select: { id: true, workspaceId: true, status: true, mergedIntoMerchantId: true } }),
+    client.merchant.findMany({
+      where: { workspaceId },
+      select: {
+        id: true,
+        workspaceId: true,
+        status: true,
+        mergedIntoMerchantId: true,
+        version: true,
+        updatedById: true,
+        updatedAt: true,
+        deprecatedAt: true,
+      },
+    }),
     client.merchantAlias.findMany({ where: { workspaceId }, select: { id: true, workspaceId: true, merchantId: true, signalType: true, valueHash: true, status: true, evidenceHash: true } }),
     client.merchantFingerprint.findMany({ where: { workspaceId }, select: { id: true, workspaceId: true, merchantId: true, signalType: true, valueHash: true, strength: true, status: true, evidenceHash: true } }),
   ]);
@@ -167,6 +184,13 @@ export const previewMerchantKnowledgePlan = async (
         .filter((row) => plan.affectedFingerprintIds.includes(row.id))
         .map((row) => ({ recordType: 'FINGERPRINT' as const, recordId: row.id, evidenceHash: row.evidenceHash })),
     ].sort((left, right) => `${left.recordType}:${left.recordId}`.localeCompare(`${right.recordType}:${right.recordId}`)),
+    merchantStateRefs: merchantRows
+      .filter((row) => plan.sourceMerchantIds.includes(row.id) || plan.targetMerchantIds.includes(row.id))
+      .map((row) => ({
+        merchantId: row.id,
+        stateHash: hashMerchantConfirmationState(row),
+      }))
+      .sort((left, right) => left.merchantId.localeCompare(right.merchantId)),
     warnings: plan.validationWarnings,
     blockingErrors: plan.blockingErrors,
     rollbackSteps: plan.rollbackPlan,

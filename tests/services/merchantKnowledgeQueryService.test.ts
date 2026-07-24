@@ -119,7 +119,7 @@ describe('Merchant Knowledge Phase 3.8A read contracts', () => {
     }
   });
 
-  it('preserves the three read bridges and allows only the approved preview and alias-confirmation POST routes', () => {
+  it('preserves the three read bridges and allows only preview plus the two bounded deprecation POST routes', () => {
     const server = fs.readFileSync(path.join(process.cwd(), 'server/index.ts'), 'utf8');
     const routeFiles = [
       'src/app/api/merchant-knowledge/summary/route.ts',
@@ -130,6 +130,7 @@ describe('Merchant Knowledge Phase 3.8A read contracts', () => {
     expect(server.match(/app\.post\('\/api\/merchant-knowledge\/[^']+'/g)).toEqual([
       "app.post('/api/merchant-knowledge/plans/preview'",
       "app.post('/api/merchant-knowledge/aliases/:aliasId/deprecate/confirm'",
+      "app.post('/api/merchant-knowledge/merchants/:merchantId/deprecate/confirm'",
     ]);
     expect(server).not.toMatch(/app\.(patch|put|delete)\('\/api\/merchant-knowledge/);
     expect(routeFiles).not.toMatch(/export async function (POST|PATCH|PUT|DELETE)/);

@@ -6,9 +6,9 @@ type TxClient = Prisma.TransactionClient;
 export type MerchantKnowledgeAuditInput = {
   id: string;
   workspaceId: string;
-  entityType: 'MERCHANT_ALIAS';
+  entityType: 'MERCHANT_ALIAS' | 'MERCHANT';
   entityId: string;
-  action: 'DEPRECATE_ALIAS';
+  action: 'DEPRECATE_ALIAS' | 'DEPRECATE_MERCHANT';
   actorId: string;
   requestId: string;
   beforeState: unknown;
