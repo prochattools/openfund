@@ -177,6 +177,99 @@ Input:
 
 The server must recompute or revalidate the plan inside the transaction. A stale plan must return a conflict response and make no changes.
 
+### Authoritative `RESOLVE_CONFLICT` persistence contract
+
+This section is normative for the bounded Phase 3.8D conflict-confirmation implementation. The server must rehydrate the conflict, transaction, candidate merchants, current resolution reference, supporting/conflicting signal identity, and evidence hash from the authenticated workspace inside one transaction. Client-supplied candidates, evidence, status, workspace, actor, before state, or after state are never authoritative.
+
+Shared rules for all intents:
+
+- only `OPEN` conflicts may be confirmed; `RESOLVED` and `DISMISSED` conflicts reject with zero writes;
+- the conflict state hash binds conflict ID, workspace ID, transaction ID, current status, ordered candidate merchant IDs, ordered supporting/conflicting signal identity, evidence hash, resolution ID, opened timestamp, and existing resolved actor/timestamp/reason fields;
+- candidate merchant IDs are sorted before hashing and must match persisted conflict evidence exactly;
+- supporting and conflicting signal identity uses only privacy-safe IDs, signal types, statuses, versions, and existing hashes; raw values and unrestricted evidence JSON are never returned to the client;
+- the pure `planMerchantIdentityChange` result remains the sole plan authority;
+- the transaction compares action, intent, selected merchant where applicable, plan version, plan hash, conflict state hash, conflict evidence hash, candidate identity, and blocking errors;
+- one `MerchantIdentityDecision` and one `MerchantAuditEvent` are always written atomically with the conflict update and any approved `MerchantResolution` row;
+- `MerchantIdentityDecision.conflictId` is always the confirmed conflict ID;
+- `MerchantIdentityDecision.targetMerchantId` is populated only for `SELECT_MERCHANT`; it is null for `ABSTAIN` and `DISMISS`;
+- aliases, fingerprints, merchants, transactions, bookings, review decisions, categorization suggestions, ledger data, period state, reports, and historical evidence are never mutated by this confirmation;
+- rollback is a new individually confirmed plan referencing the prior decision; original conflict evidence, decision, audit, and resolution rows remain immutable.
+
+#### `SELECT_MERCHANT`
+
+Persistence mapping:
+
+- require one explicit selected merchant;
+- selected merchant must be active, workspace-scoped, and present in the persisted candidate merchant IDs and preserved supporting/conflicting evidence;
+- create one append-only `MerchantResolution` with:
+  - `status = RESOLVED`;
+  - `merchantId = selectedMerchantId`;
+  - `engineVersion = merchant-admin-conflict-resolution-v1`;
+  - `inputHash = SHA-256(canonical JSON of { conflictStateHash, intent: SELECT_MERCHANT, selectedMerchantId, planVersion, planHash })`;
+  - `evidence = canonical JSON containing conflict ID, transaction ID, ordered candidate IDs, privacy-safe supporting/conflicting signal identity, original conflict evidence hash, conflict state hash, intent, selected merchant ID, plan version, plan hash, request hash, actor ID, and reason`;
+  - `evidenceHash = SHA-256(canonical evidence JSON)`;
+  - `confidenceBasisPoints = null` because administrator confirmation is not a probabilistic engine score;
+  - `abstentionCode = null`;
+  - `validUntil = null`;
+  - `backfillRunId = null`;
+- update `MerchantConflict` to:
+  - `status = RESOLVED`;
+  - `resolutionId = new MerchantResolution.id`;
+  - `resolvedAt = transaction commit timestamp`;
+  - `resolvedById = authenticated actor ID`;
+  - `resolutionReason = explicit administrator reason`;
+- do not alter an existing `MerchantResolution`; confirmation always creates a new append-only row;
+- do not approve, trust, reassign, or rewrite aliases or fingerprints;
+- do not alter the related transaction or create a booking.
+
+#### `ABSTAIN`
+
+A confirmed abstention is a terminal administrator decision, not the automatic runtime abstention that occurs while a conflict remains open.
+
+Persistence mapping:
+
+- selected merchant must be absent;
+- create one append-only `MerchantResolution` with:
+  - `status = ABSTAINED`;
+  - `merchantId = null`;
+  - `engineVersion = merchant-admin-conflict-resolution-v1`;
+  - `inputHash = SHA-256(canonical JSON of { conflictStateHash, intent: ABSTAIN, selectedMerchantId: null, planVersion, planHash })`;
+  - `evidence = canonical JSON containing conflict ID, transaction ID, ordered candidate IDs, privacy-safe supporting/conflicting signal identity, original conflict evidence hash, conflict state hash, intent, plan version, plan hash, request hash, actor ID, and reason`;
+  - `evidenceHash = SHA-256(canonical evidence JSON)`;
+  - `confidenceBasisPoints = null`;
+  - `abstentionCode = ADMIN_CONFIRMED_ABSTENTION`;
+  - `validUntil = null`;
+  - `backfillRunId = null`;
+- update `MerchantConflict` to:
+  - `status = RESOLVED`;
+  - `resolutionId = new MerchantResolution.id`;
+  - `resolvedAt = transaction commit timestamp`;
+  - `resolvedById = authenticated actor ID`;
+  - `resolutionReason = explicit administrator reason`;
+- this terminal `RESOLVED` conflict plus `MerchantResolution.status = ABSTAINED` distinguishes administrator-confirmed abstention from the existing automatic abstention caused by an `OPEN` conflict;
+- preserve every candidate and all supporting/conflicting evidence;
+- do not select or trust a merchant, alias, or fingerprint;
+- do not alter the related transaction or create a booking.
+
+#### `DISMISS`
+
+Persistence mapping:
+
+- selected merchant must be absent;
+- create no `MerchantResolution`, because the current resolution enum has no dismissed state and inventing one is prohibited;
+- update `MerchantConflict` to:
+  - `status = DISMISSED`;
+  - `resolutionId = null`;
+  - `resolvedAt = transaction commit timestamp`;
+  - `resolvedById = authenticated actor ID`;
+  - `resolutionReason = explicit administrator reason`;
+- dismissal is allowed only when the `OPEN` conflict has no existing linked resolution; a non-null `resolutionId` rejects as stale/inconsistent;
+- preserve every candidate, supporting/conflicting signal, original evidence hash, transaction relation, and opened timestamp;
+- do not select or trust any merchant, alias, or fingerprint;
+- do not alter the related transaction or create a booking.
+
+Idempotency identity for all three intents is the canonical hash of workspace ID, conflict ID, intent, selected merchant ID or null, conflict state hash, conflict evidence hash, plan version, plan hash, reason, and bounded request key. Reusing the same key with identical content returns the existing decision; reusing it with different content rejects.
+
 ### Explicit exclusions
 
 No bulk endpoint may exist. Do not create endpoints such as:

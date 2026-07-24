@@ -348,6 +348,61 @@ model MerchantConflict {
 - Open conflict forces merchant-resolution abstention.
 - Partial SQL uniqueness prevents duplicate active conflict rows.
 
+#### Administrator-confirmed conflict-resolution persistence
+
+The following Phase 3.8D mapping is normative and requires no Prisma schema change.
+
+Shared requirements:
+
+- only `MerchantConflict.status = OPEN` may be confirmed;
+- conflict state identity is a canonical SHA-256 hash over conflict/workspace/transaction IDs, status, ordered candidate merchant IDs, privacy-safe ordered supporting/conflicting signal identity, evidence hash, resolution ID, opened timestamp, and existing resolved actor/timestamp/reason fields;
+- all candidate, signal, evidence, transaction, and workspace data is reloaded from authoritative persistence inside the transaction;
+- every confirmed intent writes one `MerchantIdentityDecision` and one `MerchantAuditEvent` atomically with the conflict transition and any approved `MerchantResolution` row;
+- historical `MerchantResolution`, conflict evidence, aliases, fingerprints, merchants, transactions, bookings, reviews, suggestions, ledger data, period state, and reports are never rewritten.
+
+`SELECT_MERCHANT`:
+
+- create one append-only `MerchantResolution`;
+- `status = RESOLVED`;
+- `merchantId = selectedMerchantId`;
+- `engineVersion = merchant-admin-conflict-resolution-v1`;
+- `inputHash = SHA-256(canonical JSON of { conflictStateHash, intent: SELECT_MERCHANT, selectedMerchantId, planVersion, planHash })`;
+- `evidence` contains only canonical conflict identity, transaction ID, ordered candidate IDs, privacy-safe signal identity, original conflict evidence hash, conflict state hash, intent, selected merchant ID, plan version/hash, request hash, actor ID, and reason;
+- `evidenceHash = SHA-256(canonical evidence JSON)`;
+- `confidenceBasisPoints = null`;
+- `abstentionCode = null`;
+- `validUntil = null`;
+- `backfillRunId = null`;
+- update the conflict to `status = RESOLVED`, link `resolutionId`, and set `resolvedAt`, `resolvedById`, and `resolutionReason`;
+- set `MerchantIdentityDecision.targetMerchantId = selectedMerchantId`.
+
+`ABSTAIN`:
+
+- create one append-only `MerchantResolution`;
+- `status = ABSTAINED`;
+- `merchantId = null`;
+- `engineVersion = merchant-admin-conflict-resolution-v1`;
+- `inputHash = SHA-256(canonical JSON of { conflictStateHash, intent: ABSTAIN, selectedMerchantId: null, planVersion, planHash })`;
+- `evidence` uses the same canonical fields as `SELECT_MERCHANT`, without a selected merchant;
+- `evidenceHash = SHA-256(canonical evidence JSON)`;
+- `confidenceBasisPoints = null`;
+- `abstentionCode = ADMIN_CONFIRMED_ABSTENTION`;
+- `validUntil = null`;
+- `backfillRunId = null`;
+- update the conflict to `status = RESOLVED`, link `resolutionId`, and set `resolvedAt`, `resolvedById`, and `resolutionReason`;
+- keep `MerchantIdentityDecision.targetMerchantId = null`;
+- the terminal conflict status plus `MerchantResolution.status = ABSTAINED` distinguishes confirmed abstention from automatic abstention while a conflict remains `OPEN`.
+
+`DISMISS`:
+
+- create no `MerchantResolution`;
+- require existing `resolutionId = null`;
+- update the conflict to `status = DISMISSED`, keep `resolutionId = null`, and set `resolvedAt`, `resolvedById`, and `resolutionReason`;
+- keep `MerchantIdentityDecision.targetMerchantId = null`;
+- do not invent a dismissed resolution status.
+
+For all intents, `MerchantIdentityDecision.conflictId` is required. Idempotency hashes workspace ID, conflict ID, intent, selected merchant ID or null, conflict state hash, conflict evidence hash, plan version, plan hash, reason, and request key. Identical retries return the prior decision; conflicting reuse rejects.
+
 ### MerchantIdentityDecision
 
 ```prisma

@@ -4344,3 +4344,71 @@ The service references no mutation of aliases, fingerprints, transactions, trans
 Remaining Phase 3.8D confirmation actions are merchant merge, merchant split, conflict resolution, and knowledge reassignment. Phase 3.8E remains unstarted. Production/remote-database execution and richer persisted confirmation drafts remain out of scope.
 
 Rollback is limited to reverting the bounded merchant-confirmation commit or leaving `MERCHANT_DEPRECATION_CONFIRMATION_ENABLED` unset/false. The completed alias confirmation remains independently controlled and unchanged. No push is authorized or performed.
+
+## Program Phase 3.8D — `RESOLVE_CONFLICT` persistence design resolved
+
+Starting commit: `1497bfe` (`feat: confirm merchant deprecation`).
+
+This checkpoint resolves only the conflict-confirmation design blocker. No Prisma schema, migration, application code, route, service, UI, test implementation, capability, deployment, or push behavior was added.
+
+### Governing documents updated
+
+- `docs/MERCHANT_ADMIN_TOOLING_DESIGN.md`;
+- `docs/MERCHANT_KNOWLEDGE_SCHEMA_PROPOSAL.md`;
+- `docs/IMPLEMENTATION_PLAN.md`;
+- `docs/finance-rebuild-run.md`.
+
+### Authoritative intent mappings
+
+All three pure-planner intents are now implementation-ready without a schema change.
+
+#### `SELECT_MERCHANT`
+
+- require one active, workspace-scoped selected merchant present in persisted conflict candidates and preserved conflict evidence;
+- create one append-only `MerchantResolution(status = RESOLVED, merchantId = selectedMerchantId)`;
+- use `engineVersion = merchant-admin-conflict-resolution-v1`;
+- derive `inputHash` from canonical conflict state hash, intent, selected merchant, plan version, and plan hash;
+- persist canonical privacy-safe conflict/candidate/signal/evidence/plan/request/actor/reason provenance in `evidence` and hash it into `evidenceHash`;
+- set confidence, abstention code, validity, and backfill fields to null;
+- update `MerchantConflict` to `RESOLVED`, link the new resolution, and set commit timestamp, authenticated actor, and explicit reason;
+- set `MerchantIdentityDecision.conflictId` and `targetMerchantId`;
+- never modify an existing resolution row, alias, fingerprint, merchant, transaction, booking, or financial record.
+
+#### `ABSTAIN`
+
+- selected merchant must be absent;
+- create one append-only `MerchantResolution(status = ABSTAINED, merchantId = null)`;
+- use `engineVersion = merchant-admin-conflict-resolution-v1`;
+- derive canonical input/evidence hashes from conflict state, intent, plan identity, request identity, actor, and reason;
+- set `abstentionCode = ADMIN_CONFIRMED_ABSTENTION` and confidence/validity/backfill fields to null;
+- update `MerchantConflict` to terminal `RESOLVED`, link the new abstained resolution, and set commit timestamp, actor, and reason;
+- keep `MerchantIdentityDecision.targetMerchantId = null`;
+- the combination `MerchantConflict.status = RESOLVED` plus `MerchantResolution.status = ABSTAINED` distinguishes administrator-confirmed abstention from automatic abstention while a conflict remains `OPEN`;
+- preserve all candidates and supporting/conflicting evidence and select/trust no merchant, alias, or fingerprint.
+
+#### `DISMISS`
+
+- selected merchant must be absent;
+- create no `MerchantResolution`, because the current resolution enum has no dismissed state;
+- require existing `resolutionId = null`;
+- update `MerchantConflict` to `DISMISSED`, keep `resolutionId = null`, and set commit timestamp, actor, and reason;
+- keep `MerchantIdentityDecision.targetMerchantId = null`;
+- preserve all candidates, supporting/conflicting evidence, original evidence hash, transaction relation, and opened timestamp;
+- select or trust no merchant, alias, or fingerprint.
+
+### Shared transactional and provenance rules
+
+- only `OPEN` conflicts may be confirmed;
+- the canonical conflict state hash binds conflict/workspace/transaction identity, status, ordered candidate IDs, privacy-safe ordered supporting/conflicting signal identity, evidence hash, resolution ID, opened timestamp, and existing resolved actor/timestamp/reason fields;
+- the server reloads all authority inside one transaction and revalidates intent, selected merchant, candidate membership, workspace, plan version/hash, conflict state/evidence hashes, and planner blockers;
+- one `MerchantIdentityDecision` and one `MerchantAuditEvent` are written atomically with the conflict transition and any approved resolution row;
+- idempotency binds workspace, conflict, intent, selected merchant or null, conflict state/evidence hashes, plan version/hash, reason, and request key;
+- identical retries return the prior decision; conflicting key reuse rejects;
+- rollback is a new individually confirmed plan referencing the prior decision; original conflict, resolution, decision, audit, and evidence records remain immutable;
+- no alias/fingerprint trust, transaction/booking mutation, review/suggestion rewrite, ledger/period/report change, backfill, or AI behavior is allowed.
+
+### Implementation status
+
+The design blocker is resolved, but `RESOLVE_CONFLICT` confirmation remains unimplemented. Merge, split, and knowledge-reassignment confirmation remain unstarted. Phase 3.8E remains unstarted.
+
+No push is authorized or performed.
