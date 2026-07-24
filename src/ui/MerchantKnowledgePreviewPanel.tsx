@@ -3,10 +3,12 @@
 import { useState } from 'react';
 import {
   confirmMerchantAliasDeprecation,
+  confirmMerchantConflictResolution,
   confirmMerchantDeprecation,
   isClientAdmin,
   previewMerchantKnowledgePlan,
   type MerchantAliasDeprecationConfirmationResponse,
+  type MerchantConflictConfirmationResponse,
   type MerchantDeprecationConfirmationResponse,
   type MerchantKnowledgePreviewAction,
   type MerchantKnowledgePreviewRequest,
@@ -62,6 +64,11 @@ export function MerchantKnowledgePreviewPanel({ onConfirmed }: { onConfirmed?: (
   const [merchantConfirmationLoading, setMerchantConfirmationLoading] = useState(false);
   const [merchantConfirmationError, setMerchantConfirmationError] = useState<string | null>(null);
   const [merchantConfirmationResult, setMerchantConfirmationResult] = useState<MerchantDeprecationConfirmationResponse | null>(null);
+  const [conflictConfirmationOpen, setConflictConfirmationOpen] = useState(false);
+  const [conflictConfirmationAcknowledged, setConflictConfirmationAcknowledged] = useState(false);
+  const [conflictConfirmationLoading, setConflictConfirmationLoading] = useState(false);
+  const [conflictConfirmationError, setConflictConfirmationError] = useState<string | null>(null);
+  const [conflictConfirmationResult, setConflictConfirmationResult] = useState<MerchantConflictConfirmationResponse | null>(null);
 
   if (!isClientAdmin()) return null;
 
@@ -70,6 +77,9 @@ export function MerchantKnowledgePreviewPanel({ onConfirmed }: { onConfirmed?: (
     : undefined;
   const merchantStateRef = preview?.action === 'DEPRECATE_MERCHANT'
     ? preview.merchantStateRefs.find((item) => item.merchantId === primaryId.trim())
+    : undefined;
+  const conflictStateRef = preview?.action === 'RESOLVE_CONFLICT'
+    ? preview.conflictStateRefs.find((item) => item.conflictId === primaryId.trim())
     : undefined;
 
   const submitPreview = async () => {
@@ -84,6 +94,10 @@ export function MerchantKnowledgePreviewPanel({ onConfirmed }: { onConfirmed?: (
     setMerchantConfirmationAcknowledged(false);
     setMerchantConfirmationError(null);
     setMerchantConfirmationResult(null);
+    setConflictConfirmationOpen(false);
+    setConflictConfirmationAcknowledged(false);
+    setConflictConfirmationError(null);
+    setConflictConfirmationResult(null);
     try {
       const nextPreview = await previewMerchantKnowledgePlan(buildRequest(action, reason, requestKey, primaryId, secondaryIds, intent));
       setPreview(nextPreview);
@@ -142,6 +156,34 @@ export function MerchantKnowledgePreviewPanel({ onConfirmed }: { onConfirmed?: (
     }
   };
 
+  const submitConflictConfirmation = async () => {
+    if (!preview || preview.action !== 'RESOLVE_CONFLICT' || preview.blockingErrors.length > 0 || !conflictStateRef || !conflictConfirmationAcknowledged) return;
+    const selectedMerchantId = intent === 'SELECT_MERCHANT' ? parseIds(secondaryIds)[0] : undefined;
+    setConflictConfirmationLoading(true);
+    setConflictConfirmationError(null);
+    try {
+      const result = await confirmMerchantConflictResolution(primaryId.trim(), {
+        action: 'RESOLVE_CONFLICT',
+        intent,
+        selectedMerchantId,
+        planVersion: preview.planVersion,
+        planHash: preview.planHash,
+        conflictStateHash: conflictStateRef.stateHash,
+        conflictEvidenceHash: conflictStateRef.evidenceHash,
+        reason: reason.trim(),
+        requestKey: requestKey.trim(),
+      });
+      setConflictConfirmationResult(result);
+      setConflictConfirmationOpen(false);
+      setConflictConfirmationAcknowledged(false);
+      await onConfirmed?.();
+    } catch (caught) {
+      setConflictConfirmationError(caught instanceof Error ? caught.message : 'Conflictbevestiging kon niet worden uitgevoerd.');
+    } finally {
+      setConflictConfirmationLoading(false);
+    }
+  };
+
   return (
     <section aria-labelledby="merchant-preview-title" className="rounded-3xl border border-[#ded5c8] bg-[#fbf8f2] p-6">
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8a7965]">Administrator · preview-only</p>
@@ -196,6 +238,9 @@ export function MerchantKnowledgePreviewPanel({ onConfirmed }: { onConfirmed?: (
           ) : null}
           {preview.action === 'DEPRECATE_MERCHANT' && preview.blockingErrors.length === 0 && merchantStateRef ? (
             <button type="button" onClick={() => { setMerchantConfirmationError(null); setMerchantConfirmationOpen(true); }} className="mt-4 rounded-xl bg-[#8f3f2d] px-5 py-2.5 text-sm font-semibold text-white">Open bevestiging voor merchantdeprecatie</button>
+          ) : null}
+          {preview.action === 'RESOLVE_CONFLICT' && preview.blockingErrors.length === 0 && conflictStateRef ? (
+            <button type="button" onClick={() => { setConflictConfirmationError(null); setConflictConfirmationOpen(true); }} className="mt-4 rounded-xl bg-[#8f3f2d] px-5 py-2.5 text-sm font-semibold text-white">Open bevestiging voor conflictoplossing</button>
           ) : null}
         </div>
       ) : null}
@@ -272,6 +317,50 @@ export function MerchantKnowledgePreviewPanel({ onConfirmed }: { onConfirmed?: (
           <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <button autoFocus type="button" onClick={() => { if (!merchantConfirmationLoading) { setMerchantConfirmationOpen(false); setMerchantConfirmationAcknowledged(false); } }} disabled={merchantConfirmationLoading} className="rounded-xl border border-[#8a7965] px-5 py-2.5 text-sm font-semibold">Annuleren</button>
             <button type="button" onClick={() => void submitMerchantDeprecationConfirmation()} disabled={merchantConfirmationLoading || !merchantConfirmationAcknowledged} className="rounded-xl bg-[#8f3f2d] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{merchantConfirmationLoading ? 'Merchant deprecëren…' : 'Merchant deprecëren'}</button>
+          </div>
+        </dialog>
+      ) : null}
+      {conflictConfirmationError ? <p role="alert" className="mt-4 rounded-xl bg-[#f6e8e3] p-3 text-sm">{conflictConfirmationError}</p> : null}
+      {conflictConfirmationResult ? (
+        <p role="status" className="mt-4 rounded-xl bg-[#e5f0e9] p-3 text-sm">
+          {conflictConfirmationResult.idempotent ? 'Conflictoplossing was al bevestigd; er zijn geen dubbele records gemaakt.' : 'Conflictstatus, beslissing en audit zijn atomair vastgelegd.'}
+          {' '}Intentie: {conflictConfirmationResult.intent} · Beslissing: {conflictConfirmationResult.decisionId} · Audit: {conflictConfirmationResult.auditEventId}
+        </p>
+      ) : null}
+      {conflictConfirmationOpen && preview?.action === 'RESOLVE_CONFLICT' && conflictStateRef ? (
+        <dialog open aria-labelledby="conflict-resolution-title" aria-describedby="conflict-resolution-description" aria-busy={conflictConfirmationLoading} onCancel={(event) => { event.preventDefault(); if (!conflictConfirmationLoading) setConflictConfirmationOpen(false); }} className="fixed inset-0 z-50 m-auto max-h-[90vh] w-[min(92vw,780px)] overflow-auto rounded-3xl border border-[#b9aa98] bg-[#fbf8f2] p-6 shadow-2xl backdrop:bg-black/40">
+          <h3 id="conflict-resolution-title" className="text-2xl font-semibold">Merchantconflict individueel bevestigen</h3>
+          <p id="conflict-resolution-description" className="mt-2 text-sm text-[#6f6253]">Deze bevestiging bewaart historische conflictevidence. Geen alias of vingerafdruk wordt automatisch vertrouwd, geen merchantrecord wordt gewijzigd en er ontstaat geen boeking of bankfeitwijziging.</p>
+          <dl className="mt-5 grid gap-2 text-sm sm:grid-cols-[190px_1fr]">
+            <dt className="font-semibold">Conflict-ID</dt><dd className="break-all">{primaryId.trim()}</dd>
+            <dt className="font-semibold">Intentie</dt><dd>{intent}</dd>
+            <dt className="font-semibold">Geselecteerde merchant</dt><dd className="break-all">{intent === 'SELECT_MERCHANT' ? parseIds(secondaryIds)[0] ?? 'Ontbreekt' : 'Niet van toepassing'}</dd>
+            <dt className="font-semibold">Planversie</dt><dd>{preview.planVersion}</dd>
+            <dt className="font-semibold">Plan-hash</dt><dd className="break-all">{preview.planHash}</dd>
+            <dt className="font-semibold">Conflict state-hash</dt><dd className="break-all">{conflictStateRef.stateHash}</dd>
+            <dt className="font-semibold">Conflict evidence-hash</dt><dd className="break-all">{conflictStateRef.evidenceHash}</dd>
+            <dt className="font-semibold">Kandidaten</dt><dd>{conflictStateRef.candidateMerchantIds.join(', ') || 'Geen'}</dd>
+            <dt className="font-semibold">Ondersteunend bewijs</dt><dd>{conflictStateRef.supportingEvidenceCount}</dd>
+            <dt className="font-semibold">Tegenstrijdig bewijs</dt><dd>{conflictStateRef.conflictingEvidenceCount}</dd>
+            <dt className="font-semibold">Reden</dt><dd>{reason.trim()}</dd>
+            <dt className="font-semibold">Request key</dt><dd className="break-all">{requestKey.trim()}</dd>
+          </dl>
+          <details className="mt-4 rounded-xl border border-[#d8cdbf] bg-white p-3">
+            <summary className="cursor-pointer font-semibold">Voor- en voorgestelde nastatus</summary>
+            <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap break-words text-xs">{JSON.stringify({ beforeState: preview.beforeState, afterState: preview.afterState }, null, 2)}</pre>
+          </details>
+          <div className="mt-4 grid gap-3 text-sm md:grid-cols-3">
+            <div><p className="font-semibold">Blokkers</p><p>{preview.blockingErrors.length}</p></div>
+            <div><p className="font-semibold">Waarschuwingen</p><p>{preview.warnings.length}</p></div>
+            <div><p className="font-semibold">Rollback-records</p><p>{preview.rollbackSteps.length}</p></div>
+          </div>
+          <label className="mt-5 flex items-start gap-3 rounded-xl border border-[#d8cdbf] bg-white p-3 text-sm">
+            <input type="checkbox" aria-label="Bevestig conflictoplossing" checked={conflictConfirmationAcknowledged} onChange={(event) => setConflictConfirmationAcknowledged(event.target.checked)} className="mt-1" />
+            <span>Ik bevestig deze individuele conflictbeslissing en begrijp dat zij geen aliases, vingerafdrukken, merchants, boekingen of bankfeiten wijzigt.</span>
+          </label>
+          <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <button autoFocus type="button" onClick={() => { if (!conflictConfirmationLoading) { setConflictConfirmationOpen(false); setConflictConfirmationAcknowledged(false); } }} disabled={conflictConfirmationLoading} className="rounded-xl border border-[#8a7965] px-5 py-2.5 text-sm font-semibold">Annuleren</button>
+            <button type="button" onClick={() => void submitConflictConfirmation()} disabled={conflictConfirmationLoading || !conflictConfirmationAcknowledged} className="rounded-xl bg-[#8f3f2d] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{conflictConfirmationLoading ? 'Conflictoplossing bevestigen…' : 'Conflictoplossing bevestigen'}</button>
           </div>
         </dialog>
       ) : null}

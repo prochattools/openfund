@@ -780,6 +780,14 @@ export type MerchantKnowledgePreviewResponse = {
     merchantId: string;
     stateHash: string;
   }>;
+  conflictStateRefs: Array<{
+    conflictId: string;
+    stateHash: string;
+    evidenceHash: string;
+    candidateMerchantIds: string[];
+    supportingEvidenceCount: number;
+    conflictingEvidenceCount: number;
+  }>;
   warnings: string[];
   blockingErrors: Array<{ code: string; message: string }>;
   rollbackSteps: Array<{
@@ -895,6 +903,64 @@ export const confirmMerchantDeprecation = async (
 ): Promise<MerchantDeprecationConfirmationResponse> =>
   readJson(await fetch(
     getApiUrl(`/api/merchant-knowledge/merchants/${encodeApiPathSegment(merchantId)}/deprecate/confirm`),
+    withUserHeader({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    }),
+  ));
+
+
+
+export type MerchantConflictIntent = 'SELECT_MERCHANT' | 'ABSTAIN' | 'DISMISS';
+
+export type MerchantConflictConfirmationRequest = {
+  action: 'RESOLVE_CONFLICT';
+  intent: MerchantConflictIntent;
+  selectedMerchantId?: string;
+  planVersion: string;
+  planHash: string;
+  conflictStateHash: string;
+  conflictEvidenceHash: string;
+  reason: string;
+  requestKey: string;
+};
+
+export type MerchantConflictConfirmationResponse = {
+  decisionId: string;
+  auditEventId: string;
+  resolutionId: string | null;
+  conflictId: string;
+  intent: MerchantConflictIntent;
+  selectedMerchantId: string | null;
+  priorStatus: 'OPEN';
+  newStatus: 'RESOLVED' | 'DISMISSED';
+  resolvedAt: string;
+  planVersion: string;
+  planHash: string;
+  conflictStateHash: string;
+  evidenceHash: string;
+  idempotent: boolean;
+  confirmed: true;
+  action: 'RESOLVE_CONFLICT';
+  persistsMerchantKnowledge: true;
+  writesMerchantResolution: true;
+  writesMerchantIdentityDecision: true;
+  writesMerchantAuditEvent: true;
+  trustsAliases: false;
+  trustsFingerprints: false;
+  mutatesMerchants: false;
+  createsTransactionBooking: false;
+  mutatesBankFacts: false;
+  mutatesFinancialRecords: false;
+};
+
+export const confirmMerchantConflictResolution = async (
+  conflictId: string,
+  request: MerchantConflictConfirmationRequest,
+): Promise<MerchantConflictConfirmationResponse> =>
+  readJson(await fetch(
+    getApiUrl(`/api/merchant-knowledge/conflicts/${encodeApiPathSegment(conflictId)}/resolve/confirm`),
     withUserHeader({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

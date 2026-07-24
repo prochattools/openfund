@@ -19,6 +19,10 @@ import {
   isMerchantKnowledgePreviewEnabled,
 } from './merchantKnowledgeCapability';
 import { hashMerchantConfirmationState } from './merchantKnowledgeStateHash';
+import {
+  hashConflictConfirmationState,
+  parseConflictEvidence,
+} from './merchantConflictStateHash';
 
 const SUPPORTED_SIGNALS = new Set<MerchantFingerprintSignalType>(['IBAN', 'NORMALIZED_COUNTERPARTY', 'PAYMENT_PURPOSE', 'RECURRING_PATTERN']);
 const isSupportedSignal = (value: string): value is MerchantFingerprintSignalType =>
@@ -51,6 +55,14 @@ export type MerchantKnowledgePreviewResponse = {
   merchantStateRefs: Array<{
     merchantId: string;
     stateHash: string;
+  }>;
+  conflictStateRefs: Array<{
+    conflictId: string;
+    stateHash: string;
+    evidenceHash: string;
+    candidateMerchantIds: string[];
+    supportingEvidenceCount: number;
+    conflictingEvidenceCount: number;
   }>;
   warnings: string[];
   blockingErrors: MerchantIdentityPlanIssue[];
@@ -137,6 +149,7 @@ export const previewMerchantKnowledgePlan = async (
     .map((row) => ({ ...row, signalType: row.signalType as MerchantFingerprintSignalType }));
   const common = { workspaceId, actorId: actor.actorId, requestKey, reason, merchants: merchantRows, aliases, fingerprints };
   let input: MerchantIdentityPlanInput;
+  let conflictStateRefs: MerchantKnowledgePreviewResponse['conflictStateRefs'] = [];
 
   if (request.action === 'MERGE_MERCHANTS') {
     input = { ...common, action: request.action, targetMerchantId: stringValue(request.targetMerchantId), sourceMerchantIds: strings(request.sourceMerchantIds), affectedAliasIds: strings(request.affectedAliasIds), affectedFingerprintIds: strings(request.affectedFingerprintIds) };
@@ -150,15 +163,70 @@ export const previewMerchantKnowledgePlan = async (
     input = { ...common, action: request.action, merchantId: stringValue(request.merchantId) };
   } else if (request.action === 'RESOLVE_CONFLICT') {
     const conflictId = stringValue(request.conflictId);
-    const conflict = await client.merchantConflict.findFirst({ where: { id: conflictId, workspaceId }, select: { id: true, candidateMerchantIds: true } });
+    const conflict = await client.merchantConflict.findFirst({
+      where: { id: conflictId, workspaceId },
+      select: {
+        id: true,
+        workspaceId: true,
+        transactionId: true,
+        resolutionId: true,
+        status: true,
+        candidateMerchantIds: true,
+        supportingSignals: true,
+        conflictingSignals: true,
+        evidenceHash: true,
+        openedAt: true,
+        resolvedAt: true,
+        resolvedById: true,
+        resolutionReason: true,
+      },
+    });
     if (!conflict) throw new MerchantKnowledgePreviewError('not_found', 'Conflict niet gevonden.');
+    const intent = request.intent === 'SELECT_MERCHANT' || request.intent === 'ABSTAIN' || request.intent === 'DISMISS'
+      ? request.intent
+      : null;
+    if (!intent) throw new MerchantKnowledgePreviewError('invalid_input', 'Een geldige conflictintentie is verplicht.');
+    const selectedMerchantId = stringValue(request.selectedMerchantId) || undefined;
+    if (intent === 'SELECT_MERCHANT' && !selectedMerchantId) {
+      throw new MerchantKnowledgePreviewError('invalid_input', 'Een geselecteerde merchant is verplicht.');
+    }
+    if (intent !== 'SELECT_MERCHANT' && selectedMerchantId) {
+      throw new MerchantKnowledgePreviewError('invalid_input', 'Deze conflictintentie accepteert geen geselecteerde merchant.');
+    }
     const candidateIds = strings(conflict.candidateMerchantIds);
-    const evidence: MerchantAliasMatchEvidence[] = aliases
-      .filter((alias): alias is MerchantAliasRecord & { status: 'APPROVED' | 'TRUSTED' } =>
-        candidateIds.includes(alias.merchantId) && (alias.status === 'APPROVED' || alias.status === 'TRUSTED'))
-      .map((alias) => ({ aliasId: alias.id, merchantId: alias.merchantId, signalType: alias.signalType, fingerprintHash: alias.valueHash, aliasStatus: alias.status, precedence: alias.signalType === 'IBAN' ? 10 : alias.signalType === 'NORMALIZED_COUNTERPARTY' ? 30 : alias.signalType === 'PAYMENT_PURPOSE' ? 40 : 50, evidenceHash: alias.evidenceHash }));
-    const intent = request.intent === 'SELECT_MERCHANT' || request.intent === 'ABSTAIN' || request.intent === 'DISMISS' ? request.intent : 'ABSTAIN';
-    input = { ...common, action: request.action, intent, selectedMerchantId: stringValue(request.selectedMerchantId) || undefined, resolution: { workspaceId, resolutionVersion: 'merchant-alias-resolution-v1', status: 'CONFLICTED', merchantId: null, strongestSignalType: null, reason: 'STRONGEST_SIGNAL_COLLISION', supportingEvidence: [], conflictingEvidence: evidence }, conflictingEvidence: evidence };
+    const supportingEvidence = parseConflictEvidence(conflict.supportingSignals);
+    const conflictingEvidence = parseConflictEvidence(conflict.conflictingSignals);
+    const stateHash = hashConflictConfirmationState({
+      ...conflict,
+      candidateMerchantIds: candidateIds,
+      supportingEvidence,
+      conflictingEvidence,
+    });
+    conflictStateRefs = [{
+      conflictId: conflict.id,
+      stateHash,
+      evidenceHash: conflict.evidenceHash,
+      candidateMerchantIds: candidateIds,
+      supportingEvidenceCount: supportingEvidence.length,
+      conflictingEvidenceCount: conflictingEvidence.length,
+    }];
+    input = {
+      ...common,
+      action: request.action,
+      intent,
+      selectedMerchantId,
+      resolution: {
+        workspaceId,
+        resolutionVersion: 'merchant-alias-resolution-v1',
+        status: 'CONFLICTED',
+        merchantId: null,
+        strongestSignalType: null,
+        reason: 'STRONGEST_SIGNAL_COLLISION',
+        supportingEvidence,
+        conflictingEvidence,
+      },
+      conflictingEvidence,
+    };
   } else {
     throw new MerchantKnowledgePreviewError('invalid_input', 'Onbekende previewactie.');
   }
@@ -191,6 +259,7 @@ export const previewMerchantKnowledgePlan = async (
         stateHash: hashMerchantConfirmationState(row),
       }))
       .sort((left, right) => left.merchantId.localeCompare(right.merchantId)),
+    conflictStateRefs,
     warnings: plan.validationWarnings,
     blockingErrors: plan.blockingErrors,
     rollbackSteps: plan.rollbackPlan,

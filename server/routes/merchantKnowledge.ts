@@ -21,6 +21,11 @@ import {
   confirmMerchantDeprecation,
   type MerchantDeprecationConfirmationRequest,
 } from '../services/merchantDeprecationDecisionService';
+import {
+  MerchantConflictDecisionError,
+  confirmMerchantConflictResolution,
+  type MerchantConflictConfirmationRequest,
+} from '../services/merchantConflictDecisionService';
 import { readRouteParam } from './routeParams';
 
 const sendMerchantKnowledgeError = (res: Response, error: unknown) => {
@@ -182,6 +187,56 @@ export const confirmMerchantDeprecationRoute = async (req: Request, res: Respons
       confirmed: false,
       cascadesAliases: false,
       cascadesFingerprints: false,
+      createsTransactionBooking: false,
+      mutatesBankFacts: false,
+      mutatesFinancialRecords: false,
+    });
+  }
+};
+
+
+
+
+export const confirmMerchantConflictResolutionRoute = async (req: Request, res: Response) => {
+  const actor = await requireAdmin(req, res);
+  if (!actor) return;
+
+  const conflictId = readRouteParam(req, 'conflictId') || readRouteParam(req, 'id');
+  if (!conflictId) return res.status(400).json({ error: 'Conflict-ID ontbreekt.', code: 'invalid_input' });
+
+  try {
+    const result = await confirmMerchantConflictResolution(actor, {
+      ...(req.body as MerchantConflictConfirmationRequest),
+      conflictId,
+    });
+    return res.status(200).json({
+      ...result,
+      resolvedAt: result.resolvedAt.toISOString(),
+    });
+  } catch (error) {
+    if (error instanceof MerchantConflictDecisionError) {
+      return res.status(error.statusCode).json({
+        error: error.message,
+        code: error.code,
+        action: 'RESOLVE_CONFLICT',
+        confirmed: false,
+        persistsMerchantKnowledge: false,
+        trustsAliases: false,
+        trustsFingerprints: false,
+        mutatesMerchants: false,
+        createsTransactionBooking: false,
+        mutatesBankFacts: false,
+        mutatesFinancialRecords: false,
+      });
+    }
+    console.error('Conflictbevestiging kon niet worden uitgevoerd', error);
+    return res.status(500).json({
+      error: 'Conflictbevestiging kon niet worden uitgevoerd.',
+      code: 'internal_error',
+      confirmed: false,
+      trustsAliases: false,
+      trustsFingerprints: false,
+      mutatesMerchants: false,
       createsTransactionBooking: false,
       mutatesBankFacts: false,
       mutatesFinancialRecords: false,

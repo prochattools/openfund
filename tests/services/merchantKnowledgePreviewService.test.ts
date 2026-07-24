@@ -111,7 +111,7 @@ describe('Merchant Knowledge Phase 3.8C plan previews', () => {
     expect(bridge).not.toMatch(/export async function (PUT|PATCH|DELETE)/);
   });
 
-  it('keeps preview UI administrator-only and exposes only the two bounded deprecation confirmations', () => {
+  it('keeps preview UI administrator-only and exposes only the three bounded confirmation actions', () => {
     const panel = fs.readFileSync(path.join(process.cwd(), 'src/ui/MerchantKnowledgePreviewPanel.tsx'), 'utf8');
     const page = fs.readFileSync(path.join(process.cwd(), 'src/ui/MerchantKnowledgeAdminPage.tsx'), 'utf8');
     expect(panel).toContain('if (!isClientAdmin()) return null');
@@ -119,10 +119,12 @@ describe('Merchant Knowledge Phase 3.8C plan previews', () => {
     expect(panel).toContain('Preview-only · niet opgeslagen · geen uitvoering');
     expect(panel).toContain("preview.action === 'DEPRECATE_ALIAS'");
     expect(panel).toContain("preview.action === 'DEPRECATE_MERCHANT'");
+    expect(panel).toContain("preview.action === 'RESOLVE_CONFLICT'");
     expect(panel).toContain('Open bevestiging voor aliasdeprecatie');
     expect(panel).toContain('Open bevestiging voor merchantdeprecatie');
+    expect(panel).toContain('Open bevestiging voor conflictoplossing');
     expect(panel).not.toMatch(/>\s*(Uitvoeren|Opslaan|Toepassen)\s*</i);
-    expect(panel).not.toMatch(/Bevestig (merge|split|conflict|reassign)/i);
+    expect(panel).not.toMatch(/Bevestig (merge|split|reassign)/i);
     expect(panel).not.toContain('normalizedValue');
     expect(panel).not.toContain('rawEvidence');
     expect(panel).not.toContain('prisma');

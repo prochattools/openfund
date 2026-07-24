@@ -4412,3 +4412,128 @@ All three pure-planner intents are now implementation-ready without a schema cha
 The design blocker is resolved, but `RESOLVE_CONFLICT` confirmation remains unimplemented. Merge, split, and knowledge-reassignment confirmation remain unstarted. Phase 3.8E remains unstarted.
 
 No push is authorized or performed.
+
+
+## Program Phase 3.8D — individual `RESOLVE_CONFLICT` confirmation implemented
+
+Starting commit: `4af31ac` (`docs: define merchant conflict resolution contract`).
+
+### Exact implementation scope
+
+Implemented only the three approved individual administrator intents:
+
+- `SELECT_MERCHANT`;
+- `ABSTAIN`;
+- `DISMISS`.
+
+Changed implementation and test paths:
+
+- `server/services/merchantConflictStateHash.ts`;
+- `server/services/merchantConflictDecisionService.ts`;
+- `server/services/merchantKnowledgePreviewService.ts`;
+- `server/services/merchantKnowledgeCapability.ts`;
+- `server/services/merchantKnowledgeAuditService.ts`;
+- `server/routes/merchantKnowledge.ts`;
+- `server/index.ts`;
+- `src/app/api/merchant-knowledge/conflicts/[id]/resolve/confirm/route.ts`;
+- `src/libs/api.ts`;
+- `src/ui/MerchantKnowledgePreviewPanel.tsx`;
+- `tests/services/merchantConflictDecisionService.test.ts`;
+- `tests/routes/merchantConflictResolutionRoute.test.ts`;
+- affected completed-confirmation, preview, and read-contract regression guards.
+
+No schema, migration, merge, split, knowledge-reassignment, generic confirmation, bulk confirmation, Phase 3.8E, backfill, AI, deployment, booking, bank-fact, or financial mutation was added.
+
+### Capability, authorization, and route
+
+A separate server-only `MERCHANT_CONFLICT_CONFIRMATION_ENABLED` capability defaults to disabled. Disabled requests return before transaction, membership lookup, conflict hydration, plan regeneration, or write. Reads, previews, alias confirmation, and merchant confirmation remain independently controlled.
+
+Exactly one dedicated route exists:
+
+`POST /api/merchant-knowledge/conflicts/:conflictId/resolve/confirm`
+
+The route requires `requireAdmin`, derives actor/workspace authority only from authenticated server context, accepts Express `conflictId` or Next adapter `id`, and treats the route value as authoritative over any body value. The Next bridge is Node-runtime, force-dynamic, and POST-only at `/api/merchant-knowledge/conflicts/[id]/resolve/confirm`.
+
+### Canonical conflict state and privacy
+
+`merchantConflictStateHash.ts` strictly parses only privacy-safe persisted `MerchantAliasMatchEvidence` fields and deterministically orders supporting/conflicting evidence. The canonical conflict-state hash binds:
+
+- conflict, workspace, and transaction IDs;
+- current status;
+- ordered candidate merchant IDs;
+- ordered privacy-safe supporting/conflicting evidence identity;
+- conflict evidence hash;
+- resolution ID;
+- opened/resolved timestamps;
+- resolving actor and reason.
+
+Phase 3.8C previews now hydrate the full authoritative workspace-scoped conflict and return only `conflictStateRefs`: conflict ID, state hash, original evidence hash, candidate IDs, and supporting/conflicting evidence counts. No raw JSON, unrestricted normalized value, alias/fingerprint source value, or transaction text is exposed.
+
+### Atomic intent mappings
+
+Inside one Prisma transaction, the service verifies active workspace membership, idempotency, authoritative conflict status/linkage/candidates/evidence, selected merchant validity, exact planner regeneration, plan version/hash, state/evidence hashes, and planner blockers.
+
+`SELECT_MERCHANT`:
+
+- requires one active workspace-scoped candidate present in preserved conflict evidence;
+- creates one append-only `MerchantResolution(status = RESOLVED)` with the approved engine, canonical input hash, canonical evidence hash, and null confidence/abstention/validity/backfill fields;
+- updates the conflict to `RESOLVED`, links the resolution, and records actor, reason, and commit timestamp;
+- records `targetMerchantId` on the decision.
+
+`ABSTAIN`:
+
+- rejects any selected merchant;
+- creates one append-only `MerchantResolution(status = ABSTAINED, abstentionCode = ADMIN_CONFIRMED_ABSTENTION)`;
+- updates the conflict to terminal `RESOLVED` and links the resolution;
+- keeps decision target merchant null.
+
+`DISMISS`:
+
+- rejects any selected merchant;
+- requires current `resolutionId = null`;
+- creates no `MerchantResolution`;
+- updates the conflict to `DISMISSED` with null resolution linkage;
+- keeps decision target merchant null.
+
+Every intent writes one `MerchantIdentityDecision(conflictId = confirmed conflict)` and one `MerchantAuditEvent(entityType = MERCHANT_CONFLICT)` atomically with the conflict transition and optional resolution creation. Resolution, decision, or audit failure rolls every draft change back. Existing resolutions are never updated.
+
+### Idempotency and non-effects
+
+Deterministic decision, audit, and optional resolution IDs derive from workspace plus bounded request key. The request hash binds workspace, conflict, intent, selected merchant or null, conflict state/evidence hashes, plan version/hash, reason, and request key. Identical retries validate the final conflict, audit, decision, and linked resolution where applicable and return idempotent success. Conflicting key reuse rejects; partial prior persistence returns an integrity error.
+
+The implementation performs no alias/fingerprint trust or write, merchant mutation, transaction mutation, booking, bank-fact mutation, review/suggestion rewrite, ledger/period/report change, backfill, or AI operation. Historical conflict candidates, evidence hashes, signals, transaction relation, opened timestamp, decisions, audits, and resolutions remain preserved.
+
+### Administrator UI and accessibility
+
+The existing `/merchant-knowledge` page preserves viewer read-only behavior and both completed deprecation confirmations. Conflict confirmation appears only to administrators after a successful blocker-free `RESOLVE_CONFLICT` preview with the exact conflict state reference.
+
+The individual dialog shows conflict ID, intent, selected merchant where applicable, before/proposed-after state, plan version/hash, conflict state/evidence hashes, candidate IDs, supporting/conflicting counts, blockers, warnings, rollback count, reason, and request key. It explicitly states that no alias/fingerprint becomes trusted, no merchant record changes, no booking or bank fact changes, and historical evidence remains preserved. The dialog has labelled title/description relationships, explicit acknowledgement, safe cancel focus, disabled duplicate submission while loading, stable error/success/idempotent-success states, and no automatic retry.
+
+### Validation evidence
+
+Completed successfully:
+
+- focused conflict decision-service tests — 11 passed, 0 failed;
+- focused conflict route/UI authorization tests — 4 passed, 0 failed;
+- final conflict, completed alias/merchant confirmation, pure planner, Phase 3.8A read-contract, Phase 3.8B page/navigation, Phase 3.8C preview, API-client, authentication, and administrator-mutation regressions — 129 passed, 0 failed across fourteen files;
+- `npm run build:server` — passed;
+- full `npm run build` — passed;
+- Prisma Client generation, server TypeScript, Next compilation, type validation, static generation, and trace collection — passed;
+- `/api/merchant-knowledge/conflicts/[id]/resolve/confirm`, both completed deprecation routes, preview route, and `/merchant-knowledge` appeared in the build manifest;
+- final `git diff --check` after documentation update — passed;
+- focused comprehensive high-risk scan over the executable conflict boundary — zero findings;
+- secret-material scan over implementation and test paths — zero findings.
+
+A broader lexical high-risk scan flagged only existing same-origin `fetch` calls in `src/libs/api.ts`, including the new internal conflict confirmation request. Focused review and scanning confirmed no upload, external-network, arbitrary-execution, deployment, or secret-handling behavior was introduced.
+
+Bounded validation repairs:
+
+- Prisma JSON candidate IDs are normalized through a runtime-safe string-array parser;
+- a test-only backfill guard was corrected to prove the sole schema assignment is exactly `backfillRunId: null`;
+- completed read/preview/deprecation regression guards were narrowed to allow exactly the new conflict route and dialog while continuing to forbid merge, split, reassignment, generic, and bulk confirmation.
+
+### Limitations and rollback
+
+Merchant merge, merchant split, and knowledge-reassignment confirmation remain unstarted. Phase 3.8E remains unstarted. Production/remote-database execution and persisted confirmation drafts remain out of scope.
+
+Rollback is limited to reverting the bounded conflict-confirmation commit or leaving `MERCHANT_CONFLICT_CONFIRMATION_ENABLED` unset/false. Completed alias and merchant confirmations remain independently controlled. No push is authorized or performed.

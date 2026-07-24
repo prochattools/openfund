@@ -102,18 +102,19 @@ describe('Phase 3.8D alias-deprecation confirmation route', () => {
     );
   });
 
-  it('preserves one alias route and permits only the separately approved merchant-deprecation confirmation', () => {
+  it('preserves one alias route and permits only the separately approved merchant and conflict confirmations', () => {
     const server = fs.readFileSync(path.join(process.cwd(), 'server/index.ts'), 'utf8');
     const bridge = fs.readFileSync(path.join(process.cwd(), 'src/app/api/merchant-knowledge/aliases/[aliasId]/deprecate/confirm/route.ts'), 'utf8');
     expect(server.match(/app\.post\('\/api\/merchant-knowledge\/aliases\/:aliasId\/deprecate\/confirm'/g)).toHaveLength(1);
     expect(server.match(/app\.post\('\/api\/merchant-knowledge\/merchants\/:merchantId\/deprecate\/confirm'/g)).toHaveLength(1);
+    expect(server.match(/app\.post\('\/api\/merchant-knowledge\/conflicts\/:conflictId\/resolve\/confirm'/g)).toHaveLength(1);
     expect(server).not.toMatch(/merchant-knowledge\/(plans\/confirm|confirm|bulk)/);
-    expect(server).not.toMatch(/(merge|split|conflicts|reassign).*confirm/i);
+    expect(server).not.toMatch(/(merge|split|reassign).*confirm/i);
     expect(bridge).toContain('export async function POST');
     expect(bridge).not.toMatch(/export async function (GET|PUT|PATCH|DELETE)/);
   });
 
-  it('keeps the confirmation UI administrator-only, individual, accessible, and free of other action controls', () => {
+  it('keeps the confirmation UI administrator-only, individual, accessible, and free of unapproved action controls', () => {
     const panel = fs.readFileSync(path.join(process.cwd(), 'src/ui/MerchantKnowledgePreviewPanel.tsx'), 'utf8');
     expect(panel).toContain('if (!isClientAdmin()) return null');
     expect(panel).toContain("preview.action === 'DEPRECATE_ALIAS'");
@@ -123,7 +124,7 @@ describe('Phase 3.8D alias-deprecation confirmation route', () => {
     expect(panel).toContain('geen boeking');
     expect(panel).toContain('wijzigt geen bankfeit');
     expect(panel).not.toMatch(/bulk|alles selecteren/i);
-    expect(panel).not.toMatch(/Bevestig (merge|split|conflict|reassign)/i);
+    expect(panel).not.toMatch(/Bevestig (merge|split|reassign)/i);
     expect(panel).not.toContain('prisma');
     expect(panel).not.toContain('normalizedValue');
     expect(panel).not.toContain('rawEvidence');

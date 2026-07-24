@@ -111,13 +111,14 @@ describe('Phase 3.8D merchant-deprecation confirmation route', () => {
     );
   });
 
-  it('registers one merchant and one alias confirmation route, with no generic, bulk, merge, split, conflict, or reassignment route', () => {
+  it('registers one merchant, alias, and conflict confirmation route, with no generic, bulk, merge, split, or reassignment route', () => {
     const server = fs.readFileSync(path.join(process.cwd(), 'server/index.ts'), 'utf8');
     const bridge = fs.readFileSync(path.join(process.cwd(), 'src/app/api/merchant-knowledge/merchants/[id]/deprecate/confirm/route.ts'), 'utf8');
     expect(server.match(/app\.post\('\/api\/merchant-knowledge\/merchants\/:merchantId\/deprecate\/confirm'/g)).toHaveLength(1);
     expect(server.match(/app\.post\('\/api\/merchant-knowledge\/aliases\/:aliasId\/deprecate\/confirm'/g)).toHaveLength(1);
+    expect(server.match(/app\.post\('\/api\/merchant-knowledge\/conflicts\/:conflictId\/resolve\/confirm'/g)).toHaveLength(1);
     expect(server).not.toMatch(/merchant-knowledge\/(plans\/confirm|confirm|bulk)/);
-    expect(server).not.toMatch(/(merge|split|conflicts|reassign).*confirm/i);
+    expect(server).not.toMatch(/(merge|split|reassign).*confirm/i);
     expect(bridge).toContain('export async function POST');
     expect(bridge).not.toMatch(/export async function (GET|PUT|PATCH|DELETE)/);
   });
@@ -133,7 +134,7 @@ describe('Phase 3.8D merchant-deprecation confirmation route', () => {
     expect(panel).toContain('geen boeking');
     expect(panel).toContain('geen bankfeit');
     expect(panel).not.toMatch(/bulk|alles selecteren/i);
-    expect(panel).not.toMatch(/Bevestig (merge|split|conflict|reassign)/i);
+    expect(panel).not.toMatch(/Bevestig (merge|split|reassign)/i);
     expect(panel).not.toContain('prisma');
     expect(panel).not.toContain('normalizedValue');
     expect(panel).not.toContain('rawEvidence');
