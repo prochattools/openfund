@@ -21,17 +21,41 @@ const unresolved: SuggestionBackfillTransaction = {
   },
 };
 
-const approvedHistory: SuggestionBackfillHistory = {
+const approvedHistory = {
   ...unresolved,
   id: 'history-1',
+  userId: 'user-1',
   date: new Date('2025-06-01T00:00:00.000Z'),
+  ledger: { lockedAt: null },
   transactionBooking: {
     id: 'booking-1',
+    workspaceId: 'workspace-1',
     projectId: 'project-ya',
     transactionTypeId: 'type-gift-in',
     categoryId: 'category-gifts',
+    source: 'MANUAL' as const,
     evidenceHash: 'booking-hash-1',
+    confirmedBy: 'admin-user',
+    confirmedAt: new Date('2025-06-02T10:00:00.000Z'),
+    project: { workspaceId: 'workspace-1' },
+    transactionType: { workspaceId: 'workspace-1' },
+    category: { workspaceId: 'workspace-1' },
   },
+  reviewDecisions: [{
+    id: 'decision-1',
+    workspaceId: 'workspace-1',
+    transactionId: 'history-1',
+    suggestionId: null,
+    action: 'ASSIGN_MANUALLY' as const,
+    afterBookingId: 'booking-1',
+    afterProjectId: 'project-ya',
+    afterTypeId: 'type-gift-in',
+    afterCategoryId: 'category-gifts',
+    actorId: 'admin-user',
+    evidenceHash: 'decision-hash-1',
+    decidedAt: new Date('2025-06-02T10:00:01.000Z'),
+    suggestion: null,
+  }],
 };
 
 const makeDb = () => {

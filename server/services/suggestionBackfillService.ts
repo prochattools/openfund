@@ -6,6 +6,7 @@ import {
   type RankedHistorySuggestion,
 } from './historySuggestionService';
 import { toHistorySuggestionFacts } from './transactionSuggestionFacts';
+import { loadConfirmedHistoryEligibility } from './confirmedHistoryEligibilityService';
 
 export type SuggestionBackfillTransaction = {
   id: string;
@@ -144,12 +145,13 @@ export const buildSuggestionBackfillPlan = (input: {
 const loadPlan = async (
   db: Pick<PrismaClient, 'transaction'>,
   userId: string,
+  workspaceId: string,
   algorithmVersion: string,
 ): Promise<{
   plan: SuggestionBackfillPlan;
   unresolvedTransactionIds: string[];
 }> => {
-  const [unresolvedTransactions, approvedHistory] = await Promise.all([
+  const [unresolvedTransactions, eligibility] = await Promise.all([
     db.transaction.findMany({
       where: { userId, transactionBooking: null },
       orderBy: [{ date: 'asc' }, { id: 'asc' }],
@@ -165,39 +167,33 @@ const loadPlan = async (
         rawRow: true,
       },
     }),
-    db.transaction.findMany({
-      where: { userId, transactionBooking: { isNot: null } },
-      orderBy: [{ date: 'asc' }, { id: 'asc' }],
-      select: {
-        id: true,
-        date: true,
-        accountId: true,
-        direction: true,
-        amountMinor: true,
-        counterparty: true,
-        reference: true,
-        description: true,
-        rawRow: true,
-        transactionBooking: {
-          select: {
-            id: true,
-            projectId: true,
-            transactionTypeId: true,
-            categoryId: true,
-            evidenceHash: true,
-          },
-        },
-      },
-    }),
+    loadConfirmedHistoryEligibility(db, { workspaceId, userId }),
   ]);
 
   return {
     plan: buildSuggestionBackfillPlan({
       unresolvedTransactions: unresolvedTransactions as SuggestionBackfillTransaction[],
-      approvedHistory: approvedHistory.filter(
-        (transaction): transaction is typeof transaction & { transactionBooking: NonNullable<typeof transaction.transactionBooking> } =>
-          transaction.transactionBooking != null,
-      ) as SuggestionBackfillHistory[],
+      approvedHistory: eligibility.eligibleHistory.map((history): SuggestionBackfillHistory => ({
+        id: history.transactionId,
+        date: history.date,
+        accountId: history.accountId,
+        direction: history.direction,
+        amountMinor: history.amountMinor,
+        counterparty: history.counterparty,
+        reference: null,
+        description: history.description,
+        rawRow: {
+          'Counterparty IBAN': history.counterpartyIban,
+          Notifications: history.paymentPurpose,
+        },
+        transactionBooking: {
+          id: history.bookingId,
+          projectId: history.projectId,
+          transactionTypeId: history.transactionTypeId,
+          categoryId: history.categoryId,
+          evidenceHash: history.bookingEvidenceHash,
+        },
+      })),
       algorithmVersion,
     }),
     unresolvedTransactionIds: unresolvedTransactions.map((transaction) => transaction.id),
@@ -241,17 +237,23 @@ export const backfillHistorySuggestions = async (
     orderBy: { createdAt: 'asc' },
     select: { workspaceId: true },
   });
-  const loaded = await loadPlan(db, input.userId, algorithmVersion);
-  const plan = loaded.plan;
   const execute = input.execute === true;
+  if (!membership) {
+    return baseResult(buildSuggestionBackfillPlan({
+      unresolvedTransactions: [],
+      approvedHistory: [],
+      algorithmVersion,
+    }), 'WORKSPACE_NOT_FOUND', !execute);
+  }
 
-  if (!membership) return baseResult(plan, 'WORKSPACE_NOT_FOUND', !execute);
+  const loaded = await loadPlan(db, input.userId, membership.workspaceId, algorithmVersion);
+  const plan = loaded.plan;
   if (!execute) return baseResult(plan, 'DRY_RUN_COMPLETE', true);
   if (input.executionAllowed !== true) return baseResult(plan, 'EXECUTION_NOT_ALLOWED', false);
   if (input.confirmBackfill !== true) return baseResult(plan, 'CONFIRMATION_REQUIRED', false);
 
   return db.$transaction(async (tx) => {
-    const current = await loadPlan(tx, input.userId, algorithmVersion);
+    const current = await loadPlan(tx, input.userId, membership.workspaceId, algorithmVersion);
     const currentPlan = current.plan;
     const transactionIds = Array.from(new Set(current.unresolvedTransactionIds));
     const resolvedAt = new Date();

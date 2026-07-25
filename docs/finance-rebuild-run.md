@@ -4596,3 +4596,104 @@ It must:
 Program Phase 5 may begin only after every Phase 4 slice passes, the corrected 221-item pre-AI baseline is frozen and reproducible, candidate and Decision contracts are versioned and valid-ID constrained, every eligible item receives a deterministic Decision or explicit abstention, provider/privacy/security/cost design is approved, and integrity tests prove zero booking, bank-fact, locked-period, or confirmed-history contamination.
 
 No push is authorized or performed.
+
+
+## Program Phase 4.1 — confirmed-history eligibility contract
+
+Starting commit: `0604fb3` (`docs: align intelligence roadmap status`).
+
+### Exact implementation scope
+
+Implemented one pure/read-only confirmed-history eligibility boundary:
+
+- `server/services/confirmedHistoryEligibilityService.ts`;
+- integrated only into `server/services/suggestionBackfillService.ts` so raw booked transactions are no longer implicitly trusted as approved history;
+- focused tests in `tests/services/confirmedHistoryEligibilityService.test.ts`;
+- affected backfill fixtures in `tests/services/suggestionBackfillService.test.ts`.
+
+No schema, migration, route, UI, booking mutation, review mutation, ranking/scoring change, Phase 4.2+, AI inference, external-model call, deployment, or push behavior was added.
+
+### Eligibility contract
+
+The service derives one workspace scope from server-authoritative membership before loading history. A record is eligible only when:
+
+- it has a current complete `TransactionBooking`;
+- project, transaction type, and category are all present and workspace-scoped;
+- booking actor, confirmation timestamp, and booking evidence hash are present;
+- the latest applicable `ReviewDecision` is one of:
+  - `ACCEPT_SUGGESTION`;
+  - `ASSIGN_MANUALLY`;
+  - `CHANGE_BOOKING`;
+- the latest decision references the current booking through `afterBookingId`;
+- the latest decision’s project/type/category match the current booking exactly;
+- decision actor, decision timestamp, and decision evidence hash are present;
+- accepted-suggestion provenance references a workspace-scoped suggestion with `status = ACCEPTED`.
+
+Explicit exclusions are returned for:
+
+- cross-workspace booking, decision, suggestion, or dimension data;
+- missing current booking;
+- incomplete dimensions;
+- missing booking provenance;
+- missing review decision;
+- latest `REMOVE_BOOKING` decision;
+- latest ineligible decision;
+- superseded current booking;
+- dimension mismatch;
+- missing decision provenance;
+- non-accepted suggestion provenance.
+
+Pending, rejected, expired, generated, superseded, incomplete, cross-workspace, and provenance-incomplete records are therefore never treated as confirmed retrieval history.
+
+### Deterministic provenance
+
+Eligible records preserve privacy-safe provenance:
+
+- eligibility version `confirmed-history-v1`;
+- workspace, transaction, booking, and review-decision IDs;
+- review action and actor ID;
+- booking source;
+- booking and decision evidence hashes;
+- booking confirmation and review decision timestamps;
+- project, transaction-type, and category IDs;
+- locked-ledger timestamp when present;
+- deterministic SHA-256 provenance hash.
+
+Eligible output is sorted deterministically by transaction date and ID and remains structurally compatible with the existing `ApprovedHistoryBooking` ranking input. Ranking, scoring, merchant-anchor weighting, and suggestion generation behavior were not changed.
+
+### Read-only and integrity guarantees
+
+The eligibility boundary performs one bounded read query and opens no database transaction. It contains no create, update, delete, upsert, bulk write, booking write, suggestion write, bank-fact mutation, period-state mutation, backfill execution, or AI/external-model path.
+
+Locked-period provenance is preserved as read-only evidence; no locked-period or ledger state is modified.
+
+### Validation evidence
+
+Completed successfully:
+
+- focused confirmed-history eligibility tests — 13 passed, 0 failed;
+- affected suggestion-backfill, history-ranking, review-decision, request-context, and administrator-mutation-policy tests — 52 passed, 0 failed;
+- final combined focused and affected tests — 65 passed, 0 failed across six files;
+- `npm run build:server` — passed;
+- full `npm run build` — passed after one bounded typing repair;
+- Prisma Client generation, server TypeScript compilation, Next compilation, type validation, static generation, and trace collection — passed;
+- `git diff --check` — passed before documentation update;
+- focused comprehensive high-risk scan over implementation and test paths — zero findings;
+- focused secret-material scan over implementation and test paths — zero findings.
+
+Bounded repairs:
+
+- Prisma nullable relation filtering was corrected to use `transactionBooking: { is: { workspaceId } }`;
+- the selected Prisma projection cast was made explicit through `unknown` after selecting every required eligibility field;
+- existing backfill test fixtures were updated with the newly required human review, workspace, dimension, booking, and evidence provenance;
+- the confirmed-history mapper was explicitly typed as `SuggestionBackfillHistory` to preserve the existing ranking contract without runtime changes.
+
+### Limitations, rollback, and next slice
+
+Phase 4.1 does not define retrieval ranking, evidence aggregation, candidate generation, Decision contracts, orchestration, benchmark evaluation, or AI inference.
+
+Rollback restores the prior direct booked-transaction history query in `suggestionBackfillService.ts` and removes the pure eligibility service. No persisted data requires rollback.
+
+The exact next bounded roadmap slice is Phase 4.2: deterministic retrieval scoring and bounded queries over the confirmed-history set. Phase 5 remains blocked until every Phase 4 slice and the corrected 221-item deterministic pre-AI baseline pass.
+
+No push is authorized or performed.
