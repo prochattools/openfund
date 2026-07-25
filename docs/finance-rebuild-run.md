@@ -4697,3 +4697,113 @@ Rollback restores the prior direct booked-transaction history query in `suggesti
 The exact next bounded roadmap slice is Phase 4.2: deterministic retrieval scoring and bounded queries over the confirmed-history set. Phase 5 remains blocked until every Phase 4 slice and the corrected 221-item deterministic pre-AI baseline pass.
 
 No push is authorized or performed.
+
+
+## Program Phase 4.2 — deterministic confirmed-history retrieval
+
+Starting commit: `85b86a2` (`feat: define confirmed history eligibility`).
+
+### Exact implementation scope
+
+Implemented only deterministic retrieval scoring and bounded queries over the Phase 4.1 `confirmed-history-v1` eligible set:
+
+- `server/services/deterministicHistoryRetrievalService.ts`;
+- bounded row/date controls in `server/services/confirmedHistoryEligibilityService.ts`;
+- additive component-score export in `server/services/historySuggestionService.ts`;
+- integration into the existing suggestion-backfill retrieval path in `server/services/suggestionBackfillService.ts`;
+- focused tests in `tests/services/deterministicHistoryRetrievalService.test.ts`.
+
+The public legacy `buildSuggestionBackfillPlan` remains unchanged for backward compatibility. Suggestion persistence semantics, booking behavior, review mutations, schema, migrations, routes, UI, Phase 4.3+, and AI behavior were not changed.
+
+### Versioned scorer and weights
+
+Scorer version: `deterministic-history-retrieval-v1`.
+
+Eligibility version: `confirmed-history-v1`.
+
+The wrapper preserves the existing `history-v1` component weights:
+
+- exact IBAN: 3,600 basis points;
+- exact counterparty: 2,200;
+- exact description: 1,400;
+- exact payment purpose: 1,000;
+- token similarity maximum: 1,400;
+- same account: 500;
+- exact amount: 450;
+- recurring month: 150;
+- recency maximum: 400;
+- Merchant Knowledge anchor maximum: 1,500;
+- frequency maximum: 800.
+
+Direction incompatibility is excluded before scoring. Merchant Knowledge contribution applies only when the anchor is usable, workspace-valid, non-stale/non-expired, has a merchant ID, and the confirmed-history record carries the same privacy-safe merchant ID.
+
+### Bounds, ordering, and abstention
+
+Conservative defaults and hard limits:
+
+- maximum eligible-history rows: 500 default, 1,000 hard cap;
+- maximum returned candidates: 3;
+- lookback period: 1,825 days (five years);
+- minimum score threshold: 3,000 basis points.
+
+Eligible history is restricted to the target workspace and `confirmed-history-v1`, excludes the target transaction itself, excludes future history, enforces the lookback period, and is deterministically truncated by newest date then descending transaction ID. Candidate ranking preserves the existing `history-v1` score, evidence, and stable triple tie-breaking.
+
+Explicit abstentions:
+
+- `NO_ELIGIBLE_HISTORY`;
+- `NO_SCORE_ABOVE_THRESHOLD`.
+
+### Result and privacy contract
+
+Every matched candidate exposes:
+
+- deterministic rank and total score;
+- project, transaction-type, and category IDs;
+- strongest history transaction, booking, and review-decision IDs;
+- exact component-score breakdown including frequency contribution;
+- scorer, legacy algorithm, and eligibility versions;
+- confirmed-history provenance hash;
+- booking and decision evidence hashes;
+- privacy-safe matched-history/evidence counts and hashes;
+- Merchant Knowledge anchor state/evidence/evaluation hashes and counts;
+- deterministic candidate retrieval hash.
+
+The top-level result exposes stable bounds, weights, status/abstention reason, candidate list, and deterministic retrieval hash.
+
+No raw IBAN, unrestricted normalized value, transaction description, payment source text, or raw evidence JSON is returned. Exact IBAN matching is represented only through privacy-safe evidence hashes/counts.
+
+### Zero-side-effect guarantees
+
+The scorer and bounded eligibility query perform no create, update, delete, upsert, bulk write, database transaction, booking, suggestion persistence, review-decision mutation, bank-fact mutation, ledger or period mutation, backfill execution, AI inference, or external-model call.
+
+The repository backfill planning path now consumes only `confirmed-history-v1` eligible records and applies bounded threshold retrieval. Existing persistence behavior remains unchanged for any planned suggestions that pass retrieval.
+
+### Validation evidence
+
+Completed successfully:
+
+- focused Phase 4.2 retrieval tests — 6 passed, 0 failed;
+- affected Phase 4.1 eligibility, history-ranking, suggestion-backfill, Merchant Retrieval Anchor, request-context, and administrator-policy regressions — 66 passed, 0 failed;
+- combined validated tests — 72 passed, 0 failed;
+- `npm run build:server` — passed;
+- full `npm run build` — passed;
+- Prisma Client generation, server TypeScript compilation, Next compilation, type validation, and static generation — passed;
+- `git diff --check` — passed before documentation update;
+- focused high-risk scan — zero findings;
+- focused secret-material scan — zero findings.
+
+Bounded repairs:
+
+- version fields were narrowed to exported literal types without runtime change;
+- one focused assertion was aligned with the existing component field names;
+- the valid Merchant Knowledge anchor-precedence fixture was completed with `merchantId: 'merchant-1'`, matching the established source contract; production anchor semantics and weights were unchanged.
+
+### Limitations, rollback, and next slice
+
+Phase 4.2 does not implement supporting-versus-conflicting dimensional evidence, restricted candidate generation, Decision contracts, orchestration, benchmark evaluation, or AI inference.
+
+Rollback restores the Phase 4.1 direct `history-v1` ranking path in `suggestionBackfillService.ts`, removes the deterministic retrieval wrapper, and removes the optional bounded loader controls. No persisted data requires rollback.
+
+The exact next bounded slice is Phase 4.3: supporting and conflicting evidence for each dimensional candidate. Phase 5 remains blocked until all Phase 4 slices and the corrected 221-item deterministic pre-AI baseline pass.
+
+No push is authorized or performed.

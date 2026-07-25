@@ -6,7 +6,14 @@ import {
   type RankedHistorySuggestion,
 } from './historySuggestionService';
 import { toHistorySuggestionFacts } from './transactionSuggestionFacts';
-import { loadConfirmedHistoryEligibility } from './confirmedHistoryEligibilityService';
+import {
+  loadConfirmedHistoryEligibility,
+  type EligibleConfirmedHistoryBooking,
+} from './confirmedHistoryEligibilityService';
+import {
+  DETERMINISTIC_HISTORY_RETRIEVAL_VERSION,
+  retrieveDeterministicConfirmedHistory,
+} from './deterministicHistoryRetrievalService';
 
 export type SuggestionBackfillTransaction = {
   id: string;
@@ -142,6 +149,52 @@ export const buildSuggestionBackfillPlan = (input: {
   };
 };
 
+const buildSuggestionBackfillPlanFromEligibleHistory = (input: {
+  workspaceId: string;
+  unresolvedTransactions: SuggestionBackfillTransaction[];
+  eligibleHistory: EligibleConfirmedHistoryBooking[];
+}): SuggestionBackfillPlan => {
+  const suggestions: PlannedSuggestion[] = [];
+  const matcherDistribution: Record<string, number> = {};
+  const confidenceDistribution: Record<string, number> = {};
+  let completeRankOneCount = 0;
+
+  for (const transaction of [...input.unresolvedTransactions].sort((left, right) => {
+    const dateDifference = left.date.getTime() - right.date.getTime();
+    return dateDifference || left.id.localeCompare(right.id);
+  })) {
+    const retrieval = retrieveDeterministicConfirmedHistory({
+      workspaceId: input.workspaceId,
+      target: toHistorySuggestionFacts(transaction),
+      eligibleHistory: input.eligibleHistory,
+    });
+    if (retrieval.candidates[0]) completeRankOneCount += 1;
+    for (const candidate of retrieval.candidates) {
+      increment(matcherDistribution, candidate.matcher);
+      increment(confidenceDistribution, candidate.confidence);
+      suggestions.push({ transactionId: transaction.id, ...candidate });
+    }
+  }
+
+  return {
+    algorithmVersion: DETERMINISTIC_HISTORY_RETRIEVAL_VERSION,
+    unresolvedTransactionCount: input.unresolvedTransactions.length,
+    compatibleHistoryCount: input.eligibleHistory.length,
+    completeRankOneCount,
+    uncoveredTransactionCount: input.unresolvedTransactions.length - completeRankOneCount,
+    plannedSuggestionCount: suggestions.length,
+    matcherDistribution,
+    confidenceDistribution,
+    suggestions,
+    sideEffects: {
+      writesPerformed: false,
+      createsTransactionBooking: false,
+      closesPeriod: false,
+      mutatesBankFacts: false,
+    },
+  };
+};
+
 const loadPlan = async (
   db: Pick<PrismaClient, 'transaction'>,
   userId: string,
@@ -171,30 +224,10 @@ const loadPlan = async (
   ]);
 
   return {
-    plan: buildSuggestionBackfillPlan({
+    plan: buildSuggestionBackfillPlanFromEligibleHistory({
+      workspaceId,
       unresolvedTransactions: unresolvedTransactions as SuggestionBackfillTransaction[],
-      approvedHistory: eligibility.eligibleHistory.map((history): SuggestionBackfillHistory => ({
-        id: history.transactionId,
-        date: history.date,
-        accountId: history.accountId,
-        direction: history.direction,
-        amountMinor: history.amountMinor,
-        counterparty: history.counterparty,
-        reference: null,
-        description: history.description,
-        rawRow: {
-          'Counterparty IBAN': history.counterpartyIban,
-          Notifications: history.paymentPurpose,
-        },
-        transactionBooking: {
-          id: history.bookingId,
-          projectId: history.projectId,
-          transactionTypeId: history.transactionTypeId,
-          categoryId: history.categoryId,
-          evidenceHash: history.bookingEvidenceHash,
-        },
-      })),
-      algorithmVersion,
+      eligibleHistory: eligibility.eligibleHistory,
     }),
     unresolvedTransactionIds: unresolvedTransactions.map((transaction) => transaction.id),
   };

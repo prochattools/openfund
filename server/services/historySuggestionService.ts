@@ -13,6 +13,20 @@ import {
 
 export const HISTORY_SUGGESTION_ALGORITHM_VERSION = 'history-v1';
 
+export const HISTORY_SUGGESTION_COMPONENT_WEIGHTS = Object.freeze({
+  exactIban: 3600,
+  exactCounterparty: 2200,
+  exactDescription: 1400,
+  exactPurpose: 1000,
+  tokenSimilarityMaximum: 1400,
+  sameAccount: 500,
+  exactAmount: 450,
+  recurringMonth: 150,
+  recencyMaximum: 400,
+  merchantAnchorMaximum: 1500,
+  frequencyMaximum: 800,
+});
+
 export type HistorySuggestionFacts = {
   transactionId: string;
   date: Date;
@@ -94,6 +108,7 @@ type ScoredHistory = {
   exactAmount: boolean;
   sameAccount: boolean;
   recurringMonth: boolean;
+  recencyContributionBasisPoints: number;
   merchantAnchorContributionBasisPoints: number;
 };
 
@@ -218,6 +233,7 @@ const scoreHistory = (
     exactAmount,
     sameAccount,
     recurringMonth,
+    recencyContributionBasisPoints: recency,
     merchantAnchorContributionBasisPoints,
   };
 };
@@ -344,6 +360,57 @@ const buildCandidate = (
     scoreBasisPoints,
     evidence,
     evidenceHash: evidenceHash(hashPayload),
+  };
+};
+
+export type HistoryScoreComponents = {
+  exactIbanBasisPoints: number;
+  exactCounterpartyBasisPoints: number;
+  exactDescriptionBasisPoints: number;
+  exactPurposeBasisPoints: number;
+  tokenSimilarityBasisPoints: number;
+  tokenSimilarityContributionBasisPoints: number;
+  sameAccountBasisPoints: number;
+  exactAmountBasisPoints: number;
+  recurringMonthBasisPoints: number;
+  recencyBasisPoints: number;
+  merchantAnchorBasisPoints: number;
+  historyScoreBasisPoints: number;
+  exactIbanMatched: boolean;
+};
+
+export const evaluateHistoryScoreComponents = (
+  target: HistorySuggestionFacts,
+  history: ApprovedHistoryBooking,
+  options: {
+    workspaceId?: string;
+    merchantAnchor?: MerchantRetrievalAnchor | null;
+    merchantAnchorEnabled?: boolean;
+  } = {},
+): HistoryScoreComponents => {
+  const merchantAnchor = evaluateMerchantRetrievalAnchor({
+    workspaceId: options.workspaceId ?? '',
+    transactionId: target.transactionId,
+    anchor: options.merchantAnchor,
+    enabled: options.merchantAnchorEnabled,
+  });
+  const scored = scoreHistory(target, history, merchantAnchor);
+  return {
+    exactIbanBasisPoints: scored.exactIban ? HISTORY_SUGGESTION_COMPONENT_WEIGHTS.exactIban : 0,
+    exactCounterpartyBasisPoints: scored.exactCounterparty ? HISTORY_SUGGESTION_COMPONENT_WEIGHTS.exactCounterparty : 0,
+    exactDescriptionBasisPoints: scored.exactDescription ? HISTORY_SUGGESTION_COMPONENT_WEIGHTS.exactDescription : 0,
+    exactPurposeBasisPoints: scored.exactPurpose ? HISTORY_SUGGESTION_COMPONENT_WEIGHTS.exactPurpose : 0,
+    tokenSimilarityBasisPoints: scored.tokenSimilarityBasisPoints,
+    tokenSimilarityContributionBasisPoints: Math.round(
+      (scored.tokenSimilarityBasisPoints * HISTORY_SUGGESTION_COMPONENT_WEIGHTS.tokenSimilarityMaximum) / 10000,
+    ),
+    sameAccountBasisPoints: scored.sameAccount ? HISTORY_SUGGESTION_COMPONENT_WEIGHTS.sameAccount : 0,
+    exactAmountBasisPoints: scored.exactAmount ? HISTORY_SUGGESTION_COMPONENT_WEIGHTS.exactAmount : 0,
+    recurringMonthBasisPoints: scored.recurringMonth ? HISTORY_SUGGESTION_COMPONENT_WEIGHTS.recurringMonth : 0,
+    recencyBasisPoints: scored.recencyContributionBasisPoints,
+    merchantAnchorBasisPoints: scored.merchantAnchorContributionBasisPoints,
+    historyScoreBasisPoints: scored.scoreBasisPoints,
+    exactIbanMatched: scored.exactIban,
   };
 };
 

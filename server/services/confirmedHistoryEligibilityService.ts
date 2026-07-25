@@ -265,14 +265,32 @@ type ConfirmedHistoryDb = Pick<PrismaClient, 'transaction'>;
 
 export const loadConfirmedHistoryEligibility = async (
   db: ConfirmedHistoryDb,
-  input: { workspaceId: string; userId: string },
+  input: {
+    workspaceId: string;
+    userId: string;
+    maximumRows?: number;
+    notBefore?: Date;
+    notAfter?: Date;
+  },
 ): Promise<ConfirmedHistoryEligibilityResult> => {
+  const maximumRows = input.maximumRows == null
+    ? undefined
+    : Math.max(1, Math.min(1000, Math.floor(input.maximumRows)));
   const candidates = await db.transaction.findMany({
     where: {
       userId: input.userId,
       transactionBooking: { is: { workspaceId: input.workspaceId } },
+      ...(input.notBefore || input.notAfter
+        ? {
+            date: {
+              ...(input.notBefore ? { gte: input.notBefore } : {}),
+              ...(input.notAfter ? { lte: input.notAfter } : {}),
+            },
+          }
+        : {}),
     },
-    orderBy: [{ date: 'asc' }, { id: 'asc' }],
+    orderBy: maximumRows ? [{ date: 'desc' }, { id: 'desc' }] : [{ date: 'asc' }, { id: 'asc' }],
+    ...(maximumRows ? { take: maximumRows } : {}),
     select: {
       id: true,
       userId: true,
