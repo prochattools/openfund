@@ -4807,3 +4807,86 @@ Rollback restores the Phase 4.1 direct `history-v1` ranking path in `suggestionB
 The exact next bounded slice is Phase 4.3: supporting and conflicting evidence for each dimensional candidate. Phase 5 remains blocked until all Phase 4 slices and the corrected 221-item deterministic pre-AI baseline pass.
 
 No push is authorized or performed.
+
+
+## Program Phase 4.3 — deterministic supporting and conflicting retrieval evidence
+
+Starting commit: `2756eaf` (`feat: add deterministic history retrieval`).
+
+### Exact implementation scope
+
+Implemented only the deterministic evidence layer over Phase 4.2 retrieval:
+
+- `server/services/deterministicRetrievalEvidenceService.ts`;
+- evidence-aware abstention in `server/services/suggestionBackfillService.ts`;
+- focused tests in `tests/services/deterministicRetrievalEvidenceService.test.ts`.
+
+No Phase 4.2 scoring weight, threshold, bound, ranking, tie-break, schema, migration, route, UI, booking, suggestion-persistence, review, ledger, period, Merchant Knowledge mutation, Phase 4.4+, or AI behavior changed.
+
+### Evidence contract
+
+Evidence version: `deterministic-retrieval-evidence-v1`.
+
+For every retrieval candidate, project, transaction type, and category each expose:
+
+- selected value ID;
+- status: `SUPPORTED`, `ABSENT`, `INSUFFICIENT`, or `CONFLICTED`;
+- support count and aggregate support score;
+- deterministic component codes and exact Phase 4.2 component scores;
+- strongest supporting transaction, booking, review-decision, provenance, booking-evidence, and decision-evidence references;
+- competing value IDs with support counts, scores, strongest privacy-safe provenance references, materiality, and deterministic evidence hashes;
+- deterministic dimension evidence hash.
+
+Candidate-level output exposes evidence status `SUPPORTED`, `INSUFFICIENT`, or `MATERIAL_CONFLICT` plus a deterministic evidence hash. Top-level output preserves scorer and eligibility versions, workspace and target IDs, status/abstention, side-effect declarations, material-conflict rule, and deterministic evidence hash.
+
+### Material-conflict and abstention rule
+
+A competing value is material when its confirmed-history support score is at least:
+
+- 90% of the selected value support score; and
+- 3,000 basis points.
+
+The rule is deterministic and versioned. A material conflict in any selected dimension produces explicit `MATERIAL_CONFLICT` abstention. Missing or below-threshold selected evidence produces `INSUFFICIENT_EVIDENCE`. Existing Phase 4.2 abstentions, including no eligible history, are preserved. The evidence layer never changes ranking weights to force a choice.
+
+The existing backfill retrieval path now persists no candidate when evidence status is not `MATCHED`; existing suggestion persistence fields and behavior remain unchanged for supported candidates.
+
+### Privacy and isolation
+
+Only `confirmed-history-v1` records from the authorized workspace may contribute. Direction mismatch, future records, out-of-lookback records, target self-history, cross-workspace history, and invalid eligibility versions are rejected or excluded under the existing Phase 4.2 bounds.
+
+Outputs contain only approved IDs, component codes/scores, counts, version/status values, provenance/evidence hashes, and deterministic hashes. No raw IBAN, counterparty text, normalized values, transaction descriptions, payment-purpose/source text, raw evidence JSON, or bank facts are exposed.
+
+Merchant Knowledge anchor support appears only when the existing anchor is usable and the confirmed-history row carries the matching privacy-safe merchant ID.
+
+### Zero-side-effect guarantees
+
+The evidence service performs no database write or transaction and contains no create, update, delete, upsert, booking, suggestion, review, bank-fact, ledger, period, Merchant Knowledge mutation, backfill execution, AI inference, or external-model call.
+
+### Validation evidence
+
+Completed successfully:
+
+- focused Phase 4.3 evidence tests — 7 passed, 0 failed;
+- affected Phase 4.2 retrieval, Phase 4.1 eligibility, history-ranking, suggestion-backfill, Merchant Retrieval Anchor, request-context, and administrator-policy regressions — 72 passed, 0 failed;
+- combined validated tests — 79 passed, 0 failed;
+- `npm run build:server` — passed;
+- full `npm run build` — passed;
+- Prisma Client generation, server TypeScript compilation, Next compilation, type validation, static generation, and trace collection — passed;
+- `git diff --check` — passed before documentation update;
+- focused executable high-risk scan — zero findings;
+- focused secret-material scan — zero findings.
+
+Bounded repairs:
+
+- nested evidence/material-conflict constants were narrowed to exact exported literal types without runtime changes;
+- one focused cross-workspace assertion was aligned with the existing source error message.
+
+### Limitations, rollback, and next slice
+
+Phase 4.3 does not implement active candidate-set generation, Decision contracts, orchestration, benchmark evaluation, or AI inference.
+
+Rollback removes the evidence service and restores the Phase 4.2 retrieval-only planning path. No persisted data requires rollback.
+
+The exact next bounded slice is Phase 4.4: restricted candidate generation for active, workspace-scoped, direction-compatible project/type/category IDs. Phase 5 remains blocked until all Phase 4 slices and the corrected 221-item deterministic pre-AI baseline pass.
+
+No push is authorized or performed.

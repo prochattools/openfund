@@ -14,6 +14,7 @@ import {
   DETERMINISTIC_HISTORY_RETRIEVAL_VERSION,
   retrieveDeterministicConfirmedHistory,
 } from './deterministicHistoryRetrievalService';
+import { buildDeterministicRetrievalEvidence } from './deterministicRetrievalEvidenceService';
 
 export type SuggestionBackfillTransaction = {
   id: string;
@@ -163,13 +164,22 @@ const buildSuggestionBackfillPlanFromEligibleHistory = (input: {
     const dateDifference = left.date.getTime() - right.date.getTime();
     return dateDifference || left.id.localeCompare(right.id);
   })) {
+    const target = toHistorySuggestionFacts(transaction);
     const retrieval = retrieveDeterministicConfirmedHistory({
       workspaceId: input.workspaceId,
-      target: toHistorySuggestionFacts(transaction),
+      target,
       eligibleHistory: input.eligibleHistory,
     });
-    if (retrieval.candidates[0]) completeRankOneCount += 1;
-    for (const candidate of retrieval.candidates) {
+    const evidence = buildDeterministicRetrievalEvidence({
+      workspaceId: input.workspaceId,
+      target,
+      eligibleHistory: input.eligibleHistory,
+      retrieval,
+    });
+    if (evidence.status === 'MATCHED' && evidence.candidates[0]) completeRankOneCount += 1;
+    if (evidence.status !== 'MATCHED') continue;
+    for (const explained of evidence.candidates) {
+      const candidate = explained.candidate;
       increment(matcherDistribution, candidate.matcher);
       increment(confidenceDistribution, candidate.confidence);
       suggestions.push({ transactionId: transaction.id, ...candidate });
