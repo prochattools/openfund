@@ -1668,7 +1668,8 @@ See `docs/PRODUCTION_HISTORICAL_IMPORT_EVIDENCE_NL.md` for import evidence.
 
 ## Transaction Review and Intelligence Program — executable plan
 
-Status: **documentation approved; Program Phase 2 is CURRENT**  
+Status: **roadmap aligned; Program Phase 4 is NEXT after Phase 2/3 closeout evidence**
+
 Architecture: `docs/ACCOUNTING_INTEGRITY_AND_REVIEW_PREFILL.md`  
 Roadmap: `docs/ROADMAP.md`  
 Persistent handoff: `docs/finance-rebuild-run.md`
@@ -1677,9 +1678,24 @@ Persistent handoff: `docs/finance-rebuild-run.md`
 
 This repository is the source of truth. Chat history is not durable project memory. Before selecting or executing work, an agent must read the four documents above, verify source/branch/HEAD/worktree, and confirm the current task from the persistent handoff. After each coherent slice, update the handoff with changed paths, validation, commits, blockers, and the exact next task.
 
-The seven program phases and their dependencies are governed by `docs/ROADMAP.md`. This section governs exact Program Phase 2 execution.
+The seven program phases and their dependencies are governed by `docs/ROADMAP.md`. This section preserves Phase 2 implementation history and governs Phase 2/3 closeout plus the exact Phase 4 handoff.
 
-## CURRENT — Program Phase 2: server-paginated compact review table
+Normalized planning estimate — not an official product metric:
+
+| Program phase | Estimated completion | Current gate |
+|---|---:|---|
+| Phase 1 | 40% | Freeze corrected 221-item benchmark and dimension-level labels. |
+| Phase 2 | 90% | Complete documented production closeout and acceptance evidence. |
+| Phase 3 | 95% | Complete Phase 3.8E and consolidated Phase 3.9 validation/rollback evidence. |
+| Phase 4 | 0% | Next after Phase 2/3 exit gates. |
+| Phase 5 | 0% | Blocked until all Phase 4 contracts and the pre-AI baseline pass. |
+| Phase 6 | 0% | Not started. |
+| Phase 7 | 0% | Not started. |
+| **Normalized seven-phase total** | **32%** | Equal-weight estimate, rounded. |
+
+Merchant merge, split, and knowledge-reassignment confirmation are explicitly deferrable and are not blockers for Phase 3 acceptance, Phase 4, or bounded Phase 5 shadow inference. They remain separately approved administrator capabilities and must not be implemented opportunistically.
+
+## IMPLEMENTED — Program Phase 2: server-paginated compact review table; production closeout pending
 
 ### Objective
 
@@ -1815,7 +1831,7 @@ After the largest coherent validated Phase 2 slice:
 
 ### Program Phase 1 and future phases
 
-Program Phase 1 benchmark/instrumentation supports later calibration and may be executed as a separately documented slice when it does not block Phase 2. Program Phase 2 status, evidence, and accounting-integrity controls remain unchanged. Program Phases 3–7 remain `TODO` and exist only to improve the accuracy, evidence, calibration, and reviewer experience for the 221 unresolved transactions and future review queues. They must not be pulled into Phase 2 opportunistically.
+Program Phase 1 benchmark/instrumentation supports later calibration and remains partially open for the corrected 221-item benchmark freeze. Program Phase 2 implementation is complete with production closeout pending. Program Phase 3 is in acceptance closeout, Program Phase 4 is next, and Program Phases 5–7 remain gated future work to improve accuracy, evidence, calibration, and reviewer experience for the 221 unresolved transactions and future review queues. Later phases must not bypass their documented entry gates.
 
 Future work is governed by:
 
@@ -1828,9 +1844,9 @@ Future work is governed by:
 
 For every future slice, exact files, symbols, schema surfaces, APIs, and commands must be verified from current source before editing. The functional areas below are anticipated boundaries, not claims that specific files must change.
 
-## TODO — Program Phase 3: Merchant Knowledge Layer
+## CLOSEOUT — Program Phase 3: Merchant Knowledge Layer
 
-**Design progress:** Phase 3.1 domain/data contracts, Phase 3.2 additive schema/migration design, Phase 3.3 deterministic fingerprint extraction, Phase 3.4 workspace-scoped alias resolution, Phase 3.5 pure conflict/merge/split planning controls, Phase 3.6 deterministic dry-run backfill planning, Phase 3.7 Merchant Retrieval Anchor integration, the Phase 3.8 administrator-tooling readiness design, Phase 3.8A read-only Merchant Knowledge capability/query contracts, and Phase 3.8B read-only Merchant Knowledge administrator page are complete. The additive Merchant Knowledge Prisma schema and canonical migration `20260719095000_add_merchant_knowledge` remain replay-validated, Prisma deploy/status/no-drift validated, empty, application-compatible, and consumed only by disabled-by-default authenticated read contracts and their privacy-safe authenticated UI. Phase 3.8C administrator-only plan-preview contracts are complete; the first two bounded Phase 3.8D actions, individual `DEPRECATE_ALIAS` and `DEPRECATE_MERCHANT` confirmation, are complete. Merge, split, conflict-resolution, and knowledge-reassignment confirmation and later administrator tooling slices remain unstarted. Program Phase 2 remains the roadmap `CURRENT` phase until its documented production closeout is complete.
+**Implementation progress:** Phase 3.1–3.7 core Merchant Knowledge contracts, schema/migration design, deterministic fingerprints, workspace-scoped alias resolution, pure conflict/merge/split/reassignment/deprecation planning, dry-run backfill planning, and retrieval-anchor integration are complete. Phase 3.8A read contracts, Phase 3.8B read-only administrator UI, Phase 3.8C plan previews, and Phase 3.8D individual confirmation for alias deprecation, merchant deprecation, and conflict resolution are complete. The additive schema and canonical migration `20260719095000_add_merchant_knowledge` remain replay-validated, application-compatible, and guarded by server-only capabilities. Phase 3.8E authenticated production acceptance and Phase 3.9 consolidated validation/rollback evidence remain. Merge, split, and knowledge-reassignment confirmation are explicitly deferred optional administrator capabilities and are not blockers for Phase 3 closeout, Phase 4, or bounded Phase 5 shadow inference.
 
 **Phase objective:** create stable workspace-scoped merchant evidence that improves deterministic categorization and confirmed-history retrieval without changing raw bank facts or creating bookings.
 
@@ -1852,7 +1868,19 @@ For every future slice, exact files, symbols, schema surfaces, APIs, and command
 | 3.8 UI/admin tooling, separately approved — PHASE 3.8D `DEPRECATE_ALIAS`, `DEPRECATE_MERCHANT`, AND `RESOLVE_CONFLICT` CONFIRMATIONS COMPLETE; REMAINING ACTIONS UNSTARTED | Define a separate `/merchant-knowledge` workflow for authenticated read-only inspection and individually confirmed administrator actions without mixing merchant identity maintenance into `/review`. | Completed in `docs/MERCHANT_ADMIN_TOOLING_DESIGN.md`. The design specifies authenticated viewer reads, server-authoritative `requireAdmin` mutations, feature-disabled-by-default exposure, read/query, preview, transactional confirmation, dedicated audit, redaction, evidence/rollback, mobile/accessibility, and no-bulk contracts. Phase 3.8A read contracts, Phase 3.8B read-only UI, and Phase 3.8C administrator-only preview contracts are implemented. The first two bounded Phase 3.8D transactions are implemented for individual `DEPRECATE_ALIAS` and `DEPRECATE_MERCHANT` confirmation with server-authoritative administrator access, in-transaction plan/evidence revalidation, soft deprecation, deterministic idempotency, and atomic `MerchantIdentityDecision` plus `MerchantAuditEvent` persistence. Individual `RESOLVE_CONFLICT` confirmation is implemented for `SELECT_MERCHANT`, `ABSTAIN`, and `DISMISS` with server-authoritative administrator access, canonical conflict-state hashing, in-transaction candidate/status/resolution-link/evidence revalidation, atomic conflict/resolution/decision/audit persistence, deterministic idempotency, and no alias/fingerprint trust or financial side effects. Merge, split, and knowledge-reassignment confirmation remain unstarted. | Approved smallest slices: 3.8A read-only capability/query contracts, 3.8B read-only page, 3.8C admin plan preview, 3.8D individual transactional confirmation, and 3.8E production acceptance. No booking or bank-fact mutation is permitted; disabling the server capability must return the application to current behavior. |
 | 3.9 Validation and rollback evidence | Prove Phase 3 improves identity consistency without weakening accounting. | Targeted domain, service, workspace, audit, migration, backfill, and no-booking tests; affected type checks and builds; secret scan and diff review. | Signed Phase 3 validation, dry-run evidence, disable path, and exact Phase 4 handoff. |
 
-## TODO — Program Phase 4: Retrieval and Decision Foundation
+### Phase 2 and Phase 3 executable exit criteria
+
+Program Phase 2 closes only when current production acceptance evidence confirms authenticated administrator and viewer behavior, all 221 unresolved transactions remain reachable and individually confirmable, pagination/filtering/risk ordering/mobile/accessibility behavior is current, authorization and locked-period protections pass, and no suggestion becomes a booking without explicit administrator confirmation.
+
+Program Phase 3 closes only when Phase 3.8E authenticated production acceptance and rollback rehearsal plus Phase 3.9 consolidated validation prove workspace isolation, deterministic matching/conflict behavior, replay-safe schema state, safe disablement, retrieval-anchor correctness, privacy redaction, and zero booking or bank-fact mutation.
+
+Merchant merge, merchant split, and knowledge-reassignment confirmation are deferred, optional administrator capabilities. They are not Phase 3 exit blockers because pure plans, previews, evidence hashes, rollback contracts, and safe-disabled mutation boundaries already exist. They must not delay Phase 4 or bounded Phase 5 shadow inference.
+
+The exact next implementation task is Phase 4.1 only. It must define a side-effect-free, workspace-scoped confirmed-history eligibility contract over current bookings and review decisions; exclude pending, rejected, generated, superseded, and otherwise ineligible suggestions or decisions; preserve provenance and locked-period rules; emit a reproducible eligible-history set; and add focused contamination/isolation/no-write tests.
+
+Phase 5 may begin only when all Phase 4 slices pass, the corrected 221-item deterministic pre-AI baseline is frozen and reproducible, candidate and Decision contracts are versioned and valid-ID constrained, every eligible item receives a deterministic Decision or explicit abstention, and provider/privacy/security/cost plus no-booking/no-contamination gates are approved.
+
+## NEXT — Program Phase 4: Retrieval and Decision Foundation
 
 **Phase objective:** build a deterministic, side-effect-free Decision foundation that retrieves only confirmed history and generates valid candidates for the 221-transaction benchmark.
 

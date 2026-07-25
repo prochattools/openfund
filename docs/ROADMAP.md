@@ -461,7 +461,8 @@ Adding any of these requires an explicit philosophy and strategy review before i
 
 ## Transaction Review and Intelligence Program
 
-Status: **approved; documentation complete; Phase 2 is CURRENT**  
+Status: **roadmap aligned; Phase 2 and Phase 3 closeout pending; Phase 4 is NEXT**
+
 Approved: 2026-07-16  
 Implemented accounting/review architecture: `docs/ACCOUNTING_INTEGRITY_AND_REVIEW_PREFILL.md`  
 Approved invariants: `docs/architecture/ARCHITECTURAL_INVARIANTS.md`  
@@ -478,14 +479,29 @@ Repository documentation is the authoritative project memory. Chat history is no
 ### Program current position
 
 ```text
-Program Phase 1 — Baseline and instrumentation       DOCUMENTED / NEXT SUPPORTING WORK
-Program Phase 2 — Review-table redesign/pagination   CURRENT
-Program Phase 3 — Merchant Knowledge Layer                    TODO
-Program Phase 4 — Retrieval and Decision Foundation            TODO
-Program Phase 5 — AI Decision Engine                           TODO
+Program Phase 1 — Baseline and instrumentation                 PARTIAL / BENCHMARK FREEZE PENDING
+Program Phase 2 — Review-table redesign and pagination         IMPLEMENTED / PRODUCTION CLOSEOUT PENDING
+Program Phase 3 — Merchant Knowledge Layer                     CORE COMPLETE / ACCEPTANCE CLOSEOUT PENDING
+Program Phase 4 — Retrieval and Decision Foundation            NEXT
+Program Phase 5 — AI Decision Engine                           BLOCKED ON PHASE 4 GATE
 Program Phase 6 — Evaluation, Calibration, and Observability   TODO
 Program Phase 7 — Controlled Rollout                           TODO
 ```
+
+Normalized planning estimate — not an official product metric:
+
+| Program phase | Estimated completion | Basis |
+|---|---:|---|
+| Phase 1 | 40% | Population and historical metrics exist; corrected 221-item benchmark freeze and dimension-level labels remain pending. |
+| Phase 2 | 90% | Review workflow, pagination, filtering, accessibility, authorization, and authenticated browser evidence exist; production closeout remains. |
+| Phase 3 | 95% | Core Merchant Knowledge, read UI, previews, and alias/merchant/conflict confirmations are complete; Phase 3.8E and consolidated Phase 3 validation remain. |
+| Phase 4 | 0% | Not started. |
+| Phase 5 | 0% | Not started. |
+| Phase 6 | 0% | Not started. |
+| Phase 7 | 0% | Not started. |
+| **Normalized seven-phase total** | **32%** | Equal-weight estimate: `(40 + 90 + 95) / 7`, rounded. |
+
+Merchant merge, merchant split, and explicit knowledge-reassignment confirmation are deferrable administrator capabilities. The pure planning contracts, previews, audit model, rollback model, and safe-disable boundaries already exist; these three mutation surfaces are not required to produce the deterministic Phase 4 baseline or begin bounded Phase 5 shadow inference. They remain separately approved future Phase 3.8D slices and must not be implemented opportunistically.
 
 ### Program Phase 1 — Baseline and instrumentation
 
@@ -507,7 +523,7 @@ Program Phase 7 — Controlled Rollout                           TODO
 
 ### Program Phase 2 — Review-table redesign and pagination
 
-**Status: CURRENT — next implementation phase.**
+**Status: IMPLEMENTED — production closeout pending.**
 
 **Objective:** make review of 221 and larger queues fast, clear, auditable, and accessible.
 
@@ -544,6 +560,18 @@ Program Phase 7 — Controlled Rollout                           TODO
 **Rollback/safety:** merchant-assisted resolution and aliases can be disabled independently; knowledge links can be restored from audit history; raw transactions and confirmed bookings remain unchanged.
 
 **Architecture references:** `docs/architecture/ARCHITECTURAL_INVARIANTS.md`, `docs/architecture/SYSTEM_ARCHITECTURE.md`, and `docs/architecture/MERCHANT_KNOWLEDGE_ARCHITECTURE.md`.
+
+### Program Phase 2 and Phase 3 closeout gates
+
+Program Phase 2 exits when the existing review workflow has documented production acceptance for authenticated administrator and viewer behavior, all 221 unresolved transactions remain reachable and individually confirmable, pagination/filtering/risk ordering/mobile/accessibility evidence is current, authorization and locked-period controls remain green, and no suggestion becomes a booking without explicit administrator confirmation.
+
+Program Phase 3 exits when the consolidated Phase 3.9 validation report confirms workspace isolation, deterministic fingerprint/alias/conflict behavior, replay-safe schema and migration state, safe-disable behavior, retrieval-anchor correctness, privacy redaction, no booking or bank-fact mutation, and authenticated production acceptance/rollback evidence for the implemented Merchant Knowledge surfaces. Phase 3.8E is the remaining acceptance slice.
+
+Merchant merge, merchant split, and knowledge-reassignment confirmation are not Phase 3 exit blockers. They are deferrable administrator capabilities because Phase 3 already provides pure plans, versioned previews, evidence/rollback contracts, and safe-disabled mutation boundaries. They must remain unstarted unless separately approved and must not delay the deterministic Phase 4 baseline or bounded Phase 5 shadow inference.
+
+The smallest Phase 4 slice is Phase 4.1 only: define and test the confirmed-history eligibility contract over existing bookings and review decisions. It must produce a reproducible workspace-scoped eligible-history set, exclude all pending/rejected/generated suggestions and superseded or ineligible records, preserve locked-period and provenance rules, and perform no writes. This slice directly improves categorization quality by ensuring retrieval for the 221 transactions is based only on confirmed human outcomes.
+
+Program Phase 5 may begin only after all Phase 4 slices pass, especially a frozen reproducible pre-AI baseline for the corrected 221 transactions; the Decision request/response and candidate contracts are versioned; every candidate is active, workspace-scoped, and valid; deterministic Decisions or explicit abstentions exist for every eligible benchmark item; privacy/security/provider/cost design is approved; and integrity tests prove zero booking, bank-fact, locked-period, or trusted-history contamination.
 
 ### Program Phase 4 — Retrieval and Decision Foundation
 

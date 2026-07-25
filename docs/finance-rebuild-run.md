@@ -4537,3 +4537,62 @@ Bounded validation repairs:
 Merchant merge, merchant split, and knowledge-reassignment confirmation remain unstarted. Phase 3.8E remains unstarted. Production/remote-database execution and persisted confirmation drafts remain out of scope.
 
 Rollback is limited to reverting the bounded conflict-confirmation commit or leaving `MERCHANT_CONFLICT_CONFIRMATION_ENABLED` unset/false. Completed alias and merchant confirmations remain independently controlled. No push is authorized or performed.
+
+
+## Transaction Review and Intelligence roadmap alignment — Phase 3 closeout review
+
+Starting commit: `eb4b473` (`feat: confirm merchant conflict resolution`).
+
+This review changed only governing documentation. No application code, Prisma schema, migration, route, service, UI, test implementation, deployment, AI inference, booking, bank-fact mutation, or push behavior changed.
+
+### Corrected current position
+
+The stale top-level labels that still described Program Phase 2 as the sole current phase and Program Phase 3 as unstarted were corrected.
+
+Current roadmap position:
+
+- Phase 1 — baseline and instrumentation: partial; corrected 221-item benchmark freeze and dimension-level labels remain;
+- Phase 2 — review-table redesign and pagination: implemented; production acceptance closeout remains;
+- Phase 3 — Merchant Knowledge Layer: core complete; Phase 3.8E authenticated production acceptance and Phase 3.9 consolidated validation/rollback evidence remain;
+- Phase 4 — Retrieval and Decision Foundation: next;
+- Phase 5 — AI Decision Engine: blocked on the complete Phase 4 gate;
+- Phases 6 and 7: unstarted.
+
+Normalized planning estimate, explicitly not an official product metric:
+
+| Program phase | Estimated completion |
+|---|---:|
+| Phase 1 | 40% |
+| Phase 2 | 90% |
+| Phase 3 | 95% |
+| Phase 4 | 0% |
+| Phase 5 | 0% |
+| Phase 6 | 0% |
+| Phase 7 | 0% |
+| **Equal-weight normalized total** | **32%** |
+
+### Phase 3 closeout decision
+
+Merchant merge, merchant split, and explicit knowledge-reassignment confirmation are deferrable administrator capabilities and are not blockers for Phase 3 acceptance, Phase 4, or bounded Phase 5 shadow inference. The repository already contains pure plans, versioned previews, evidence hashes, rollback contracts, audit conventions, and safe-disabled mutation boundaries for later separately approved work.
+
+Phase 2 exits only when current production acceptance proves authenticated administrator/viewer behavior, all 221 unresolved transactions remain reachable and individually confirmable, pagination/filtering/risk ordering/mobile/accessibility evidence is current, authorization and locked-period protections remain green, and no suggestion becomes a booking without explicit administrator confirmation.
+
+Phase 3 exits only when Phase 3.8E authenticated production acceptance and rollback rehearsal plus Phase 3.9 consolidated validation prove workspace isolation, deterministic matching/conflict behavior, replay-safe schema state, safe disablement, retrieval-anchor correctness, privacy redaction, and zero booking or bank-fact mutation.
+
+### Exact next roadmap slice
+
+The smallest next implementation slice is Program Phase 4.1 only: define and test the side-effect-free confirmed-history eligibility contract over existing bookings and review decisions.
+
+It must:
+
+- derive workspace scope from server-authoritative context;
+- include only confirmed human outcomes eligible for retrieval;
+- exclude pending, rejected, generated, superseded, and otherwise ineligible suggestions or decisions;
+- preserve provenance and locked-period rules;
+- produce a deterministic reproducible eligible-history set for the corrected 221-transaction benchmark;
+- perform no write, booking, bank-fact mutation, AI inference, or trusted-history contamination;
+- include focused workspace-isolation, contamination, provenance, determinism, and zero-write tests.
+
+Program Phase 5 may begin only after every Phase 4 slice passes, the corrected 221-item pre-AI baseline is frozen and reproducible, candidate and Decision contracts are versioned and valid-ID constrained, every eligible item receives a deterministic Decision or explicit abstention, provider/privacy/security/cost design is approved, and integrity tests prove zero booking, bank-fact, locked-period, or confirmed-history contamination.
+
+No push is authorized or performed.
