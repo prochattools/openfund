@@ -4890,3 +4890,129 @@ Rollback removes the evidence service and restores the Phase 4.2 retrieval-only 
 The exact next bounded slice is Phase 4.4: restricted candidate generation for active, workspace-scoped, direction-compatible project/type/category IDs. Phase 5 remains blocked until all Phase 4 slices and the corrected 221-item deterministic pre-AI baseline pass.
 
 No push is authorized or performed.
+
+
+## Program Phase 4.4 — restricted deterministic retrieval candidates
+
+Starting commit: `48f9002` (`feat: add deterministic retrieval evidence`).
+
+### Exact implementation scope
+
+Implemented only the bounded candidate-generation layer over Phase 4.3 evidence:
+
+- `server/services/restrictedRetrievalCandidateService.ts`;
+- candidate-gated integration in `server/services/suggestionBackfillService.ts`;
+- focused tests in `tests/services/restrictedRetrievalCandidateService.test.ts`;
+- bounded backfill fixture updates in `tests/services/suggestionBackfillService.test.ts`.
+
+No schema, migration, route, UI, booking behavior, persisted suggestion fields, review mutation, ledger/period state, Merchant Knowledge mutation, Phase 4.5+, AI inference, deployment, or push behavior changed.
+
+### Candidate contract
+
+Candidate version: `restricted-retrieval-candidates-v1`.
+
+Each selectable candidate exposes only:
+
+- dimension: `PROJECT`, `TRANSACTION_TYPE`, or `CATEGORY`;
+- candidate ID and deterministic rank;
+- active and direction-compatible booleans;
+- stable reason codes;
+- supporting/conflicting evidence counts;
+- Phase 4.2 retrieval hash;
+- Phase 4.3 dimension evidence hash;
+- privacy-safe provenance hashes;
+- deterministic candidate hash.
+
+Selectable reason codes:
+
+- `CURRENT_RETRIEVED_VALUE`;
+- `SUPPORTED_ALTERNATIVE`;
+- `ACTIVE_WORKSPACE_MATCH`;
+- `DIRECTION_COMPATIBLE`.
+
+Bounded diagnostics:
+
+- `INACTIVE`;
+- `CROSS_WORKSPACE`;
+- `MISSING`;
+- `UNSUPPORTED_BY_EVIDENCE`.
+
+Diagnostics follow the fixed dimension sequence project, transaction type, category.
+
+### Bounds and ordering
+
+Conservative defaults and hard caps:
+
+- project candidates: 5 default, 10 hard cap;
+- transaction-type candidates: 5 default, 10 hard cap;
+- category candidates: 5 default, 10 hard cap;
+- Phase 4.3 alternatives evaluated per dimension: 10 default, 25 hard cap.
+
+Invalid bounds are normalized deterministically. Exact candidate IDs are derived only from the current selected value and bounded Phase 4.3 alternatives, then queried by exact ID plus authorized workspace. No unbounded workspace scan is used.
+
+Ordering:
+
+1. current retrieved value first when still valid;
+2. support score descending;
+3. supporting count descending;
+4. conflicting count ascending;
+5. candidate ID as stable final tie-breaker.
+
+Every candidate and candidate set has a deterministic hash.
+
+### Validation and direction contract
+
+Projects, transaction types, and categories are accepted only when the exact record exists, belongs to the authorized workspace, and `isActive = true`.
+
+The current schema defines no dimension direction field and no project/type/category combination compatibility table. Direction compatibility is inherited from Phase 4.2/4.3 because only confirmed history matching the target transaction direction contributes evidence. Phase 4.4 does not invent a new compatibility model.
+
+Current selected values are retained only when valid. Alternatives require explicit Phase 4.3 support. Unsupported configured IDs are excluded.
+
+### Abstention behavior
+
+Explicit abstentions:
+
+- `MATERIAL_CONFLICT`;
+- `INSUFFICIENT_EVIDENCE`;
+- `NO_VALID_PROJECT_CANDIDATE`;
+- `NO_VALID_TRANSACTION_TYPE_CANDIDATE`;
+- `NO_VALID_CATEGORY_CANDIDATE`.
+
+The existing backfill planner retains a ranked suggestion only when its project, transaction type, and category are all present in matched restricted candidate sets. Existing persisted suggestion fields remain unchanged.
+
+### Privacy and zero-side-effect guarantees
+
+Candidate output contains only approved IDs, booleans, reason codes, counts, versions, and hashes. It exposes no raw IBAN, counterparty text, descriptions, payment-purpose/source text, normalized values, evidence JSON, dimension labels, or bank facts.
+
+The candidate service performs bounded reads only. It contains no create, update, delete, upsert, bulk write, database transaction, booking write, suggestion write, review mutation, bank-fact mutation, ledger/period mutation, Merchant Knowledge mutation, backfill execution, AI inference, or external-model call.
+
+### Validation evidence
+
+Completed successfully:
+
+- focused Phase 4.4 candidate tests — 12 passed, 0 failed;
+- complete affected Phase 4.1–4.3, history, backfill, Merchant Retrieval Anchor, MODEL-002 dimension/schema, categorization, rule-engine, request-context, and administrator-policy regressions — 112 passed, 0 failed;
+- MODEL-002 migration deploy/status/drift validation — passed;
+- `npm run build:server` — passed;
+- full `npm run build` — passed;
+- Prisma Client generation, server TypeScript compilation, Next compilation, type validation, static generation, and trace collection — passed;
+- `git diff --check` — passed before documentation update;
+- focused executable high-risk scan — zero findings;
+- focused secret-material scan — zero findings.
+
+Bounded repairs:
+
+- abstention reason was narrowed to its exact literal union;
+- the focused diagnostics expectation was aligned with fixed project/type/category order;
+- existing backfill test fixtures gained only the required read-only project/type/category delegates;
+- the abstention response object was typed as `Omit<RestrictedRetrievalCandidateResult, 'candidateSetHash'>` so empty arrays retain exact contract types without runtime changes.
+
+### Limitations, rollback, and next slice
+
+Phase 4.4 does not define the conceptual Decision DTO, deterministic orchestration, isolation report, benchmark evaluation, or AI inference.
+
+Rollback removes the restricted candidate service and restores Phase 4.3 evidence-only gating in the private backfill planner. No persisted data requires rollback.
+
+The exact next bounded slice is Phase 4.5: the conceptual Decision contract without changing booking truth. Phase 5 remains blocked until all Phase 4 slices and the corrected 221-item deterministic pre-AI baseline pass.
+
+No push is authorized or performed.

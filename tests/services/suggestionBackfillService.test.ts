@@ -79,12 +79,24 @@ const makeDb = () => {
       return { count: args.data.length };
     },
   };
-  const tx = { transaction, categorizationSuggestion };
+  const project = {
+    findMany: async () => [{ id: 'project-ya', workspaceId: 'workspace-1', isActive: true }],
+  };
+  const transactionType = {
+    findMany: async () => [{ id: 'type-gift-in', workspaceId: 'workspace-1', isActive: true }],
+  };
+  const category = {
+    findMany: async () => [{ id: 'category-gifts', workspaceId: 'workspace-1', isActive: true }],
+  };
+  const tx = { transaction, project, transactionType, category, categorizationSuggestion };
   const db = {
     workspaceMembership: {
       findFirst: async () => ({ workspaceId: 'workspace-1' }),
     },
     transaction,
+    project,
+    transactionType,
+    category,
     categorizationSuggestion,
     $transaction: async (callback: (client: any) => Promise<any>) => {
       calls.transactionCallbacks += 1;
@@ -187,12 +199,24 @@ describe('suggestion backfill service', () => {
         return { count: args.data.length };
       },
     };
-    const tx = { transaction, categorizationSuggestion };
+    const project = {
+      findMany: async () => [{ id: 'project-ya', workspaceId: 'workspace-1', isActive: true }],
+    };
+    const transactionType = {
+      findMany: async () => [{ id: 'type-gift-in', workspaceId: 'workspace-1', isActive: true }],
+    };
+    const category = {
+      findMany: async () => [{ id: 'category-gifts', workspaceId: 'workspace-1', isActive: true }],
+    };
+    const tx = { transaction, project, transactionType, category, categorizationSuggestion };
     const db = {
       workspaceMembership: {
         findFirst: async () => ({ workspaceId: 'workspace-1' }),
       },
       transaction,
+      project,
+      transactionType,
+      category,
       categorizationSuggestion,
       $transaction: async (callback: (client: any) => Promise<any>) => callback(tx),
     } as any;

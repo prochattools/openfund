@@ -15,6 +15,10 @@ import {
   retrieveDeterministicConfirmedHistory,
 } from './deterministicHistoryRetrievalService';
 import { buildDeterministicRetrievalEvidence } from './deterministicRetrievalEvidenceService';
+import {
+  buildRestrictedRetrievalCandidates,
+  loadRestrictedDimensionRecords,
+} from './restrictedRetrievalCandidateService';
 
 export type SuggestionBackfillTransaction = {
   id: string;
@@ -82,7 +86,13 @@ export type SuggestionBackfillResult = Omit<SuggestionBackfillPlan, 'sideEffects
 
 type SuggestionBackfillDb = Pick<
   PrismaClient,
-  'workspaceMembership' | 'transaction' | 'categorizationSuggestion' | '$transaction'
+  | 'workspaceMembership'
+  | 'transaction'
+  | 'project'
+  | 'transactionType'
+  | 'category'
+  | 'categorizationSuggestion'
+  | '$transaction'
 >;
 
 export type SuggestionBackfillInput = {
@@ -150,11 +160,12 @@ export const buildSuggestionBackfillPlan = (input: {
   };
 };
 
-const buildSuggestionBackfillPlanFromEligibleHistory = (input: {
+const buildSuggestionBackfillPlanFromEligibleHistory = async (input: {
+  db: Pick<PrismaClient, 'project' | 'transactionType' | 'category'>;
   workspaceId: string;
   unresolvedTransactions: SuggestionBackfillTransaction[];
   eligibleHistory: EligibleConfirmedHistoryBooking[];
-}): SuggestionBackfillPlan => {
+}): Promise<SuggestionBackfillPlan> => {
   const suggestions: PlannedSuggestion[] = [];
   const matcherDistribution: Record<string, number> = {};
   const confidenceDistribution: Record<string, number> = {};
@@ -176,14 +187,35 @@ const buildSuggestionBackfillPlanFromEligibleHistory = (input: {
       eligibleHistory: input.eligibleHistory,
       retrieval,
     });
-    if (evidence.status === 'MATCHED' && evidence.candidates[0]) completeRankOneCount += 1;
     if (evidence.status !== 'MATCHED') continue;
+
+    let transactionHasValidCandidate = false;
     for (const explained of evidence.candidates) {
+      const candidateEvidence = { ...evidence, candidates: [explained] };
+      const records = await loadRestrictedDimensionRecords(input.db, {
+        workspaceId: input.workspaceId,
+        evidence: candidateEvidence,
+      });
+      const restricted = buildRestrictedRetrievalCandidates({
+        workspaceId: input.workspaceId,
+        evidence: candidateEvidence,
+        ...records,
+      });
+      if (restricted.status !== 'MATCHED') continue;
       const candidate = explained.candidate;
+      const projectValid = restricted.projectCandidates.some((item) => item.candidateId === candidate.projectId);
+      const transactionTypeValid = restricted.transactionTypeCandidates.some(
+        (item) => item.candidateId === candidate.transactionTypeId,
+      );
+      const categoryValid = restricted.categoryCandidates.some((item) => item.candidateId === candidate.categoryId);
+      if (!projectValid || !transactionTypeValid || !categoryValid) continue;
+
+      transactionHasValidCandidate = true;
       increment(matcherDistribution, candidate.matcher);
       increment(confidenceDistribution, candidate.confidence);
       suggestions.push({ transactionId: transaction.id, ...candidate });
     }
+    if (transactionHasValidCandidate) completeRankOneCount += 1;
   }
 
   return {
@@ -206,7 +238,7 @@ const buildSuggestionBackfillPlanFromEligibleHistory = (input: {
 };
 
 const loadPlan = async (
-  db: Pick<PrismaClient, 'transaction'>,
+  db: Pick<PrismaClient, 'transaction' | 'project' | 'transactionType' | 'category'>,
   userId: string,
   workspaceId: string,
   algorithmVersion: string,
@@ -234,7 +266,8 @@ const loadPlan = async (
   ]);
 
   return {
-    plan: buildSuggestionBackfillPlanFromEligibleHistory({
+    plan: await buildSuggestionBackfillPlanFromEligibleHistory({
+      db,
       workspaceId,
       unresolvedTransactions: unresolvedTransactions as SuggestionBackfillTransaction[],
       eligibleHistory: eligibility.eligibleHistory,
