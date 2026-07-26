@@ -20,6 +20,7 @@ import {
   loadRestrictedDimensionRecords,
 } from './restrictedRetrievalCandidateService';
 import { buildDeterministicDecision } from './deterministicDecisionService';
+import { orchestrateDeterministicDecision } from './deterministicDecisionOrchestrationService';
 import { hashEvidence } from './reviewDecisionService';
 
 export type SuggestionBackfillTransaction = {
@@ -203,26 +204,33 @@ const buildSuggestionBackfillPlanFromEligibleHistory = async (input: {
         evidence: candidateEvidence,
         ...records,
       });
+      const transactionFactHash = hashEvidence({
+        transactionId: target.transactionId,
+        date: target.date,
+        accountId: target.accountId,
+        direction: target.direction,
+        amountMinor: target.amountMinor,
+      });
       const decision = buildDeterministicDecision({
         workspaceId: input.workspaceId,
-        transactionFactHash: hashEvidence({
-          transactionId: target.transactionId,
-          date: target.date,
-          accountId: target.accountId,
-          direction: target.direction,
-          amountMinor: target.amountMinor,
-        }),
+        transactionFactHash,
         retrieval,
         evidence: candidateEvidence,
         candidates: restricted,
       });
-      if (decision.status !== 'PROPOSED') continue;
+      const orchestration = orchestrateDeterministicDecision({
+        workspaceId: input.workspaceId,
+        targetTransactionId: target.transactionId,
+        transactionFactHash,
+        decision,
+      });
+      if (orchestration.status !== 'MATCHED' || !orchestration.finalDecision) continue;
 
       const candidate = explained.candidate;
       if (
-        decision.dimensions.project.selectedCandidateId !== candidate.projectId
-        || decision.dimensions.transactionType.selectedCandidateId !== candidate.transactionTypeId
-        || decision.dimensions.category.selectedCandidateId !== candidate.categoryId
+        orchestration.finalDecision.dimensions.project.selectedCandidateId !== candidate.projectId
+        || orchestration.finalDecision.dimensions.transactionType.selectedCandidateId !== candidate.transactionTypeId
+        || orchestration.finalDecision.dimensions.category.selectedCandidateId !== candidate.categoryId
       ) continue;
 
       transactionHasValidCandidate = true;

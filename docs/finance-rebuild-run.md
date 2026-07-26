@@ -5143,3 +5143,135 @@ Rollback removes `deterministicDecisionService.ts` and restores the Phase 4.4 di
 The exact next bounded slice is Phase 4.6: deterministic orchestration across rules, Merchant Knowledge, confirmed-history retrieval, evidence, candidates, alternatives, and abstention without model inference. Phase 5 remains blocked.
 
 No push is authorized or performed.
+
+
+
+## Program Phase 4.6 — deterministic orchestration
+
+Starting commit: `fd6ba2c` (`feat: add deterministic decision contract`).
+
+### Exact implementation scope
+
+Implemented only the Phase 4.6 deterministic orchestration boundary:
+
+- `server/services/deterministicDecisionOrchestrationService.ts`;
+- in-memory orchestration gating inside `server/services/suggestionBackfillService.ts`;
+- focused tests in `tests/services/deterministicDecisionOrchestrationService.test.ts`.
+
+No ProChat code or branding was introduced into the Finance repository. A focused contamination scan found zero ProChat metadata, manifest, structured-data, OG-route, social-preview, or branding content in the Phase 4.6 paths.
+
+No persistence, schema, migration, route, UI, booking, suggestion-field, review, ledger, period, Merchant Knowledge mutation, AI inference, external-model call, deployment, or push behavior was added.
+
+### Orchestration contract
+
+Orchestration version: `deterministic-orchestration-v1`.
+
+Contributor-priority version: `rule-history-agreement-v1`.
+
+Contributor set:
+
+- optional deterministic rule contributor;
+- optional Merchant Knowledge retrieval-anchor contributor;
+- mandatory retrieval identity;
+- mandatory retrieval-evidence identity;
+- mandatory restricted-candidate identity;
+- mandatory Phase 4.5 `deterministic-decision-v1` contributor.
+
+Canonical contributor order:
+
+1. rule;
+2. Merchant Knowledge;
+3. retrieval;
+4. evidence;
+5. candidates;
+6. Decision.
+
+Every contributor exposes privacy-safe type, version, mandatory/optional classification, status, input/output hashes, sorted provenance hashes, deterministic reason, and whether it affected the final Decision.
+
+### Verified priority and conflict semantics
+
+Rules and confirmed history are deterministic peers under `rule-history-agreement-v1`:
+
+- rule/Decision agreement preserves the existing Phase 4.5 Decision;
+- rule/Decision disagreement returns a deterministic conflict;
+- an existing deterministic-categorization conflict remains a conflict;
+- a rule requiring review abstains and does not silently promote a Decision;
+- rules do not silently outrank or replace confirmed-history results.
+
+Merchant Knowledge is optional supporting evidence:
+
+- a ready usable anchor is retained as a matched contributor;
+- a missing or unavailable anchor does not erase an independent valid Decision;
+- a stale anchor remains visible as stale but does not erase an independent valid Decision;
+- an explicit Merchant Knowledge conflict blocks orchestration;
+- cross-workspace Merchant Knowledge scope fails closed.
+
+The Phase 4.5 Decision and its retrieval, evidence, and candidate identities remain mandatory. `ABSTAINED`, `CONFLICTED`, and `INCOMPLETE` Decisions are propagated and never promoted to a final proposal.
+
+### Failure isolation and timeout behavior
+
+Optional rule or Merchant Knowledge unavailability does not erase an independent valid mandatory Decision. Mandatory contributor failure, stale identity, or scope mismatch fails closed.
+
+No timeout contract was added. All current contributors are synchronous and local, and the governing source defines no deterministic timeout values. Inventing timeout durations or using elapsed time in ranking or hashes was explicitly avoided.
+
+### Replay, provenance, staleness, and hashes
+
+The orchestration envelope binds:
+
+- orchestration version;
+- contributor-priority version;
+- workspace ID;
+- target transaction ID;
+- privacy-safe transaction-fact hash;
+- canonical contributor identities and versions;
+- contributor input/output hashes;
+- sorted contributor provenance hashes;
+- Phase 4.1–4.5 retrieval, evidence, candidate, and Decision identities;
+- contributor-identity hash;
+- final Decision hash;
+- deterministic orchestration hash.
+
+An optional expected orchestration hash rejects stale replay. Workspace and transaction mismatch are rejected with typed errors. Contributor ordering is canonical and does not depend on caller input ordering.
+
+### In-memory integration and zero side effects
+
+The existing suggestion-backfill planning path builds the Phase 4.5 Decision and then the Phase 4.6 orchestration envelope in memory. Existing persisted suggestion fields and semantics remain unchanged. A ranked candidate is retained only when orchestration returns `MATCHED` with a complete `PROPOSED` Decision whose selected project, transaction-type, and category IDs exactly match the existing ranked triple.
+
+Every orchestration result explicitly declares:
+
+- `readOnly: true`;
+- `previewOnly: true`;
+- `createsTransactionBooking: false`;
+- `createsCategorizationSuggestion: false`;
+- `mutatesBankFacts: false`;
+- `mutatesReviewDecisions: false`;
+- `mutatesPeriodState: false`;
+- `mutatesLedgerRecords: false`;
+- `mutatesMerchantKnowledge: false`;
+- `persistsDecision: false`;
+- `invokesExternalModel: false`.
+
+### Validation evidence
+
+Completed successfully:
+
+- focused Phase 4.6 orchestration tests — 10 passed, 0 failed;
+- affected Phase 4.1–4.5, rule, Merchant Knowledge anchor, history, backfill, hashing, request-context, and administrator-policy regressions — 120 passed, 0 failed;
+- combined validated tests — 130 passed, 0 failed;
+- `npm run build:server` — passed;
+- full `npm run build` — passed;
+- Prisma Client generation, server TypeScript compilation, Next.js compilation/type validation, page-data collection, static generation for 19/19 pages, and trace collection — passed;
+- `git diff --check` — passed before documentation update;
+- focused executable high-risk scan — zero findings;
+- focused secret-material scan — zero findings;
+- focused ProChat contamination scan — zero findings.
+
+### Limitations, rollback, and next slice
+
+Phase 4.6 does not add network contributors, timeouts, persistence, routes, UI, benchmark evaluation, or model inference.
+
+Rollback removes `deterministicDecisionOrchestrationService.ts` and restores the direct Phase 4.5 Decision gate in `suggestionBackfillService.ts`. No persisted data requires rollback.
+
+The exact next bounded slice is Phase 4.7: isolation and integrity validation proving workspace scope, read-only behavior, suggestion-versus-booking separation, locked-period protections, and zero mutation across the complete deterministic Phase 4 pipeline. Phase 5 remains blocked.
+
+No push is authorized or performed.
