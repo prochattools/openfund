@@ -5016,3 +5016,130 @@ Rollback removes the restricted candidate service and restores Phase 4.3 evidenc
 The exact next bounded slice is Phase 4.5: the conceptual Decision contract without changing booking truth. Phase 5 remains blocked until all Phase 4 slices and the corrected 221-item deterministic pre-AI baseline pass.
 
 No push is authorized or performed.
+
+
+## Program Phase 4.5 — conceptual deterministic Decision contract
+
+Starting commit: `a5f5747` (`feat: add restricted retrieval candidates`).
+
+### Exact implementation scope
+
+Implemented only a pure, in-memory Decision DTO/domain contract over the completed Phase 4.1–4.4 deterministic pipeline:
+
+- `server/services/deterministicDecisionService.ts`;
+- in-memory Decision gating inside `server/services/suggestionBackfillService.ts`;
+- focused tests in `tests/services/deterministicDecisionService.test.ts`.
+
+No Decision persistence model, schema, migration, route, UI, booking, suggestion field, review mutation, ledger/period mutation, Merchant Knowledge mutation, AI inference, or external-model call was added.
+
+### Decision contract
+
+Decision version: `deterministic-decision-v1`.
+
+Overall statuses:
+
+- `PROPOSED`;
+- `ABSTAINED`;
+- `CONFLICTED`;
+- `INCOMPLETE`.
+
+Per-dimension statuses:
+
+- `SELECTED`;
+- `ABSTAINED`;
+- `CONFLICTED`;
+- `INCOMPLETE`.
+
+Project, transaction-type, and category Decision dimensions expose only privacy-safe fields:
+
+- selected candidate ID and rank;
+- canonically ordered bounded candidate IDs;
+- supporting and conflicting evidence counts;
+- existing Phase 4.3 component scores;
+- retrieval, evidence, selected-candidate, candidate-set, and deterministic dimension hashes;
+- privacy-safe provenance hashes;
+- explicit reason where applicable;
+- uncalibrated confidence placeholder with deterministic score basis points and `label = null`.
+
+Confidence is explicitly `UNCALIBRATED` and is not represented as probability or calibrated acceptance confidence.
+
+### Replay, staleness, provenance, and hashes
+
+The Decision binds:
+
+- workspace ID;
+- target transaction ID;
+- optional privacy-safe transaction-fact hash;
+- `confirmed-history-v1`;
+- `deterministic-history-retrieval-v1` and retrieval hash;
+- `deterministic-retrieval-evidence-v1` and evidence hash;
+- `restricted-retrieval-candidates-v1` and candidate-set hash;
+- scorer weights hash;
+- retrieval/candidate bounds hash;
+- selected and ordered allowed candidates;
+- deterministic dimension hashes;
+- deterministic Decision hash.
+
+Optional expected retrieval, evidence, and candidate-set identities reject stale replay with typed errors. Workspace, transaction identity, and version mismatch are also rejected.
+
+Candidate arrays are canonicalized by the existing Phase 4.4 rank and candidate ID so replay output is independent of caller array order without changing candidate ranks or hashes.
+
+### Abstention and integration
+
+The Decision propagates deterministic upstream reasons including:
+
+- `NO_ELIGIBLE_HISTORY`;
+- `NO_SCORE_ABOVE_THRESHOLD`;
+- `MATERIAL_CONFLICT`;
+- `INSUFFICIENT_EVIDENCE`;
+- `NO_VALID_PROJECT_CANDIDATE`;
+- `NO_VALID_TRANSACTION_TYPE_CANDIDATE`;
+- `NO_VALID_CATEGORY_CANDIDATE`.
+
+A missing selected candidate in an otherwise non-empty contract returns `INCOMPLETE` with `INCOMPLETE_DECISION`; it is not silently converted to a proposal or true upstream abstention.
+
+The existing backfill planner builds the conceptual Decision only in memory. Existing suggestion persistence fields and semantics remain unchanged. A ranked candidate is retained only when the Decision is `PROPOSED` and all three selected IDs exactly match the existing ranked project/type/category triple.
+
+### Zero-side-effect declarations
+
+Every Decision explicitly declares:
+
+- `readOnly: true`;
+- `previewOnly: true`;
+- `createsTransactionBooking: false`;
+- `createsCategorizationSuggestion: false`;
+- `mutatesBankFacts: false`;
+- `mutatesReviewDecisions: false`;
+- `mutatesPeriodState: false`;
+- `mutatesLedgerRecords: false`;
+- `persistsDecision: false`;
+- `invokesExternalModel: false`.
+
+### Validation evidence
+
+Completed successfully:
+
+- focused Phase 4.5 Decision tests — 10 passed, 0 failed;
+- affected Phase 4.1–4.4, history, backfill, hashing, request-context, and administrator-policy regressions — 90 passed, 0 failed;
+- combined validated tests — 100 passed, 0 failed;
+- `npm run build:server` — passed;
+- full `npm run build` — passed;
+- Prisma Client generation, server TypeScript compilation, Next.js compilation, type validation, static generation, page-data collection, and trace collection — passed;
+- `git diff --check` — passed before documentation update;
+- focused executable high-risk scan — zero findings;
+- focused secret-material scan — zero findings.
+
+Bounded repairs:
+
+- an incomplete selected-value contract was classified as `INCOMPLETE` rather than `ABSTAINED`;
+- the Decision dimension base object was explicitly typed so `confidence.label` remains `string | null` while preserving runtime `null` and uncalibrated semantics.
+
+### Limitations, rollback, and next slice
+
+Phase 4.5 does not implement contributor orchestration, timeouts, benchmark evaluation, Decision persistence, routes, UI, or AI inference.
+
+Rollback removes `deterministicDecisionService.ts` and restores the Phase 4.4 direct candidate gate in `suggestionBackfillService.ts`. No persisted data requires rollback.
+
+The exact next bounded slice is Phase 4.6: deterministic orchestration across rules, Merchant Knowledge, confirmed-history retrieval, evidence, candidates, alternatives, and abstention without model inference. Phase 5 remains blocked.
+
+No push is authorized or performed.

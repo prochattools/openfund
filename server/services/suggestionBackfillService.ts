@@ -19,6 +19,8 @@ import {
   buildRestrictedRetrievalCandidates,
   loadRestrictedDimensionRecords,
 } from './restrictedRetrievalCandidateService';
+import { buildDeterministicDecision } from './deterministicDecisionService';
+import { hashEvidence } from './reviewDecisionService';
 
 export type SuggestionBackfillTransaction = {
   id: string;
@@ -201,14 +203,27 @@ const buildSuggestionBackfillPlanFromEligibleHistory = async (input: {
         evidence: candidateEvidence,
         ...records,
       });
-      if (restricted.status !== 'MATCHED') continue;
+      const decision = buildDeterministicDecision({
+        workspaceId: input.workspaceId,
+        transactionFactHash: hashEvidence({
+          transactionId: target.transactionId,
+          date: target.date,
+          accountId: target.accountId,
+          direction: target.direction,
+          amountMinor: target.amountMinor,
+        }),
+        retrieval,
+        evidence: candidateEvidence,
+        candidates: restricted,
+      });
+      if (decision.status !== 'PROPOSED') continue;
+
       const candidate = explained.candidate;
-      const projectValid = restricted.projectCandidates.some((item) => item.candidateId === candidate.projectId);
-      const transactionTypeValid = restricted.transactionTypeCandidates.some(
-        (item) => item.candidateId === candidate.transactionTypeId,
-      );
-      const categoryValid = restricted.categoryCandidates.some((item) => item.candidateId === candidate.categoryId);
-      if (!projectValid || !transactionTypeValid || !categoryValid) continue;
+      if (
+        decision.dimensions.project.selectedCandidateId !== candidate.projectId
+        || decision.dimensions.transactionType.selectedCandidateId !== candidate.transactionTypeId
+        || decision.dimensions.category.selectedCandidateId !== candidate.categoryId
+      ) continue;
 
       transactionHasValidCandidate = true;
       increment(matcherDistribution, candidate.matcher);
