@@ -5275,3 +5275,134 @@ Rollback removes `deterministicDecisionOrchestrationService.ts` and restores the
 The exact next bounded slice is Phase 4.7: isolation and integrity validation proving workspace scope, read-only behavior, suggestion-versus-booking separation, locked-period protections, and zero mutation across the complete deterministic Phase 4 pipeline. Phase 5 remains blocked.
 
 No push is authorized or performed.
+
+
+
+## Program Phase 4.7 — isolation and integrity validation
+
+Starting commit: `a0887a7` (`feat: add deterministic decision orchestration`).
+
+### Exact validation scope
+
+Added one test-only integrity proof:
+
+- `tests/services/deterministicPhase4Integrity.test.ts`.
+
+No production service, schema, migration, route, UI, booking, review, ledger, period, Merchant Knowledge, Decision, orchestration, AI, deployment, or push behavior was changed.
+
+### Versions validated
+
+- `confirmed-history-v1`;
+- `deterministic-history-retrieval-v1`;
+- `deterministic-retrieval-evidence-v1`;
+- `restricted-retrieval-candidates-v1`;
+- `deterministic-decision-v1`;
+- `deterministic-orchestration-v1`.
+
+### Workspace-isolation evidence
+
+The integrity suite proves:
+
+- cross-workspace bookings and review decisions are excluded at confirmed-history eligibility;
+- retrieval rejects eligible-history records whose workspace identity differs from the authorized workspace;
+- retrieval evidence rejects workspace mismatch;
+- restricted candidates exclude cross-workspace dimensions and abstain when a required dimension becomes empty;
+- Decisions reject workspace and target-transaction mismatch;
+- orchestration rejects Decision or Merchant Knowledge scope mismatch;
+- mixed-workspace provenance cannot override the server-authoritative workspace.
+
+### Zero-write and zero-transaction evidence
+
+Source guards and strict database doubles prove zero planning invocation of:
+
+- `create`;
+- `createMany`;
+- `update`;
+- `updateMany`;
+- `delete`;
+- `deleteMany`;
+- `upsert`;
+- `$transaction`.
+
+The dry-run backfill path returns before the existing explicitly authorized write transaction. It reports `writesPerformed: false`, does not create suggestions or bookings, and does not mutate bank facts. The existing execution path remains distinct and still requires its current authorization and explicit confirmation controls.
+
+### Suggestion-versus-booking integrity
+
+The integrity proof confirms:
+
+- retrieval candidates, evidence, restricted candidates, conceptual Decisions, and orchestration envelopes are not bookings;
+- conceptual Decisions and orchestration envelopes are not persisted suggestions;
+- deterministic confidence, scores, statuses, and matches do not constitute human confirmation;
+- no Phase 4 planning stage creates or mutates `TransactionBooking`;
+- no Phase 4 planning stage mutates raw `Transaction` facts or booking state;
+- only existing administrator review flows may establish confirmed outcomes.
+
+### Locked-period, ledger, report, and accounting integrity
+
+The pipeline may read locked-period provenance from confirmed historical outcomes, but the test suite proves it does not:
+
+- open, close, unlock, or otherwise mutate a period;
+- create, change, or remove a booking in a locked period;
+- mutate ledger entries;
+- alter account balances, reports, accounting exports, or historical review decisions;
+- bypass existing booking or review protections.
+
+### Privacy and provenance boundary
+
+The governing Decision architecture distinguishes internal deterministic scorer inputs from externally consumable contracts.
+
+`confirmed-history-v1` eligible-history records may retain transaction facts internally for scoring. The privacy-safe response guarantee applies to:
+
+- deterministic retrieval response evidence;
+- Phase 4.3 retrieval evidence;
+- restricted candidates;
+- conceptual Decisions;
+- orchestration envelopes.
+
+The integrity test proves those externally consumable contracts expose no raw IBAN, counterparty, description, payment purpose, raw-row field, stack trace, or unrestricted source value. No route, UI, or server route imports or exposes `eligibleHistory`. Decision and orchestration services do not contain eligible-history fields or raw scoring facts, and both explicitly declare `persistsDecision: false`.
+
+Approved outputs remain limited to privacy-safe IDs, statuses, versions, counts, component scores, evidence/provenance hashes, candidate hashes, Decision hashes, orchestration hashes, and deterministic abstention/conflict reasons.
+
+### Deterministic replay and stale identity
+
+The complete Phase 4 pipeline produces byte-equivalent outputs when confirmed-history input rows are reordered. The test suite validates deterministic replay across eligibility, retrieval, evidence, restricted candidates, Decision, and orchestration.
+
+It also proves deterministic rejection of:
+
+- invalid confirmed-history version;
+- stale retrieval hash;
+- stale evidence hash;
+- stale candidate-set hash;
+- stale orchestration hash;
+- workspace and transaction mismatch.
+
+No current time, random value, network result, duration, or automatic retry enters ranking or deterministic hashes.
+
+### Administrator-confirmation protections
+
+The integrity suite preserves the existing separation between deterministic planning and human confirmation. No planning result becomes booking truth, no review decision is created or changed, and no administrator authorization or locked-period protection is bypassed.
+
+### Validation evidence
+
+Completed successfully:
+
+- focused Phase 4.7 isolation/integrity tests — 8 passed, 0 failed;
+- complete affected Phase 4.1–4.7, rule, Merchant Knowledge anchor, suggestion-backfill, review, period, ledger, request-context, and administrator-policy regressions — 173 passed, 0 failed;
+- `npm run build:server` — passed;
+- full `npm run build` — passed;
+- Prisma Client generation, server TypeScript compilation, Next.js compilation/type validation, page-data collection, static generation for 19/19 pages, and trace collection — passed;
+- `git diff --check` — passed before documentation update;
+- focused executable high-risk scan — zero findings;
+- focused secret-material scan — zero findings.
+
+One bounded test-only repair corrected bigint-safe replay serialization and narrowed an over-broad source guard to executable database delegate writes. The final privacy assertion was aligned with the governing internal-scorer versus external-contract boundary; no production DTO or behavior change was required.
+
+### Limitations, rollback, and next slice
+
+Phase 4.7 is a validation and integrity-proof slice. It does not add a runtime integrity endpoint, dashboard, persistence layer, benchmark evaluator, route, UI, or AI behavior.
+
+Rollback removes `tests/services/deterministicPhase4Integrity.test.ts` and reverts these documentation entries. No persisted data requires rollback.
+
+The exact next bounded slice is Phase 4.8: freeze and evaluate the deterministic pre-AI baseline against the corrected 221-transaction benchmark. Phase 5 remains blocked until the Phase 4 baseline and acceptance gate are complete.
+
+No push is authorized or performed.
