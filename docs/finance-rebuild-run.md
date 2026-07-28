@@ -5406,3 +5406,261 @@ Rollback removes `tests/services/deterministicPhase4Integrity.test.ts` and rever
 The exact next bounded slice is Phase 4.8: freeze and evaluate the deterministic pre-AI baseline against the corrected 221-transaction benchmark. Phase 5 remains blocked until the Phase 4 baseline and acceptance gate are complete.
 
 No push is authorized or performed.
+
+
+
+## Program Phase 4.8 — benchmark-source discovery and freeze
+
+Starting commit: `4d7b908` (`test: prove deterministic decision integrity`).
+
+This packet performs benchmark-source discovery only. It does not implement the evaluator, calculate baseline metrics, create a duplicate dataset, mutate database records, add routes/UI, or begin Phase 5.
+
+### Authoritative benchmark source
+
+The corrected 221-transaction benchmark is database-backed. Its authoritative cohort is the imported 2026 partial/open bank statement in the authorized Finance workspace.
+
+The source is identified by all of the following existing records and invariants:
+
+- authorized `FinanceWorkspace.id` derived from server context;
+- `SourceFile.sha256 = 768912927a7bb3b545616631e6d5360479a90b0bc6448faa3f225925636d31d3` for the retained 2026 CSV source role `openStatementCsv2026`;
+- source filename `NL89INGB0006369960_2026-01-01_2026-07-01.csv` as recorded by the production import plan and copied to `Transaction.sourceFile`;
+- one workspace-scoped `BankStatement` linked to that `SourceFile`;
+- statement period `2026-01-01` through `2026-07-01`;
+- `coverageStatus = PARTIAL`;
+- `transactionCount = 221`;
+- the statement/import `ImportBatch.id` where present;
+- transactions imported by that batch/source, scoped through active workspace membership and ordered by `date`, then `id`;
+- each benchmark transaction must have a non-null `importFingerprint` and remain unique under `Transaction.@@unique([userId, importFingerprint])`.
+
+The existing control totals remain part of the source identity:
+
+- opening balance minor units: `1,035,086`;
+- income minor units: `5,878,408`;
+- expense minor units: `6,129,769`;
+- closing balance minor units: `783,725`;
+- close permitted: `false`.
+
+No JSON, CSV copy, exported benchmark table, or manually maintained duplicate fixture is introduced. The retained source file and current database records remain authoritative.
+
+### Canonical cohort query contract
+
+The Phase 4.8 evaluator must resolve the cohort in this order:
+
+1. derive the authorized workspace from server context;
+2. locate the workspace `SourceFile` by the exact 2026 CSV SHA-256;
+3. locate the workspace `BankStatement` whose `sourceFileId` matches, whose period is `2026-01-01` through `2026-07-01`, whose coverage is `PARTIAL`, and whose `transactionCount` is 221;
+4. select transactions associated with the statement import identity using the statement `importBatchId` when non-null, plus the recorded source filename and active workspace-member ownership;
+5. require non-null unique `importFingerprint` values;
+6. reject duplicate transaction IDs or fingerprints;
+7. require the resulting cohort count to equal 221;
+8. order rows by transaction date ascending, then transaction ID ascending.
+
+The query must fail closed if the source hash, workspace, period, control totals, import identity, uniqueness, or row count differs.
+
+### Ground-truth field mapping
+
+Benchmark ground truth comes only from current administrator-confirmed outcomes already stored in the database.
+
+For each cohort transaction:
+
+- current booking: `Transaction.transactionBooking` / `TransactionBooking.transactionId`;
+- expected project: `TransactionBooking.projectId`;
+- expected transaction type: `TransactionBooking.transactionTypeId`;
+- expected category: `TransactionBooking.categoryId`;
+- expected complete triple: the ordered tuple `(projectId, transactionTypeId, categoryId)`.
+
+A booking is eligible as benchmark truth only when the latest applicable workspace-scoped `ReviewDecision`, ordered by `decidedAt` descending and then stable ID ordering, satisfies all of the following:
+
+- action is `ACCEPT_SUGGESTION`, `ASSIGN_MANUALLY`, or `CHANGE_BOOKING`;
+- `afterBookingId` equals the current `TransactionBooking.id`;
+- `afterProjectId`, `afterTypeId`, and `afterCategoryId` equal the current booking dimensions;
+- actor ID, decision timestamp, booking evidence hash, and decision evidence hash are present;
+- booking and all dimensions belong to the authorized workspace.
+
+`REMOVE_BOOKING`, pending/rejected/expired/generated suggestions, superseded decisions, decisions pointing to a non-current booking, incomplete triples, missing provenance, and cross-workspace records are never benchmark labels.
+
+Transactions without an eligible current confirmed outcome remain members of the 221-row source cohort but are `UNLABELED_PENDING_CONFIRMATION` for benchmark evaluation. The evaluator must report them explicitly and must not invent labels or silently exclude them from source-row totals.
+
+### Exclusion and integrity contract
+
+A source row is invalid for metric comparison when any of these conditions holds:
+
+- duplicate transaction ID or import fingerprint;
+- missing import fingerprint;
+- source/workspace/import identity mismatch;
+- missing current booking;
+- latest applicable decision removes the booking;
+- latest applicable decision does not point to the current booking;
+- incomplete project/type/category triple;
+- missing actor, timestamps, or evidence hashes;
+- cross-workspace booking, decision, actor, or dimension identity.
+
+Invalid-label rows must be counted by stable exclusion reason. They remain visible in the 221-row cohort accounting and cannot be dropped from the report without explanation.
+
+### Version, hash, and replay strategy
+
+Benchmark source identifier: `finance-db-open-statement-2026-221`.
+
+Benchmark source contract version: `finance-db-benchmark-source-v1`.
+
+The canonical benchmark-source hash must be SHA-256 over canonical JSON containing:
+
+- source-contract version;
+- workspace ID;
+- source-file SHA-256;
+- statement ID;
+- statement period and coverage status;
+- statement control totals and transaction count;
+- import batch ID or explicit null;
+- ordered array of transaction IDs and import fingerprints;
+- canonical cohort ordering contract;
+- label eligibility version `confirmed-history-v1`;
+- ordered per-row current booking ID or null;
+- ordered latest applicable review-decision ID or null;
+- project/type/category IDs or null;
+- booking and decision evidence hashes or null;
+- stable exclusion reason or null.
+
+The replay identity is the tuple:
+
+- source-contract version;
+- source-file SHA-256;
+- workspace ID;
+- statement/import identity;
+- ordered transaction identity hash;
+- ordered label-state hash;
+- final benchmark-source hash.
+
+Any cohort, booking, decision, evidence, workspace, source, period, or import change produces a new source hash. Existing benchmark history must never be rewritten to hide those changes; a later evaluator run records the new hash.
+
+### Competing sources considered
+
+The following are not authoritative benchmark sources:
+
+- `tests/fixtures/historical-loading/2026-ing.csv`: useful parser/import fixture, but it is a repository copy rather than current database state and contains no confirmed review labels;
+- the 681-sample `historySuggestionEvaluationService`: evaluates previously booked historical transactions, not the 221-row unresolved 2026 cohort;
+- the 663 persisted `history-v1` suggestions: unconfirmed derived data and never ground truth;
+- raw transaction `projectId`, `transactionTypeId`, or `categoryId`: legacy/import classifications that are not the current audited booking contract;
+- Merchant Knowledge plans, suggestions, or AI output: derived evidence only, never benchmark truth.
+
+### Discovery validation
+
+Source inspection verified:
+
+- the production import pins the 2026 CSV SHA-256 and the 221-row controls;
+- `SourceFile` is unique by `(workspaceId, sha256)`;
+- `BankStatement` is unique by source file and by `(workspaceId, accountId, periodStart, periodEnd)`;
+- `Transaction` is unique by `(userId, importFingerprint)`;
+- `TransactionBooking.transactionId` is unique, yielding at most one current booking per transaction;
+- `ReviewDecision` is indexed by workspace, transaction, and decision time;
+- `confirmed-history-v1` already defines the eligible administrator actions and current-booking match rule;
+- benchmark selection remains workspace-scoped and read-only;
+- focused discovery validation passed 62/62 tests across the production import guard, confirmed-history eligibility, review-decision mapping, and request-context workspace authority.
+
+### Current status and limitation
+
+The benchmark source and label query are now unambiguous and frozen without duplicating data. The authoritative source row count is 221.
+
+The evaluator has not been implemented and no metrics have been calculated. The number of currently eligible confirmed labels must be read from the database at evaluator runtime; documentation that previously reported 221 unresolved decisions may be stale relative to current production state and is not used as the label count authority.
+
+Phase 5 remains blocked until the Phase 4.8 evaluator produces a reproducible pre-AI report and the documented entry gate is assessed.
+
+No commit or push is authorized or performed in this discovery packet.
+
+
+
+## Program Phase 4.8 — deterministic benchmark evaluator
+
+Starting commit: `4d7b908` (`test: prove deterministic decision integrity`).
+
+### Implemented evaluator
+
+Implemented and validated:
+
+- `server/services/deterministicBenchmarkEvaluationService.ts`;
+- `tests/services/deterministicBenchmarkEvaluationService.test.ts`.
+
+Evaluator version: `deterministic-benchmark-evaluator-v1`.
+
+The evaluator preserves the frozen source contract:
+
+- source identifier `finance-db-open-statement-2026-221`;
+- source version `finance-db-benchmark-source-v1`;
+- exact 2026 source SHA-256, filename, statement period, `PARTIAL` coverage, statement controls, import identity, and required 221-row cohort;
+- deterministic ordering by transaction date and transaction ID;
+- current `TransactionBooking` plus latest eligible administrator `ReviewDecision` ground truth;
+- explicit `LABELED_CONFIRMED`, `UNLABELED_PENDING_CONFIRMATION`, and `EXCLUDED_INVALID_LABEL` states;
+- no duplicated benchmark fixture or export.
+
+The source loader is workspace-derived and read-only. It rejects source, statement, control-total, import, row-count, duplicate-ID, duplicate-fingerprint, missing-fingerprint, workspace, and stale-source mismatches.
+
+The evaluator produces privacy-safe per-row results and aggregate metrics for:
+
+- total, labeled, unlabeled, excluded, evaluated, and covered rows;
+- labeled and all-source coverage;
+- abstention and conflict counts/rates;
+- project, transaction-type, category, and complete-triple accuracy on covered rows;
+- end-to-end accuracy across labeled rows;
+- bounded top-three accuracy from existing Phase 4.4 candidate ordering;
+- incomplete Decision count;
+- rule, Merchant Knowledge, and confirmed-history contributor attribution;
+- stable source, row, and report hashes;
+- stale source/report and pipeline identity rejection.
+
+Every result explicitly declares zero writes, zero transactions, no booking or suggestion creation, no bank-fact/review/period/ledger/Merchant Knowledge mutation, no Decision/orchestration persistence, and no external-model invocation.
+
+### Validation evidence
+
+Completed successfully:
+
+- focused Phase 4.8 loader/evaluator tests — 12 passed, 0 failed;
+- affected Phase 4.1–4.7, source-identity, rule, Merchant Knowledge, backfill, request-context, and administrator-policy regressions — 155 passed, 0 failed;
+- combined validated tests — 167 passed, 0 failed;
+- `npm run build:server` — passed;
+- full `npm run build` — passed;
+- Prisma Client generation, server TypeScript compilation, Next.js compilation/type validation, and static generation — passed.
+
+Two narrow type-only repairs preserved runtime behavior:
+
+- exact literal typing for benchmark row-result construction;
+- exact return typing for invalid-label helper null fields.
+
+The focused metric-contract mismatches were resolved source-groundedly:
+
+- loader rows are canonically sorted by date and ID independently of database/test-double ordering;
+- top-three uses all labeled rows and existing ordered allowed candidates without reranking;
+- contributor counts follow `MATCHED` contributor statuses in row results.
+
+### Live database execution blocker
+
+A policy-safe read-only invocation of the compiled frozen source loader was attempted without printing secrets, row contents, or unrestricted transaction data. The invocation reached Prisma initialization, which failed before any database query because the configured Workbench environment does not provide `DATABASE_URL`.
+
+Verified error:
+
+- `PrismaClientInitializationError`;
+- schema datasource requires `env("DATABASE_URL")`;
+- environment variable not found.
+
+No query, write, transaction, file mutation, environment modification, or secret exposure occurred. The repository environment was not synthesized or altered to force access.
+
+Therefore the current production source hash, labeled/unlabeled/excluded counts, deterministic report hash, and live metrics were not invented.
+
+### Phase 5 entry gate
+
+`PHASE_5_GATE_UNDECIDABLE`
+
+Reason: the deterministic evaluator is implemented and fully validated against source-grounded tests, but the configured Workbench environment cannot connect to the existing database because `DATABASE_URL` is absent. Without a live database-backed report, the documented Phase 5 thresholds cannot be assessed honestly.
+
+Phase 5 remains unstarted and blocked.
+
+### Limitations and rollback
+
+Limitations:
+
+- no committed production benchmark report exists;
+- no live source/report hash or metric values were produced;
+- no route, UI, job, runner, or persistence boundary was added.
+
+Rollback removes `deterministicBenchmarkEvaluationService.ts` and its focused test and reverts the Phase 4.8 documentation. No database rollback is required.
+
+No push is authorized or performed.
