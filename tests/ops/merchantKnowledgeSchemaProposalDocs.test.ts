@@ -77,9 +77,9 @@ describe('merchant knowledge schema proposal documentation', () => {
     expect(proposal).toContain('no project/type/category fields');
   });
 
-  it('records Phase 3.2 completion and the current Phase 3.8 implementation blocker', () => {
+  it('records Phase 3.2 completion and current Phase 3.8 implementation status', () => {
     expect(architecture).toContain('Program Phase 3.2 — Approved schema and migration design');
     expect(plan).toContain('3.2 Additive schema and migration planning — COMPLETE');
-    expect(plan).toContain('Phase 3.8 application implementation is blocked until the approved additive Merchant Knowledge schema/migration and dedicated workspace-scoped audit persistence exist.');
+    expect(plan).toContain('3.8 UI/admin tooling, separately approved');
   });
 });

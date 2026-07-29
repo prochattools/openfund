@@ -13,6 +13,24 @@ import {
   type EmailRecipient,
   type ImportBatchSummary,
   isClientAdmin,
+  fetchReferenceProjects,
+  createReferenceProject,
+  updateReferenceProject,
+  fetchReferenceCategories,
+  createReferenceCategory,
+  updateReferenceCategory,
+  fetchReferenceTransactionTypes,
+  createReferenceTransactionType,
+  updateReferenceTransactionType,
+  postDirectionInferenceDryRun,
+  postDirectionInferenceExecute,
+  postOwnerHistoryProposalDryRun,
+  postOwnerHistoryProposalExecute,
+  type ReferenceProjectItem,
+  type ReferenceCategoryItem,
+  type ReferenceTransactionTypeItem,
+  type DirectionInferenceResponse,
+  type OwnerHistoryProposalResponse,
 } from '@/libs/api';
 import { useLedger } from '@/context/ledger-context';
 import {
@@ -309,8 +327,401 @@ function GuardrailList() {
   );
 }
 
+// ─── Reference data panels ────────────────────────────────────────────────
+
+function ProjectsPanel({ admin }: { admin: boolean }) {
+  const [items, setItems] = useState<ReferenceProjectItem[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [newCode, setNewCode] = useState('');
+  const [newName, setNewName] = useState('');
+
+  const load = () => {
+    fetchReferenceProjects()
+      .then((data) => { setItems(data); setError(null); })
+      .catch((err) => setError(err instanceof Error ? err.message : 'Laden mislukt.'));
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleCreate = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!admin) return;
+    setBusy(true);
+    try {
+      await createReferenceProject({ code: newCode.trim(), name: newName.trim() });
+      setNewCode('');
+      setNewName('');
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Aanmaken mislukt.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const toggle = async (item: ReferenceProjectItem) => {
+    if (!admin) return;
+    setBusy(true);
+    try {
+      await updateReferenceProject(item.id, { isActive: !item.isActive });
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Bijwerken mislukt.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="rounded-[2rem] border border-[#ded5c8] bg-[#fbf8f2] p-6 shadow-[0_24px_70px_rgba(87,67,45,0.08)]">
+      <p className="text-sm font-medium text-[#7d6d5a]">Referentiedata</p>
+      <h3 className="mt-1 text-2xl font-semibold tracking-[-0.04em]">Projecten / Klanten</h3>
+      {!admin && <p className="mt-3 rounded-2xl bg-[#f5f1ea] p-4 text-sm text-[#6f6253]">Alleen beheerders kunnen projecten beheren.</p>}
+      {admin && (
+        <form onSubmit={handleCreate} className="mt-4 flex flex-wrap gap-2">
+          <input value={newCode} onChange={(e) => setNewCode(e.target.value)} placeholder="Code (bijv. YA)" className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm" />
+          <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Naam" className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm flex-1 min-w-[160px]" />
+          <button type="submit" disabled={busy || !newCode.trim() || !newName.trim()} className="rounded-xl bg-[#1f5f4a] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Toevoegen</button>
+        </form>
+      )}
+      {error && <p className="mt-3 rounded-xl bg-[#f7e9e4] p-3 text-sm text-[#7b4b3a]">{error}</p>}
+      <div className="mt-4 space-y-2">
+        {items.map((item) => (
+          <div key={item.id} className={`flex items-center justify-between rounded-xl px-3 py-2 text-sm ${item.isActive ? 'bg-[#f5f1ea]' : 'bg-[#fdf5f5] opacity-60'}`}>
+            <span><span className="font-mono text-xs text-[#8a7965] mr-2">{item.code}</span>{item.name}{item.isHistorical ? <span className="ml-2 text-xs text-[#8a7965]">(historisch)</span> : null}</span>
+            {admin && (
+              <button type="button" disabled={busy} onClick={() => toggle(item)} className="ml-3 rounded-full border border-[#d7cdbf] px-2 py-0.5 text-xs font-semibold text-[#6f6253] disabled:opacity-40">
+                {item.isActive ? 'Deactiveren' : 'Activeren'}
+              </button>
+            )}
+          </div>
+        ))}
+        {!items.length && <p className="rounded-xl bg-[#f5f1ea] p-3 text-sm text-[#6f6253]">Nog geen projecten.</p>}
+      </div>
+    </section>
+  );
+}
+
+function CategoriesPanel({ admin }: { admin: boolean }) {
+  const [items, setItems] = useState<ReferenceCategoryItem[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [newName, setNewName] = useState('');
+
+  const load = () => {
+    fetchReferenceCategories()
+      .then((data) => { setItems(data); setError(null); })
+      .catch((err) => setError(err instanceof Error ? err.message : 'Laden mislukt.'));
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleCreate = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!admin) return;
+    setBusy(true);
+    try {
+      await createReferenceCategory({ name: newName.trim() });
+      setNewName('');
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Aanmaken mislukt.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const toggle = async (item: ReferenceCategoryItem) => {
+    if (!admin) return;
+    setBusy(true);
+    try {
+      await updateReferenceCategory(item.id, { isActive: !item.isActive });
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Bijwerken mislukt.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="rounded-[2rem] border border-[#ded5c8] bg-[#fbf8f2] p-6 shadow-[0_24px_70px_rgba(87,67,45,0.08)]">
+      <p className="text-sm font-medium text-[#7d6d5a]">Referentiedata</p>
+      <h3 className="mt-1 text-2xl font-semibold tracking-[-0.04em]">Categorieën beheren</h3>
+      {!admin && <p className="mt-3 rounded-2xl bg-[#f5f1ea] p-4 text-sm text-[#6f6253]">Alleen beheerders kunnen categorieën beheren.</p>}
+      {admin && (
+        <form onSubmit={handleCreate} className="mt-4 flex flex-wrap gap-2">
+          <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Categorie-naam" className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm flex-1 min-w-[160px]" />
+          <button type="submit" disabled={busy || !newName.trim()} className="rounded-xl bg-[#1f5f4a] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Toevoegen</button>
+        </form>
+      )}
+      {error && <p className="mt-3 rounded-xl bg-[#f7e9e4] p-3 text-sm text-[#7b4b3a]">{error}</p>}
+      <div className="mt-4 space-y-2">
+        {items.map((item) => (
+          <div key={item.id} className={`flex items-center justify-between rounded-xl px-3 py-2 text-sm ${item.isActive ? 'bg-[#f5f1ea]' : 'bg-[#fdf5f5] opacity-60'}`}>
+            <span>{item.name}{item.isHistorical ? <span className="ml-2 text-xs text-[#8a7965]">(historisch)</span> : null}</span>
+            {admin && (
+              <button type="button" disabled={busy} onClick={() => toggle(item)} className="ml-3 rounded-full border border-[#d7cdbf] px-2 py-0.5 text-xs font-semibold text-[#6f6253] disabled:opacity-40">
+                {item.isActive ? 'Deactiveren' : 'Activeren'}
+              </button>
+            )}
+          </div>
+        ))}
+        {!items.length && <p className="rounded-xl bg-[#f5f1ea] p-3 text-sm text-[#6f6253]">Nog geen categorieën.</p>}
+      </div>
+    </section>
+  );
+}
+
+function TransactionTypesPanel({ admin }: { admin: boolean }) {
+  const [items, setItems] = useState<ReferenceTransactionTypeItem[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newDirection, setNewDirection] = useState<'credit' | 'debit'>('credit');
+
+  const load = () => {
+    fetchReferenceTransactionTypes()
+      .then((data) => { setItems(data); setError(null); })
+      .catch((err) => setError(err instanceof Error ? err.message : 'Laden mislukt.'));
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleCreate = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!admin) return;
+    setBusy(true);
+    try {
+      await createReferenceTransactionType({ literalName: newName.trim(), direction: newDirection });
+      setNewName('');
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Aanmaken mislukt.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const toggle = async (item: ReferenceTransactionTypeItem) => {
+    if (!admin) return;
+    setBusy(true);
+    try {
+      await updateReferenceTransactionType(item.id, { isActive: !item.isActive });
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Bijwerken mislukt.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const directionLabel = (d: 'credit' | 'debit' | null) =>
+    d === 'credit' ? 'Bijschrijving' : d === 'debit' ? 'Afschrijving' : null;
+
+  return (
+    <section className="rounded-[2rem] border border-[#ded5c8] bg-[#fbf8f2] p-6 shadow-[0_24px_70px_rgba(87,67,45,0.08)]">
+      <p className="text-sm font-medium text-[#7d6d5a]">Referentiedata</p>
+      <h3 className="mt-1 text-2xl font-semibold tracking-[-0.04em]">Transactietypes</h3>
+      {!admin && <p className="mt-3 rounded-2xl bg-[#f5f1ea] p-4 text-sm text-[#6f6253]">Alleen beheerders kunnen transactietypes beheren.</p>}
+      {admin && (
+        <form onSubmit={handleCreate} className="mt-4 flex flex-wrap gap-2">
+          <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Type-naam (literal)" className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm flex-1 min-w-[160px]" />
+          <select value={newDirection} onChange={(e) => setNewDirection(e.target.value as 'credit' | 'debit')} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
+            <option value="credit">Bijschrijving (credit)</option>
+            <option value="debit">Afschrijving (debit)</option>
+          </select>
+          <button type="submit" disabled={busy || !newName.trim()} className="rounded-xl bg-[#1f5f4a] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Toevoegen</button>
+        </form>
+      )}
+      {error && <p className="mt-3 rounded-xl bg-[#f7e9e4] p-3 text-sm text-[#7b4b3a]">{error}</p>}
+      <div className="mt-4 space-y-2">
+        {items.map((item) => (
+          <div key={item.id} className={`flex items-center justify-between rounded-xl px-3 py-2 text-sm ${item.isActive ? 'bg-[#f5f1ea]' : 'bg-[#fdf5f5] opacity-60'}`}>
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span>{item.literalName}</span>
+              {directionLabel(item.direction)
+                ? <span className="text-xs text-[#8a7965]">{directionLabel(item.direction)}</span>
+                : <span className="rounded-full bg-[#fff7df] px-2 py-0.5 text-xs font-semibold text-[#7a5512]">Richting ontbreekt</span>}
+              {item.isHistorical ? <span className="text-xs text-[#8a7965]">(historisch)</span> : null}
+            </span>
+            {admin && (
+              <button type="button" disabled={busy} onClick={() => toggle(item)} className="ml-3 rounded-full border border-[#d7cdbf] px-2 py-0.5 text-xs font-semibold text-[#6f6253] disabled:opacity-40">
+                {item.isActive ? 'Deactiveren' : 'Activeren'}
+              </button>
+            )}
+          </div>
+        ))}
+        {!items.length && <p className="rounded-xl bg-[#f5f1ea] p-3 text-sm text-[#6f6253]">Nog geen transactietypes. Voeg er minimaal één toe voor elke richting om transacties te kunnen beoordelen.</p>}
+      </div>
+    </section>
+  );
+}
+
+function OperatorToolsPanel({ admin }: { admin: boolean }) {
+  const [dirResult, setDirResult] = useState<DirectionInferenceResponse | null>(null);
+  const [propResult, setPropResult] = useState<OwnerHistoryProposalResponse | null>(null);
+  const [dirConfirmHash, setDirConfirmHash] = useState('');
+  const [propConfirmHash, setPropConfirmHash] = useState('');
+  const [dirBusy, setDirBusy] = useState(false);
+  const [propBusy, setPropBusy] = useState(false);
+  const [dirError, setDirError] = useState<string | null>(null);
+  const [propError, setPropError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!admin) return;
+    postDirectionInferenceDryRun()
+      .then((r) => setDirResult(r))
+      .catch((e) => setDirError(e instanceof Error ? e.message : 'Laden mislukt.'));
+    postOwnerHistoryProposalDryRun()
+      .then((r) => setPropResult(r))
+      .catch((e) => setPropError(e instanceof Error ? e.message : 'Laden mislukt.'));
+  }, [admin]);
+
+  const runDirDryRun = async () => {
+    setDirBusy(true); setDirError(null);
+    try { setDirResult(await postDirectionInferenceDryRun()); }
+    catch (e) { setDirError(e instanceof Error ? e.message : 'Mislukt.'); }
+    finally { setDirBusy(false); }
+  };
+
+  const runDirExecute = async () => {
+    if (!dirConfirmHash.trim()) return;
+    setDirBusy(true); setDirError(null);
+    try { setDirResult(await postDirectionInferenceExecute(dirConfirmHash.trim())); setDirConfirmHash(''); }
+    catch (e) { setDirError(e instanceof Error ? e.message : 'Mislukt.'); }
+    finally { setDirBusy(false); }
+  };
+
+  const runPropDryRun = async () => {
+    setPropBusy(true); setPropError(null);
+    try { setPropResult(await postOwnerHistoryProposalDryRun()); }
+    catch (e) { setPropError(e instanceof Error ? e.message : 'Mislukt.'); }
+    finally { setPropBusy(false); }
+  };
+
+  const runPropExecute = async () => {
+    if (!propConfirmHash.trim()) return;
+    setPropBusy(true); setPropError(null);
+    try { setPropResult(await postOwnerHistoryProposalExecute(propConfirmHash.trim())); setPropConfirmHash(''); }
+    catch (e) { setPropError(e instanceof Error ? e.message : 'Mislukt.'); }
+    finally { setPropBusy(false); }
+  };
+
+  if (!admin) return null;
+
+  return (
+    <section className="rounded-[2rem] border border-amber-300 bg-[#fffdf5] p-6 shadow-[0_24px_70px_rgba(87,67,45,0.08)]">
+      <p className="text-sm font-medium text-[#7d6d5a]">Beheerder – eenmalige operaties</p>
+      <h3 className="mt-1 text-2xl font-semibold tracking-[-0.04em]">Operatortools</h3>
+      <p className="mt-2 text-sm leading-6 text-[#6f6253]">
+        Voer altijd eerst een dry-run uit. Kopieer de planhash naar het bevestigingsveld en klik daarna uitvoeren. Elke uitvoer is gecontroleerd idempotent.
+      </p>
+
+      {/* Direction inference */}
+      <div className="mt-6 rounded-[1.5rem] border border-[#ded5c8] bg-[#fbf8f2] p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="font-semibold">Richtingsinferentie transactietypes</p>
+            <p className="text-xs text-[#7d6d5a]">Past alleen ondubbelzinnige richtingen toe op types zonder richting.</p>
+          </div>
+          <button type="button" disabled={dirBusy} onClick={runDirDryRun} className="rounded-xl border border-[#d7cdbf] px-3 py-1.5 text-xs font-semibold text-[#574b3f] disabled:opacity-40">
+            {dirBusy ? 'Laden…' : 'Dry-run vernieuwen'}
+          </button>
+        </div>
+        {dirError && <p className="mt-3 rounded-xl bg-[#f7e9e4] p-3 text-sm text-[#7b4b3a]">{dirError}</p>}
+        {dirResult && (
+          <div className="mt-3 space-y-2 text-sm">
+            <div className="flex flex-wrap gap-3 rounded-xl bg-[#f5f1ea] px-3 py-2">
+              <span>Ondubbelzinnig: <strong>{dirResult.counts.unambiguous}</strong></span>
+              <span>Conflicterend: <strong>{dirResult.counts.conflicting}</strong></span>
+              <span>Onbekend: <strong>{dirResult.counts.unknown}</strong></span>
+              <span>Ongebruikt: <strong>{dirResult.counts.unused}</strong></span>
+              {dirResult.updatedCount !== undefined && <span>Bijgewerkt: <strong>{dirResult.updatedCount}</strong></span>}
+            </div>
+            <div className="rounded-xl bg-[#f5f1ea] px-3 py-2">
+              <span className="text-xs text-[#8a7965]">Status: </span>
+              <span className={`text-xs font-semibold ${dirResult.status === 'APPLIED' ? 'text-[#1f5f4a]' : dirResult.status === 'HASH_DRIFT' ? 'text-[#914f35]' : 'text-[#574b3f]'}`}>{dirResult.status}</span>
+              <span className="ml-3 text-xs text-[#8a7965]">Plan hash: </span>
+              <code className="text-[10px] break-all">{dirResult.planHash}</code>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <input
+                value={dirConfirmHash}
+                onChange={(e) => setDirConfirmHash(e.target.value)}
+                placeholder="Plak planhash ter bevestiging"
+                className="flex-1 min-w-[200px] rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 font-mono text-xs"
+              />
+              <button
+                type="button"
+                disabled={dirBusy || !dirConfirmHash.trim() || dirConfirmHash.trim() !== dirResult.planHash}
+                onClick={runDirExecute}
+                className="rounded-xl bg-amber-600 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40"
+              >
+                Uitvoeren
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Owner-history proposals */}
+      <div className="mt-4 rounded-[1.5rem] border border-[#ded5c8] bg-[#fbf8f2] p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="font-semibold">Eigenaar-historische suggesties</p>
+            <p className="text-xs text-[#7d6d5a]">Zaait CategorizatieSuggesties voor open transacties op basis van HISTORICAL-boekingen.</p>
+          </div>
+          <button type="button" disabled={propBusy} onClick={runPropDryRun} className="rounded-xl border border-[#d7cdbf] px-3 py-1.5 text-xs font-semibold text-[#574b3f] disabled:opacity-40">
+            {propBusy ? 'Laden…' : 'Dry-run vernieuwen'}
+          </button>
+        </div>
+        {propError && <p className="mt-3 rounded-xl bg-[#f7e9e4] p-3 text-sm text-[#7b4b3a]">{propError}</p>}
+        {propResult && (
+          <div className="mt-3 space-y-2 text-sm">
+            <div className="flex flex-wrap gap-3 rounded-xl bg-[#f5f1ea] px-3 py-2">
+              <span>Open tx: <strong>{propResult.counts.openTransactions}</strong></span>
+              <span>Gedekt: <strong>{propResult.counts.covered}</strong></span>
+              <span>Ongedekt: <strong>{propResult.counts.uncovered}</strong></span>
+              <span>Onthouden: <strong>{propResult.counts.abstainedWeak}</strong></span>
+              {propResult.createdSuggestionCount !== undefined && <span>Aangemaakt: <strong>{propResult.createdSuggestionCount}</strong></span>}
+            </div>
+            <div className="rounded-xl bg-[#f5f1ea] px-3 py-2">
+              <span className="text-xs text-[#8a7965]">Status: </span>
+              <span className={`text-xs font-semibold ${propResult.status === 'CREATED' ? 'text-[#1f5f4a]' : propResult.status === 'HASH_DRIFT' ? 'text-[#914f35]' : 'text-[#574b3f]'}`}>{propResult.status}</span>
+              <span className="ml-3 text-xs text-[#8a7965]">Plan hash: </span>
+              <code className="text-[10px] break-all">{propResult.planHash}</code>
+            </div>
+            <p className="text-xs text-[#8a7965]">
+              Bewijs: {propResult.provenanceProof.evidenceBookingsLoadedFromSource} · Kwalificeert voor confirmedHistoryEligibility: {propResult.provenanceProof.qualifiesUnderConfirmedHistoryEligibilityService ? 'ja' : 'nee'} · Uitsluitingsreden: {propResult.provenanceProof.exclusionReason}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <input
+                value={propConfirmHash}
+                onChange={(e) => setPropConfirmHash(e.target.value)}
+                placeholder="Plak planhash ter bevestiging"
+                className="flex-1 min-w-[200px] rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 font-mono text-xs"
+              />
+              <button
+                type="button"
+                disabled={propBusy || !propConfirmHash.trim() || propConfirmHash.trim() !== propResult.planHash}
+                onClick={runPropExecute}
+                className="rounded-xl bg-amber-600 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40"
+              >
+                Uitvoeren
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export default function FinanceSettingsPage() {
   const { summary } = useLedger();
+  const admin = isClientAdmin();
 
   return (
     <FinanceAppFrame reviewCount={summary.reviewCount} activeHref="/settings">
@@ -327,9 +738,13 @@ export default function FinanceSettingsPage() {
           <SettingCard title="Beheermodus" body="Handmatig wijzigen of verwijderen van transacties hoort later achter een aparte veilige beheermodus, niet in het normale dashboard." status="Gepland" />
         </section>
 
+        <ProjectsPanel admin={admin} />
+        <CategoriesPanel admin={admin} />
+        <TransactionTypesPanel admin={admin} />
         <CategoryOverview />
         <ImportHistoryPanel />
         <EmailRecipientsPanel />
+        <OperatorToolsPanel admin={admin} />
         <AuditLogPreview />
         <GuardrailList />
       </div>

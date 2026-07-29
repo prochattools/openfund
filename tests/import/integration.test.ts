@@ -255,13 +255,14 @@ class FakePrismaClient {
           });
         },
         upsert: async ({ where, create }: any) => {
-          const existing = this.categories.find((category) => category.name === where.name);
+          const lookupName = where.workspaceId_name?.name ?? where.name;
+          const existing = this.categories.find((category) => category.name === lookupName);
           if (existing) {
             return existing;
           }
           const record = {
-            id: create?.id ?? `category-${where.name}`,
-            name: create?.name ?? where.name,
+            id: create?.id ?? `category-${lookupName}`,
+            name: create?.name ?? lookupName,
           };
           this.categories.push(record);
           return record;

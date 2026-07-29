@@ -103,6 +103,7 @@ model TransactionType {
   id                        String                     @id @default(uuid())
   workspaceId               String
   literalName               String
+  direction                 TransactionDirection?
   isActive                  Boolean                    @default(true)
   isHistorical              Boolean                    @default(false)
   sortOrder                 Int?
@@ -124,7 +125,7 @@ model Category {
   id                        String                     @id @default(uuid())
   workspaceId               String                     @default("00000000-0000-4000-8000-000000000001")
   /// Exact literal category label retained under the legacy field name during additive migration.
-  name                      String                     @unique
+  name                      String
   color                     String?
   isActive                  Boolean                    @default(true)
   isHistorical              Boolean                    @default(false)

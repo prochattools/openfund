@@ -770,6 +770,7 @@ const ensureDefaultSuggestionCategories = async (
   tx: TxClient,
   lookup: Map<string, string>,
 ): Promise<DefaultCategoryIds> => {
+  const workspaceId = process.env.DEFAULT_WORKSPACE_ID?.trim() ?? '00000000-0000-4000-8000-000000000001';
   const ensureLabel = async (label: string | null): Promise<string | null> => {
     if (!label) return null;
     for (const [id, existing] of lookup.entries()) {
@@ -778,9 +779,9 @@ const ensureDefaultSuggestionCategories = async (
       }
     }
     const record = await tx.category.upsert({
-      where: { name: label },
+      where: { workspaceId_name: { workspaceId, name: label } },
       update: {},
-      create: { name: label },
+      create: { workspaceId, name: label },
     });
     lookup.set(record.id, record.name);
     return record.id;
@@ -939,10 +940,11 @@ const findBestHistoryGuess = (
 };
 
 const ensureReviewCategory = async (tx: TxClient): Promise<string> => {
+  const workspaceId = process.env.DEFAULT_WORKSPACE_ID?.trim() ?? '00000000-0000-4000-8000-000000000001';
   const category = await tx.category.upsert({
-    where: { name: REVIEW_CATEGORY_NAME },
+    where: { workspaceId_name: { workspaceId, name: REVIEW_CATEGORY_NAME } },
     update: {},
-    create: { name: REVIEW_CATEGORY_NAME },
+    create: { workspaceId, name: REVIEW_CATEGORY_NAME },
   });
 
   return category.id;

@@ -45,6 +45,12 @@ import {
 } from './routes/reportSnapshots';
 import { ensureCategorizationRuleConditionsColumn } from './db/ensureCategorizationRuleConditions';
 import { authenticateExpressRequest } from './auth/requestContext';
+import {
+  listProjects, createProject, updateProject,
+  listCategories, createCategory, updateCategory as updateCategoryRecord,
+  listTransactionTypes, createTransactionType, updateTransactionType,
+} from './routes/referenceData';
+import { postDirectionInference, postOwnerHistoryProposals } from './routes/operatorTools';
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -99,6 +105,23 @@ app.post('/api/rules/:id/apply', applyRule);
 app.get('/api/reconciliation/statement-periods/:id/preview', getStatementReconciliationPreview);
 app.post('/api/reconciliation/statement-periods/:id/close', postStrictPeriodClose);
 app.post('/api/reconciliation/period-closes/:id/reopen', postAuditedPeriodReopen);
+
+// Operator tools — direction inference and owner-history proposal seeding (admin-only)
+app.post('/api/operator/direction-inference', postDirectionInference);
+app.post('/api/operator/owner-history-proposals', postOwnerHistoryProposals);
+
+// Reference data — projects, categories, transaction types
+app.get('/api/reference-data/projects', listProjects);
+app.post('/api/reference-data/projects', createProject);
+app.patch('/api/reference-data/projects/:id', updateProject);
+
+app.get('/api/reference-data/categories', listCategories);
+app.post('/api/reference-data/categories', createCategory);
+app.patch('/api/reference-data/categories/:id', updateCategoryRecord);
+
+app.get('/api/reference-data/transaction-types', listTransactionTypes);
+app.post('/api/reference-data/transaction-types', createTransactionType);
+app.patch('/api/reference-data/transaction-types/:id', updateTransactionType);
 
 // Phase 6 — Reports and distribution (REPORT-001 through REPORT-005)
 app.get('/api/reports/monthly/:year/:month/preview', getMonthlyReportPreview);

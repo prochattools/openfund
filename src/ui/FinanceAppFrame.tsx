@@ -22,6 +22,32 @@ export function FinanceAppFrame({
 }) {
   return (
     <main className="min-h-screen bg-[#f5f1ea] text-[#251f1a]">
+      {/* Mobile / tablet top bar — hidden on lg+ where the sidebar takes over */}
+      <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-[#ded5c8] bg-[#fbf8f2] px-4 py-3 lg:hidden">
+        <p className="text-sm font-semibold tracking-[-0.02em]">YA Finance</p>
+        <nav className="flex gap-1 overflow-x-auto">
+          {navItems.map((item) => {
+            const isActive = item.href === activeHref;
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                className={`flex shrink-0 items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
+                  isActive
+                    ? 'bg-[#1f5f4a] text-[#fbf8f2]'
+                    : 'text-[#6f6253] hover:bg-[#efe7db] hover:text-[#251f1a]'
+                }`}
+              >
+                {item.label}
+                {item.label === 'Te beoordelen' && reviewCount > 0 ? (
+                  <span className="rounded-full bg-[#e6b85c] px-1.5 py-0.5 text-[10px] text-[#35240a]">{reviewCount}</span>
+                ) : null}
+              </Link>
+            );
+          })}
+        </nav>
+      </header>
+
       <div className="mx-auto flex min-h-screen max-w-[1480px] gap-6 px-4 py-4 sm:px-6 sm:py-6">
         <aside className="hidden w-64 shrink-0 rounded-[2rem] border border-[#ded5c8] bg-[#fbf8f2] p-5 shadow-[0_24px_70px_rgba(87,67,45,0.08)] lg:block">
           <div className="mb-8">

@@ -117,7 +117,7 @@ function ReviewRow({
   };
 
   return (
-    <article className="border-b border-[#ded5c8] bg-[#fbf8f2] p-4 last:border-b-0">
+    <article className="min-w-0 border-b border-[#ded5c8] bg-[#fbf8f2] p-4 last:border-b-0">
       <div className="grid gap-3 xl:grid-cols-[110px_minmax(190px,1.2fr)_minmax(220px,1.5fr)_110px_minmax(170px,1fr)_minmax(170px,1fr)_minmax(180px,1fr)_145px_140px] xl:items-center">
         <div className="text-sm text-[#6f6253]"><span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Datum</span>{dateFormatter.format(new Date(item.displayDate))}</div>
         <div>
@@ -146,7 +146,9 @@ function ReviewRow({
             {transactionTypeIssue?.code === 'unavailable-transaction-type' || transactionTypeIssue?.code === 'wrong-direction-transaction-type'
               ? <option value={INVALID_SELECT_VALUE} disabled>Ongeldig voorstel — kies opnieuw</option>
               : null}
-            <option value="">Kies type</option>
+            {!compatibleTypes.length
+              ? <option value="" disabled>Geen typen voor deze richting — voeg toe via Instellingen</option>
+              : <option value="">Kies type</option>}
             {compatibleTypes.map((type) => <option key={type.id} value={type.id}>{type.literalName}</option>)}
           </select>
           {transactionTypeIssue ? renderSelectionWarning(transactionTypeIssue, 'Voorgestelde transactietype-id', transactionTypeWarningId) : null}
@@ -236,7 +238,7 @@ export default function FinanceReviewPage() {
         </div>
       </header>
 
-      <section className="mb-4 grid gap-3 rounded-2xl border border-[#ded5c8] bg-[#fbf8f2] p-4 md:grid-cols-2 xl:grid-cols-6">
+      <section className="mb-4 grid gap-3 rounded-2xl border border-[#ded5c8] bg-[#fbf8f2] p-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <select aria-label="Betrouwbaarheid filter" value={confidence} onChange={(event) => { setConfidence(event.target.value as ReviewConfidenceFilter); setPage(1); }} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm"><option value="all">Alle betrouwbaarheid</option><option value="green">Zeer betrouwbaar</option><option value="amber">Controleer zorgvuldig</option><option value="red">Onzeker</option><option value="gray">Onvoldoende bewijs</option></select>
         <select aria-label="Richting filter" value={direction} onChange={(event) => { setDirection(event.target.value as typeof direction); setPage(1); }} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm"><option value="all">Alle richtingen</option><option value="debit">Afschrijvingen</option><option value="credit">Bijschrijvingen</option></select>
         <select aria-label="Project filter" value={projectFilter} onChange={(event) => { setProjectFilter(event.target.value); setPage(1); }} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm"><option value="">Alle projecten</option>{data?.projects.map((project) => <option key={project.id} value={project.id}>{project.code} · {project.name}</option>)}</select>
@@ -248,10 +250,12 @@ export default function FinanceReviewPage() {
       {loading && !data ? <div className="rounded-2xl border border-[#ded5c8] bg-[#fbf8f2] p-8 text-center">Laden…</div> : null}
       {!loading && data && data.pagination.totalItems === 0 ? <EmptyReviewState /> : null}
       {data && data.pagination.totalItems > 0 ? (
-        <section className="overflow-hidden rounded-2xl border border-[#ded5c8] bg-[#fbf8f2]">
-          <div className="hidden bg-[#f5f1ea] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[#7d6d5a] xl:grid xl:grid-cols-[110px_minmax(190px,1.2fr)_minmax(220px,1.5fr)_110px_minmax(170px,1fr)_minmax(170px,1fr)_minmax(180px,1fr)_145px_140px] xl:gap-3"><span>Datum</span><span>Tegenpartij</span><span>Omschrijving</span><span className="text-right">Bedrag</span><span>Project</span><span>Type</span><span>Categorie</span><span>Betrouwbaarheid</span><span>Actie</span></div>
-          {visibleTransactions.map((item) => <ReviewRow key={item.transactionId} item={item} categories={data.categories} projects={data.projects} transactionTypes={data.transactionTypes} onConfirmed={load} />)}
-          {!visibleTransactions.length ? <div className="p-8 text-center text-sm text-[#6f6253]">Geen transacties op deze pagina voldoen aan de filters.</div> : null}
+        <section className="rounded-2xl border border-[#ded5c8] bg-[#fbf8f2]">
+          <div className="overflow-x-auto">
+            <div className="hidden min-w-[1100px] bg-[#f5f1ea] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[#7d6d5a] xl:grid xl:grid-cols-[110px_minmax(190px,1.2fr)_minmax(220px,1.5fr)_110px_minmax(170px,1fr)_minmax(170px,1fr)_minmax(180px,1fr)_145px_140px] xl:gap-3"><span>Datum</span><span>Tegenpartij</span><span>Omschrijving</span><span className="text-right">Bedrag</span><span>Project</span><span>Type</span><span>Categorie</span><span>Betrouwbaarheid</span><span>Actie</span></div>
+            {visibleTransactions.map((item) => <ReviewRow key={item.transactionId} item={item} categories={data.categories} projects={data.projects} transactionTypes={data.transactionTypes} onConfirmed={load} />)}
+            {!visibleTransactions.length ? <div className="p-8 text-center text-sm text-[#6f6253]">Geen transacties op deze pagina voldoen aan de filters.</div> : null}
+          </div>
         </section>
       ) : null}
 

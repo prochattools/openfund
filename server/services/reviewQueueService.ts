@@ -600,6 +600,7 @@ export const getEvidenceRichReviewQueue = async (
     }),
     db.transactionType.findMany({
       where: { isActive: true },
+      select: { id: true, workspaceId: true, literalName: true, direction: true, isActive: true, isHistorical: true, sortOrder: true, createdAt: true, updatedAt: true },
       orderBy: [{ sortOrder: 'asc' }, { literalName: 'asc' }],
     }),
   ]);

@@ -97,9 +97,8 @@ export type ReviewProjectOption = {
 
 export type ReviewTransactionTypeOption = {
   id: string;
-  code: string;
   literalName: string;
-  direction: 'credit' | 'debit';
+  direction: 'credit' | 'debit' | null;
 };
 
 export type ReviewPagination = {
@@ -967,3 +966,174 @@ export const confirmMerchantConflictResolution = async (
       body: JSON.stringify(request),
     }),
   ));
+
+// ─── Reference data ─────────────────────────────────────────────────────────
+
+export type ReferenceProjectItem = {
+  id: string;
+  code: string;
+  name: string;
+  isActive: boolean;
+  isHistorical: boolean;
+};
+
+export type ReferenceCategoryItem = {
+  id: string;
+  name: string;
+  color: string | null;
+  sortOrder: number | null;
+  isActive: boolean;
+  isHistorical: boolean;
+};
+
+export type ReferenceTransactionTypeItem = {
+  id: string;
+  literalName: string;
+  direction: 'credit' | 'debit' | null;
+  sortOrder: number | null;
+  isActive: boolean;
+  isHistorical: boolean;
+};
+
+export const fetchReferenceProjects = async (): Promise<ReferenceProjectItem[]> => {
+  const res = await fetch(getApiUrl('/api/reference-data/projects'), withUserHeader({ cache: 'no-store' }));
+  if (!res.ok) throw new Error('Projecten konden niet worden geladen.');
+  const data = await res.json() as { items: ReferenceProjectItem[] };
+  return data.items;
+};
+
+export const createReferenceProject = async (payload: { code: string; name: string }): Promise<ReferenceProjectItem> =>
+  readJson(await fetch(getApiUrl('/api/reference-data/projects'), withUserHeader({
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })));
+
+export const updateReferenceProject = async (id: string, payload: { name?: string; isActive?: boolean }): Promise<ReferenceProjectItem> =>
+  readJson(await fetch(getApiUrl(`/api/reference-data/projects/${encodeApiPathSegment(id)}`), withUserHeader({
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })));
+
+export const fetchReferenceCategories = async (): Promise<ReferenceCategoryItem[]> => {
+  const res = await fetch(getApiUrl('/api/reference-data/categories'), withUserHeader({ cache: 'no-store' }));
+  if (!res.ok) throw new Error('Categorieën konden niet worden geladen.');
+  const data = await res.json() as { items: ReferenceCategoryItem[] };
+  return data.items;
+};
+
+export const createReferenceCategory = async (payload: { name: string; color?: string; sortOrder?: number }): Promise<ReferenceCategoryItem> =>
+  readJson(await fetch(getApiUrl('/api/reference-data/categories'), withUserHeader({
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })));
+
+export const updateReferenceCategory = async (id: string, payload: { name?: string; color?: string; sortOrder?: number; isActive?: boolean }): Promise<ReferenceCategoryItem> =>
+  readJson(await fetch(getApiUrl(`/api/reference-data/categories/${encodeApiPathSegment(id)}`), withUserHeader({
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })));
+
+export const fetchReferenceTransactionTypes = async (): Promise<ReferenceTransactionTypeItem[]> => {
+  const res = await fetch(getApiUrl('/api/reference-data/transaction-types'), withUserHeader({ cache: 'no-store' }));
+  if (!res.ok) throw new Error('Transactietypes konden niet worden geladen.');
+  const data = await res.json() as { items: ReferenceTransactionTypeItem[] };
+  return data.items;
+};
+
+export const createReferenceTransactionType = async (payload: { literalName: string; direction: 'credit' | 'debit'; sortOrder?: number }): Promise<ReferenceTransactionTypeItem> =>
+  readJson(await fetch(getApiUrl('/api/reference-data/transaction-types'), withUserHeader({
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })));
+
+export const updateReferenceTransactionType = async (id: string, payload: { literalName?: string; direction?: 'credit' | 'debit'; sortOrder?: number; isActive?: boolean }): Promise<ReferenceTransactionTypeItem> =>
+  readJson(await fetch(getApiUrl(`/api/reference-data/transaction-types/${encodeApiPathSegment(id)}`), withUserHeader({
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })));
+
+// ─── Operator tools ───────────────────────────────────────────────────────────
+
+export type DirectionInferenceCounts = {
+  unambiguous: number;
+  conflicting: number;
+  unknown: number;
+  unused: number;
+  total: number;
+};
+
+export type DirectionInferenceResponse = {
+  status: 'DRY_RUN_COMPLETE' | 'APPLIED' | 'HASH_DRIFT' | 'EXECUTION_NOT_ALLOWED' | 'CONFIRMATION_REQUIRED';
+  dryRun: boolean;
+  writesPerformed: boolean;
+  updatedCount?: number;
+  skippedAlreadySetCount?: number;
+  algorithmVersion: string;
+  planHash: string;
+  counts: DirectionInferenceCounts;
+  sideEffects: { writesPerformed: false };
+};
+
+export type OwnerHistoryProposalCounts = {
+  evidenceCandidates: number;
+  disqualifiedIncomplete: number;
+  disqualifiedDirectionConflict: number;
+  eligibleEvidence: number;
+  openTransactions: number;
+  covered: number;
+  uncovered: number;
+  abstainedWeak: number;
+};
+
+export type OwnerHistoryProposalResponse = {
+  status: 'DRY_RUN_COMPLETE' | 'CREATED' | 'HASH_DRIFT' | 'EXECUTION_NOT_ALLOWED' | 'CONFIRMATION_REQUIRED';
+  dryRun: boolean;
+  writesPerformed: boolean;
+  expiredSuggestionCount?: number;
+  createdSuggestionCount?: number;
+  algorithmVersion: string;
+  planHash: string;
+  counts: OwnerHistoryProposalCounts;
+  matcherDistribution: Record<string, number>;
+  confidenceDistribution: Record<string, number>;
+  provenanceProof: {
+    evidenceBookingsLoadedFromSource: string;
+    reviewDecisionRequired: boolean;
+    qualifiesUnderConfirmedHistoryEligibilityService: boolean;
+    exclusionReason: string;
+  };
+};
+
+export const postDirectionInferenceDryRun = async (): Promise<DirectionInferenceResponse> =>
+  readJson(await fetch(getApiUrl('/api/operator/direction-inference'), withUserHeader({
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ execute: false }),
+  })));
+
+export const postDirectionInferenceExecute = async (confirmedPlanHash: string): Promise<DirectionInferenceResponse> =>
+  readJson(await fetch(getApiUrl('/api/operator/direction-inference'), withUserHeader({
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ execute: true, confirmedPlanHash }),
+  })));
+
+export const postOwnerHistoryProposalDryRun = async (): Promise<OwnerHistoryProposalResponse> =>
+  readJson(await fetch(getApiUrl('/api/operator/owner-history-proposals'), withUserHeader({
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ execute: false }),
+  })));
+
+export const postOwnerHistoryProposalExecute = async (confirmedPlanHash: string): Promise<OwnerHistoryProposalResponse> =>
+  readJson(await fetch(getApiUrl('/api/operator/owner-history-proposals'), withUserHeader({
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ execute: true, confirmedPlanHash }),
+  })));

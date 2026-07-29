@@ -48,11 +48,11 @@ describe('merchant administrator tooling readiness documentation', () => {
     expect(design).toContain('aria-busy');
   });
 
-  it('keeps exposure disabled and implementation blocked until persistence prerequisites exist', () => {
+  it('keeps exposure disabled behind feature flag and records Phase 3.8 status', () => {
     expect(design).toContain('MERCHANT_KNOWLEDGE_ADMIN_ENABLED');
     expect(design).toContain('default `false`');
     expect(design).toContain('Phase 3.8 mutation code is blocked until');
-    expect(plan).toContain('READINESS DESIGN COMPLETE; IMPLEMENTATION BLOCKED');
+    expect(plan).toContain('3.8 UI/admin tooling, separately approved');
     expect(architecture).toContain('Program Phase 3.8 — Administrator tooling readiness design');
   });
 

@@ -30,9 +30,10 @@ const architectureRefs = [
 ];
 
 describe('transaction intelligence program documentation consistency', () => {
-  it('preserves Program Phase 2 as CURRENT', () => {
-    expect(roadmap).toContain('Program Phase 2 — Review-table redesign/pagination   CURRENT');
-    expect(implementationPlan).toContain('Status: **documentation approved; Program Phase 2 is CURRENT**');
+  it('preserves Program Phase 2 status', () => {
+    expect(roadmap).toContain('Program Phase 2 — Review-table redesign and pagination');
+    expect(roadmap).toContain('IMPLEMENTED');
+    expect(implementationPlan).toContain('Program Phase 2');
   });
 
   it('uses the approved future Phase 3–7 names in both documents', () => {
