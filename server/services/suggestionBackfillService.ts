@@ -13,14 +13,25 @@ import {
 import {
   DETERMINISTIC_HISTORY_RETRIEVAL_VERSION,
   retrieveDeterministicConfirmedHistory,
+  type DeterministicHistoryRetrievalResult,
 } from './deterministicHistoryRetrievalService';
-import { buildDeterministicRetrievalEvidence } from './deterministicRetrievalEvidenceService';
+import {
+  buildDeterministicRetrievalEvidence,
+  type DeterministicRetrievalEvidenceResult,
+} from './deterministicRetrievalEvidenceService';
 import {
   buildRestrictedRetrievalCandidates,
   loadRestrictedDimensionRecords,
+  type RestrictedRetrievalCandidateResult,
 } from './restrictedRetrievalCandidateService';
-import { buildDeterministicDecision } from './deterministicDecisionService';
-import { orchestrateDeterministicDecision } from './deterministicDecisionOrchestrationService';
+import {
+  buildDeterministicDecision,
+  type DeterministicDecisionResult,
+} from './deterministicDecisionService';
+import {
+  orchestrateDeterministicDecision,
+  type DeterministicOrchestrationResult,
+} from './deterministicDecisionOrchestrationService';
 import { hashEvidence } from './reviewDecisionService';
 
 export type SuggestionBackfillTransaction = {
@@ -106,6 +117,14 @@ export type SuggestionBackfillInput = {
   algorithmVersion?: string;
 };
 
+export type ReadOnlyPhase4PipelineResult = {
+  retrieval: DeterministicHistoryRetrievalResult;
+  evidence: DeterministicRetrievalEvidenceResult;
+  candidates: RestrictedRetrievalCandidateResult;
+  decision: DeterministicDecisionResult;
+  orchestration: DeterministicOrchestrationResult;
+};
+
 const toHistory = (transaction: SuggestionBackfillHistory): ApprovedHistoryBooking => ({
   ...toHistorySuggestionFacts(transaction),
   bookingId: transaction.transactionBooking.id,
@@ -163,8 +182,76 @@ export const buildSuggestionBackfillPlan = (input: {
   };
 };
 
+type ReadOnlyPhase4PipelineDb = Pick<PrismaClient, 'project' | 'transactionType' | 'category'>;
+
+const buildReadOnlyPhase4PipelineFromEvidence = async (input: {
+  db: ReadOnlyPhase4PipelineDb;
+  workspaceId: string;
+  target: ReturnType<typeof toHistorySuggestionFacts>;
+  retrieval: DeterministicHistoryRetrievalResult;
+  evidence: DeterministicRetrievalEvidenceResult;
+}): Promise<ReadOnlyPhase4PipelineResult> => {
+  const records = await loadRestrictedDimensionRecords(input.db, {
+    workspaceId: input.workspaceId,
+    evidence: input.evidence,
+  });
+  const candidates = buildRestrictedRetrievalCandidates({
+    workspaceId: input.workspaceId,
+    evidence: input.evidence,
+    ...records,
+  });
+  const transactionFactHash = hashEvidence({
+    transactionId: input.target.transactionId,
+    date: input.target.date,
+    accountId: input.target.accountId,
+    direction: input.target.direction,
+    amountMinor: input.target.amountMinor,
+  });
+  const decision = buildDeterministicDecision({
+    workspaceId: input.workspaceId,
+    transactionFactHash,
+    retrieval: input.retrieval,
+    evidence: input.evidence,
+    candidates,
+  });
+  const orchestration = orchestrateDeterministicDecision({
+    workspaceId: input.workspaceId,
+    targetTransactionId: input.target.transactionId,
+    transactionFactHash,
+    decision,
+  });
+  return { retrieval: input.retrieval, evidence: input.evidence, candidates, decision, orchestration };
+};
+
+export const buildReadOnlyPhase4Pipeline = async (input: {
+  db: ReadOnlyPhase4PipelineDb;
+  workspaceId: string;
+  transaction: SuggestionBackfillTransaction;
+  eligibleHistory: EligibleConfirmedHistoryBooking[];
+}): Promise<ReadOnlyPhase4PipelineResult> => {
+  const target = toHistorySuggestionFacts(input.transaction);
+  const retrieval = retrieveDeterministicConfirmedHistory({
+    workspaceId: input.workspaceId,
+    target,
+    eligibleHistory: input.eligibleHistory,
+  });
+  const evidence = buildDeterministicRetrievalEvidence({
+    workspaceId: input.workspaceId,
+    target,
+    eligibleHistory: input.eligibleHistory,
+    retrieval,
+  });
+  return buildReadOnlyPhase4PipelineFromEvidence({
+    db: input.db,
+    workspaceId: input.workspaceId,
+    target,
+    retrieval,
+    evidence,
+  });
+};
+
 const buildSuggestionBackfillPlanFromEligibleHistory = async (input: {
-  db: Pick<PrismaClient, 'project' | 'transactionType' | 'category'>;
+  db: ReadOnlyPhase4PipelineDb;
   workspaceId: string;
   unresolvedTransactions: SuggestionBackfillTransaction[];
   eligibleHistory: EligibleConfirmedHistoryBooking[];
@@ -195,34 +282,12 @@ const buildSuggestionBackfillPlanFromEligibleHistory = async (input: {
     let transactionHasValidCandidate = false;
     for (const explained of evidence.candidates) {
       const candidateEvidence = { ...evidence, candidates: [explained] };
-      const records = await loadRestrictedDimensionRecords(input.db, {
+      const { orchestration } = await buildReadOnlyPhase4PipelineFromEvidence({
+        db: input.db,
         workspaceId: input.workspaceId,
-        evidence: candidateEvidence,
-      });
-      const restricted = buildRestrictedRetrievalCandidates({
-        workspaceId: input.workspaceId,
-        evidence: candidateEvidence,
-        ...records,
-      });
-      const transactionFactHash = hashEvidence({
-        transactionId: target.transactionId,
-        date: target.date,
-        accountId: target.accountId,
-        direction: target.direction,
-        amountMinor: target.amountMinor,
-      });
-      const decision = buildDeterministicDecision({
-        workspaceId: input.workspaceId,
-        transactionFactHash,
+        target,
         retrieval,
         evidence: candidateEvidence,
-        candidates: restricted,
-      });
-      const orchestration = orchestrateDeterministicDecision({
-        workspaceId: input.workspaceId,
-        targetTransactionId: target.transactionId,
-        transactionFactHash,
-        decision,
       });
       if (orchestration.status !== 'MATCHED' || !orchestration.finalDecision) continue;
 

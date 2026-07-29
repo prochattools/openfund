@@ -5631,36 +5631,116 @@ The focused metric-contract mismatches were resolved source-groundedly:
 - top-three uses all labeled rows and existing ordered allowed candidates without reranking;
 - contributor counts follow `MATCHED` contributor statuses in row results.
 
-### Live database execution blocker
+### Benchmark runner and CLI
 
-A policy-safe read-only invocation of the compiled frozen source loader was attempted without printing secrets, row contents, or unrestricted transaction data. The invocation reached Prisma initialization, which failed before any database query because the configured Workbench environment does not provide `DATABASE_URL`.
+Implemented and validated after the evaluator:
 
-Verified error:
+- `server/services/deterministicBenchmarkRunnerService.ts` — read-only runner that wires the evaluator to a live Prisma client, performs a double-replay integrity check, and asserts zero side effects;
+- `server/cli/runDeterministicBenchmark.ts` — compiled CLI entrypoint; requires `--read-only`; loads environment via `@next/env` before dynamic Prisma import; outputs privacy-safe JSON;
+- `tests/services/deterministicBenchmarkRunnerService.test.ts` — focused runner and replay tests;
+- `tests/cli/runDeterministicBenchmark.test.ts` — focused CLI flag, env-guard, and output tests;
+- `package.json` — `benchmark:deterministic` script targeting `dist/server/cli/runDeterministicBenchmark.js`.
 
-- `PrismaClientInitializationError`;
-- schema datasource requires `env("DATABASE_URL")`;
-- environment variable not found.
+Runner version: `deterministic-benchmark-runner-v1`.
 
-No query, write, transaction, file mutation, environment modification, or secret exposure occurred. The repository environment was not synthesized or altered to force access.
+### Live benchmark execution
 
-Therefore the current production source hash, labeled/unlabeled/excluded counts, deterministic report hash, and live metrics were not invented.
+Starting commit: `6fd0024` (`test: freeze deterministic categorization baseline`).
+
+Command:
+
+```
+npm run benchmark:deterministic -- --read-only
+```
+
+Environment: `DATABASE_URL` loaded from `.env.production` via `@next/env`; Tailscale IP used to reach the production PostgreSQL instance from the local machine.
+
+Result: `ok: true`.
+
+#### Privacy-safe live metrics
+
+| Field | Value |
+|---|---|
+| runnerVersion | `deterministic-benchmark-runner-v1` |
+| sourceId | `finance-db-open-statement-2026-221` |
+| sourceVersion | `finance-db-benchmark-source-v1` |
+| evaluatorVersion | `deterministic-benchmark-evaluator-v1` |
+| totalSourceRows | 221 |
+| labeledRows | 0 |
+| unlabeledPendingConfirmationRows | 221 |
+| excludedInvalidLabelRows | 0 |
+| evaluatedLabeledRows | 0 |
+| coveredLabeledRows | 0 |
+
+All accuracy, coverage, abstention, conflict, and contribution basis-point metrics are 0 because no administrator-confirmed `ReviewDecision` / `TransactionBooking` eligible labels exist yet for the 221-transaction 2026 cohort.
+
+#### Source hash and report hash
+
+| Field | Value |
+|---|---|
+| sourceHash | `524b03d6f105798144a958804a1f9efaa554ef09d81fd59d9523813738f75a0d` |
+| reportHash | `526c3b6686b4db0a3be06dc8809f07329fbd8d569b2bc8e3d255fa27c376da46` |
+
+#### Replay verification
+
+| Field | Value |
+|---|---|
+| replay.verified | `true` |
+| replay.sourceHashMatches | `true` |
+| replay.reportHashMatches | `true` |
+| replay.rowHashesMatch | `true` |
+| replay.metricsMatch | `true` |
+
+Both executions produced identical ordered row hashes and aggregate metrics. No replay mismatch.
+
+#### Zero side-effects proof
+
+| Field | Value |
+|---|---|
+| sideEffects.readOnly | `true` |
+| sideEffects.writesPerformed | `false` |
+| sideEffects.createsTransactionBooking | `false` |
+| sideEffects.createsCategorizationSuggestion | `false` |
+| sideEffects.mutatesBankFacts | `false` |
+| sideEffects.mutatesReviewDecisions | `false` |
+| sideEffects.mutatesPeriodState | `false` |
+| sideEffects.mutatesLedgerRecords | `false` |
+| sideEffects.mutatesMerchantKnowledge | `false` |
+| sideEffects.persistsDecision | `false` |
+| sideEffects.invokesExternalModel | `false` |
+| sideEffects.opensTransaction | `false` |
+
+Zero writes. Zero Prisma transactions. No repository changes from execution.
+
+### Phase 4.8 final validation evidence
+
+| Step | Result |
+|---|---|
+| Focused Phase 4.8 runner and CLI tests | 21 passed, 0 failed |
+| Affected Phase 4.1–4.7 and related regressions | 131 passed, 0 failed |
+| `npm run build:server` | passed |
+| Full `npm run build` | passed |
+| `git diff --check` (implementation paths) | clean |
+| High-risk scan over changed paths | clean |
+| Secret-material scan over changed paths | clean |
+| Live benchmark command | `ok: true` |
 
 ### Phase 5 entry gate
 
 `PHASE_5_GATE_UNDECIDABLE`
 
-Reason: the deterministic evaluator is implemented and fully validated against source-grounded tests, but the configured Workbench environment cannot connect to the existing database because `DATABASE_URL` is absent. Without a live database-backed report, the documented Phase 5 thresholds cannot be assessed honestly.
+Reason: `NO_COMMITTED_NUMERIC_ACCEPTANCE_THRESHOLDS`. The evaluator, runner, and CLI are fully implemented and validated. The live benchmark executed successfully against the production database. However, zero administrator-confirmed `ReviewDecision` / `TransactionBooking` labels exist for the 2026 cohort at this time — all 221 rows are `UNLABELED_PENDING_CONFIRMATION`. Therefore all accuracy, coverage, and calibration metrics are 0 and no numeric Phase 5 acceptance threshold can be honestly assessed against the current benchmark.
 
-Phase 5 remains unstarted and blocked.
+Phase 5 remains unstarted and blocked until the administrator confirms at least one review decision, establishing a non-zero labeled cohort and enabling metric-based gate assessment.
 
 ### Limitations and rollback
 
 Limitations:
 
-- no committed production benchmark report exists;
-- no live source/report hash or metric values were produced;
-- no route, UI, job, runner, or persistence boundary was added.
+- all 221 benchmark rows are currently unlabeled; Phase 5 thresholds require a non-zero labeled cohort;
+- no route, UI, job, or persistence boundary was added by the runner/CLI;
+- `.env.production` host was updated locally to reach the database via Tailscale; this is a runtime configuration change only and is not committed.
 
-Rollback removes `deterministicBenchmarkEvaluationService.ts` and its focused test and reverts the Phase 4.8 documentation. No database rollback is required.
+Rollback removes `deterministicBenchmarkRunnerService.ts`, `runDeterministicBenchmark.ts`, their focused tests, the `benchmark:deterministic` package script, and reverts the Phase 4.8 documentation. No database rollback is required.
 
 No push is authorized or performed.
