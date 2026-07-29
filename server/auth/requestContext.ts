@@ -47,7 +47,7 @@ export const getRequestActor = (req: Request): RequestActor | null =>
   REQUEST_ACTORS.get(req) ?? null;
 
 const resolveConfiguredLocalActor = async (): Promise<AuthResolution> => {
-  if (process.env.NODE_ENV === 'production' || AUTH_PROVIDER !== 'disabled') {
+  if (AUTH_PROVIDER !== 'disabled') {
     return unauthenticated();
   }
 
@@ -88,9 +88,7 @@ const resolveConfiguredLocalActor = async (): Promise<AuthResolution> => {
 export const resolveRequestActor = async (
   cookieHeader: string | null | undefined,
 ): Promise<AuthResolution> => {
-  if (!process.env.NODE_ENV || process.env.NODE_ENV !== 'production') {
-    if (AUTH_PROVIDER === 'disabled') return resolveConfiguredLocalActor();
-  }
+  if (AUTH_PROVIDER === 'disabled') return resolveConfiguredLocalActor();
 
   const session = await verifyClerkSession(cookieHeader);
   if (!session) return unauthenticated();

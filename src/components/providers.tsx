@@ -14,6 +14,7 @@ import {
   getSignUpUrl,
 } from "@/utils/auth";
 import { useRouter } from "next/navigation";
+import { AUTH_PROVIDER } from "@/utils/auth";
 
 declare global {
   interface Window {
@@ -30,7 +31,14 @@ const AppProviders = ({ children }: { children: ReactNode }) => (
     disableTransitionOnChange
   >
     <LedgerProvider>
-      <div className="min-h-screen bg-[#f5f1ea]">{children}</div>
+      <div className="min-h-screen bg-[#f5f1ea]">
+        {AUTH_PROVIDER === 'disabled' && (
+          <div className="fixed top-0 left-0 right-0 bg-amber-100 text-amber-900 px-4 py-2 text-sm text-center z-50 border-b border-amber-200 pointer-events-none">
+            Tijdelijke testmodus: authenticatie is uitgeschakeld.
+          </div>
+        )}
+        <div className={AUTH_PROVIDER === 'disabled' ? 'pt-10' : ''}>{children}</div>
+      </div>
     </LedgerProvider>
 
     <Toaster

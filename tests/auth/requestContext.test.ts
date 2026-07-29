@@ -69,8 +69,10 @@ describe('request context auth guard', () => {
   });
 
   it('requires a verified session when no trusted actor is present', async () => {
-    const originalNodeEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'production';
+    const originalUserId = process.env.DEFAULT_USER_ID;
+    const originalWorkspaceId = process.env.DEFAULT_WORKSPACE_ID;
+    process.env.DEFAULT_USER_ID = '';
+    process.env.DEFAULT_WORKSPACE_ID = '550e8400-e29b-41d4-a716-446655440000';
     try {
       const res = makeResponse();
       const actor = await requireAuthenticatedRequest(makeRequest({}) as any, res as any);
@@ -79,7 +81,8 @@ describe('request context auth guard', () => {
       expect(res.status).toHaveBeenCalledWith(401);
       expect(res.json).toHaveBeenCalledWith({ error: 'Authenticatie vereist.' });
     } finally {
-      process.env.NODE_ENV = originalNodeEnv;
+      process.env.DEFAULT_USER_ID = originalUserId;
+      process.env.DEFAULT_WORKSPACE_ID = originalWorkspaceId;
     }
   });
 });

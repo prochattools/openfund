@@ -59,6 +59,13 @@ export const verifyClerkSession = async (
 export const isProductionSessionAuthenticated = async (
   cookieHeader: string | null | undefined,
 ): Promise<boolean> => {
+  // Bypass auth in production if explicitly enabled and properly configured
+  if (isProductionAuthEnforced() && process.env.ALLOW_PRODUCTION_AUTH_BYPASS === 'true') {
+    const userId = process.env.DEFAULT_USER_ID?.trim();
+    const workspaceId = process.env.DEFAULT_WORKSPACE_ID?.trim();
+    if (userId && workspaceId) return true;
+  }
+
   if (!isProductionAuthEnforced() && !CLERK_SERVER_ENABLED) return true;
   return Boolean(await verifyClerkSession(cookieHeader));
 };

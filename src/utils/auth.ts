@@ -6,9 +6,20 @@ const configuredProvider = (process.env.AUTH_PROVIDER ?? process.env.NEXT_PUBLIC
 
 const isProduction = process.env.NODE_ENV === 'production';
 
+const canUseProductionAuthBypass = (): boolean => {
+  if (!isProduction) return false;
+  if (process.env.ALLOW_PRODUCTION_AUTH_BYPASS !== 'true') return false;
+
+  const userId = process.env.DEFAULT_USER_ID?.trim();
+  const workspaceId = process.env.DEFAULT_WORKSPACE_ID?.trim();
+
+  return Boolean(userId && workspaceId);
+};
+
 const readAuthProvider = (): AuthProvider => {
-  if (!isProduction && (configuredProvider === 'disabled' || configuredProvider === 'false')) {
-    return 'disabled';
+  if ((configuredProvider === 'disabled' || configuredProvider === 'false')) {
+    if (!isProduction) return 'disabled';
+    if (canUseProductionAuthBypass()) return 'disabled';
   }
 
   if (!isProduction && !configuredProvider && !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
