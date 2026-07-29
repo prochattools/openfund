@@ -1,0 +1,2 @@
+-- This is an intentionally empty migration.
+-- The actual merchant knowledge schema is in 20260719095000_add_merchant_knowledge.
