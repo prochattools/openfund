@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextFetchEvent, NextRequest } from "next/server";
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { CLERK_RUNTIME_ENABLED } from "@/utils/auth";
+import { CLERK_RUNTIME_ENABLED, isValidWorkspaceId } from "@/utils/auth";
 import { isProductionAuthEnforced } from "@/utils/session-auth";
 
 const publicRoutes = [
@@ -14,7 +14,26 @@ const publicRoutes = [
 
 const isPublicRoute = createRouteMatcher(publicRoutes);
 
+const isExplicitProductionBypassEnabled = () => {
+  const provider = (process.env.AUTH_PROVIDER ?? process.env.NEXT_PUBLIC_AUTH_PROVIDER ?? '')
+    .trim()
+    .toLowerCase();
+  const userId = process.env.DEFAULT_USER_ID?.trim();
+  const workspaceId = process.env.DEFAULT_WORKSPACE_ID?.trim();
+
+  return (
+    isProductionAuthEnforced() &&
+    (provider === 'disabled' || provider === 'false') &&
+    process.env.ALLOW_PRODUCTION_AUTH_BYPASS === 'true' &&
+    Boolean(userId) &&
+    isValidWorkspaceId(workspaceId)
+  );
+};
+
 const productionFallbackHandler = (request: NextRequest) => {
+  if (isExplicitProductionBypassEnabled()) {
+    return NextResponse.next();
+  }
   if (!isProductionAuthEnforced()) {
     return NextResponse.next();
   }
@@ -55,7 +74,11 @@ const clerkHandler = clerkMiddleware((auth, request, _event) => {
 });
 
 const handler = async (request: NextRequest, event?: NextFetchEvent): Promise<NextResponse> => {
-  // Production always selects Clerk middleware. The runtime secret is read by
+  if (isExplicitProductionBypassEnabled()) {
+    return NextResponse.next();
+  }
+
+  // Production normally selects Clerk middleware. The runtime secret is read by
   // Clerk at request time, never during Docker image construction.
   if (isProductionAuthEnforced() || CLERK_RUNTIME_ENABLED) {
     try {
