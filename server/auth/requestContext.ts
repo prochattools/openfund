@@ -51,35 +51,75 @@ const resolveConfiguredLocalActor = async (): Promise<AuthResolution> => {
     return unauthenticated();
   }
 
+  const explicitProductionBypass =
+    process.env.NODE_ENV === 'production' &&
+    process.env.ALLOW_PRODUCTION_AUTH_BYPASS === 'true';
+
+  if (process.env.NODE_ENV === 'production' && !explicitProductionBypass) {
+    return unauthenticated();
+  }
+
   const workspaceId = getConfiguredWorkspaceId();
   if (!workspaceId) return misconfigured();
 
   const configuredUserId = process.env.DEFAULT_USER_ID?.trim();
-  if (!configuredUserId) return unauthenticated();
 
-  const user = await prisma.user.findFirst({
-    where: { id: configuredUserId, isActive: true },
-    select: { id: true, email: true },
-  });
-  if (!user) return forbidden();
+  if (configuredUserId) {
+    const user = await prisma.user.findFirst({
+      where: { id: configuredUserId, isActive: true },
+      select: { id: true, email: true },
+    });
 
-  const membership = await prisma.workspaceMembership.findFirst({
+    if (user) {
+      const membership = await prisma.workspaceMembership.findFirst({
+        where: {
+          userId: user.id,
+          workspaceId,
+          isActive: true,
+          workspace: { isActive: true },
+        },
+        select: { role: true },
+      });
+
+      if (membership) {
+        return {
+          actor: {
+            userId: user.id,
+            role: membership.role === 'ADMIN' ? 'admin' : 'viewer',
+            actorId: user.id,
+            actorEmail: user.email,
+          },
+          error: null,
+        };
+      }
+    }
+  }
+
+  if (!explicitProductionBypass) return unauthenticated();
+
+  const fallbackMemberships = await prisma.workspaceMembership.findMany({
     where: {
-      userId: user.id,
       workspaceId,
+      role: 'ADMIN',
       isActive: true,
       workspace: { isActive: true },
+      user: { isActive: true },
     },
-    select: { role: true },
+    select: {
+      user: { select: { id: true, email: true } },
+    },
+    take: 2,
   });
-  if (!membership) return forbidden();
 
+  if (fallbackMemberships.length !== 1) return forbidden();
+
+  const fallbackUser = fallbackMemberships[0].user;
   return {
     actor: {
-      userId: user.id,
-      role: membership.role === 'ADMIN' ? 'admin' : 'viewer',
-      actorId: user.id,
-      actorEmail: user.email,
+      userId: fallbackUser.id,
+      role: 'admin',
+      actorId: fallbackUser.id,
+      actorEmail: fallbackUser.email,
     },
     error: null,
   };

@@ -22,7 +22,8 @@ export async function GET() {
     clerkPublishableKeyConfigured: isValidPublishableKey(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY),
     clerkSecretConfigured: isValidSecretKey(process.env.CLERK_SECRET_KEY),
     workspaceConfigured: isValidWorkspaceId(process.env.DEFAULT_WORKSPACE_ID),
-    apiProxyEnabled: process.env.ENABLE_API_PROXY === 'true',
+    apiProxyEnabled: process.env.ENABLE_API_PROXY !== 'false',
+    internalApiOriginConfigured: Boolean(process.env.INTERNAL_API_ORIGIN?.trim()),
     directRoutes: [
       '/api/ledger',
       '/api/reports/summary',
