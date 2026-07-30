@@ -50,7 +50,7 @@ import {
   listCategories, createCategory, updateCategory as updateCategoryRecord,
   listTransactionTypes, createTransactionType, updateTransactionType,
 } from './routes/referenceData';
-import { postDirectionInference, postOwnerHistoryProposals } from './routes/operatorTools';
+import { postDirectionInference, postOwnerHistoryProposals, postTransactionTypeDirectionUsageAudit } from './routes/operatorTools';
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -109,6 +109,7 @@ app.post('/api/reconciliation/period-closes/:id/reopen', postAuditedPeriodReopen
 // Operator tools — direction inference and owner-history proposal seeding (admin-only)
 app.post('/api/operator/direction-inference', postDirectionInference);
 app.post('/api/operator/owner-history-proposals', postOwnerHistoryProposals);
+app.post('/api/operator/transaction-type-direction-usage-audit', postTransactionTypeDirectionUsageAudit);
 
 // Reference data — projects, categories, transaction types
 app.get('/api/reference-data/projects', listProjects);

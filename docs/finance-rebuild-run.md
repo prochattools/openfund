@@ -4413,6 +4413,20 @@ The design blocker is resolved, but `RESOLVE_CONFLICT` confirmation remains unim
 
 No push is authorized or performed.
 
+## Direction-neutral historical Type compatibility (bounded slice)
+
+Administrator-approved semantics: historical workbook `Type` labels are direction-neutral accounting classifications. A historical example is eligible only when its immutable factual bank `Transaction.direction` equals the target transaction's immutable factual direction. `TransactionType.direction` remains unchanged legacy/reference metadata in this slice; it neither backfills nor restricts historical-example eligibility.
+
+`owner-history-proposal-v2` partitions evidence by factual direction and records explicit abstentions for missing source direction, missing target direction, opposite/no matching factual direction, no ranked candidate, weak/default evidence, incomplete triples, cross-workspace triples, and inactive/unauthorized triples. It never mutates historical `TransactionBooking`, `Transaction`, source/import or period facts, `ReviewDecision`, literal workbook labels, or confirmed classifications. A dry-run writes nothing; guarded execution may create only idempotent derived `CategorizationSuggestion` records under the existing exact-plan-hash contract.
+
+The v2 plan hash deterministically binds its algorithm version, workspace-safe scope hash, factual source and target direction facts, source chronology fact hashes, eligible evidence hashes, candidate triple/rank/matcher/confidence/score output, abstention counts, and proposed outputs. Equivalent row ordering produces the same hash; a material fact or direction change produces a different hash. Execution recomputes the plan inside its transaction and rejects stale hashes.
+
+`transaction-type-direction-usage-audit-v1` is a read-only privacy-safe aggregate report. It exposes only stable anonymous `TYPE_nn` buckets, direction counts, classification, aggregate totals, and a deterministic report hash—never literal labels, identifiers, account data, counterparties, or raw rows. Its totals must reconcile exactly with the historical evidence count.
+
+`npm run dry-run:direction-neutral-history -- --read-only` is the production-connected read-only operator. It requires both database and workspace configuration, executes the audit and v2 proposal plan twice, emits only privacy-safe aggregates and hashes, rejects nondeterministic replay, and declares no mutation of transactions, confirmed history, decisions, bank facts, or suggestions.
+
+Phase 5 remains unstarted and blocked pending review of direction-neutral compatibility coverage and the existing administrator confirmation requirements.
+
 
 ## Program Phase 3.8D — individual `RESOLVE_CONFLICT` confirmation implemented
 

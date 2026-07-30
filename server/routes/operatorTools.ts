@@ -9,6 +9,7 @@ import {
   buildOwnerHistoryProposalPlan,
   executeOwnerHistoryProposalPlan,
 } from '../services/ownerHistoryProposalEvidenceService';
+import { auditHistoricalTransactionTypeDirections } from '../services/transactionTypeDirectionUsageAuditService';
 
 const resolveWorkspace = (res: Response): string | null => {
   const workspaceId = process.env.DEFAULT_WORKSPACE_ID?.trim();
@@ -142,6 +143,37 @@ export const postOwnerHistoryProposals = async (req: Request, res: Response) => 
     console.error('Owner history proposal failed', error);
     return res.status(500).json({
       error: 'De eigenaar-geschiedenis-voorstellen konden niet worden berekend.',
+      writesPerformed: false,
+    });
+  }
+};
+
+// POST /api/operator/transaction-type-direction-usage-audit
+// Read-only, privacy-safe aggregate audit of factual historical directions.
+export const postTransactionTypeDirectionUsageAudit = async (req: Request, res: Response) => {
+  const actor = await requireAdmin(req, res);
+  if (!actor) return;
+
+  const workspaceId = resolveWorkspace(res);
+  if (!workspaceId) return;
+
+  try {
+    const audit = await auditHistoricalTransactionTypeDirections(prisma, { workspaceId });
+    return res.json({
+      status: 'DRY_RUN_COMPLETE',
+      dryRun: true,
+      writesPerformed: false,
+      algorithmVersion: audit.algorithmVersion,
+      scopeHash: audit.scopeHash,
+      reportHash: audit.reportHash,
+      totals: audit.totals,
+      buckets: audit.buckets,
+      sideEffects: audit.sideEffects,
+    });
+  } catch (error) {
+    console.error('Transaction type direction usage audit failed', error);
+    return res.status(500).json({
+      error: 'De richtingsaudit kon niet worden berekend.',
       writesPerformed: false,
     });
   }

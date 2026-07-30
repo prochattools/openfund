@@ -6,6 +6,7 @@ const confirmedPlanHash = process.argv[4] ?? null;
 const routes = {
   direction: '/api/operator/direction-inference',
   proposals: '/api/operator/owner-history-proposals',
+  'direction-usage-audit': '/api/operator/transaction-type-direction-usage-audit',
 };
 
 if (!(operation in routes)) {
@@ -35,7 +36,10 @@ const summary = {
   dryRun: body.dryRun ?? null,
   writesPerformed: body.writesPerformed ?? null,
   planHash: body.planHash ?? null,
+  reportHash: body.reportHash ?? null,
   counts: body.counts ?? null,
+  totals: body.totals ?? null,
+  buckets: body.buckets ?? null,
   matcherDistribution: body.matcherDistribution ?? null,
   confidenceDistribution: body.confidenceDistribution ?? null,
   updatedCount: body.updatedCount ?? null,

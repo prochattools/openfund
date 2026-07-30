@@ -15,6 +15,7 @@
 		"prebuild": "prisma generate && npm run build:server",
 		"build:server": "tsc -p tsconfig.server.json",
 		"benchmark:deterministic": "node dist/server/cli/runDeterministicBenchmark.js",
+		"dry-run:direction-neutral-history": "node dist/server/cli/runDirectionNeutralHistoryDryRun.js",
 		"start": "node scripts/start-prod.mjs",
 		"start:api": "node dist/server/index.js",
 		"migrate": "prisma migrate deploy",

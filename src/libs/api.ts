@@ -1083,12 +1083,29 @@ export type DirectionInferenceResponse = {
 export type OwnerHistoryProposalCounts = {
   evidenceCandidates: number;
   disqualifiedIncomplete: number;
-  disqualifiedDirectionConflict: number;
+  disqualifiedCrossWorkspace: number;
+  disqualifiedInactiveOrUnauthorizedTriple: number;
+  disqualifiedMissingSourceDirection: number;
   eligibleEvidence: number;
   openTransactions: number;
   covered: number;
   uncovered: number;
   abstainedWeak: number;
+  abstainedMissingTargetDirection: number;
+  abstainedNoFactualDirectionMatch: number;
+  abstainedNoRankedCandidate: number;
+  abstained: number;
+};
+
+export type TransactionTypeDirectionUsageAuditResponse = {
+  status: 'DRY_RUN_COMPLETE';
+  dryRun: true;
+  writesPerformed: false;
+  algorithmVersion: string;
+  scopeHash: string;
+  reportHash: string;
+  totals: { historicalEvidence: number; bucketUsageCount: number; debitCount: number; creditCount: number; unknownCount: number };
+  buckets: Array<{ anonymousKey: string; historicalUsageCount: number; debitCount: number; creditCount: number; unknownCount: number; classification: 'single-direction' | 'mixed-direction' | 'unknown-only' | 'unused' }>;
 };
 
 export type OwnerHistoryProposalResponse = {
@@ -1136,4 +1153,11 @@ export const postOwnerHistoryProposalExecute = async (confirmedPlanHash: string)
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ execute: true, confirmedPlanHash }),
+  })));
+
+export const postTransactionTypeDirectionUsageAudit = async (): Promise<TransactionTypeDirectionUsageAuditResponse> =>
+  readJson(await fetch(getApiUrl('/api/operator/transaction-type-direction-usage-audit'), withUserHeader({
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
   })));

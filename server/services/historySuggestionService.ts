@@ -10,6 +10,7 @@ import {
   type EvaluatedMerchantRetrievalAnchor,
   type MerchantRetrievalAnchor,
 } from './merchantRetrievalAnchor';
+import { compareHistoricalFactualDirections } from './historicalDirectionCompatibilityService';
 
 export const HISTORY_SUGGESTION_ALGORITHM_VERSION = 'history-v1';
 
@@ -435,7 +436,7 @@ export const rankHistorySuggestions = (
   });
   const compatible = approvedHistory
     .filter((history) =>
-      history.direction === target.direction
+      compareHistoricalFactualDirections(history.direction, target.direction).compatible
       && history.transactionId !== target.transactionId
       && history.date.getTime() <= target.date.getTime(),
     )

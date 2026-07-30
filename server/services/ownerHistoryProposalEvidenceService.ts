@@ -6,13 +6,15 @@ import {
   type ApprovedHistoryBooking,
   type RankedHistorySuggestion,
 } from './historySuggestionService';
+import { compareHistoricalFactualDirections } from './historicalDirectionCompatibilityService';
 
-export const OWNER_HISTORY_PROPOSAL_VERSION = 'owner-history-proposal-v1';
+export const OWNER_HISTORY_PROPOSAL_VERSION = 'owner-history-proposal-v2';
 
 export type OwnerHistoryEvidenceDisqualificationReason =
   | 'INCOMPLETE_TRIPLE'
   | 'CROSS_WORKSPACE'
-  | 'DIRECTION_CONFLICT_WITHIN_TYPE';
+  | 'INACTIVE_OR_UNAUTHORIZED_TRIPLE'
+  | 'MISSING_SOURCE_DIRECTION';
 
 export type OwnerHistoryEvidenceEntry = {
   bookingId: string;
@@ -23,6 +25,7 @@ export type OwnerHistoryEvidenceEntry = {
   categoryId: string;
   direction: TransactionDirection;
   evidenceHash: string;
+  sourceFactHash: string;
 };
 
 export type OwnerHistoryProposedSuggestion = {
@@ -50,12 +53,18 @@ export type OwnerHistoryProposalPlan = {
   counts: {
     evidenceCandidates: number;
     disqualifiedIncomplete: number;
-    disqualifiedDirectionConflict: number;
+    disqualifiedCrossWorkspace: number;
+    disqualifiedInactiveOrUnauthorizedTriple: number;
+    disqualifiedMissingSourceDirection: number;
     eligibleEvidence: number;
     openTransactions: number;
     covered: number;
     uncovered: number;
     abstainedWeak: number;
+    abstainedMissingTargetDirection: number;
+    abstainedNoFactualDirectionMatch: number;
+    abstainedNoRankedCandidate: number;
+    abstained: number;
   };
   matcherDistribution: Record<string, number>;
   confidenceDistribution: Record<string, number>;
@@ -90,6 +99,8 @@ type OwnerHistoryDb = Pick<
 
 const stableValue = (value: unknown): unknown => {
   if (value === null || value === undefined) return null;
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === 'bigint') return value.toString();
   if (Array.isArray(value)) return value.map(stableValue);
   if (typeof value === 'object') {
     return Object.fromEntries(
@@ -101,17 +112,41 @@ const stableValue = (value: unknown): unknown => {
   return value;
 };
 
-const hashPlan = (counts: OwnerHistoryProposalPlan['counts'], proposals: OwnerHistoryProposedSuggestion[]): string => {
+const digest = (value: unknown): string => crypto.createHash('sha256').update(JSON.stringify(stableValue(value))).digest('hex');
+
+const hashPlan = (input: {
+  workspaceId: string;
+  counts: OwnerHistoryProposalPlan['counts'];
+  evidence: OwnerHistoryEvidenceEntry[];
+  targets: Array<{ id: string; date: Date; direction: TransactionDirection | null | undefined; amountMinor: bigint; accountId: string | null; counterparty: string | null; description: string }>;
+  proposals: OwnerHistoryProposedSuggestion[];
+}): string => {
   const payload = {
-    counts,
-    evidenceHashes: proposals
-      .map((p) => p.rank1.evidenceHash)
-      .sort(),
+    algorithmVersion: OWNER_HISTORY_PROPOSAL_VERSION,
+    workspaceScopeHash: digest({ workspaceId: input.workspaceId }),
+    counts: input.counts,
+    evidence: input.evidence.map((entry) => ({
+      evidenceHash: entry.evidenceHash,
+      sourceFactHash: entry.sourceFactHash,
+      direction: entry.direction,
+      transactionId: entry.transactionId,
+    })).sort((a, b) => a.evidenceHash.localeCompare(b.evidenceHash)),
+    targets: input.targets.map((target) => ({ targetFactHash: digest(target), direction: target.direction })).sort((a, b) => a.targetFactHash.localeCompare(b.targetFactHash)),
+    proposals: input.proposals.map((proposal) => ({
+      transactionId: proposal.transactionId,
+      candidates: proposal.allRanks.map((ranked) => ({
+        rank: ranked.rank,
+        projectId: ranked.projectId,
+        transactionTypeId: ranked.transactionTypeId,
+        categoryId: ranked.categoryId,
+        matcher: ranked.matcher,
+        confidence: ranked.confidence,
+        scoreBasisPoints: ranked.scoreBasisPoints,
+        evidenceHash: ranked.evidenceHash,
+      })).sort((a, b) => a.rank - b.rank || a.evidenceHash.localeCompare(b.evidenceHash)),
+    })).sort((a, b) => a.transactionId.localeCompare(b.transactionId)),
   };
-  return crypto
-    .createHash('sha256')
-    .update(JSON.stringify(stableValue(payload)))
-    .digest('hex');
+  return digest(payload);
 };
 
 export const buildOwnerHistoryProposalPlan = async (
@@ -129,6 +164,9 @@ export const buildOwnerHistoryProposalPlan = async (
       transactionTypeId: true,
       categoryId: true,
       evidenceHash: true,
+      project: { select: { workspaceId: true, isActive: true } },
+      transactionType: { select: { workspaceId: true, isActive: true } },
+      category: { select: { workspaceId: true, isActive: true } },
       transaction: {
         select: {
           id: true,
@@ -138,42 +176,40 @@ export const buildOwnerHistoryProposalPlan = async (
           counterparty: true,
           description: true,
           accountId: true,
-          rawRow: true,
-          reviewDecisions: { select: { id: true }, take: 1 },
         },
       },
     },
   });
 
   let disqualifiedIncomplete = 0;
-  let disqualifiedDirectionConflict = 0;
-
-  const directionByTypeId = new Map<string, Set<TransactionDirection>>();
-  for (const booking of rawBookings) {
-    if (!booking.projectId || !booking.transactionTypeId || !booking.categoryId) {
-      disqualifiedIncomplete += 1;
-      continue;
-    }
-    const set = directionByTypeId.get(booking.transactionTypeId) ?? new Set<TransactionDirection>();
-    set.add(booking.transaction.direction);
-    directionByTypeId.set(booking.transactionTypeId, set);
-  }
-
-  const conflictingTypeIds = new Set<string>(
-    [...directionByTypeId.entries()]
-      .filter(([, directions]) => directions.size > 1)
-      .map(([typeId]) => typeId),
-  );
+  let disqualifiedCrossWorkspace = 0;
+  let disqualifiedInactiveOrUnauthorizedTriple = 0;
+  let disqualifiedMissingSourceDirection = 0;
 
   const evidenceEntries: OwnerHistoryEvidenceEntry[] = [];
   const approvedHistory: ApprovedHistoryBooking[] = [];
 
   for (const booking of rawBookings) {
     if (!booking.projectId || !booking.transactionTypeId || !booking.categoryId) {
+      disqualifiedIncomplete += 1;
       continue;
     }
-    if (conflictingTypeIds.has(booking.transactionTypeId)) {
-      disqualifiedDirectionConflict += 1;
+    if (
+      booking.workspaceId !== workspaceId
+      || booking.project.workspaceId !== workspaceId
+      || booking.transactionType.workspaceId !== workspaceId
+      || booking.category.workspaceId !== workspaceId
+    ) {
+      disqualifiedCrossWorkspace += 1;
+      continue;
+    }
+    if (!booking.project.isActive || !booking.transactionType.isActive || !booking.category.isActive) {
+      disqualifiedInactiveOrUnauthorizedTriple += 1;
+      continue;
+    }
+    const compatibility = compareHistoricalFactualDirections(booking.transaction.direction, 'credit');
+    if (compatibility.reason === 'MISSING_SOURCE_DIRECTION') {
+      disqualifiedMissingSourceDirection += 1;
       continue;
     }
 
@@ -186,6 +222,15 @@ export const buildOwnerHistoryProposalPlan = async (
       categoryId: booking.categoryId,
       direction: booking.transaction.direction,
       evidenceHash: booking.evidenceHash,
+      sourceFactHash: digest({
+        transactionId: booking.transaction.id,
+        date: booking.transaction.date,
+        direction: booking.transaction.direction,
+        amountMinor: booking.transaction.amountMinor,
+        accountId: booking.transaction.accountId,
+        counterparty: booking.transaction.counterparty,
+        description: booking.transaction.description,
+      }),
     };
     evidenceEntries.push(entry);
 
@@ -225,8 +270,23 @@ export const buildOwnerHistoryProposalPlan = async (
 
   const proposals: OwnerHistoryProposedSuggestion[] = [];
   let abstainedWeak = 0;
+  let abstainedMissingTargetDirection = 0;
+  let abstainedNoFactualDirectionMatch = 0;
+  let abstainedNoRankedCandidate = 0;
 
   for (const tx of openTransactions) {
+    const targetCompatibility = compareHistoricalFactualDirections('credit', tx.direction);
+    if (targetCompatibility.reason === 'MISSING_TARGET_DIRECTION') {
+      abstainedMissingTargetDirection += 1;
+      continue;
+    }
+    const matchingDirectionEvidence = approvedHistory.filter((history) =>
+      compareHistoricalFactualDirections(history.direction, tx.direction).compatible,
+    );
+    if (!matchingDirectionEvidence.length) {
+      abstainedNoFactualDirectionMatch += 1;
+      continue;
+    }
     const ranked = rankHistorySuggestions(
       {
         transactionId: tx.id,
@@ -239,11 +299,14 @@ export const buildOwnerHistoryProposalPlan = async (
         description: tx.description,
         paymentPurpose: null,
       },
-      approvedHistory,
-      { algorithmVersion: HISTORY_SUGGESTION_ALGORITHM_VERSION, workspaceId },
+      matchingDirectionEvidence,
+      { algorithmVersion: OWNER_HISTORY_PROPOSAL_VERSION, workspaceId },
     );
 
-    if (!ranked.length) continue;
+    if (!ranked.length) {
+      abstainedNoRankedCandidate += 1;
+      continue;
+    }
 
     const rank1 = ranked[0]!;
     if (rank1.matcher === 'DIRECTION_DEFAULT') {
@@ -254,15 +317,26 @@ export const buildOwnerHistoryProposalPlan = async (
     proposals.push({ transactionId: tx.id, rank1, allRanks: ranked });
   }
 
+  const abstained = abstainedWeak
+    + abstainedMissingTargetDirection
+    + abstainedNoFactualDirectionMatch
+    + abstainedNoRankedCandidate;
+
   const counts: OwnerHistoryProposalPlan['counts'] = {
     evidenceCandidates: rawBookings.length,
     disqualifiedIncomplete,
-    disqualifiedDirectionConflict,
+    disqualifiedCrossWorkspace,
+    disqualifiedInactiveOrUnauthorizedTriple,
+    disqualifiedMissingSourceDirection,
     eligibleEvidence: evidenceEntries.length,
     openTransactions: openTransactions.length,
     covered: proposals.length,
-    uncovered: openTransactions.length - proposals.length - abstainedWeak,
+    uncovered: abstained,
     abstainedWeak,
+    abstainedMissingTargetDirection,
+    abstainedNoFactualDirectionMatch,
+    abstainedNoRankedCandidate,
+    abstained,
   };
 
   const matcherDistribution: Record<string, number> = {};
@@ -275,7 +349,7 @@ export const buildOwnerHistoryProposalPlan = async (
   return {
     algorithmVersion: OWNER_HISTORY_PROPOSAL_VERSION,
     workspaceId,
-    planHash: hashPlan(counts, proposals),
+    planHash: hashPlan({ workspaceId, counts, evidence: evidenceEntries, targets: openTransactions, proposals }),
     sideEffects: {
       writesPerformed: false,
       createsTransactionBooking: false,
@@ -352,21 +426,37 @@ export const executeOwnerHistoryProposalPlan = async (
     }
 
     const transactionIds = currentPlan.proposals.map((p) => p.transactionId);
+    const desiredEvidenceKeys = new Set(
+      currentPlan.proposals.flatMap((proposal) => proposal.allRanks.map((ranked) => `${proposal.transactionId}|${ranked.evidenceHash}`)),
+    );
+    const existingSuggestions = transactionIds.length === 0
+      ? []
+      : await (tx as unknown as OwnerHistoryDb).categorizationSuggestion.findMany({
+          where: { workspaceId: input.workspaceId, transactionId: { in: transactionIds } },
+          select: { id: true, transactionId: true, evidenceHash: true, status: true, evidence: true },
+        });
+    const isOwnedByCurrentVersion = (suggestion: { evidence: unknown }): boolean => {
+      if (!suggestion.evidence || typeof suggestion.evidence !== 'object' || Array.isArray(suggestion.evidence)) return false;
+      return (suggestion.evidence as { algorithmVersion?: unknown }).algorithmVersion === OWNER_HISTORY_PROPOSAL_VERSION;
+    };
+    const ownedSuggestions = existingSuggestions.filter(isOwnedByCurrentVersion);
+    const existingEvidenceKeys = new Set(ownedSuggestions.map((suggestion) => `${suggestion.transactionId}|${suggestion.evidenceHash}`));
+    const stalePendingSuggestionIds = ownedSuggestions
+      .filter((suggestion) => suggestion.status === 'PENDING' && !desiredEvidenceKeys.has(`${suggestion.transactionId}|${suggestion.evidenceHash}`))
+      .map((suggestion) => suggestion.id);
     const resolvedAt = new Date();
 
-    const expired = transactionIds.length === 0
+    const expired = stalePendingSuggestionIds.length === 0
       ? { count: 0 }
       : await (tx as unknown as OwnerHistoryDb).categorizationSuggestion.updateMany({
           where: {
-            workspaceId: input.workspaceId,
-            transactionId: { in: transactionIds },
-            status: 'PENDING',
+            id: { in: stalePendingSuggestionIds },
           },
           data: { status: 'EXPIRED', resolvedAt },
         });
 
     const createData: Prisma.CategorizationSuggestionCreateManyInput[] = currentPlan.proposals.flatMap((proposal) =>
-      proposal.allRanks.map((ranked) => ({
+      proposal.allRanks.filter((ranked) => !existingEvidenceKeys.has(`${proposal.transactionId}|${ranked.evidenceHash}`)).map((ranked) => ({
         workspaceId: input.workspaceId,
         transactionId: proposal.transactionId,
         projectId: ranked.projectId,
