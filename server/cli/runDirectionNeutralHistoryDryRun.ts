@@ -52,6 +52,7 @@ export const runDirectionNeutralHistoryDryRunCli = async (input: {
         counts: planFirst.counts,
         matcherDistribution: planFirst.matcherDistribution,
         confidenceDistribution: planFirst.confidenceDistribution,
+        persistence: planFirst.persistence,
       },
       replay: { auditReportHashMatches: true, planHashMatches: true },
       sideEffects: {

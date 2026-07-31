@@ -156,8 +156,10 @@ describe('MODEL-002 additive domain schema', () => {
       '20260703001200_add_workspace_dimensions',
       '20260703193000_add_classification_records',
       '20260704143000_add_statement_close_report_models',
+      '20260719094000_add_merchant_knowledge',
       '20260719095000_add_merchant_knowledge',
       '20260729000000_add_transaction_type_direction',
+      '20260731000000_add_suggestion_producer_ownership',
     ]);
     expect(sha256File(migrationPath)).toBe(model002ExpectedHash);
   });

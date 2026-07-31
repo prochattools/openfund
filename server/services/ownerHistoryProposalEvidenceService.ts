@@ -9,6 +9,9 @@ import {
 import { compareHistoricalFactualDirections } from './historicalDirectionCompatibilityService';
 
 export const OWNER_HISTORY_PROPOSAL_VERSION = 'owner-history-proposal-v2';
+export const OWNER_HISTORY_PRODUCER_KEY = 'owner-history';
+export const OWNER_HISTORY_PRODUCER_VERSION = 'v2';
+export const OWNER_HISTORY_RANK_PERSISTENCE = 'RANK_1_ONLY';
 
 export type OwnerHistoryEvidenceDisqualificationReason =
   | 'INCOMPLETE_TRIPLE'
@@ -68,6 +71,15 @@ export type OwnerHistoryProposalPlan = {
   };
   matcherDistribution: Record<string, number>;
   confidenceDistribution: Record<string, number>;
+  persistence: {
+    producerKey: typeof OWNER_HISTORY_PRODUCER_KEY;
+    producerVersion: typeof OWNER_HISTORY_PRODUCER_VERSION;
+    rankPersistence: typeof OWNER_HISTORY_RANK_PERSISTENCE;
+    existingOwnedSuggestionCount: number;
+    plannedCreateCount: number;
+    plannedExpirationCount: number;
+    ownershipStateHash: string;
+  };
   proposals: OwnerHistoryProposedSuggestion[];
 };
 
@@ -119,12 +131,14 @@ const hashPlan = (input: {
   counts: OwnerHistoryProposalPlan['counts'];
   evidence: OwnerHistoryEvidenceEntry[];
   targets: Array<{ id: string; date: Date; direction: TransactionDirection | null | undefined; amountMinor: bigint; accountId: string | null; counterparty: string | null; description: string }>;
+  persistence: OwnerHistoryProposalPlan['persistence'];
   proposals: OwnerHistoryProposedSuggestion[];
 }): string => {
   const payload = {
     algorithmVersion: OWNER_HISTORY_PROPOSAL_VERSION,
     workspaceScopeHash: digest({ workspaceId: input.workspaceId }),
     counts: input.counts,
+    persistence: input.persistence,
     evidence: input.evidence.map((entry) => ({
       evidenceHash: entry.evidenceHash,
       sourceFactHash: entry.sourceFactHash,
@@ -134,16 +148,16 @@ const hashPlan = (input: {
     targets: input.targets.map((target) => ({ targetFactHash: digest(target), direction: target.direction })).sort((a, b) => a.targetFactHash.localeCompare(b.targetFactHash)),
     proposals: input.proposals.map((proposal) => ({
       transactionId: proposal.transactionId,
-      candidates: proposal.allRanks.map((ranked) => ({
-        rank: ranked.rank,
-        projectId: ranked.projectId,
-        transactionTypeId: ranked.transactionTypeId,
-        categoryId: ranked.categoryId,
-        matcher: ranked.matcher,
-        confidence: ranked.confidence,
-        scoreBasisPoints: ranked.scoreBasisPoints,
-        evidenceHash: ranked.evidenceHash,
-      })).sort((a, b) => a.rank - b.rank || a.evidenceHash.localeCompare(b.evidenceHash)),
+      candidate: {
+        rank: proposal.rank1.rank,
+        projectId: proposal.rank1.projectId,
+        transactionTypeId: proposal.rank1.transactionTypeId,
+        categoryId: proposal.rank1.categoryId,
+        matcher: proposal.rank1.matcher,
+        confidence: proposal.rank1.confidence,
+        scoreBasisPoints: proposal.rank1.scoreBasisPoints,
+        evidenceHash: proposal.rank1.evidenceHash,
+      },
     })).sort((a, b) => a.transactionId.localeCompare(b.transactionId)),
   };
   return digest(payload);
@@ -346,10 +360,34 @@ export const buildOwnerHistoryProposalPlan = async (
     confidenceDistribution[proposal.rank1.confidence] = (confidenceDistribution[proposal.rank1.confidence] ?? 0) + 1;
   }
 
+  const proposedTransactionIds = proposals.map((proposal) => proposal.transactionId);
+  const existingOwnedSuggestions = proposedTransactionIds.length === 0
+    ? []
+    : await db.categorizationSuggestion.findMany({
+        where: {
+          workspaceId,
+          transactionId: { in: proposedTransactionIds },
+          producerKey: OWNER_HISTORY_PRODUCER_KEY,
+          producerVersion: OWNER_HISTORY_PRODUCER_VERSION,
+        },
+        select: { id: true, transactionId: true, evidenceHash: true, status: true },
+      });
+  const desiredEvidenceKeys = new Set(proposals.map((proposal) => `${proposal.transactionId}|${proposal.rank1.evidenceHash}`));
+  const existingEvidenceKeys = new Set(existingOwnedSuggestions.map((suggestion) => `${suggestion.transactionId}|${suggestion.evidenceHash}`));
+  const persistence: OwnerHistoryProposalPlan['persistence'] = {
+    producerKey: OWNER_HISTORY_PRODUCER_KEY,
+    producerVersion: OWNER_HISTORY_PRODUCER_VERSION,
+    rankPersistence: OWNER_HISTORY_RANK_PERSISTENCE,
+    existingOwnedSuggestionCount: existingOwnedSuggestions.length,
+    plannedCreateCount: proposals.filter((proposal) => !existingEvidenceKeys.has(`${proposal.transactionId}|${proposal.rank1.evidenceHash}`)).length,
+    plannedExpirationCount: existingOwnedSuggestions.filter((suggestion) => suggestion.status === 'PENDING' && !desiredEvidenceKeys.has(`${suggestion.transactionId}|${suggestion.evidenceHash}`)).length,
+    ownershipStateHash: digest(existingOwnedSuggestions.map((suggestion) => ({ id: suggestion.id, transactionId: suggestion.transactionId, evidenceHash: suggestion.evidenceHash, status: suggestion.status })).sort((a, b) => a.id.localeCompare(b.id))),
+  };
+
   return {
     algorithmVersion: OWNER_HISTORY_PROPOSAL_VERSION,
     workspaceId,
-    planHash: hashPlan({ workspaceId, counts, evidence: evidenceEntries, targets: openTransactions, proposals }),
+    planHash: hashPlan({ workspaceId, counts, evidence: evidenceEntries, targets: openTransactions, persistence, proposals }),
     sideEffects: {
       writesPerformed: false,
       createsTransactionBooking: false,
@@ -365,6 +403,7 @@ export const buildOwnerHistoryProposalPlan = async (
     counts,
     matcherDistribution,
     confidenceDistribution,
+    persistence,
     proposals,
   };
 };
@@ -427,21 +466,21 @@ export const executeOwnerHistoryProposalPlan = async (
 
     const transactionIds = currentPlan.proposals.map((p) => p.transactionId);
     const desiredEvidenceKeys = new Set(
-      currentPlan.proposals.flatMap((proposal) => proposal.allRanks.map((ranked) => `${proposal.transactionId}|${ranked.evidenceHash}`)),
+      currentPlan.proposals.map((proposal) => `${proposal.transactionId}|${proposal.rank1.evidenceHash}`),
     );
     const existingSuggestions = transactionIds.length === 0
       ? []
       : await (tx as unknown as OwnerHistoryDb).categorizationSuggestion.findMany({
-          where: { workspaceId: input.workspaceId, transactionId: { in: transactionIds } },
-          select: { id: true, transactionId: true, evidenceHash: true, status: true, evidence: true },
+          where: {
+            workspaceId: input.workspaceId,
+            transactionId: { in: transactionIds },
+            producerKey: OWNER_HISTORY_PRODUCER_KEY,
+            producerVersion: OWNER_HISTORY_PRODUCER_VERSION,
+          },
+          select: { id: true, transactionId: true, evidenceHash: true, status: true },
         });
-    const isOwnedByCurrentVersion = (suggestion: { evidence: unknown }): boolean => {
-      if (!suggestion.evidence || typeof suggestion.evidence !== 'object' || Array.isArray(suggestion.evidence)) return false;
-      return (suggestion.evidence as { algorithmVersion?: unknown }).algorithmVersion === OWNER_HISTORY_PROPOSAL_VERSION;
-    };
-    const ownedSuggestions = existingSuggestions.filter(isOwnedByCurrentVersion);
-    const existingEvidenceKeys = new Set(ownedSuggestions.map((suggestion) => `${suggestion.transactionId}|${suggestion.evidenceHash}`));
-    const stalePendingSuggestionIds = ownedSuggestions
+    const existingEvidenceKeys = new Set(existingSuggestions.map((suggestion) => `${suggestion.transactionId}|${suggestion.evidenceHash}`));
+    const stalePendingSuggestionIds = existingSuggestions
       .filter((suggestion) => suggestion.status === 'PENDING' && !desiredEvidenceKeys.has(`${suggestion.transactionId}|${suggestion.evidenceHash}`))
       .map((suggestion) => suggestion.id);
     const resolvedAt = new Date();
@@ -456,20 +495,23 @@ export const executeOwnerHistoryProposalPlan = async (
         });
 
     const createData: Prisma.CategorizationSuggestionCreateManyInput[] = currentPlan.proposals.flatMap((proposal) =>
-      proposal.allRanks.filter((ranked) => !existingEvidenceKeys.has(`${proposal.transactionId}|${ranked.evidenceHash}`)).map((ranked) => ({
+      existingEvidenceKeys.has(`${proposal.transactionId}|${proposal.rank1.evidenceHash}`) ? [] : [{
         workspaceId: input.workspaceId,
         transactionId: proposal.transactionId,
-        projectId: ranked.projectId,
-        transactionTypeId: ranked.transactionTypeId,
-        categoryId: ranked.categoryId,
-        confidence: ranked.confidence,
-        matcher: ranked.matcher,
-        rank: ranked.rank,
-        scoreBasisPoints: ranked.scoreBasisPoints,
-        evidence: ranked.evidence as unknown as Prisma.InputJsonValue,
-        evidenceHash: ranked.evidenceHash,
+        projectId: proposal.rank1.projectId,
+        transactionTypeId: proposal.rank1.transactionTypeId,
+        categoryId: proposal.rank1.categoryId,
+        confidence: proposal.rank1.confidence,
+        matcher: proposal.rank1.matcher,
+        rank: 1,
+        scoreBasisPoints: proposal.rank1.scoreBasisPoints,
+        evidence: proposal.rank1.evidence as unknown as Prisma.InputJsonValue,
+        evidenceHash: proposal.rank1.evidenceHash,
+        producerKey: OWNER_HISTORY_PRODUCER_KEY,
+        producerVersion: OWNER_HISTORY_PRODUCER_VERSION,
+        planHash: currentPlan.planHash,
         status: 'PENDING' as const,
-      })),
+      }],
     );
 
     const created = createData.length === 0

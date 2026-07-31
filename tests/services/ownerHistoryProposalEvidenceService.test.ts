@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   OWNER_HISTORY_PROPOSAL_VERSION,
+  OWNER_HISTORY_PRODUCER_KEY,
+  OWNER_HISTORY_PRODUCER_VERSION,
   buildOwnerHistoryProposalPlan,
   executeOwnerHistoryProposalPlan,
 } from '../../server/services/ownerHistoryProposalEvidenceService';
@@ -50,24 +52,30 @@ const makePrisma = (bookings: FakeBooking[], openTxs: FakeOpenTx[]) => ({
   transaction: {
     findMany: async () => openTxs,
   },
+  categorizationSuggestion: {
+    findMany: async () => [],
+  },
 });
 
 const makeExecutionPrisma = (
   bookings: FakeBooking[],
   openTxs: FakeOpenTx[],
-  initialSuggestions: Array<{ id: string; transactionId: string; evidenceHash: string; status: string; evidence: unknown }> = [],
+  initialSuggestions: Array<{ id: string; transactionId: string; evidenceHash: string; status: string; evidence: unknown; producerKey?: string | null; producerVersion?: string | null; planHash?: string | null }> = [],
 ) => {
   const suggestions = [...initialSuggestions];
   const db = {
     ...makePrisma(bookings, openTxs),
     categorizationSuggestion: {
-      findMany: async () => suggestions,
+      findMany: async ({ where }: { where?: { producerKey?: string; producerVersion?: string } } = {}) => suggestions.filter((suggestion) =>
+        (!where?.producerKey || suggestion.producerKey === where.producerKey)
+        && (!where?.producerVersion || suggestion.producerVersion === where.producerVersion),
+      ),
       updateMany: async ({ where }: { where: { id: { in: string[] } } }) => {
         const matches = suggestions.filter((suggestion) => where.id.in.includes(suggestion.id) && suggestion.status === 'PENDING');
         matches.forEach((suggestion) => { suggestion.status = 'EXPIRED'; });
         return { count: matches.length };
       },
-      createMany: async ({ data }: { data: Array<{ transactionId: string; evidenceHash: string; evidence: unknown }> }) => {
+      createMany: async ({ data }: { data: Array<{ transactionId: string; evidenceHash: string; evidence: unknown; producerKey?: string; producerVersion?: string; planHash?: string }> }) => {
         const newSuggestions = data.filter((entry) => !suggestions.some((suggestion) => suggestion.transactionId === entry.transactionId && suggestion.evidenceHash === entry.evidenceHash));
         newSuggestions.forEach((entry, index) => suggestions.push({
           id: `suggestion-${suggestions.length + index}`,
@@ -75,6 +83,9 @@ const makeExecutionPrisma = (
           evidenceHash: entry.evidenceHash,
           status: 'PENDING',
           evidence: entry.evidence,
+          producerKey: entry.producerKey ?? null,
+          producerVersion: entry.producerVersion ?? null,
+          planHash: entry.planHash ?? null,
         }));
         return { count: newSuggestions.length };
       },
@@ -203,6 +214,28 @@ describe('buildOwnerHistoryProposalPlan', () => {
 
     expect(plan1.planHash).toBe(plan2.planHash);
     expect(plan1.planHash).toHaveLength(64);
+    expect(plan1.persistence).toMatchObject({
+      producerKey: OWNER_HISTORY_PRODUCER_KEY,
+      producerVersion: OWNER_HISTORY_PRODUCER_VERSION,
+      rankPersistence: 'RANK_1_ONLY',
+      plannedCreateCount: 1,
+      plannedExpirationCount: 0,
+    });
+  });
+
+  it('binds owned-suggestion state into the plan hash without claiming unowned rows', async () => {
+    const target = openTx('open-ownership-hash', 'credit');
+    const base = makeExecutionPrisma([booking('b-ownership-hash', 'type-credit', 'credit')], [target]);
+    const basePlan = await buildOwnerHistoryProposalPlan(base.db as never, { workspaceId: WORKSPACE_ID });
+    const owned = makeExecutionPrisma([booking('b-ownership-hash', 'type-credit', 'credit')], [target], [{
+      id: 'owned-for-hash', transactionId: target.id, evidenceHash: basePlan.proposals[0]!.rank1.evidenceHash, status: 'PENDING', evidence: {},
+      producerKey: OWNER_HISTORY_PRODUCER_KEY, producerVersion: OWNER_HISTORY_PRODUCER_VERSION,
+    }]);
+    const ownedPlan = await buildOwnerHistoryProposalPlan(owned.db as never, { workspaceId: WORKSPACE_ID });
+
+    expect(ownedPlan.planHash).not.toBe(basePlan.planHash);
+    expect(ownedPlan.persistence.plannedCreateCount).toBe(0);
+    expect(ownedPlan.persistence.existingOwnedSuggestionCount).toBe(1);
   });
 
   it('excludes self evidence and evidence newer than the target', async () => {
@@ -248,6 +281,8 @@ describe('buildOwnerHistoryProposalPlan', () => {
       evidenceHash: 'manual-evidence',
       status: 'PENDING',
       evidence: { algorithmVersion: 'manual-review-v1' },
+      producerKey: null,
+      producerVersion: null,
     };
     const { db, suggestions } = makeExecutionPrisma(
       [booking('b-owned', 'type-credit', 'credit')],
@@ -265,6 +300,36 @@ describe('buildOwnerHistoryProposalPlan', () => {
 
     expect(result.expiredSuggestionCount).toBe(0);
     expect(suggestions.find((suggestion) => suggestion.id === unrelated.id)?.status).toBe('PENDING');
+  });
+
+  it('expires only exact owner-history-v2 suggestions and persists rank 1 only', async () => {
+    const target = openTx('open-exact-owner', 'credit');
+    const ownedStale = {
+      id: 'owned-stale', transactionId: target.id, evidenceHash: 'old-owned-evidence', status: 'PENDING', evidence: {},
+      producerKey: OWNER_HISTORY_PRODUCER_KEY, producerVersion: OWNER_HISTORY_PRODUCER_VERSION,
+    };
+    const otherProducer = {
+      id: 'other-producer', transactionId: target.id, evidenceHash: 'other-evidence', status: 'PENDING', evidence: {},
+      producerKey: 'history-backfill', producerVersion: 'v1',
+    };
+    const { db, suggestions } = makeExecutionPrisma([booking('b-exact-owner', 'type-credit', 'credit')], [target], [ownedStale, otherProducer]);
+    const plan = await buildOwnerHistoryProposalPlan(db as never, { workspaceId: WORKSPACE_ID });
+    const result = await executeOwnerHistoryProposalPlan(db as never, {
+      workspaceId: WORKSPACE_ID, execute: true, executionAllowed: true, confirmedPlanHash: plan.planHash,
+    });
+
+    expect(plan.persistence.rankPersistence).toBe('RANK_1_ONLY');
+    expect(plan.persistence.plannedCreateCount).toBe(1);
+    expect(plan.persistence.plannedExpirationCount).toBe(1);
+    expect(result.expiredSuggestionCount).toBe(1);
+    expect(result.createdSuggestionCount).toBe(1);
+    expect(suggestions.find((suggestion) => suggestion.id === ownedStale.id)?.status).toBe('EXPIRED');
+    expect(suggestions.find((suggestion) => suggestion.id === otherProducer.id)?.status).toBe('PENDING');
+    const created = suggestions.find((suggestion) => suggestion.id !== ownedStale.id && suggestion.id !== otherProducer.id);
+    expect(created?.producerKey).toBe(OWNER_HISTORY_PRODUCER_KEY);
+    expect(created?.producerVersion).toBe(OWNER_HISTORY_PRODUCER_VERSION);
+    expect(created?.planHash).toBe(plan.planHash);
+    expect(created?.status).toBe('PENDING');
   });
 
   it('returns different planHash when proposals differ', async () => {

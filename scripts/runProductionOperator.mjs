@@ -42,6 +42,7 @@ const summary = {
   buckets: body.buckets ?? null,
   matcherDistribution: body.matcherDistribution ?? null,
   confidenceDistribution: body.confidenceDistribution ?? null,
+  persistence: body.persistence ?? null,
   updatedCount: body.updatedCount ?? null,
   skippedAlreadySetCount: body.skippedAlreadySetCount ?? null,
   expiredSuggestionCount: body.expiredSuggestionCount ?? null,

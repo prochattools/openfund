@@ -340,6 +340,10 @@ model CategorizationSuggestion {
   scoreBasisPoints  Int?
   evidence          Json
   evidenceHash      String
+  /// Explicit producer ownership. Null is legacy/unowned and must never be claimed by a later producer.
+  producerKey       String?
+  producerVersion   String?
+  planHash          String?
   status            SuggestionStatus     @default(PENDING)
   createdAt         DateTime             @default(now())
   resolvedAt        DateTime?
@@ -357,6 +361,8 @@ model CategorizationSuggestion {
   @@index([projectId])
   @@index([transactionTypeId])
   @@index([transactionId, matcher, evidenceHash])
+  @@index([workspaceId, transactionId, producerKey, producerVersion, status], map: "CategorizationSuggestion_owner_lookup_idx")
+  @@unique([workspaceId, transactionId, producerKey, producerVersion, evidenceHash], map: "CategorizationSuggestion_owner_evidence_key")
 }
 
 model ReviewDecision {

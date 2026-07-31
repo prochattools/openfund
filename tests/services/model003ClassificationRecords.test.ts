@@ -76,6 +76,21 @@ describe('MODEL-003 additive classification records', () => {
     expect(suggestion).toMatch(/@@index\(\[transactionId, matcher, evidenceHash\]\)/);
   });
 
+  it('adds nullable producer ownership without claiming legacy suggestions', () => {
+    const suggestion = modelBlock('CategorizationSuggestion');
+    const ownershipMigration = readRepoFile('prisma/migrations/20260731000000_add_suggestion_producer_ownership/migration.sql');
+
+    expect(suggestion).toMatch(/producerKey\s+String\?/);
+    expect(suggestion).toMatch(/producerVersion\s+String\?/);
+    expect(suggestion).toMatch(/planHash\s+String\?/);
+    expect(suggestion).toMatch(/@@index\(\[workspaceId, transactionId, producerKey, producerVersion, status\], map: "CategorizationSuggestion_owner_lookup_idx"\)/);
+    expect(suggestion).toMatch(/@@unique\(\[workspaceId, transactionId, producerKey, producerVersion, evidenceHash\], map: "CategorizationSuggestion_owner_evidence_key"\)/);
+    expect(ownershipMigration).toMatch(/ADD COLUMN "producerKey" TEXT/);
+    expect(ownershipMigration).toMatch(/ADD COLUMN "producerVersion" TEXT/);
+    expect(ownershipMigration).toMatch(/ADD COLUMN "planHash" TEXT/);
+    expect(ownershipMigration).not.toMatch(/UPDATE|INSERT|DELETE|DROP/i);
+  });
+
   it('models ReviewDecision as immutable administrator decision history', () => {
     const decision = modelBlock('ReviewDecision');
 

@@ -107,6 +107,7 @@ export const postOwnerHistoryProposals = async (req: Request, res: Response) => 
         counts: plan.counts,
         matcherDistribution: plan.matcherDistribution,
         confidenceDistribution: plan.confidenceDistribution,
+        persistence: plan.persistence,
         provenanceProof: plan.provenanceProof,
         sideEffects: plan.sideEffects,
       });
@@ -136,6 +137,7 @@ export const postOwnerHistoryProposals = async (req: Request, res: Response) => 
       counts: result.plan.counts,
       matcherDistribution: result.plan.matcherDistribution,
       confidenceDistribution: result.plan.confidenceDistribution,
+      persistence: result.plan.persistence,
       provenanceProof: result.plan.provenanceProof,
       sideEffects: result.sideEffects,
     });

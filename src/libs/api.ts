@@ -1119,6 +1119,15 @@ export type OwnerHistoryProposalResponse = {
   counts: OwnerHistoryProposalCounts;
   matcherDistribution: Record<string, number>;
   confidenceDistribution: Record<string, number>;
+  persistence: {
+    producerKey: 'owner-history';
+    producerVersion: 'v2';
+    rankPersistence: 'RANK_1_ONLY';
+    existingOwnedSuggestionCount: number;
+    plannedCreateCount: number;
+    plannedExpirationCount: number;
+    ownershipStateHash: string;
+  };
   provenanceProof: {
     evidenceBookingsLoadedFromSource: string;
     reviewDecisionRequired: boolean;
