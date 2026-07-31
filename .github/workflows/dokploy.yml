@@ -63,7 +63,12 @@ jobs:
           COMMIT_DATE=$(git log -1 --pretty=format:"%ci" ${{ github.sha }})
           DESCRIPTION="${COMMIT_AUTHOR} · ${COMMIT_DATE}"$'\n\n'"${{ github.sha }}"
 
-          RESPONSE=$(curl -s -o /tmp/dokploy_response.json -w "%{http_code}" \
+          RESPONSE=$(curl --silent --show-error \
+            --retry 3 \
+            --retry-delay 5 \
+            --retry-all-errors \
+            -o /tmp/dokploy_response.json \
+            -w "%{http_code}" \
             -X POST "https://dokploy.prochat.tools/api/application.deploy" \
             -H "x-api-key: ${{ secrets.DOKPLOY_API_KEY }}" \
             -H "Content-Type: application/json" \
@@ -77,8 +82,8 @@ jobs:
           cat /tmp/dokploy_response.json
 
           if [ "$RESPONSE" != "200" ]; then
-            echo "::warning title=Dokploy redeploy was not triggered::Dokploy returned HTTP $RESPONSE. The GHCR image was still built and pushed; manually redeploy ghcr.io/${{ github.repository }}:${{ github.sha }} or update DOKPLOY_API_KEY/DOKPLOY_APP_ID."
-            exit 0
+            echo "::error title=Dokploy redeploy failed::Dokploy returned HTTP $RESPONSE. Verify DOKPLOY_API_KEY, DOKPLOY_APP_ID, and Dokploy application availability."
+            exit 1
           fi
 
           echo "Deployment triggered successfully."
