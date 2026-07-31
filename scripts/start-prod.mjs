@@ -1,74 +1,122 @@
 #!/usr/bin/env node
 import { spawn } from 'node:child_process';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
 
-const processes = [];
-let shuttingDown = false;
+export const buildProductionCommands = ({ root = projectRoot, port = process.env.PORT ?? '3000' } = {}) => ({
+  migration: {
+    name: 'migration',
+    command: process.execPath,
+    args: [path.join(root, 'node_modules', 'prisma', 'build', 'index.js'), 'migrate', 'deploy'],
+  },
+  api: {
+    name: 'api',
+    command: process.execPath,
+    args: [path.join(root, 'dist', 'server', 'index.js')],
+  },
+  web: {
+    name: 'web',
+    command: process.execPath,
+    args: [path.join(root, 'node_modules', 'next', 'dist', 'bin', 'next'), 'start', '-p', port],
+  },
+});
 
-const baseEnv = { ...process.env };
-if (!baseEnv.NEW_RELIC_LICENSE_KEY?.trim()) {
-  delete baseEnv.NODE_OPTIONS;
-}
-
-const startProcess = ({ name, command, args, env }) => {
-  const child = spawn(command, args, {
-    cwd: projectRoot,
-    env: { ...baseEnv, ...env },
-    stdio: 'inherit',
-  });
-
-  child.on('exit', (code, signal) => {
-    const reason =
-      signal ? `${name} exited after receiving ${signal}` : `${name} exited with code ${code ?? 0}`;
-    console.log(reason);
-    shutdown(code ?? (signal ? 1 : 0));
-  });
-
-  child.on('error', (error) => {
-    console.error(`${name} failed to start`, error);
-    shutdown(1);
-  });
-
-  processes.push(child);
-};
-
-const shutdown = (code = 0) => {
-  if (shuttingDown) {
-    return;
+export const runProductionStartup = async ({
+  env = process.env,
+  spawnImpl = spawn,
+  root = projectRoot,
+  exitImpl = (code) => process.exit(code),
+  log = console.log,
+  errorLog = console.error,
+  setTimeoutImpl = setTimeout,
+  registerSignalHandlers = true,
+} = {}) => {
+  const databaseUrl = env.DATABASE_URL?.trim();
+  if (!databaseUrl) {
+    throw new Error('DATABASE_URL is required before production startup.');
   }
-  shuttingDown = true;
-  processes.forEach((child) => {
-    if (child.killed) {
+
+  const baseEnv = { ...env };
+  if (!baseEnv.NEW_RELIC_LICENSE_KEY?.trim()) {
+    delete baseEnv.NODE_OPTIONS;
+  }
+
+  const commands = buildProductionCommands({ root, port: env.PORT ?? '3000' });
+  const processes = [];
+  let shuttingDown = false;
+
+  const shutdown = (code = 0) => {
+    if (shuttingDown) {
       return;
     }
-    child.kill('SIGTERM');
+    shuttingDown = true;
+    processes.forEach((child) => {
+      if (!child.killed) {
+        child.kill('SIGTERM');
+      }
+    });
+    setTimeoutImpl(() => exitImpl(code), 500);
+  };
+
+  if (registerSignalHandlers) {
+    process.on('SIGTERM', () => shutdown(0));
+    process.on('SIGINT', () => shutdown(0));
+  }
+
+  const spawnProcess = ({ name, command, args }, { track = true } = {}) => {
+    const child = spawnImpl(command, args, {
+      cwd: root,
+      env: baseEnv,
+      stdio: 'inherit',
+      shell: false,
+    });
+    if (track) {
+      processes.push(child);
+    }
+    return child;
+  };
+
+  const migration = spawnProcess(commands.migration);
+  await new Promise((resolve, reject) => {
+    migration.once('error', () => reject(new Error('Prisma migration failed to start.')));
+    migration.once('exit', (code, signal) => {
+      if (code === 0 && !signal) {
+        resolve();
+        return;
+      }
+      reject(new Error(`Prisma migration failed with code ${code ?? 'null'}${signal ? ` after ${signal}` : ''}.`));
+    });
   });
-  // Give children a brief moment to exit cleanly before forcing shutdown.
-  setTimeout(() => {
-    process.exit(code);
-  }, 500);
+
+  const startLongRunningProcess = (definition) => {
+    const child = spawnProcess(definition);
+    child.on('exit', (code, signal) => {
+      const reason = signal
+        ? `${definition.name} exited after receiving ${signal}`
+        : `${definition.name} exited with code ${code ?? 0}`;
+      log(reason);
+      shutdown(code ?? (signal ? 1 : 0));
+    });
+    child.on('error', () => {
+      errorLog(`${definition.name} failed to start`);
+      shutdown(1);
+    });
+  };
+
+  startLongRunningProcess(commands.api);
+  startLongRunningProcess(commands.web);
+
+  return { shutdown };
 };
 
-process.on('SIGTERM', () => shutdown(0));
-process.on('SIGINT', () => shutdown(0));
-
-const apiEntry = path.join(projectRoot, 'dist', 'server', 'index.js');
-const nextBin = path.join(projectRoot, 'node_modules', 'next', 'dist', 'bin', 'next');
-const port = process.env.PORT ?? '3000';
-
-startProcess({
-  name: 'api',
-  command: process.execPath,
-  args: [apiEntry],
-});
-
-startProcess({
-  name: 'web',
-  command: process.execPath,
-  args: [nextBin, 'start', '-p', port],
-});
+const isMain = process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url;
+if (isMain) {
+  runProductionStartup().catch((error) => {
+    console.error(error instanceof Error ? error.message : 'Production startup failed.');
+    process.exit(1);
+  });
+}
