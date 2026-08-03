@@ -72,7 +72,7 @@ export const getReviewTransactions = async (req: Request, res: Response) => {
   }
 
   try {
-    return res.json(await getEvidenceRichReviewQueue(prisma, actor.userId, readReviewQueueOptions(req)));
+    return res.json(await getEvidenceRichReviewQueue(prisma, actor.userId, actor.workspaceId, readReviewQueueOptions(req)));
   } catch (error) {
     console.error('Beoordelingsrij kon niet worden geladen', error);
     return res.status(500).json({ error: 'De beoordelingsrij kon niet worden geladen.' });

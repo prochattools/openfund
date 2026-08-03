@@ -29,6 +29,14 @@ const makeItem = (overrides: Partial<EvidenceRichReviewItem> = {}): EvidenceRich
   statusLabel: 'Geen match',
   reason: 'Handmatige controle nodig',
   proposed: null,
+  prefill: {
+    source: 'NONE' as const,
+    complete: false,
+    weakFallback: false,
+    scoreBasisPoints: null,
+    confidence: null,
+    matcher: null,
+  },
   alternatives: [],
   evidence: {
     matchedRuleIds: [],
@@ -88,11 +96,11 @@ describe('review UI helpers', () => {
       categoryId: 'category-1',
       projects: [{ id: 'project-1', code: 'YA', name: 'Yeshua Academy' }],
       transactionTypes: [
-        { id: 'type-credit', code: 'GIFT_IN', literalName: 'Schenking in', direction: 'credit' },
-        { id: 'type-debit', code: 'BANK_OUT', literalName: 'Bankkosten', direction: 'debit' },
+        { id: 'type-credit', literalName: 'Schenking in', direction: 'credit' },
+        { id: 'type-debit', literalName: 'Bankkosten', direction: 'debit' },
       ],
       compatibleTransactionTypes: [
-        { id: 'type-credit', code: 'GIFT_IN', literalName: 'Schenking in', direction: 'credit' },
+        { id: 'type-credit', literalName: 'Schenking in', direction: 'credit' },
       ],
       categories: [{ id: 'category-1', name: 'Giften' }],
     });
@@ -112,8 +120,8 @@ describe('review UI helpers', () => {
       transactionTypeId: 'type-credit',
       categoryId: 'category-1',
       projects: [{ id: 'project-1', code: 'YA', name: 'Yeshua Academy' }],
-      transactionTypes: [{ id: 'type-credit', code: 'GIFT_IN', literalName: 'Schenking in', direction: 'credit' }],
-      compatibleTransactionTypes: [{ id: 'type-credit', code: 'GIFT_IN', literalName: 'Schenking in', direction: 'credit' }],
+      transactionTypes: [{ id: 'type-credit', literalName: 'Schenking in', direction: 'credit' }],
+      compatibleTransactionTypes: [{ id: 'type-credit', literalName: 'Schenking in', direction: 'credit' }],
       categories: [{ id: 'category-1', name: 'Giften' }],
     });
 
@@ -136,8 +144,8 @@ describe('review UI helpers', () => {
       transactionTypeId: 'type-credit',
       categoryId: 'category-1',
       projects: [{ id: 'project-1', code: 'YA', name: 'Yeshua Academy' }],
-      transactionTypes: [{ id: 'type-credit', code: 'GIFT_IN', literalName: 'Schenking in', direction: 'credit' }],
-      compatibleTransactionTypes: [{ id: 'type-credit', code: 'GIFT_IN', literalName: 'Schenking in', direction: 'credit' }],
+      transactionTypes: [{ id: 'type-credit', literalName: 'Schenking in', direction: 'credit' }],
+      compatibleTransactionTypes: [{ id: 'type-credit', literalName: 'Schenking in', direction: 'credit' }],
       categories: [{ id: 'category-1', name: 'Giften' }],
     });
 
@@ -158,8 +166,8 @@ describe('review UI helpers', () => {
       transactionTypeId: 'type-credit',
       categoryId: 'category-missing',
       projects: [{ id: 'project-1', code: 'YA', name: 'Yeshua Academy' }],
-      transactionTypes: [{ id: 'type-credit', code: 'GIFT_IN', literalName: 'Schenking in', direction: 'credit' }],
-      compatibleTransactionTypes: [{ id: 'type-credit', code: 'GIFT_IN', literalName: 'Schenking in', direction: 'credit' }],
+      transactionTypes: [{ id: 'type-credit', literalName: 'Schenking in', direction: 'credit' }],
+      compatibleTransactionTypes: [{ id: 'type-credit', literalName: 'Schenking in', direction: 'credit' }],
       categories: [{ id: 'category-1', name: 'Giften' }],
     });
 
@@ -180,8 +188,8 @@ describe('review UI helpers', () => {
       transactionTypeId: 'type-missing',
       categoryId: 'category-1',
       projects: [{ id: 'project-1', code: 'YA', name: 'Yeshua Academy' }],
-      transactionTypes: [{ id: 'type-credit', code: 'GIFT_IN', literalName: 'Schenking in', direction: 'credit' }],
-      compatibleTransactionTypes: [{ id: 'type-credit', code: 'GIFT_IN', literalName: 'Schenking in', direction: 'credit' }],
+      transactionTypes: [{ id: 'type-credit', literalName: 'Schenking in', direction: 'credit' }],
+      compatibleTransactionTypes: [{ id: 'type-credit', literalName: 'Schenking in', direction: 'credit' }],
       categories: [{ id: 'category-1', name: 'Giften' }],
     });
 
@@ -203,10 +211,10 @@ describe('review UI helpers', () => {
       categoryId: 'category-1',
       projects: [{ id: 'project-1', code: 'YA', name: 'Yeshua Academy' }],
       transactionTypes: [
-        { id: 'type-credit', code: 'GIFT_IN', literalName: 'Schenking in', direction: 'credit' },
-        { id: 'type-debit', code: 'BANK_OUT', literalName: 'Bankkosten', direction: 'debit' },
+        { id: 'type-credit', literalName: 'Schenking in', direction: 'credit' },
+        { id: 'type-debit', literalName: 'Bankkosten', direction: 'debit' },
       ],
-      compatibleTransactionTypes: [{ id: 'type-credit', code: 'GIFT_IN', literalName: 'Schenking in', direction: 'credit' }],
+      compatibleTransactionTypes: [{ id: 'type-credit', literalName: 'Schenking in', direction: 'credit' }],
       categories: [{ id: 'category-1', name: 'Giften' }],
     });
 
@@ -225,8 +233,8 @@ describe('review UI helpers', () => {
       transactionTypeId: 'type-credit',
       categoryId: 'category-1',
       projects: [{ id: 'project-1', code: 'YA', name: 'Yeshua Academy' }],
-      transactionTypes: [{ id: 'type-credit', code: 'GIFT_IN', literalName: 'Schenking in', direction: 'credit' }],
-      compatibleTransactionTypes: [{ id: 'type-credit', code: 'GIFT_IN', literalName: 'Schenking in', direction: 'credit' }],
+      transactionTypes: [{ id: 'type-credit', literalName: 'Schenking in', direction: 'credit' as const }],
+      compatibleTransactionTypes: [{ id: 'type-credit', literalName: 'Schenking in', direction: 'credit' as const }],
       categories: [{ id: 'category-1', name: 'Giften' }],
     };
 

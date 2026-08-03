@@ -14,7 +14,7 @@ export const runDirectionNeutralHistoryDryRunCli = async (input: {
     input.write(JSON.stringify(failure('READ_ONLY_ACKNOWLEDGEMENT_REQUIRED')));
     return 2;
   }
-  if (!input.env.DATABASE_URL?.trim() || !input.env.DEFAULT_WORKSPACE_ID?.trim()) {
+  if (!input.env.DATABASE_URL?.trim() || !input.env.DEFAULT_WORKSPACE_ID?.trim() || !input.env.DEFAULT_USER_ID?.trim()) {
     input.write(JSON.stringify(failure('DATABASE_OR_WORKSPACE_REQUIRED')));
     return 2;
   }
@@ -24,13 +24,14 @@ export const runDirectionNeutralHistoryDryRunCli = async (input: {
     const connection = await input.createDb();
     disconnect = connection.disconnect;
     const workspaceId = input.env.DEFAULT_WORKSPACE_ID;
+    const userId = input.env.DEFAULT_USER_ID;
     const [auditFirst, planFirst] = await Promise.all([
       auditHistoricalTransactionTypeDirections(connection.db as never, { workspaceId }),
-      buildOwnerHistoryProposalPlan(connection.db, { workspaceId }),
+      buildOwnerHistoryProposalPlan(connection.db, { workspaceId, userId }),
     ]);
     const [auditReplay, planReplay] = await Promise.all([
       auditHistoricalTransactionTypeDirections(connection.db as never, { workspaceId }),
-      buildOwnerHistoryProposalPlan(connection.db, { workspaceId }),
+      buildOwnerHistoryProposalPlan(connection.db, { workspaceId, userId }),
     ]);
     if (auditFirst.reportHash !== auditReplay.reportHash || planFirst.planHash !== planReplay.planHash) {
       input.write(JSON.stringify(failure('NONDETERMINISTIC_REPLAY')));

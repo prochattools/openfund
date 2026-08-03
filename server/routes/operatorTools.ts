@@ -97,7 +97,7 @@ export const postOwnerHistoryProposals = async (req: Request, res: Response) => 
 
   try {
     if (!execute) {
-      const plan = await buildOwnerHistoryProposalPlan(prisma, { workspaceId });
+      const plan = await buildOwnerHistoryProposalPlan(prisma, { workspaceId, userId: actor.userId });
       return res.json({
         status: 'DRY_RUN_COMPLETE',
         dryRun: true,
@@ -115,6 +115,7 @@ export const postOwnerHistoryProposals = async (req: Request, res: Response) => 
 
     const result = await executeOwnerHistoryProposalPlan(prisma, {
       workspaceId,
+      userId: actor.userId,
       execute,
       executionAllowed: process.env.ALLOW_OWNER_HISTORY_PROPOSAL_EXECUTION === 'true',
       confirmedPlanHash: body.confirmedPlanHash?.trim() || null,

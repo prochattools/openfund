@@ -50,6 +50,7 @@ describe('Clerk identity to finance membership authorization', () => {
     await expect(resolveRequestActor('__session=verified')).resolves.toEqual({
       actor: {
         userId: 'local-user-1',
+        workspaceId: expect.any(String),
         role: 'viewer',
         actorId: 'local-user-1',
         actorEmail: 'finance@example.test',

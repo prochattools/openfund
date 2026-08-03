@@ -35,6 +35,14 @@ const response: EvidenceRichReviewResponse = {
       categoryLabel: 'Giften',
       complete: true,
     },
+    prefill: {
+      source: 'LEGACY_HISTORY_FALLBACK',
+      complete: true,
+      weakFallback: true,
+      scoreBasisPoints: null,
+      confidence: 'FUZZY',
+      matcher: 'FUZZY_HISTORY',
+    },
     alternatives: [{
       suggestionId: 'suggestion-1',
       rank: 1,
@@ -46,6 +54,9 @@ const response: EvidenceRichReviewResponse = {
       historicalRecordIds: ['history-1'],
       evidenceHashes: ['hash-1'],
       evidenceHash: 'suggestion-hash-1',
+      producerKey: null,
+      producerVersion: null,
+      scoreBasisPoints: null,
       projectId: 'project-1',
       projectCode: 'YA',
       projectLabel: 'Yeshua Academy',
@@ -54,6 +65,7 @@ const response: EvidenceRichReviewResponse = {
       categoryId: 'category-gifts',
       categoryLabel: 'Giften',
       complete: true,
+      eligible: true,
     }],
     evidence: {
       matchedRuleIds: [],
@@ -74,7 +86,15 @@ const response: EvidenceRichReviewResponse = {
     { id: 'category-gifts', name: 'Giften' },
   ],
   projects: [{ id: 'project-1', code: 'YA', name: 'Yeshua Academy' }],
-  transactionTypes: [{ id: 'type-1', code: 'GIFT_IN', literalName: 'Schenking in', direction: 'credit' }],
+  transactionTypes: [{ id: 'type-1', literalName: 'Schenking in', direction: 'credit' }],
+  pagination: {
+    page: 1,
+    pageSize: 25,
+    totalItems: 1,
+    totalPages: 1,
+    hasPreviousPage: false,
+    hasNextPage: false,
+  },
   message: 'Review geladen',
 };
 

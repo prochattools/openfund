@@ -77,6 +77,7 @@ const makeRequest = ({
   if (cookie !== null) {
     setRequestActor(request, {
       userId: 'user-1',
+      workspaceId: 'workspace-1',
       role,
       actorId: 'user-1',
       actorEmail: 'finance@example.test',
@@ -148,7 +149,7 @@ describe('review routes', () => {
           },
         ],
       });
-      expect(serviceMocks.getEvidenceRichReviewQueue).toHaveBeenCalledWith(expect.anything(), 'user-1', {
+      expect(serviceMocks.getEvidenceRichReviewQueue).toHaveBeenCalledWith(expect.anything(), 'user-1', 'workspace-1', {
         page: 1,
         pageSize: 25,
         confidence: null,
@@ -186,7 +187,7 @@ describe('review routes', () => {
     }) as any, response as any);
 
     expect(response.statusCode).toBe(200);
-    expect(serviceMocks.getEvidenceRichReviewQueue).toHaveBeenCalledWith(expect.anything(), 'user-1', {
+    expect(serviceMocks.getEvidenceRichReviewQueue).toHaveBeenCalledWith(expect.anything(), 'user-1', 'workspace-1', {
       page: 3,
       pageSize: 50,
       confidence: null,
@@ -213,7 +214,7 @@ describe('review routes', () => {
       },
     }) as any, response as any);
 
-    expect(serviceMocks.getEvidenceRichReviewQueue).toHaveBeenCalledWith(expect.anything(), 'user-1', {
+    expect(serviceMocks.getEvidenceRichReviewQueue).toHaveBeenCalledWith(expect.anything(), 'user-1', 'workspace-1', {
       page: 1, pageSize: 25, confidence: 'red', direction: 'debit',
       projectId: 'project-1', categoryId: 'category-1', state: 'incomplete',
     });
@@ -232,7 +233,7 @@ describe('review routes', () => {
       query: { page: '-4', pageSize: '40', confidence: 'blue', direction: 'sideways', state: 'closed' },
     }) as any, response as any);
 
-    expect(serviceMocks.getEvidenceRichReviewQueue).toHaveBeenCalledWith(expect.anything(), 'user-1', {
+    expect(serviceMocks.getEvidenceRichReviewQueue).toHaveBeenCalledWith(expect.anything(), 'user-1', 'workspace-1', {
       page: 1, pageSize: 25, confidence: null, direction: null,
       projectId: null, categoryId: null, state: 'all',
     });

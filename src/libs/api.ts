@@ -43,6 +43,26 @@ export type ReviewEvidenceAlternative = ReviewDimensionCandidate & {
   historicalRecordIds: string[];
   evidenceHashes: string[];
   evidenceHash: string;
+  producerKey: string | null;
+  producerVersion: string | null;
+  scoreBasisPoints: number | null;
+  eligible: boolean;
+};
+
+export type PrefillSource =
+  | 'AUTHORITATIVE_TRANSACTION'
+  | 'EXISTING_BOOKING'
+  | 'OWNER_HISTORY_V2'
+  | 'LEGACY_HISTORY_FALLBACK'
+  | 'NONE';
+
+export type ReviewPrefillMetadata = {
+  source: PrefillSource;
+  complete: boolean;
+  weakFallback: boolean;
+  scoreBasisPoints: number | null;
+  confidence: string | null;
+  matcher: string | null;
 };
 
 export type EvidenceRichReviewItem = {
@@ -67,6 +87,7 @@ export type EvidenceRichReviewItem = {
   statusLabel: string;
   reason: string;
   proposed: ReviewDimensionCandidate | null;
+  prefill: ReviewPrefillMetadata;
   alternatives: ReviewEvidenceAlternative[];
   evidence: {
     matchedRuleIds: string[];

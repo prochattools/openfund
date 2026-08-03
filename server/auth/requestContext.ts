@@ -8,6 +8,7 @@ export type AppRole = 'admin' | 'viewer';
 
 export type RequestActor = {
   userId: string;
+  workspaceId: string;
   role: AppRole;
   actorId: string;
   actorEmail: string;
@@ -85,6 +86,7 @@ const resolveConfiguredLocalActor = async (): Promise<AuthResolution> => {
         return {
           actor: {
             userId: user.id,
+            workspaceId,
             role: membership.role === 'ADMIN' ? 'admin' : 'viewer',
             actorId: user.id,
             actorEmail: user.email,
@@ -117,6 +119,7 @@ const resolveConfiguredLocalActor = async (): Promise<AuthResolution> => {
   return {
     actor: {
       userId: fallbackUser.id,
+      workspaceId,
       role: 'admin',
       actorId: fallbackUser.id,
       actorEmail: fallbackUser.email,
@@ -168,6 +171,7 @@ export const resolveRequestActor = async (
     return {
       actor: {
         userId: user.id,
+        workspaceId,
         role: membership.role === 'ADMIN' ? 'admin' : 'viewer',
         actorId: user.id,
         actorEmail: user.email,

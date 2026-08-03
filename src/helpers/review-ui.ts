@@ -1,6 +1,7 @@
 import type {
   EvidenceRichReviewItem,
   ReviewCategoryOption,
+  ReviewPrefillMetadata,
   ReviewProjectOption,
   ReviewTransactionTypeOption,
 } from '@/libs/api';
@@ -163,4 +164,27 @@ export const getReviewConfirmLabel = (input: {
   if (!input.admin) return 'Alleen beheerder';
   if (input.busy) return 'Opslaan…';
   return input.changed ? 'Wijzigingen bevestigen' : 'Bevestigen';
+};
+
+export type ReviewPrefillTone = 'neutral' | 'warning' | 'muted';
+
+export type ReviewPrefillPresentation = {
+  label: string;
+  tone: ReviewPrefillTone;
+};
+
+export const getReviewPrefillPresentation = (prefill: ReviewPrefillMetadata): ReviewPrefillPresentation => {
+  switch (prefill.source) {
+    case 'OWNER_HISTORY_V2':
+      return { label: 'Beste beschikbare historische match', tone: 'neutral' };
+    case 'LEGACY_HISTORY_FALLBACK':
+      return { label: 'Zwakke historische fallback — zorgvuldig controleren', tone: 'warning' };
+    case 'EXISTING_BOOKING':
+      return { label: 'Bestaande boeking', tone: 'neutral' };
+    case 'AUTHORITATIVE_TRANSACTION':
+      return { label: 'Bestaande classificatie', tone: 'neutral' };
+    case 'NONE':
+    default:
+      return { label: 'Geen geldig voorstel', tone: 'muted' };
+  }
 };

@@ -165,9 +165,9 @@ const hashPlan = (input: {
 
 export const buildOwnerHistoryProposalPlan = async (
   db: OwnerHistoryDb,
-  input: { workspaceId: string },
+  input: { workspaceId: string; userId: string },
 ): Promise<OwnerHistoryProposalPlan> => {
-  const { workspaceId } = input;
+  const { workspaceId, userId } = input;
 
   const rawBookings = await db.transactionBooking.findMany({
     where: { workspaceId, source: 'HISTORICAL' },
@@ -268,6 +268,7 @@ export const buildOwnerHistoryProposalPlan = async (
 
   const openTransactions = await db.transaction.findMany({
     where: {
+      userId,
       transactionBooking: null,
     },
     select: {
@@ -428,12 +429,13 @@ export const executeOwnerHistoryProposalPlan = async (
   db: OwnerHistoryDb,
   input: {
     workspaceId: string;
+    userId: string;
     execute: boolean;
     executionAllowed: boolean;
     confirmedPlanHash?: string | null;
   },
 ): Promise<OwnerHistoryProposalExecutionResult> => {
-  const plan = await buildOwnerHistoryProposalPlan(db, { workspaceId: input.workspaceId });
+  const plan = await buildOwnerHistoryProposalPlan(db, { workspaceId: input.workspaceId, userId: input.userId });
 
   if (!input.execute) return baseDryRunResult(plan);
 
@@ -453,7 +455,7 @@ export const executeOwnerHistoryProposalPlan = async (
     // Recompute inside transaction to detect drift
     const currentPlan = await buildOwnerHistoryProposalPlan(
       tx as unknown as OwnerHistoryDb,
-      { workspaceId: input.workspaceId },
+      { workspaceId: input.workspaceId, userId: input.userId },
     );
 
     if (currentPlan.planHash !== input.confirmedPlanHash) {

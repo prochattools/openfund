@@ -7,6 +7,7 @@ import { FinanceAppFrame } from '@/ui/FinanceAppFrame';
 import {
   canConfirmReviewRow,
   getReviewConfirmLabel,
+  getReviewPrefillPresentation,
   getReviewReliability,
   getReviewSelectionValidity,
   type ReviewConfidenceFilter,
@@ -165,6 +166,20 @@ function ReviewRow({
         <div><span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Betrouwbaarheid</span><div className={`rounded-xl border px-3 py-2 text-xs font-semibold ${reliability.className}`}>
           <span aria-hidden="true">● </span>{reliability.score === null ? reliability.label : `${reliability.score}% · ${reliability.label}`}
         </div></div>
+        {(() => {
+          const prefillPresentation = getReviewPrefillPresentation(item.prefill);
+          const prefillClassName = prefillPresentation.tone === 'warning'
+            ? 'rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800'
+            : prefillPresentation.tone === 'muted'
+            ? 'rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-xs font-medium text-stone-500'
+            : 'rounded-xl border border-stone-300 bg-stone-100 px-3 py-2 text-xs font-medium text-stone-600';
+          return (
+            <div>
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Voorstel</span>
+              <div className={prefillClassName}>{prefillPresentation.label}</div>
+            </div>
+          );
+        })()}
         <button type="button" onClick={confirm} disabled={!canConfirm} aria-describedby={hasSelectionWarnings ? warningId : undefined} className="w-full rounded-xl bg-[#1f5f4a] px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 xl:w-auto">
           {getReviewConfirmLabel({ admin, busy, changed })}
         </button>
