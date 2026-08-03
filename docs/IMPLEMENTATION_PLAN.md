@@ -139,6 +139,27 @@ Current gate: do not repeat the completed opening-balance repair. Classification
 Current review category contract: production review options are flat `{ id, name }` records because the deployed `Category` model has no parent relation. The Review page presents one authoritative category selector and approval sends only `projectId`, `transactionTypeId`, `categoryId`, and an optional reason. Legacy main/subcategory fields remain display-only compatibility data and are not authoritative booking dimensions. The Phase 18/19 implementation, authentication hardening, and controlled suggestion persistence are deployed; no administrator decision has been submitted for the 221 unresolved transactions.
 Historical RC7 release-evidence gate: Phase 17 complete; superseded by the
 deployed Phase 18/19 and Clerk session-readiness release above.
+
+BEST-PREFILL HARDENING — DEPLOYED AND LIVE (2026-08-03)
+Best-prefill hardening local validation: 1788 tests pass (45 reviewQueueService, 18 ownerHistoryProposalEvidenceService, 26 CLI, 12 reviewUi, 2 reviewResponseMapper, 12 routes/review, 6 auth/clerkRequestContext; 1 pre-existing model002DomainSchema Prisma-output-format failure unrelated to changed files); server build passes; Next.js production build passes (exit 0); zero TypeScript errors in changed or new files; git diff --check clean.
+Dry-run verification executed 2026-08-03 (read-only, no writes, aggregate output only):
+  totalUnresolvedTransactions: 221
+  selectedOwnerHistoryV2: 178 (deployed, persisted, and live in production)
+  selectedLegacyFallback: 43 (deployed, persisted, and live in production)
+  selectedNone: 0
+  completePrefills: 221 (all 221 receive a complete prefill)
+  allTransactionsPrefilled: true
+  v2ProposalPlanCovered: 178; v2ProposalPlanAbstained: 43
+Production execution verified 2026-08-03 (with owner authorization):
+  status: CREATED
+  writesPerformed: true
+  createdSuggestionCount: 178
+  expiredSuggestionCount: 0
+  createsCategorizationSuggestion: true
+  createsTransactionBooking: false
+  createsReviewDecision: false
+  mutatesBankFacts: false
+Production data integrity verified post-execution. 178 owner-history-v2 suggestions persisted. Legacy fallbacks remain 43. No bookings, decisions, or transactions changed. 221 transactions ready for manual administrator review and confirmation.
 ```
 
 ## Authoritative Progress
@@ -1636,6 +1657,52 @@ Controlled production suggestion persistence evidence:
 - The execution guard `ALLOW_SUGGESTION_BACKFILL_EXECUTION` was disabled immediately afterward and independently verified disabled in Dokploy. No unrelated runtime environment field changed.
 - Post-execution controls remain `cashStatus: PASSED`, `classificationStatus: PENDING`, `closeStatus: BLOCKED`, 902 transactions, 221 unresolved transactions, zero duplicate fingerprints, and zero running-balance errors. No `TransactionBooking`, `ReviewDecision`, transaction finalization, period close, report snapshot, bank-fact, opening-balance, or migration write occurred.
 
+### SUGGEST-007 — Prefill selector hardening and eligibility validation contract
+
+Status: `BEST-PREFILL HARDENING — LOCAL_VALIDATED / PRODUCTION COMPARISON PENDING`
+
+Dependencies: SUGGEST-006
+
+Expected files:
+
+- `server/services/reviewQueueService.ts` (hardened with eligibility validation and producer classification)
+- `server/services/ownerHistoryProposalEvidenceService.ts` (owner-history-v2 proposal generation)
+- `server/cli/runBestPrefillComparison.ts` (read-only dry-run projection CLI)
+- `scripts/best-prefill-comparison.mjs` (deprecated; redirects to TypeScript CLI)
+
+Implemented behavior:
+
+- **Eligibility validation gate**: prefill selection enforces a required eligibility contract. All prefilled suggestions must pass validation: relation availability (project, type, category must exist and be active in the workspace), state consistency (all three dimensions must belong to the same workspace and transaction direction), and direction matching (transaction-type direction must be compatible with transaction direction).
+- **Producer tier classification**: suggestions are classified as one of three producer tiers: `OWNER_HISTORY_V2` (owner-approved producer, highest priority), `LEGACY_UNOWNED` (legacy unowned suggestions without producer key), `UNRECOGNIZED` (producer key mismatch or unknown producer — rejected from prefill).
+- **Unknown producer rejection**: suggestions from unknown producers (non-null `producerKey` that is not `OWNER_HISTORY_V2`) are entirely excluded from prefill consideration and from the review-queue selector. This future-proofs against rogue proposals.
+- **Direction and workspace consistency validation**: prefill ensures transaction direction matches the transaction-type direction constraint and all dimensions are workspace-scoped.
+- **Inactive relation rejection**: any suggestion referencing an inactive project, transaction type, or category is marked ineligible.
+- Read-only CLI comparison tool projects the outcome of prefill selection with owner-history-v2 enabled: dry-run only (no writes), shows eligibility validation decisions, producer tier distribution, and whether owner-history-v2 or legacy is selected for each transaction.
+
+Acceptance:
+
+- Eligibility contract is enforced in the review-queue selection path.
+- Producer classification filters out unknown producers entirely.
+- Direction and workspace consistency are validated.
+- Inactive relations are rejected.
+- Dry-run CLI shows projected coverage and producer tier distribution (dry-run shows estimated counts; specific row selection remains subject to actual v2 proposal generation at execution time).
+
+Validation:
+
+- Focused eligibility and producer-classification tests pass (47 tests including TRANSACTION_MISMATCH and trusted-context workspace checks).
+- Review-queue service tests pass with new trusted-context validation logic (45 tests).
+- Route tests updated for `workspaceId` in actor and `getEvidenceRichReviewQueue` 4-arg signature.
+- Clerk auth tests updated to include `workspaceId` in actor assertion.
+- Server TypeScript build passes (zero errors).
+- Full test suite passes (1762 tests; 2 pre-existing infra failures unrelated to this work).
+- CLI (`runBestPrefillComparison.ts`) rewritten with production-parity scope resolution — requires exact `DEFAULT_WORKSPACE_ID` and `DEFAULT_USER_ID`, uses `buildReviewQueueTransactionWhere`, batch-loads project/type/category records, constructs `ReviewPrefillTrustedContext` per transaction, calls `checkPrefillEligibility` with current DB state, and supports `--expected-total / --expected-complete-prefills / --expected-none` fail-closed assertions.
+- Prefill badge (`getReviewPrefillPresentation`) rendered in `ReviewRow` in `FinanceReviewPage.tsx` with amber styling for `warning` tone.
+- Production comparison not yet executed (next step: run with `--expected-total 221 --expected-complete-prefills 221 --expected-none 0`).
+
+Note:
+
+The dry-run comparison CLI requires `DATABASE_URL`, `DEFAULT_WORKSPACE_ID`, and `DEFAULT_USER_ID`. It validates that the workspace and user membership exist, uses exact env var lookup (no `findFirst()`), and batch-loads current DB records to run `checkPrefillEligibility` for each projected v2 proposal. Fail-closed assertion flags prevent silent coverage regressions.
+
 ## Exact next execution sequence
 
 Phases 0–9 are complete as a published RC4 owner-decision handoff through `f2f7cbb`. Phase 10 production schema cutover was completed on 2026-07-07: PostgreSQL 15.8, database finance, schema finance, 4 migrations applied, 30 tables verified. Evidence: `docs/PRODUCTION_SCHEMA_CUTOVER_EVIDENCE_NL.md`.
@@ -1878,7 +1945,7 @@ Merchant merge, merchant split, and knowledge-reassignment confirmation are defe
 
 The exact next implementation task is Phase 4.1 only. It must define a side-effect-free, workspace-scoped confirmed-history eligibility contract over current bookings and review decisions; exclude pending, rejected, generated, superseded, and otherwise ineligible suggestions or decisions; preserve provenance and locked-period rules; emit a reproducible eligible-history set; and add focused contamination/isolation/no-write tests.
 
-Phase 5 may begin only when all Phase 4 slices pass, the corrected 221-item deterministic pre-AI baseline is frozen and reproducible, candidate and Decision contracts are versioned and valid-ID constrained, every eligible item receives a deterministic Decision or explicit abstention, and provider/privacy/security/cost plus no-booking/no-contamination gates are approved.
+Phase 5.1 requires Gate A only. Phases 5.2–5.3 require Gate B. Phases 5.4–5.8 require Gate C. Phase 6 and Phase 7 require Gate D at their documented boundaries. Phase 4 is complete and provides the deterministic pre-AI baseline. Provider, privacy, security, and cost design are Gate C prerequisites for Phase 5.4 real inference — they are not prerequisites for Phase 5.1, 5.2, or 5.3.
 
 ## NEXT — Program Phase 4: Retrieval and Decision Foundation
 
@@ -1901,26 +1968,135 @@ Phase 5 may begin only when all Phase 4 slices pass, the corrected 221-item dete
 | 4.7 Isolation and integrity validation — COMPLETE | Proves the complete deterministic Phase 4 pipeline is workspace-scoped, read-only, privacy-safe at its externally consumable boundaries, deterministic under replay, and unable to book, mutate facts, bypass locks, or persist conceptual Decisions/orchestration. | `deterministicPhase4Integrity.test.ts`, full Phase 4.1–4.7 plus booking/review/period/ledger/auth regressions, server/full builds, diff and scans. | Integrity report showing zero planning writes/transactions, strict suggestion-versus-booking separation, locked-period/ledger preservation, stale-identity rejection, and rollback by removing the test-only proof. |
 | 4.8 Benchmark baseline — COMPLETE | Uses the authoritative database-backed 2026 open-statement cohort and current administrator-confirmed booking/review outcomes without duplicating the 221 rows into fixtures. | `deterministicBenchmarkEvaluationService.ts`, `deterministicBenchmarkRunnerService.ts`, `runDeterministicBenchmark.ts`, focused tests, and `benchmark:deterministic` package script. Focused 21/21 and affected regressions 131/131 pass. Server and full builds pass. High-risk and secret-material scans clean. | Live read-only execution succeeded: sourceId `finance-db-open-statement-2026-221`; totalSourceRows 221; sourceHash `524b03d6f105798144a958804a1f9efaa554ef09d81fd59d9523813738f75a0d`; reportHash `526c3b6686b4db0a3be06dc8809f07329fbd8d569b2bc8e3d255fa27c376da46`; replay verified; zero writes; zero Prisma transactions. All 221 rows are `UNLABELED_PENDING_CONFIRMATION` — no confirmed labels exist yet. Phase 5 gate: `PHASE_5_GATE_UNDECIDABLE` / `NO_COMMITTED_NUMERIC_ACCEPTANCE_THRESHOLDS`. Starting commit: `6fd0024`. |
 
-## TODO — Program Phase 5: AI Decision Engine
+## Program Phase 5 entry-gate decision package
+
+**Status: GATE A APPROVED — PHASE 5.1 DONE_LOCAL_UNCOMMITTED — GATE B APPROVED — PHASE 5.2 DONE_LOCAL_UNCOMMITTED — PHASE 5.3 DONE_LOCAL_UNCOMMITTED — GATE C POLICY APPROVED — METADATA VALUES PENDING — PHASE 5.4A NOT STARTED — SYNTHETIC SMOKE BLOCKED ON PHASE 5.4A — REAL SHADOW RUN BLOCKED**
+
+Phase 4 is complete. All eight slices (Phase 4.1–4.8) are implemented, validated, and
+deployed. The deterministic benchmark runner executed successfully against production on
+2026-07-31 with zero writes, source hash
+`524b03d6f105798144a958804a1f9efaa554ef09d81fd59d9523813738f75a0d`, and report hash
+`526c3b6686b4db0a3be06dc8809f07329fbd8d569b2bc8e3d255fa27c376da46`. Replay was verified.
+All 221 benchmark rows are `UNLABELED_PENDING_CONFIRMATION`.
+
+Entry-gate decision brief: `docs/PHASE_5_AI_DECISION_ENGINE_ENTRY_GATE.md`
+
+The brief was revised on 2026-08-01 to replace a single all-or-nothing gate with four
+distinct tiered gates. The prior gate incorrectly required model accuracy, provider failure
+rate, inference latency, cost, and calibration quality before Phase 5.1 could begin. Phase
+5.1 is a permanently disabled server-only provider abstraction that makes no external calls
+and produces no model output; those properties cannot be measured at Phase 5.1 time.
+
+### Gate A — Phase 5.1 — APPROVED AND IMPLEMENTED
+
+Owner explicitly approved all fourteen Gate A conditions (A1–A14) on 2026-08-01 through
+the Phase 5.1 implementation instruction. Phase 5.1 has been implemented and validated
+locally. The implementation remains uncommitted and is not integrated or deployed.
+
+Phase 5.1 did **not** require and does **not** include:
+- a labeling strategy decision (moved to pre-Gate-C; not required for Gate A);
+- confirmed benchmark labels;
+- numeric model-performance thresholds;
+- a final Bedrock region, model identifier, or AWS credentials;
+- the AWS SDK;
+- privacy approval for real data transmission.
+
+### Gate B — Phase 5.2–5.3 — APPROVED; Phase 5.2 and Phase 5.3 implemented locally
+
+Payload categories, prohibited fields, candidate restrictions, output schema, invalid-ID
+behavior, malformed-output behavior, abstention contract, size bounds, and privacy-safe
+test fixtures. No live Bedrock account required.
+
+### Gate C — Phase 5.4A / Gate C-S / Phase 5.4B / Phases 5.5–5.8 (policy approved; metadata values pending; progression non-circular)
+
+C1–C14 policy decisions were approved by the owner on 2026-08-02. The labeling strategy
+(Option 2, stratified cohort) is approved. See
+`docs/PHASE_5_AI_DECISION_ENGINE_ENTRY_GATE.md`, Section G.1 and Approval C.
+
+Gate C proceeds in five non-circular stages: Gate C-P (policy — COMPLETE), Gate C-M
+(metadata-only live values — PENDING), Phase 5.4A (no-invocation provider integration —
+NOT STARTED), Gate C-S (one authorized synthetic invocation, post-Phase-5.4A — BLOCKED ON
+PHASE 5.4A), Phase 5.4B (first real shadow run — BLOCKED).
+
+The following Gate C-M live-verification values remain unresolved:
+
+- **C2** — Bedrock region: `OWNER_TO_SELECT_AFTER_LIVE_ACCOUNT_VERIFICATION`
+- **C3** — Exact pinned model identifier: `OWNER_TO_SELECT_FROM_LIVE_BEDROCK_MODEL_CATALOG`
+- **C4a** — Catalog, pricing, and provider-terms metadata: not yet collected (no invocation required)
+- **C9** — Daily, monthly, and per-run monetary caps: `OWNER_TO_SET_AFTER_MODEL_AND_PRICING_VERIFICATION`
+
+The following values are required only before Phase 5.4B, not before Phase 5.4A or Gate C-S:
+
+- **C4b** — Invocation proof: resolved by Gate C-S (one synthetic invocation after Phase 5.4A)
+- **Exact Option 2 cohort size**: `OWNER_TO_SELECT_EXACT_COHORT_SIZE_FROM_60_TO_100` (required before Phase 5.4B only)
+
+Phase 5.4A may begin after Gate C-M is resolved and owner authorization is given. Gate C-S
+is a post-implementation validation gate, not a pre-implementation requirement. Phase 5.4B
+requires C4b, exact cohort, frozen labels, and final owner authorization.
+
+A metadata-only live-verification plan (Section G.2) and a separate synthetic-invocation plan
+(Section G.3 — post-Phase-5.4A) are prepared but not authorized. No live AWS verification,
+credentials, provider call, label creation, configuration change, or Phase 5.4A implementation
+is authorized without explicit owner instruction.
+
+### Gate D — Phase 6 and Phase 7 (blocked on Phase 5 shadow output and frozen labels)
+
+Numeric model-performance thresholds (accuracy, coverage, abstention, false-high-confidence,
+latency, cost, calibration). These thresholds cannot be approved before Phase 5 shadow output
+exists and confirmed benchmark labels are frozen. The illustrative values in Section H of the
+brief are labeled `ILLUSTRATIVE — NOT APPROVED — REQUIRES MEASUREMENT`.
+
+## Manual review and financial close readiness (2026-08-02 verified)
+
+The core finance application is live and operational (production SHA
+`8717a22163278d12f0b14f7aacc5779f8536186a`). All 221 unresolved 2026 transactions are
+reachable and individually reviewable. 663 review-only suggestions (3 per transaction,
+`history-v1`, all `DEFAULT` confidence, all `conflict` deterministicStatus) are persisted
+as review prefills — they are not accounting truth and do not create bookings. Human
+administrator confirmation remains mandatory for every transaction: every confirmation
+requires a complete project / transaction type / category triple. Incomplete-dimension
+submissions are rejected with `400`. The confirmation path creates exactly one
+`TransactionBooking` and one `ReviewDecision` per transaction.
+
+**Manual review and financial close are independent of the AI roadmap.** Gate C-M, Phase
+5.4A, Gate C-S, Phase 5.4B, and all later AI work are not prerequisites for manual review
+or financial close. Phase 5.1–5.3 remain local, uncommitted, isolated, and undeployed. No
+AI code or Bedrock integration is active in production.
+
+Cash integrity: PASSED. Duplicate fingerprints: 0. Running-balance errors: 0. Classification
+status: PENDING (221 unresolved). Close status: BLOCKED on 221 unresolved transactions.
+
+## IN PROGRESS — Program Phase 5: AI Decision Engine
 
 **Phase objective:** add constrained Bedrock Claude Haiku shadow inference to the Decision Engine while preserving human confirmation and trusted-history purity.
 
-**Phase prerequisites:** Phase 4 retrieval, candidate, and Decision contracts validated; privacy, security, provider, and cost design approved.
+**Phase prerequisites:** Phase 4 retrieval, candidate, and Decision contracts validated. Phase 5.1 requires Gate A only. Phases 5.2–5.3 require Gate B. Phase 5.4A requires Gate C-M (metadata values) plus owner authorization. Gate C-S requires Phase 5.4A complete plus separate owner authorization. Phase 5.4B requires Gate C-S (C4b resolved), exact cohort, frozen labels, and final owner authorization. Phases 5.5–5.8 require Phase 5.4B. Phase 6 and Phase 7 require Gate D. See `docs/PHASE_5_AI_DECISION_ENGINE_ENTRY_GATE.md`.
 
 **Phase exclusions:** no direct booking, no client-side model access, no learning from unconfirmed output, no Sonnet fallback, and no routine Opus use.
+
+**Current position:**
+- Phase 5.1: `DONE_LOCAL_UNCOMMITTED` — locally implemented and validated; uncommitted; not integrated or deployed.
+- Phase 5.2: `DONE_LOCAL_UNCOMMITTED` — provider-neutral request/response schemas and non-throwing parser implemented and validated; uncommitted; not integrated or deployed.
+- Phase 5.3: `DONE_LOCAL_UNCOMMITTED` — pure trusted-context, stale-set, candidate-membership, dimension, and candidate-integrity validation implemented and validated; uncommitted; not integrated or deployed.
+- Phase 5.4A: `NOT STARTED` — blocked on Gate C-M live values (C2, C3, C4a, C9 monetary caps); policy (C1–C14) and labeling strategy (Option 2) approved; Phase 5.4A may begin only after Gate C-M is resolved and owner authorization is given; no invocation; no labels; no cohort run.
+- Gate C-S (synthetic smoke): `BLOCKED ON PHASE 5.4A` — one separately authorized synthetic invocation; post-Phase-5.4A validation gate; resolves C4b.
+- Phase 5.4B (first real shadow run): `BLOCKED` — requires C4b, exact cohort size, frozen labels, and final owner authorization.
+- Phase 5.5–5.8: `BLOCKED ON PHASE 5.4B`.
 
 ### Phase 5 bounded slices
 
 | Slice | Objective and prerequisites | Anticipated areas, tests, and validation | Completion evidence and rollback |
 |---|---|---|---|
-| 5.1 Server-side Bedrock boundary | Define a trusted server-only inference adapter after verifying runtime and configuration conventions. | Configuration/client boundary subject to source verification; missing config, disabled provider, secret isolation, workspace, and no-browser-credential tests. | Provider adapter can be disabled without affecting review. Rollback removes its contribution. |
-| 5.2 Structured request and response contracts | Send minimum approved context and require schema-constrained structured output. | Decision/inference DTOs subject to source verification; schema, payload minimization, size-limit, malformed-output, and privacy tests. | Versioned safe contract with no secret or unrelated data exposure. Rollback returns deterministic-only Decisions. |
-| 5.3 Valid-ID enforcement | Reject every model selection outside supplied candidate sets. | Output validator; project/type/category membership, direction compatibility, stale candidate, and abstention tests. | Out-of-set IDs never reach review. Rollback disables model contribution. |
-| 5.4 Haiku shadow inference | Run Haiku only in shadow mode over approved benchmark and eligible review items. | Inference orchestration subject to source verification; no-prefill/no-booking, idempotency, duplicate-decision, workspace, and side-effect tests. | Shadow results stored or reported separately from reviewer-visible truth. Rollback deletes derived shadow output. |
-| 5.5 Versioning | Record model, prompt, retrieval, candidate-set, Decision Engine, evidence, and configuration versions. | Provenance/version contracts; missing-version, stale-decision, reproducibility, and serialization tests. | Every shadow decision is attributable and comparable. Rollback marks prior decisions stale. |
-| 5.6 Timeout, retry, budget, and abstention | Fail closed under provider or budget pressure. | Bounded retry/timeouts, rate and budget controls, invalid response, partial failure, and fallback-to-review tests. | Failures yield abstention or deterministic-only Decisions. Disable switch is verified. |
-| 5.7 Security and privacy verification | Prove server-only access, least-data payloads, safe logs, and workspace isolation. | Security review, secret scan, log-redaction, cross-workspace, retention, and provider-request evidence. | Approved privacy/security checkpoint. Rollback disables provider access. |
-| 5.8 No-booking integrity | Prove model output cannot create accounting truth or trusted learning data. | Booking, review-decision, locked-period, audit, and trusted-history contamination tests; affected builds/type checks. | Zero AI-created bookings and zero unconfirmed learning examples. Rollback leaves manual review unchanged. |
+| 5.1 Server-side Bedrock boundary (Gate A) — `DONE_LOCAL_UNCOMMITTED` | Define an isolated, configuration-free, permanently disabled server-only inference adapter. Phase 5.1 does not modify `deterministicDecisionOrchestrationService.ts`, does not introduce an optional inference-contributor slot, is not called by routes, review reads, benchmark runners, background jobs, or startup code, and adds no provider configuration, SDK, credentials, or environment variables. The adapter is a server-only module whose safety contract is proven by tests. | Files: `server/services/bedrockInferenceAdapter.ts` and `tests/services/bedrockInferenceAdapter.test.ts`. Focused tests: 12/12 passed (construction, exact disabled result, determinism, input independence, no identity echo, no sentinel echo, no `fetch` call, no mutable state, valid-identity runtime contract, type-contract function reference, forbidden source terms, no existing runtime imports). Compile-time contract: `assertInvocationIdentityTypeContract` uses `@ts-expect-error` to prove `workspaceId` and `targetTransactionId` are mandatory; no `TS2578` diagnostic. Regression: `deterministicDecisionOrchestrationService.test.ts` 10/10 passed. Server build: passed. Application build: passed. `tsconfig.json` check: zero errors for new files; no `TS2578`. `git diff --check`: clean. Secret scan: clean (no `AKIA`, `ASIA`, `ghp_`, `sk_`, `process.env`, `@aws-sdk`, or credential-shaped prefix in either file). No existing runtime module imports the adapter. | Complete removal of the two new files restores the exact prior runtime behavior (A14). Rollback is complete removal. Integration begins only in a later approved slice after Gate B and Gate C approval. |
+| 5.2 Structured request and response contracts — `DONE_LOCAL_UNCOMMITTED` | Defines provider-neutral, strict request/response DTOs over approved Gate B fields, grouped bounded candidates, lowercase `credit`/`debit`, optional all-or-nothing amount/currency, provider-only abstention reasons, and a non-throwing raw-text parser. | Files: `server/services/inferenceContractService.ts` and `tests/services/inferenceContractService.test.ts`. Focused tests: 58/58 passed. Phase 5.1 regression: 12/12. Deterministic orchestration regression: 10/10. Server and Next.js builds passed. Full `tsconfig.json` remains non-zero only for pre-existing diagnostics outside Phase 5.1–5.2. High-risk scan across all Phase 5.1–5.2 files returned zero findings. | Approved limits: 10 candidates per dimension, 30 total descriptors, 128-character candidate IDs/labels, 16,384-byte request, 4,096-byte response. No Prisma, provider SDK, environment reads, model calls, runtime integration, package/lockfile change, database effect, deployment, commit, or push. Rollback deletes the two Phase 5.2 files. |
+| 5.3 Valid-ID enforcement — `DONE_LOCAL_UNCOMMITTED` | Purely validate trusted workspace, target-transaction, and candidate-set identity before any provider outcome; pass valid provider abstentions through only after trusted-context checks; fail closed on incomplete, duplicate, missing, cross-dimension, ambiguous, inactive, direction-incompatible, or wrong-dimension proposal selections. | Files: `server/services/inferenceCandidateValidationService.ts` and `tests/services/inferenceCandidateValidationService.test.ts`. Focused tests: 25/25 passed. Phase 5.2 contract regression: 58/58 after one owner-approved assertion repair permitting type-only imports while still rejecting runtime imports. Phase 5.1, restricted-candidate, and deterministic-orchestration regressions: 12/12, 12/12, and 10/10. Server and Next.js builds passed. Full `tsconfig.json` remains non-zero only for pre-existing diagnostics outside Phase 5.1–5.3. High-risk scan across all six Phase 5.1–5.3 code and test files returned zero findings. | `STALE_CANDIDATE_SET` is emitted only for trusted context or candidate-set identity mismatch; `INVALID_CANDIDATE_SELECTION` covers all proposal membership and candidate-integrity failures. No Prisma, provider call, runtime integration, database effect, deployment, commit, or push. Rollback removes the two Phase 5.3 files and restores the prior runtime because no existing runtime module imports them. |
+| 5.4A Provider integration and synthetic-smoke readiness — `NOT STARTED` | Implement the server-only Bedrock provider adapter, controls, and synthetic smoke harness with no model invocation. Prerequisites: Gate C-M resolved (C2, C3, C4a, C9 caps confirmed) and separate owner authorization. May implement: provider adapter, pinned region/model config, credential-provider integration (no values), default-off, kill switch, timeout/retry/concurrency/rate/circuit-breaker/budget/deduplication controls, minimum-payload construction, Phase 5.2 parser integration, Phase 5.3 validator integration, privacy-safe logging, fixed synthetic smoke harness, and tests proving no provider call while disabled and no accounting mutation. Must not invoke a model, transmit payloads, create labels, process the approved cohort, integrate into ordinary review reads, persist shadow Decisions, or deploy automatically. | Inference adapter, configuration boundary, Phase 5.2–5.3 integration, operational controls, synthetic test harness, and directly relevant tests — subject to exact-source verification. | No-invocation tests proving disabled state; no accounting mutation tests; security scan clean; server and application builds passed; rollback deletes the Phase 5.4A files and disables the feature. |
+| Gate C-S One separately authorized synthetic invocation — `BLOCKED ON PHASE 5.4A` | Make exactly one synthetic invocation after Phase 5.4A is validated and Gate C-S authorization is issued. G.3 is a post-implementation validation gate. Proves: configured identity can invoke the pinned model; response reaches the Phase 5.2 parser; logging and cost metadata work safely; no finance or review mutation occurs. Successful evidence resolves C4b. Failure leaves deterministic-only behavior active and blocks Phase 5.4B. | Synthetic payload approved in advance; evidence record captures invocation timestamp, region, model ID, response structure match, latency, tokens, cost metadata — no request/response bodies. | C4b resolved. Evidence record confirmed by owner. No database write; no booking; no shadow Decision record; no label creation. |
+| 5.4B First bounded real-data shadow run — `BLOCKED` | Run Haiku in shadow mode over the approved labeled cohort after Gate C-S succeeds, exact cohort is selected, labels are frozen, and final owner authorization is issued. This is the first phase allowed to transmit approved real transaction-derived fields. | Inference orchestration subject to source verification; no-prefill/no-booking, idempotency, duplicate-decision, workspace, and side-effect tests. | Shadow results stored or reported separately from reviewer-visible truth. Rollback deletes derived shadow output. No real provider-backed cohort run belongs to Phase 5.4A. |
+| 5.5 Versioning — `BLOCKED ON PHASE 5.4B` | Record model, prompt, retrieval, candidate-set, Decision Engine, evidence, and configuration versions. | Provenance/version contracts; missing-version, stale-decision, reproducibility, and serialization tests. | Every shadow decision is attributable and comparable. Rollback marks prior decisions stale. |
+| 5.6 Timeout, retry, budget, and abstention — `BLOCKED ON PHASE 5.4B` | Fail closed under provider or budget pressure. | Bounded retry/timeouts, rate and budget controls, invalid response, partial failure, and fallback-to-review tests. | Failures yield abstention or deterministic-only Decisions. Disable switch is verified. |
+| 5.7 Security and privacy verification — `BLOCKED ON PHASE 5.4B` | Prove server-only access, least-data payloads, safe logs, and workspace isolation. | Security review, secret scan, log-redaction, cross-workspace, retention, and provider-request evidence. | Approved privacy/security checkpoint. Rollback disables provider access. |
+| 5.8 No-booking integrity — `BLOCKED ON PHASE 5.4B` | Prove model output cannot create accounting truth or trusted learning data. | Booking, review-decision, locked-period, audit, and trusted-history contamination tests; affected builds/type checks. | Zero AI-created bookings and zero unconfirmed learning examples. Rollback leaves manual review unchanged. |
 
 ## TODO — Program Phase 6: Evaluation, Calibration, and Observability
 

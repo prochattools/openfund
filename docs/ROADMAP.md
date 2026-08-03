@@ -73,7 +73,9 @@ Phase 15 — Real PDF renderer                     COMPLETE (2026-07-08; pdfkit 
 Phase 16 — Real email sending                    COMPLETE (2026-07-08; Resend provider abstraction; executeDispatch with guards; bounded production send verified via Resend)
 Phase 17 — Month-by-month accounting reconciliation and administrator reporting COMPLETE (2026-07-09; formula-based monthly chaining model; read-only production audit passed; baseline controls: 2024/2025/2026 confirmed)
 Phase 18 — Cent-exact accounting integrity and opening-balance repair COMPLETE (one-time production repair completed 2026-07-14; never repeat)
-Phase 19 — History-based review prefill            DEPLOYED (history-v1; 681-booking evaluation; 663 review-only suggestions persisted; human approval remains mandatory)
+Phase 19 — History-based review prefill            DEPLOYED (history-v1; 681-booking evaluation; 663 review-only suggestions persisted; human approval remains mandatory; eligibility contract hardened; producer classification and unknown-producer rejection active; direction and workspace consistency validated)
+Phase 20 — Owner-history-v2 best-prefill           DEPLOYED AND LIVE (2026-08-03; canonical selectReviewPrefill selector; strict trusted-context; producer-aware rank-1 selection; 221/221 complete prefills live: 178 OWNER_HISTORY_V2 + 43 LEGACY_HISTORY_FALLBACK; 0 NONE; 178 suggestions persisted; production integrity verified)
+Phase 21 — Manual transaction review and confirmation READY (221 unresolved transactions; all completely prefilled; owner-led manual review through /review endpoint; each confirmation creates TransactionBooking + ReviewDecision; no automatic posting without human approval; accounting close eligible after review completion)
 ```
 
 ## Authoritative Progress
@@ -461,7 +463,19 @@ Adding any of these requires an explicit philosophy and strategy review before i
 
 ## Transaction Review and Intelligence Program
 
-Status: **roadmap aligned; Phase 2 and Phase 3 closeout pending; Phase 4 is NEXT**
+Status: **roadmap aligned; Program Phase 5 IN PROGRESS — Phase 5.1–5.3 DONE_LOCAL_UNCOMMITTED; GATE C POLICY APPROVED — METADATA VALUES PENDING — PHASE 5.4A NOT STARTED — SYNTHETIC SMOKE BLOCKED ON PHASE 5.4A — REAL SHADOW RUN BLOCKED**
+
+**Manual review and financial close status (2026-08-02):** Core finance application is live
+and operational. The 221 unresolved 2026 transactions are prepared for administrator manual
+review; none are categorized yet. 663 review-only suggestions (3 per transaction, algorithm
+`history-v1`) are persisted as review prefills — they are not accounting truth and do not
+create bookings. Human administrator confirmation remains mandatory for every transaction.
+Manual review and financial close can proceed immediately and independently of the AI
+roadmap. Gate C-M and all later AI work (Phase 5.4A through Gate D) are not prerequisites
+for manual review or financial close.
+
+Phase 5.1–5.3 remain local, uncommitted, isolated, and undeployed. No AI code or
+Bedrock integration is active in production.
 
 Approved: 2026-07-16  
 Implemented accounting/review architecture: `docs/ACCOUNTING_INTEGRITY_AND_REVIEW_PREFILL.md`  
@@ -482,11 +496,37 @@ Repository documentation is the authoritative project memory. Chat history is no
 Program Phase 1 — Baseline and instrumentation                 PARTIAL / BENCHMARK FREEZE PENDING
 Program Phase 2 — Review-table redesign and pagination         IMPLEMENTED / PRODUCTION CLOSEOUT PENDING
 Program Phase 3 — Merchant Knowledge Layer                     CORE COMPLETE / ACCEPTANCE CLOSEOUT PENDING
-Program Phase 4 — Retrieval and Decision Foundation            NEXT
-Program Phase 5 — AI Decision Engine                           BLOCKED ON PHASE 4 GATE
-Program Phase 6 — Evaluation, Calibration, and Observability   TODO
-Program Phase 7 — Controlled Rollout                           TODO
+Program Phase 4 — Retrieval and Decision Foundation            COMPLETE
+Program Phase 5 — AI Decision Engine                           IN PROGRESS — 5.1 DONE_LOCAL_UNCOMMITTED; 5.2 DONE_LOCAL_UNCOMMITTED; 5.3 DONE_LOCAL_UNCOMMITTED; GATE C POLICY APPROVED — METADATA VALUES PENDING — PHASE 5.4A NOT STARTED — SYNTHETIC SMOKE BLOCKED ON PHASE 5.4A — REAL SHADOW RUN BLOCKED
+Program Phase 6 — Evaluation, Calibration, and Observability   BLOCKED ON PHASE 5 SHADOW OUTPUT AND LABELED BENCHMARK
+Program Phase 7 — Controlled Rollout                           BLOCKED ON PHASE 6 GO/NO-GO
 ```
+
+Phase 4 is complete. All eight slices (4.1–4.8) are implemented, validated, and deployed.
+Gate A was approved by the owner on 2026-08-01. Phase 5.1 has been implemented and
+validated locally (see `docs/PHASE_5_AI_DECISION_ENGINE_ENTRY_GATE.md`); it remains
+uncommitted and is not integrated or deployed.
+
+- **Gate A (Phase 5.1):** APPROVED — server-only disabled boundary implemented locally.
+  `server/services/bedrockInferenceAdapter.ts` and `tests/services/bedrockInferenceAdapter.test.ts`
+  created; 12 focused tests pass; compile-time identity contract proven; clean security scan.
+  Implementation is uncommitted and isolated. Rollback by deleting the two files.
+- **Gate B (Phase 5.2–5.3):** APPROVED — Phase 5.2 and Phase 5.3 implemented and validated locally.
+  Phase 5.2 created `server/services/inferenceContractService.ts` and
+  `tests/services/inferenceContractService.test.ts`; 58 focused tests pass. Phase 5.3 created
+  `server/services/inferenceCandidateValidationService.ts` and
+  `tests/services/inferenceCandidateValidationService.test.ts`; 25 focused tests pass.
+  Phase 5.1, restricted-candidate, and orchestration regressions pass; server and Next.js builds
+  pass; high-risk scans are clean. All work remains uncommitted, isolated, and not deployed.
+- **Gate C (Phase 5.4A / Gate C-S / Phase 5.4B / Phases 5.5–5.8):** POLICY APPROVED — C1–C14 policy decisions and labeling strategy (Option 2) approved by owner on 2026-08-02. Gate C proceeds in five non-circular stages: Gate C-P (policy — COMPLETE), Gate C-M (metadata-only live values — PENDING), Phase 5.4A (no-invocation provider integration — NOT STARTED), Gate C-S (one authorized synthetic invocation, post-Phase-5.4A — BLOCKED ON PHASE 5.4A), Phase 5.4B (first real shadow run — BLOCKED). Gate C-M values pending: C2 region, C3 pinned model identifier, C4a catalog/pricing/terms metadata (no invocation), C9 monetary caps. C4b (invocation proof) is resolved by Gate C-S, not required before Phase 5.4A. Exact Option 2 cohort size (`OWNER_TO_SELECT_EXACT_COHORT_SIZE_FROM_60_TO_100`) is required only before Phase 5.4B. A metadata-only verification plan (Section G.2) and a post-Phase-5.4A synthetic-invocation plan (Section G.3) are prepared but neither is authorized yet.
+- **Gate D (Phase 6–7):** PENDING — numeric model-performance thresholds; applicable only after
+  Phase 5 shadow output and confirmed benchmark labels exist.
+
+The entry-gate decision brief is at `docs/PHASE_5_AI_DECISION_ENGINE_ENTRY_GATE.md`.
+
+**Phase 5.1, Phase 5.2, and Phase 5.3 are locally implemented and uncommitted. Gate C policy decisions are approved. The exact next owner actions are: (1) authorize metadata-only live verification to resolve Gate C-M values (Section G.2 of the entry-gate document); (2) separately authorize Phase 5.4A implementation after Gate C-M is resolved; (3) select the exact Option 2 cohort size (an integer from 60 through 100) before Phase 5.4B only.**
+
+Phase 5.4A is not started; Gate C-S and Phase 5.4B remain blocked on Phase 5.4A. Phases 5.5–5.8 remain blocked on Phase 5.4B. Phase 6 remains blocked on Phase 5 shadow output plus frozen labels and Gate D thresholds. Phase 7 remains blocked on Phase 6 go/no-go.
 
 Normalized planning estimate — not an official product metric:
 
@@ -495,11 +535,11 @@ Normalized planning estimate — not an official product metric:
 | Phase 1 | 40% | Population and historical metrics exist; corrected 221-item benchmark freeze and dimension-level labels remain pending. |
 | Phase 2 | 90% | Review workflow, pagination, filtering, accessibility, authorization, and authenticated browser evidence exist; production closeout remains. |
 | Phase 3 | 95% | Core Merchant Knowledge, read UI, previews, and alias/merchant/conflict confirmations are complete; Phase 3.8E and consolidated Phase 3 validation remain. |
-| Phase 4 | 0% | Not started. |
-| Phase 5 | 0% | Not started. |
-| Phase 6 | 0% | Not started. |
-| Phase 7 | 0% | Not started. |
-| **Normalized seven-phase total** | **32%** | Equal-weight estimate: `(40 + 90 + 95) / 7`, rounded. |
+| Phase 4 | 100% | All eight slices complete and deployed; benchmark executed with zero writes; Phase 5 gate `UNDECIDABLE`. |
+| Phase 5 | 0% | 5.1, 5.2, and 5.3 implemented locally (uncommitted); Gate C policy approved; Gate C-M values pending (C2 region, C3 model ID, C4a catalog/pricing/terms, C9 monetary caps); Phase 5.4A not started; Gate C-S and Phase 5.4B blocked on Phase 5.4A; exact Option 2 cohort size pending before Phase 5.4B. |
+| Phase 6 | 0% | Blocked on Phase 5 shadow output and labeled benchmark. |
+| Phase 7 | 0% | Blocked on Phase 6 go/no-go. |
+| **Normalized seven-phase total** | **46%** | Equal-weight estimate unchanged; local uncommitted Phase 5.1–5.3 work does not shift the aggregate percentage. |
 
 Merchant merge, merchant split, and explicit knowledge-reassignment confirmation are deferrable administrator capabilities. The pure planning contracts, previews, audit model, rollback model, and safe-disable boundaries already exist; these three mutation surfaces are not required to produce the deterministic Phase 4 baseline or begin bounded Phase 5 shadow inference. They remain separately approved future Phase 3.8D slices and must not be implemented opportunistically.
 
@@ -571,7 +611,7 @@ Merchant merge, merchant split, and knowledge-reassignment confirmation are not 
 
 The smallest Phase 4 slice is Phase 4.1 only: define and test the confirmed-history eligibility contract over existing bookings and review decisions. It must produce a reproducible workspace-scoped eligible-history set, exclude all pending/rejected/generated suggestions and superseded or ineligible records, preserve locked-period and provenance rules, and perform no writes. This slice directly improves categorization quality by ensuring retrieval for the 221 transactions is based only on confirmed human outcomes.
 
-Program Phase 5 may begin only after all Phase 4 slices pass, especially a frozen reproducible pre-AI baseline for the corrected 221 transactions; the Decision request/response and candidate contracts are versioned; every candidate is active, workspace-scoped, and valid; deterministic Decisions or explicit abstentions exist for every eligible benchmark item; privacy/security/provider/cost design is approved; and integrity tests prove zero booking, bank-fact, locked-period, or trusted-history contamination.
+Program Phase 5.1 may begin only after Gate A is explicitly approved. Program Phases 5.2–5.3 require Gate B. Program Phases 5.4–5.8 require Gate C. Program Phase 6 evaluation and Phase 7 rollout require Gate D at their documented boundaries. The Phase 4 deterministic foundation is validated and provides the reproducible pre-AI baseline. Privacy, security, provider, and cost design are Gate C prerequisites that apply to Phase 5.4 real inference and later phases. They are not prerequisites for Phase 5.1, 5.2, or 5.3.
 
 ### Program Phase 4 — Retrieval and Decision Foundation
 
@@ -597,7 +637,7 @@ Program Phase 5 may begin only after all Phase 4 slices pass, especially a froze
 
 **Objective:** introduce server-side Bedrock Claude Haiku as the constrained default classifier, enforce schema-constrained valid-ID output, permit abstention, version every inference dependency, and operate initially in shadow mode.
 
-**Dependencies:** Program Phase 4 deterministic retrieval and candidates validated; approved privacy, security, provider, and cost design; `docs/architecture/DECISION_ENGINE_ARCHITECTURE.md` approved.
+**Dependencies:** Program Phase 4 deterministic retrieval and candidates validated; `docs/architecture/DECISION_ENGINE_ARCHITECTURE.md` approved. Phase 5.1 requires Gate A only. Phases 5.2–5.3 require Gate B. Phases 5.4–5.8 require Gate C (provider, privacy, cost, credentials). Phase 6 and Phase 7 require Gate D.
 
 **Scope:** trusted server-side Bedrock boundary; structured request and response contracts; supplied-valid-ID enforcement; Haiku shadow inference; prompt, model, retrieval, candidate-set, Decision Engine, calibration-input, and evidence versioning; bounded timeout, retry, budget, and abstention behavior; provenance, latency, and cost evidence.
 

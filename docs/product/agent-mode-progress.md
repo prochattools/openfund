@@ -1,0 +1,1540 @@
+# Agent Mode Progress — History-Based Prefill Launch Complete
+
+Updated: 2026-08-03 18:30 +01:00 (production verified and live)
+
+## Repository lock
+
+- Source: `yeshuaacademy-finance`
+- Branch: `main`
+- Local tip: `3c2d5eb fix(deploy): apply Prisma migrations before startup`
+- Ownership commit: `f2d3dc0 fix(suggestions): scope owner-history execution by producer`
+- Previous rollout recovery run: `agent-74786ab1-4223-4411-8104-a70758c48ade` (ended)
+- New conversation: check for a matching active run; otherwise create a bounded deployment-convergence run
+
+Do not switch source, branch, or repository.
+
+## Status: COMPLETE
+
+**2026-08-03:** History-based prefill launch complete.
+
+Production deployed commit: `678525766159919927771abf2042a47b19757f55` (feat(review): deploy producer-aware best-prefill selection)
+
+Owner-history-v2 suggestions: 178 persisted and live in production.
+
+Remaining operational work: 221 unresolved transactions ready for manual owner review and confirmation through the /review endpoint.
+
+## Completed activities
+
+- Dry-run verification (2026-08-03, 10:22–10:35 UTC)
+- Plan execution with owner authorization (2026-08-03, 10:36 UTC)
+- Post-execution read-only verification (2026-08-03, 10:37–10:42 UTC)
+- Production integrity confirmed
+- All 221 review rows completely prefilled (178 v2, 43 legacy fallback, 0 none)
+- No bookings, decisions, or finance facts changed
+- Application remains live and healthy
+
+## Completed implementation
+
+Two commits are already on `main` and were pushed together once:
+
+1. `f2d3dc0 fix(suggestions): scope owner-history execution by producer`
+2. `3c2d5eb fix(deploy): apply Prisma migrations before startup`
+
+The second commit directly follows the first.
+
+### Suggestion ownership contract
+
+`CategorizationSuggestion` now has nullable:
+
+- `producerKey`
+- `producerVersion`
+- `planHash`
+
+Ownership semantics:
+
+- `NULL` means legacy/unowned.
+- There is no heuristic backfill.
+- Owner-history-v2 uses:
+  - `producerKey = owner-history`
+  - `producerVersion = v2`
+  - reviewed `planHash`
+  - rank `1` only
+- Duplicate and expiration scope is exact workspace, transaction, producer key, and producer version.
+- Legacy, manual, administrator-created, generic history-backfill, other-producer, and other-version suggestions remain outside owner-history-v2 mutation scope.
+
+The additive migration is:
+
+`prisma/migrations/20260731000000_add_suggestion_producer_ownership/migration.sql`
+
+It contains no data backfill and no destructive data operation. PostgreSQL-safe index names are:
+
+- `CategorizationSuggestion_owner_lookup_idx`
+- `CategorizationSuggestion_owner_evidence_key`
+
+### Fail-closed production startup migration
+
+`scripts/start-prod.mjs` now:
+
+- requires `DATABASE_URL`;
+- invokes the bundled Prisma CLI directly with `shell: false`;
+- runs `prisma migrate deploy` before API or web startup;
+- waits for successful migration completion;
+- starts neither API nor web if migration fails or cannot start;
+- preserves signal-driven shutdown handling;
+- does not log database credentials;
+- has no migration bypass.
+
+Focused coverage is in:
+
+`tests/ops/productionStartupMigration.test.ts`
+
+## Validation already completed
+
+Focused startup tests:
+
+- 6/6 passed
+
+Combined startup, ownership, migration-chain, review, route, and backfill tests:
+
+- 66/66 passed
+
+Full release-candidate validation job:
+
+`validation-83b675d7-c329-4690-95f6-1ef072f5c8de`
+
+Result:
+
+- 181 test files passed
+- 1,627 tests passed
+- 2 skipped
+- Prisma migrate deploy/status/drift checks passed
+- Prisma validate/generate passed
+- server build passed
+- Next production build passed
+- backup/restore rehearsal dry-run passed
+- `git diff --check` passed
+- changed-path secret scan passed
+- runtime scan found only the intentional fixed-command startup `spawn`; manual review confirmed `shell: false`
+- network/upload scan found no new startup network behavior
+
+## Current repository state
+
+Before this handoff update:
+
+- `main` tip was `3c2d5eb`
+- worktree was clean
+
+This handoff file is now the only expected uncommitted change unless later work deliberately adds evidence.
+
+Do not amend or recreate the two deployment commits.
+
+## Current production state
+
+Latest privacy-safe production check still reports the previous deployed SHA:
+
+`0de09fbd30fbb1956657cbefa4c01ad146fc60d6`
+
+Production is healthy on that prior release:
+
+- `/api/deployment-info`: 200
+- `/api/health`: 200
+- `/api/ledger`: 200, 902 transactions
+- `/api/review?page=1&pageSize=25`: 200
+- `/api/reference-data/projects`: 200
+
+The new tip `3c2d5eb` has not yet converged in production.
+
+No manual migration fallback, SQL, proposal execution, suggestion mutation, or Phase 5 work occurred.
+
+## Previously stable read-only evidence
+
+Before deployment of the ownership migration, production read-only checks were stable twice:
+
+- Proposal hash: `748ab9695d249f4edec5fca99f132753088bac7e2a3d65726ff9d2d1b999dd1c`
+- Audit hash: `02d639e0d7c983b43a577e41653ef7e995cdd4a3955b05b1d00bdf90ca0e2695`
+- Historical evidence: 681
+- Proposed targets: 178
+- Abstained targets: 43
+- Direction audit: 460 credit, 221 debit, 0 unknown
+- Zero writes
+
+## Expected protected-state baseline
+
+Before proposal execution, require:
+
+- transactions: 902
+- confirmed bookings: 681
+- ReviewDecision records: 0
+- pending suggestions: expected 663
+- legacy/unowned pending suggestions: expected 663
+- owner-history-v2 owned suggestions: expected 0
+- unowned suggestions on the 178 proposed targets: expected 534
+- planned owner-history-v2 creates: expected 178
+- planned expirations: 0
+- abstained targets: 43
+
+## Exact next task
+
+1. Lock source `yeshuaacademy-finance` and check for a matching active deployment-convergence run; otherwise create a new bounded run.
+2. Run `git_status_short`.
+3. Expect only `docs/product/agent-mode-progress.md` to be modified.
+4. Poll `node scripts/checkProductionDeployment.mjs` without another push or alternate deployment.
+5. Stop and report a deployment blocker if production remains on the old SHA after a reasonable deployment window.
+6. Once production reports the full SHA for tip `3c2d5eb`, verify deployment-info, health, ledger, review, and reference-data.
+7. Confirm startup migration success through approved privacy-safe application diagnostics only.
+8. Capture protected-state aggregate counts.
+9. Run the ownership audit twice and require matching hashes and zero writes.
+10. Run owner-history-v2 dry-run twice and require matching proposal hashes and zero writes.
+11. Confirm all 663 legacy suggestions remain untouched, including all 534 on proposed targets.
+12. Stop before proposal execution and keep Phase 5 blocked.
+13. Update this handoff with deployment and verification evidence.
+14. Close the Workbench run only after all evidence is persisted.
+
+## Required deployed ownership audit
+
+Run twice and require identical results:
+
+- total pending suggestions: 663 unless unrelated production activity is explicitly identified
+- unowned suggestions: 663
+- owner-history-v2 owned suggestions: 0
+- unowned suggestions on proposed targets: 534
+- planned expirations: 0
+- all legacy rows preserved
+- matching ownership-state hashes
+- zero writes
+
+## Required owner-history-v2 dry-run
+
+Run twice and require:
+
+- algorithm: `owner-history-proposal-v2`
+- historical evidence: 681
+- eligible evidence: 681
+- open targets: 221
+- proposed targets: 178
+- abstained targets: 43
+- rank policy: `RANK_1_ONLY`
+- unique proposed targets: 178
+- planned creates: 178 and never above 178
+- planned expirations: 0
+- repeated proposal hashes identical
+- zero missing directions
+- zero factual-direction conflicts
+- zero incomplete triples
+- zero inactive references
+- zero cross-workspace references
+- zero writes
+
+## Final stop boundary
+
+After deployed read-only verification:
+
+- do not execute the plan;
+- do not create the 178 suggestions;
+- do not expire any suggestion;
+- do not create ReviewDecision records;
+- do not modify confirmed bookings or finance facts;
+- do not begin Phase 5.
+
+
+## Ready-to-copy continuation prompt
+
+```text
+Continue work in the `yeshuaacademy-finance` repository.
+
+Read `docs/product/agent-mode-progress.md` first and treat it as the current
+source of truth.
+
+Lock source `yeshuaacademy-finance`, verify branch `main`, verify local tip
+`3c2d5eb`, and confirm the only worktree change is the handoff file unless
+unrelated activity is explicitly identified.
+
+Continue only post-push deployment convergence and ownership-aware production
+read-only verification for:
+
+- `f2d3dc0 fix(suggestions): scope owner-history execution by producer`
+- `3c2d5eb fix(deploy): apply Prisma migrations before startup`
+
+Do not push again.
+Do not trigger an alternate deployment.
+Do not run manual production SQL.
+Do not execute owner-history-v2 proposals.
+Do not create ReviewDecision records.
+Do not modify confirmed bookings or finance facts.
+Do not begin Phase 5.
+
+Poll the existing deployment with `node scripts/checkProductionDeployment.mjs`.
+Once production serves the exact deployment commit, complete every protected-
+state, ownership-audit, and owner-history-v2 dry-run check documented in the
+handoff. Run each ownership/proposal read-only check twice, require stable hashes
+and zero writes, update the handoff with the resulting evidence, then stop before
+proposal execution.
+```
+
+
+
+## Resume check — 2026-07-31 12:55 +01:00
+
+Workbench run: `agent-06954be8-2eb8-438d-b7fa-f50caae7075e`
+
+Repository verification:
+
+- source: `yeshuaacademy-finance`
+- branch: `main`
+- local tip: `3c2d5eb fix(deploy): apply Prisma migrations before startup`
+- worktree before this update: only `docs/product/` untracked, matching the expected handoff-only change
+
+Read-only production deployment poll completed with no file changes:
+
+- `/api/deployment-info`: 200
+- deployed SHA: `0de09fbd30fbb1956657cbefa4c01ad146fc60d6`
+- deployed ref: `main`
+- `/api/health`: 200
+- `/api/ledger`: 200, 902 transactions
+- `/api/review?page=1&pageSize=25`: 200, 25 returned transactions, 6 projects
+- `/api/reference-data/projects`: 200, 6 items
+
+Deployment blocker: production still serves the previous SHA rather than local tip `3c2d5eb` after approximately 49 minutes from the prior handoff timestamp. Per the stop boundary, no alternate deployment, push, manual SQL, ownership audit, owner-history-v2 dry-run, proposal execution, suggestion mutation, ReviewDecision creation, or Phase 5 work was performed.
+
+Exact resume point: poll the existing deployment again with `node scripts/checkProductionDeployment.mjs`. Continue protected-state and ownership-aware read-only verification only after `/api/deployment-info` reports the full SHA for `3c2d5eb`.
+
+
+
+## Deployment unblock — 2026-07-31 14:01 +01:00
+
+Workbench run: `agent-07150a01-7d7b-46f1-808d-6b42e01101de`
+
+Root cause identified in `.github/workflows/dokploy.yml`: the Dokploy trigger converted non-200 API responses into warnings and exited `0`, allowing GitHub Actions to report success while production remained on the previous SHA.
+
+Approved fix applied:
+
+- added `curl --retry 3 --retry-delay 5 --retry-all-errors`
+- retained response-body and HTTP-status logging
+- changed non-200 Dokploy responses from warning + `exit 0` to error + `exit 1`
+
+Validation and Git evidence:
+
+- Prettier check passed for `.github/workflows/dokploy.yml`
+- broad security scan only flagged expected GitHub secret references and the intentional curl deployment call; no literal secret material was introduced
+- commit: `8717a22 fix(deploy): fail closed when Dokploy trigger fails`
+- pushed: `3c2d5eb..8717a22 main -> main`
+- worktree after push: only expected untracked `docs/product/`
+
+Initial post-push production poll remained healthy but still reported:
+
+- deployed SHA: `0de09fbd30fbb1956657cbefa4c01ad146fc60d6`
+- deployed ref: `main`
+- ledger: 902 transactions
+- review page: 25 transactions, 6 projects
+- projects reference data: 6 items
+
+Exact next task: inspect the GitHub Actions run for commit `8717a22`. The workflow now fails visibly if Dokploy rejects the trigger. If the run succeeds, poll `node scripts/checkProductionDeployment.mjs` until `/api/deployment-info` reports `8717a22`. If it fails, use the surfaced HTTP status and response body to repair only the Dokploy integration or secret/configuration issue. Do not push unrelated changes, trigger an alternate deployment, run manual production SQL, execute owner-history-v2 proposals, mutate protected production state, or begin Phase 5.
+
+
+
+## Deployment unblock update — 2026-07-31 14:24 +01:00
+
+Diagnosis:
+
+- `.github/workflows/dokploy.yml` previously converted every non-200 Dokploy API response into workflow success with `exit 0`.
+- This allowed GitHub Actions to appear successful while production remained on the prior SHA.
+
+Approved fix completed:
+
+- commit: `8717a22 fix(deploy): fail closed when Dokploy trigger fails`
+- pushed: `main` to `origin/main`
+- workflow now retries transient curl failures three times and exits `1` on non-200 Dokploy responses
+- Prettier validation passed
+- targeted secret scan found only GitHub secret references, with no literal secret material
+
+Current production poll after the push:
+
+- `/api/deployment-info`: 200
+- production SHA: `0de09fbd30fbb1956657cbefa4c01ad146fc60d6`
+- production ref: `main`
+- `/api/health`: 200
+- `/api/ledger`: 200, 902 transactions
+- `/api/review?page=1&pageSize=25`: 200, 25 returned transactions, 6 projects
+- `/api/reference-data/projects`: 200, 6 items
+
+The repository-side silent-failure defect is fixed, but deployment convergence is not yet complete. The next operator must inspect the GitHub Actions run for commit `8717a22` and use the now-visible failure response from the `Trigger Dokploy redeploy` step to distinguish invalid/expired `DOKPLOY_API_KEY`, incorrect `DOKPLOY_APP_ID`, Dokploy API unavailability, or a downstream Dokploy deployment failure. Do not push another repository change until that evidence is read.
+
+
+
+## Actions evidence — 2026-07-31 15:30 +01:00
+
+Workbench run: current session
+
+Repository verification at session start:
+
+- source: `yeshuaacademy-finance`
+- branch: `main`
+- local tip: `8717a22 fix(deploy): fail closed when Dokploy trigger fails`
+- worktree: only `docs/product/` untracked — matches expected state
+
+GitHub Actions run for commit `8717a22`:
+
+- Run ID: `30633754512`
+- Workflow: `Build and Deploy`
+- Conclusion: `success`
+- Run started: `2026-07-31T13:15:52Z`
+
+Step results:
+
+- `Run actions/checkout@v4`: success
+- `Validate Clerk build configuration`: success
+- `Run docker/setup-buildx-action@v3`: success
+- `Run docker/login-action@v3`: success
+- `Build and push`: success — image pushed to `ghcr.io/yeshuaacademy/finance:8717a22163278d12f0b14f7aacc5779f8536186a`
+- `Trigger Dokploy redeploy`: success
+
+Trigger Dokploy redeploy step output (exact):
+
+- `curl --retry 3 --retry-delay 5 --retry-all-errors` executed
+- Target: `https://dokploy.prochat.tools/api/application.deploy`
+- `x-api-key` header: redacted by Actions (`***`)
+- `applicationId`: redacted by Actions (`***`)
+- **HTTP status: 200**
+- Response body: no content logged (empty JSON body from Dokploy)
+- Output: `"Deployment triggered successfully."`
+- The `exit 1` branch (non-200) was NOT taken
+
+Secret and configuration evidence:
+
+- `DOKPLOY_API_KEY` was present and accepted — HTTP 200, no 401
+- `DOKPLOY_APP_ID` was present and accepted — HTTP 200, no 404
+- No curl error, no retry, no Dokploy availability error
+
+Post-trigger production polling (4 polls over ~5 minutes):
+
+- All polls: `/api/deployment-info` returned `buildSha: 0de09fbd30fbb1956657cbefa4c01ad146fc60d6`
+- Production health: 200 throughout
+- Ledger: 902 transactions throughout
+- Production has not converged to `8717a22`
+
+Root cause analysis:
+
+- The repository-side silent-failure defect (workflow `exit 0` on non-200) was correctly fixed in `8717a22`.
+- Dokploy accepted the deployment trigger with HTTP 200.
+- Non-convergence is a Dokploy-side deployment delay or internal failure after acceptance — not a GitHub Actions configuration defect, not a missing or expired secret, and not an incorrect application ID.
+- No further repository change is appropriate without owner inspection of Dokploy's deployment status and logs directly via the Dokploy dashboard at `https://dokploy.prochat.tools`.
+
+Deployment blocker:
+
+The owner must inspect the Dokploy application deployment status and logs in the Dokploy dashboard to determine why the accepted deployment did not complete. No repository commit is needed. The protected-state checks, ownership audit, and owner-history-v2 dry-run remain blocked until production reports `buildSha: 8717a22` or a later explicitly approved commit.
+
+
+
+## Diagnosis correction — 2026-07-31 18:15 +01:00
+
+The root cause stated in the "Dokploy inspection" section below is **incorrect and retracted**. The partial-index NULL-duplicate hypothesis was disproved by:
+
+1. Local reproduction: the exact migration SQL was applied against a PostgreSQL 15 table containing two rows sharing `(workspaceId, transactionId, evidenceHash)` with `producerKey = NULL` and `producerVersion = NULL`. The `CREATE UNIQUE INDEX` succeeded — PostgreSQL standard NULL-distinct semantics allow this without error.
+2. The actual error recorded in `_prisma_migrations` is PostgreSQL code `42501`: `must be owner of table CategorizationSuggestion`.
+
+The correct root cause, evidence, and fix are documented in the "Exact diagnosis" section at the end of this file.
+
+---
+
+## Dokploy inspection — 2026-07-31 16:45 +01:00
+
+Workbench run: current session
+
+Repository verification at session start:
+
+- source: `yeshuaacademy-finance`
+- branch: `main`
+- local tip: `8717a22 fix(deploy): fail closed when Dokploy trigger fails`
+- worktree: only `docs/product/` untracked — matches expected state
+
+### Dokploy application record
+
+- Application: `Yeshua Academy Finance`
+- Application ID: `rUyCCZYOE0TIKoUKkqSGQ`
+- Project: `Web` | Environment: `production`
+- `sourceType`: `docker`
+- `dockerImage`: `ghcr.io/yeshuaacademy/finance:latest`
+- `registryUrl`: `ghcr.io`
+- `username`: `stevewesthoek`
+- `applicationStatus`: `done`
+- `healthCheckSwarm`: `null` (relies on Dockerfile HEALTHCHECK)
+- `restartPolicySwarm`: `null`
+- `rollbackActive`: `false`
+
+### Deployment records (most recent five)
+
+| deploymentId | title (commit) | status | duration | errorMessage |
+|---|---|---|---|---|
+| `-CDeh0kr39S8yxY8WgFVE` | `8717a22` fix(deploy): fail closed | done | 45s | null |
+| `8CbPhJ06cJ_WTvNTLdoT8` | `3c2d5eb` fix(deploy): apply Prisma migrations | done | 43s | null |
+| `9XGlspTMQC6n54LyDa30X` | `0de09fb` fix(history): use factual direction | done | 46s | null |
+| `Hko-7ZGf_8pU2C-KW605J` | `9405498` chore: add diagnostics | done | 47s | null |
+| `Y5KBc-kfWDXjaHnntUndj` | `78fedbb` fix(auth): allow bypass | done | 43s | null |
+
+Key observations:
+
+- Dokploy marks deployments `done` after issuing the `docker service update` command. It does not wait for the Swarm task/container to converge. All deployments show `done` regardless of whether the container actually started.
+- Log files are on the Dokploy host filesystem (`/etc/dokploy/logs/apps-saas-open-fund-vdymfu/`) and are not accessible via the Dokploy REST API. SSH access to the host is blocked by Tailscale policy.
+
+### Running container evidence
+
+- Container: `apps-saas-open-fund-vdymfu.1.4sdpwqy2rercxaktrixwj3sx0`
+- Image: `e7046e1b73b8` (short digest — tag resolved to local digest at pull time)
+- State: `running`
+- Status: `Up 19 hours (healthy)`
+
+The `Up 19 hours` timestamp maps directly to `0de09fb` (`finishedAt: 2026-07-30T21:18:19Z`). The containers started by the `3c2d5eb` and `8717a22` deployments (`Up 6h` and `Up 2h` respectively) are absent — they attempted to start and were removed by Docker Swarm after health-check failure. They appear in the pool of 79 `dead` containers (no name, identified by digest only), which cannot be matched to this application without SSH access to the host.
+
+### Root cause — container startup failure on migration
+
+The root cause is the `CREATE UNIQUE INDEX "CategorizationSuggestion_owner_evidence_key"` statement in migration `20260731000000_add_suggestion_producer_ownership`.
+
+The index definition is:
+
+```sql
+CREATE UNIQUE INDEX "CategorizationSuggestion_owner_evidence_key"
+  ON "CategorizationSuggestion"("workspaceId", "transactionId", "producerKey", "producerVersion", "evidenceHash");
+```
+
+All existing rows have `producerKey = NULL` and `producerVersion = NULL`. PostgreSQL treats NULLs as distinct in unique indexes for the nullable columns, but `evidenceHash` is `NOT NULL`. Therefore, if any two existing rows share the same `(workspaceId, transactionId, evidenceHash)` triple (with `producerKey = NULL, producerVersion = NULL`), PostgreSQL raises:
+
+```
+ERROR: could not create unique index "CategorizationSuggestion_owner_evidence_key"
+DETAIL: Key (workspaceId, transactionId, producerKey, producerVersion, evidenceHash) = (..., ..., null, null, <hash>) is duplicated.
+```
+
+The prior schema had only a **non-unique** index on `(transactionId, matcher, evidenceHash)`, which allows such duplicates. The 663 existing production rows may contain duplicate `(workspaceId, transactionId, evidenceHash)` tuples from the suggestion-generation process.
+
+When `prisma migrate deploy` exits non-zero, `start-prod.mjs` throws `"Prisma migration failed with code 1"` and exits. The container exits before `node /api/health` can return 200. Docker Swarm health check never passes. Swarm rolls back to the previous healthy task (`0de09fb`). Dokploy has already marked the deployment `done`.
+
+This same failure occurred for both `3c2d5eb` and `8717a22`. The `8717a22` deployment did not introduce a new migration — the identical migration from `3c2d5eb` would already be applied on a successful first run (if any). But since no `3c2d5eb` container ever successfully ran `prisma migrate deploy` to completion (every attempt failed), the migration remains **unapplied** in production.
+
+### Failure classification
+
+- **Category:** container startup failure — Prisma migration SQL error
+- **Specific cause:** `CREATE UNIQUE INDEX` rejected by PostgreSQL due to duplicate `(workspaceId, transactionId, NULL, NULL, evidenceHash)` tuples in existing `CategorizationSuggestion` rows
+
+### Required fix
+
+The correct fix is a **partial unique index** scoped to rows where `producerKey IS NOT NULL`. This enforces uniqueness only for owned suggestions (the intended contract) and leaves legacy NULL-owner rows unconstrained. The fix is a tracked-file change to the migration SQL and Prisma schema.
+
+The migration SQL must change from:
+
+```sql
+CREATE UNIQUE INDEX "CategorizationSuggestion_owner_evidence_key"
+  ON "CategorizationSuggestion"("workspaceId", "transactionId", "producerKey", "producerVersion", "evidenceHash");
+```
+
+to:
+
+```sql
+CREATE UNIQUE INDEX "CategorizationSuggestion_owner_evidence_key"
+  ON "CategorizationSuggestion"("workspaceId", "transactionId", "producerKey", "producerVersion", "evidenceHash")
+  WHERE "producerKey" IS NOT NULL;
+```
+
+The Prisma schema `@@unique` directive must be updated to match, using a `@@unique` with a filtered clause or replaced by a raw `@@index` plus an `@db.Constraint` in the migration — **pending owner approval**.
+
+**No owner action in Dokploy is required.** The fix is a repository commit to `prisma/migrations/20260731000000_add_suggestion_producer_ownership/migration.sql` and `prisma/schema.prisma`. After the fix commit is pushed, the next GitHub Actions build will deploy the corrected image. The existing Dokploy configuration (`DOKPLOY_API_KEY`, `DOKPLOY_APP_ID`, `dockerImage: latest`) is correct and does not need to change.
+
+### Current production safety
+
+Production (`0de09fb`) remains healthy:
+
+- `/api/deployment-info`: 200, `buildSha: 0de09fbd30fbb1956657cbefa4c01ad146fc60d6`
+- `/api/health`: 200
+- `/api/ledger`: 200, 902 transactions
+- `/api/review?page=1&pageSize=25`: 200, 25 transactions, 6 projects
+- `/api/reference-data/projects`: 200, 6 items
+
+The 663 existing suggestions, 681 confirmed bookings, and all finance facts are intact and unchanged.
+
+### Exact next task (owner approval required before acting)
+
+Present this evidence to the owner. Once approved:
+
+1. Update `prisma/migrations/20260731000000_add_suggestion_producer_ownership/migration.sql`: add `WHERE "producerKey" IS NOT NULL` to the `CREATE UNIQUE INDEX` statement.
+2. Update `prisma/schema.prisma`: replace the `@@unique` directive on `CategorizationSuggestion` with a correctly scoped constraint or adjust the Prisma model so `prisma validate` passes.
+3. Run `npx prisma validate` and the full test suite locally.
+4. Commit and push. The next GitHub Actions build will produce a deployable image.
+5. After deployment, poll `node scripts/checkProductionDeployment.mjs` until `buildSha` reports the new commit SHA.
+6. Then complete the protected-state checks, ownership audit, and owner-history-v2 dry-run as documented above.
+
+Do not apply the fix without explicit owner approval of the proposed migration change.
+
+
+
+## Exact diagnosis — 2026-07-31 18:15 +01:00
+
+### 1. Exact first failure output
+
+From `finance._prisma_migrations`, migration `20260731000000_add_suggestion_producer_ownership`:
+
+```
+started_at: 2026-07-31T09:08:50.121Z
+finished_at: null
+rolled_back_at: null
+applied_steps_count: 0
+
+A migration failed to apply. New migrations cannot be applied before the error is
+recovered from. Read more about how to resolve migration issues in a production
+database: https://pris.ly/d/migrate-resolve
+
+Migration name: 20260731000000_add_suggestion_producer_ownership
+
+Database error code: 42501
+
+Database error:
+ERROR: must be owner of table CategorizationSuggestion
+
+DbError { severity: "ERROR", parsed_severity: Some(Error), code: SqlState(E42501),
+message: "must be owner of table CategorizationSuggestion", detail: None, hint: None,
+position: None, where_: None, schema: None, table: None, column: None, datatype: None,
+constraint: None, file: Some("aclchk.c"), line: Some(3788),
+routine: Some("aclcheck_error") }
+
+   0: sql_schema_connector::apply_migration::apply_script
+           with migration_name="20260731000000_add_suggestion_producer_ownership"
+             at schema-engine/connectors/sql-schema-connector/src/apply_migration.rs:113
+   1: schema_commands::commands::apply_migrations::Applying migration
+           with migration_name="20260731000000_add_suggestion_producer_ownership"
+             at schema-engine/commands/src/commands/apply_migrations.rs:95
+   2: schema_core::state::ApplyMigrations
+             at schema-engine/core/src/state.rs:260
+```
+
+This is the identical error that previously blocked `20260729000000_add_transaction_type_direction` (error 42501: `must be owner of table TransactionType`). That migration was resolved by running its DDL as `supabase_admin` and then calling `prisma migrate resolve --applied`.
+
+### 2. Verified migration-history state
+
+`npx prisma migrate status` output (production):
+
+- `0_finance_baseline`: applied
+- `20260703001200_add_workspace_dimensions`: applied
+- `20260703193000_add_classification_records`: applied
+- `20260704143000_add_statement_close_report_models`: applied
+- `20260719094000_add_merchant_knowledge`: applied
+- `20260719095000_add_merchant_knowledge`: applied
+- `20260729000000_add_transaction_type_direction` (first record): rolled_back (steps: 0)
+- `20260729000000_add_transaction_type_direction` (second record): applied (steps: 0 — marked applied after manual DDL)
+- `20260731000000_add_suggestion_producer_ownership`: **FAILED** (steps: 0, finished_at: null, rolled_back_at: null)
+
+The failed record blocks all subsequent `prisma migrate deploy` attempts with:
+> `A migration failed to apply. New migrations cannot be applied before the error is recovered from.`
+
+This is why both the `3c2d5eb` and `8717a22` containers exited immediately. On the second attempt (`8717a22`), `prisma migrate deploy` failed at the Prisma history-validation step — before re-executing the SQL — because the failed record was already present. Both containers exited with code 1, Docker Swarm rolled back to `0de09fb`, and Dokploy marked both deployments `done` after issuing the service update command.
+
+### 3. Production schema state
+
+The migration's DDL was fully rolled back (PostgreSQL ran the `ALTER TABLE` and encountered the 42501 error — the entire migration script ran in a single implicit transaction, which PostgreSQL aborted):
+
+- `CategorizationSuggestion` has **no** `producerKey`, `producerVersion`, or `planHash` columns.
+- Neither `CategorizationSuggestion_owner_lookup_idx` nor `CategorizationSuggestion_owner_evidence_key` exists.
+- The table and all other production tables are owned by `supabase_admin`. `finance_user` has only DML grants (SELECT, INSERT, UPDATE, DELETE, REFERENCES, TRIGGER, TRUNCATE) — not DDL ownership.
+
+### 4. Local reproduction result
+
+A PostgreSQL 15 container was created with a representative `CategorizationSuggestion` table. Two rows were inserted sharing `(workspaceId, transactionId, evidenceHash)` with `producerKey = NULL` and `producerVersion = NULL`. The exact migration SQL was run as the table owner:
+
+- `ALTER TABLE ... ADD COLUMN ...`: succeeded
+- `CREATE INDEX ... (non-unique)`: succeeded
+- `CREATE UNIQUE INDEX ... (all five columns, NULLs)`: succeeded
+
+**The NULL-duplicate hypothesis is disproved.** Standard PostgreSQL NULL-distinct behavior means the unique index would succeed regardless of how many rows share `(workspaceId, transactionId, NULL, NULL, evidenceHash)`.
+
+The reproduction was also run as a non-owner user. `ALTER TABLE "CategorizationSuggestion"` failed immediately with `ERROR: must be owner of table CategorizationSuggestion`, exactly matching the production error.
+
+### 5. Root cause
+
+**Root cause: `finance_user` is not the owner of `CategorizationSuggestion`.** All 30 of the 39 `finance`-schema tables (including `CategorizationSuggestion` and `_prisma_migrations`) are owned by `supabase_admin`. `prisma migrate deploy` runs as `finance_user` (via `DATABASE_URL`), which lacks `ALTER TABLE` DDL rights. PostgreSQL code `42501` was raised at the first statement of the migration — `ALTER TABLE "CategorizationSuggestion" ADD COLUMN "producerKey" TEXT` — and the transaction aborted with `applied_steps_count: 0`.
+
+This is **not** a migration SQL correctness problem. The SQL itself is valid and would succeed when run as `supabase_admin`.
+
+### 6. Smallest proposed fix
+
+The fix follows the exact same pattern used to resolve `20260729000000_add_transaction_type_direction`:
+
+**Step A — Run the migration DDL manually as `supabase_admin` (production mutation, requires owner approval):**
+
+```sql
+-- Connect to the finance database as supabase_admin (SYSTEM_DATABASE_URL host, finance db)
+-- and run:
+
+ALTER TABLE finance."CategorizationSuggestion"
+  ADD COLUMN "producerKey" TEXT,
+  ADD COLUMN "producerVersion" TEXT,
+  ADD COLUMN "planHash" TEXT;
+
+CREATE INDEX "CategorizationSuggestion_owner_lookup_idx"
+  ON finance."CategorizationSuggestion"("workspaceId", "transactionId", "producerKey", "producerVersion", "status");
+
+CREATE UNIQUE INDEX "CategorizationSuggestion_owner_evidence_key"
+  ON finance."CategorizationSuggestion"("workspaceId", "transactionId", "producerKey", "producerVersion", "evidenceHash");
+```
+
+The `SYSTEM_DATABASE_URL` user is `supabase_admin`, confirmed to own `CategorizationSuggestion`. The SQL above must be executed against the `finance` database (not the `postgres` database that `SYSTEM_DATABASE_URL` defaults to).
+
+**Step B — Mark the migration as applied in Prisma (production mutation, requires owner approval):**
+
+```bash
+DATABASE_URL=<finance_user_url> npx prisma migrate resolve \
+  --applied "20260731000000_add_suggestion_producer_ownership" \
+  --schema=prisma/schema.prisma
+```
+
+This writes a `finished_at` timestamp and resets `rolled_back_at` to null in `_prisma_migrations`, unblocking all future `prisma migrate deploy` calls.
+
+**Step C — Redeploy** (after Steps A and B succeed):
+
+No new repository commit is required. The `8717a22` image includes the correct migration SQL. After the failed migration record is resolved, the next `prisma migrate deploy` will find the migration already applied (via the `applied_steps_count` and `finished_at` from Step B) and proceed normally. A Dokploy redeploy of the existing image `ghcr.io/yeshuaacademy/finance:8717a22163278d12f0b14f7aacc5779f8536186a` (or `:latest`) will then start the container successfully.
+
+**No schema.prisma or migration.sql edit is required.** The migration SQL is correct for `supabase_admin`. The Prisma schema `@@unique` is correct. Nothing about the partial-index approach applies here.
+
+### 7. Application call site impact
+
+The `@@unique([workspaceId, transactionId, producerKey, producerVersion, evidenceHash], map: "CategorizationSuggestion_owner_evidence_key")` is used in exactly one place: `server/services/ownerHistoryProposalEvidenceService.ts` via `prisma.categorizationSuggestion.createMany({ data: ..., skipDuplicates: true })`. This is correct: `skipDuplicates: true` on Prisma `createMany` is backed by the unique constraint and will suppress re-insertion of owned suggestions already present. No other call site uses this compound key for `upsert` or `findUnique`.
+
+### 8. Production mutations requiring explicit owner approval
+
+Both of the following must not be executed without explicit owner approval:
+
+1. **Manual DDL as `supabase_admin`:** Run the three SQL statements (one `ALTER TABLE`, two `CREATE INDEX`) against the `finance` database as `supabase_admin`. This is a schema change to the production database.
+
+2. **`prisma migrate resolve --applied`:** The command `DATABASE_URL=<...> npx prisma migrate resolve --applied 20260731000000_add_suggestion_producer_ownership` writes to `_prisma_migrations` in the production database. This must be run only after Step A (DDL) succeeds.
+
+Neither step involves running production SQL against business data. Neither step touches `CategorizationSuggestion` rows, `TransactionBooking`, `Transaction`, or any other business table.
+
+### 9. Current production safety
+
+Production (`0de09fb`) remains fully healthy at time of this update:
+
+- `/api/deployment-info`: 200, `buildSha: 0de09fbd30fbb1956657cbefa4c01ad146fc60d6`
+- `/api/health`: 200
+- `/api/ledger`: 200, 902 transactions
+- `/api/review?page=1&pageSize=25`: 200, 25 transactions, 6 projects
+- `/api/reference-data/projects`: 200, 6 items
+
+
+
+## Final guards preflight — 2026-07-31 (recovery execution)
+
+Verified immediately before Mutation A:
+
+| Check | Value | Pass |
+|---|---|---|
+| Branch | `main` | ✓ |
+| HEAD | `8717a22163278d12f0b14f7aacc5779f8536186a` | ✓ |
+| Worktree changes | only `docs/product/` untracked | ✓ |
+| Migration file hash (SHA-256) | `4573826b68763e08c87ae454492c553a787078ade2c0a1a9063baa76a8a62dc8` | ✓ |
+| Production database | `finance` | ✓ |
+| Schema | `finance` | ✓ |
+| Privileged principal (`SYSTEM_DATABASE_URL`) | `supabase_admin` | ✓ |
+| Application principal (`DATABASE_URL`) | `finance_user` | ✓ |
+| `producerKey` absent | 0/3 columns present | ✓ |
+| `producerVersion` absent | 0/3 columns present | ✓ |
+| `planHash` absent | 0/3 columns present | ✓ |
+| `CategorizationSuggestion_owner_lookup_idx` absent | 0/2 indexes present | ✓ |
+| `CategorizationSuggestion_owner_evidence_key` absent | 0/2 indexes present | ✓ |
+| Failed migration `finished_at IS NULL` | `true` | ✓ |
+| Failed migration `rolled_back_at IS NULL` | `true` | ✓ |
+| Failed migration `applied_steps_count` | `0` | ✓ |
+| `:latest` image digest | `sha256:d62b878851cbf56537f786851586c2b7518ba7e1a19d3e778cbde9eb32c68e79` | ✓ |
+| `:8717a22…` image digest | `sha256:d62b878851cbf56537f786851586c2b7518ba7e1a19d3e778cbde9eb32c68e79` | ✓ |
+
+All guards passed. Proceeding to Mutation A.
+
+
+
+## Recovery execution — 2026-07-31
+
+### Mutation A — DDL applied as supabase_admin
+
+**Status: SUCCESS**
+
+Command: `psql <SYSTEM_DATABASE_URL repointed to finance db> -X --single-transaction -v ON_ERROR_STOP=1 -c "SET search_path = finance, public" -f prisma/migrations/20260731000000_add_suggestion_producer_ownership/migration.sql`
+
+- shell: false (execFileSync)
+- migration file hash confirmed before apply: `4573826b68763e08c87ae454492c553a787078ade2c0a1a9063baa76a8a62dc8`
+- psql output: `SET`, `ALTER TABLE`, `CREATE INDEX`, `CREATE INDEX`
+- transaction committed atomically
+
+Mutation A post-verification:
+
+| Check | Result |
+|---|---|
+| `producerKey` — nullable TEXT | ✓ present |
+| `producerVersion` — nullable TEXT | ✓ present |
+| `planHash` — nullable TEXT | ✓ present |
+| `CategorizationSuggestion_owner_lookup_idx` | ✓ present |
+| `CategorizationSuggestion_owner_evidence_key` | ✓ present |
+| `owner_evidence_key` index def | `CREATE UNIQUE INDEX … USING btree ("workspaceId","transactionId","producerKey","producerVersion","evidenceHash")` — matches tracked migration |
+| `owner_lookup_idx` index def | `CREATE INDEX … USING btree ("workspaceId","transactionId","producerKey","producerVersion",status)` — matches tracked migration |
+| Rows with non-null new columns | 0 (all pre-existing rows NULL) |
+| Total `CategorizationSuggestion` rows | 663 (unchanged) |
+| Migration file hash after apply | `4573826b68763e08c87ae454492c553a787078ade2c0a1a9063baa76a8a62dc8` ✓ |
+
+### Mutation B — Prisma history reconciled
+
+**Status: SUCCESS**
+
+Command: `npx prisma migrate resolve --applied 20260731000000_add_suggestion_producer_ownership --schema=prisma/schema.prisma` (with `DATABASE_URL` = `finance_user`)
+
+Output: `Migration 20260731000000_add_suggestion_producer_ownership marked as applied.`
+
+`prisma migrate status` after resolve:
+
+```
+Datasource "db": PostgreSQL database "finance", schema "finance"
+8 migrations found in prisma/migrations
+Database schema is up to date!
+```
+
+No failed migrations. No pending migrations. No checksum conflicts.
+
+### Redeployment — BLOCKED (owner action required)
+
+`DOKPLOY_API_KEY` and `DOKPLOY_APP_ID` are GitHub Actions secrets only. They are not present in `.env.production`, `.env.preview`, or any local env file. They cannot be read via GitHub API (write-only). No redeployment has been triggered.
+
+**Required owner action (choose one):**
+
+1. **Dokploy dashboard:** Navigate to `https://dokploy.prochat.tools`, open the `Yeshua Academy Finance` application, and click Redeploy. The `latest` image (`sha256:d62b878851cbf56537f786851586c2b7518ba7e1a19d3e778cbde9eb32c68e79`) is already pulled. No rebuild will occur.
+
+2. **Dashboard redeployment:** Use the Dokploy dashboard owner action described above. Deployment credentials are not available to the repository workflow, so Workbench cannot trigger this action directly.
+
+Once the redeployment is triggered, resume this session to complete post-convergence verification (protected-state checks, ownership audit ×2, owner-history-v2 dry-run ×2).
+
+**Current production state remains healthy on `0de09fb`.** The 663 suggestions, 681 bookings, and all finance facts are intact.
+
+
+
+## Workbench continuation checkpoint — 2026-07-31 21:46 +01:00
+
+Direct repository and production verification completed after the recovery report:
+
+- source: `yeshuaacademy-finance`
+- branch: `main`
+- HEAD: `8717a22163278d12f0b14f7aacc5779f8536186a`
+- expected worktree boundary: only `docs/product/` untracked
+- Mutation A remains recorded as successful: exact tracked migration applied atomically as `supabase_admin`
+- Mutation B remains recorded as successful: Prisma reports 8 migrations, 0 failed, 0 pending
+- no repository edit, commit, push, image rebuild, proposal execution, or Phase 5 work occurred during this checkpoint
+
+Latest read-only production poll:
+
+- `/api/deployment-info`: 200
+- deployed SHA: `0de09fbd30fbb1956657cbefa4c01ad146fc60d6`
+- deployed ref: `main`
+- `/api/health`: 200
+- `/api/ledger`: 200, 902 transactions
+- `/api/review?page=1&pageSize=25`: 200, 25 returned transactions, 6 projects
+- `/api/reference-data/projects`: 200, 6 items
+
+Current blocker:
+
+- the database recovery is complete;
+- production has not yet been redeployed to the already-built `8717a22` image;
+- no deployment credential or webhook token was read, requested, or stored by Workbench.
+
+Exact next action:
+
+1. In the Dokploy dashboard, open project `Web`, environment `production`, application `Yeshua Academy Finance` (`rUyCCZYOE0TIKoUKkqSGQ`).
+2. Confirm the configured image remains `ghcr.io/yeshuaacademy/finance:latest` and resolves to digest `sha256:d62b878851cbf56537f786851586c2b7518ba7e1a19d3e778cbde9eb32c68e79`.
+3. Trigger exactly one redeployment. Do not rebuild, change configuration, or trigger a second deployment automatically.
+4. Resume Workbench immediately after the redeployment is triggered.
+
+After redeployment, poll `node scripts/checkProductionDeployment.mjs` until `/api/deployment-info` reports full SHA `8717a22163278d12f0b14f7aacc5779f8536186a`, or stop with exact Dokploy/container failure evidence.
+
+Only after convergence, complete the documented protected-state checks, ownership audit twice, and `owner-history-v2` dry-run twice. Require stable repeated hashes and zero writes. Do not execute proposals, mutate suggestions, create `ReviewDecision` records, modify bookings or finance facts, or begin Phase 5.
+
+
+
+## Final deployment convergence and read-only verification — 2026-08-01 09:50 +01:00
+
+Repository and deployment state:
+
+- source: `yeshuaacademy-finance`
+- branch: `main`
+- HEAD: `8717a22163278d12f0b14f7aacc5779f8536186a`
+- migration file remained unchanged at SHA-256 `4573826b68763e08c87ae454492c553a787078ade2c0a1a9063baa76a8a62dc8`
+- temporary verifier `scripts/.workbench-readonly-protected-state-audit.mjs` was deleted after its two successful runs
+- no repository commit, push, rebuild, deployment trigger, proposal execution, or Phase 5 work was performed by Workbench during verification
+
+Production convergence:
+
+- `/api/deployment-info`: 200
+- deployed SHA: `8717a22163278d12f0b14f7aacc5779f8536186a`
+- deployed ref: `main`
+- `/api/health`: 200
+- `/api/ledger`: 200, 902 transactions
+- `/api/review?page=1&pageSize=25`: 200, 25 returned transactions, 6 projects
+- `/api/reference-data/projects`: 200, 6 items
+- final deployment poll passed after the approved single Dokploy redeployment
+- no rollback to the previous SHA was observed
+
+Protected-state audit:
+
+The bounded Prisma-only aggregate verifier was run twice against production. Both runs returned identical counts and state hashes and reported `writesPerformed: false`.
+
+- transactions: 902
+- confirmed bookings: 681
+- `ReviewDecision` records: 0
+- pending suggestions: 663
+- legacy/unowned pending suggestions: 663
+- pending suggestions with any ownership metadata: 0
+- owner-history-v2 owned suggestions: 0
+- proposed targets: 178
+- legacy/unowned suggestions on proposed targets: 534
+- planned creates: 178
+- planned expirations: 0
+- abstained targets: 43
+- all 663 legacy suggestions remained untouched
+- all 534 legacy suggestions on proposed targets remained untouched
+- zero application writes were performed
+
+`owner-history-v2` proposal dry-run:
+
+The deployed operator dry-run was executed repeatedly with identical output and zero writes.
+
+- status: `DRY_RUN_COMPLETE`
+- algorithm/producer: `owner-history` / `v2`
+- rank persistence: `RANK_1_ONLY`
+- evidence candidates: 681
+- eligible evidence: 681
+- incomplete evidence: 0
+- cross-workspace evidence: 0
+- inactive or unauthorized triples: 0
+- missing source directions: 0
+- open transactions: 221
+- proposed/covered targets: 178
+- uncovered targets: 43
+- abstained targets: 43
+- abstained missing target direction: 0
+- abstained factual-direction mismatch: 0
+- abstained without ranked candidate: 0
+- existing owned suggestions: 0
+- planned creates: 178
+- planned expirations: 0
+- proposal plan hash: `7a2d946f92b3004fc92959107508f485daf75971872d519806a24e0e30f2de14`
+- ownership-state hash: `4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945`
+- writes performed: false
+- creates `TransactionBooking`: false
+- creates `ReviewDecision`: false
+- administrator approval remains required for any execution
+
+Direction-usage audit:
+
+The deployed direction audit was executed repeatedly with identical output and zero writes.
+
+- status: `DRY_RUN_COMPLETE`
+- historical evidence: 681
+- bucket usage: 681
+- debit: 221
+- credit: 460
+- unknown: 0
+- report hash: `02d639e0d7c983b43a577e41653ef7e995cdd4a3955b05b1d00bdf90ca0e2695`
+- writes performed: false
+- creates `TransactionBooking`: false
+- creates `ReviewDecision`: false
+- mutates bank facts: false
+
+Final boundary:
+
+Deployment convergence and the required repeated read-only verification are complete. No owner-history-v2 proposals were executed. No suggestions were created or expired. No `ReviewDecision` records, confirmed bookings, transactions, or finance facts were modified. Phase 5 was not started.
+
+The remaining architectural risk is unchanged: `scripts/start-prod.mjs` runs `prisma migrate deploy` using the long-running application `DATABASE_URL` principal, while production DDL objects are owned by `supabase_admin`. Future DDL migrations require a separately designed privileged migration stage or migration-only credential. Do not place privileged credentials in the long-running application process.
+
+
+
+## Phase 5 entry-gate documentation slice — 2026-08-01
+
+### Status
+
+- Program Phase 4: **COMPLETE**
+- Production deployment and owner-history-v2 read-only verification: **COMPLETE**
+- Program Phase 5: **UNSTARTED — BLOCKED**
+- Phase 5 gate: `PHASE_5_GATE_UNDECIDABLE` / `NO_COMMITTED_NUMERIC_ACCEPTANCE_THRESHOLDS`
+
+### What changed
+
+Documentation-only slice. No code, schema, migration, configuration, dependency, or
+generated file changed. No production command or external provider call occurred.
+
+Files updated:
+
+- `docs/ROADMAP.md` — Transaction Review and Intelligence Program current position updated;
+  Phase 4 marked COMPLETE; Phase 5 marked BLOCKED with exact blocker list; Phase 6 and 7
+  marked blocked on Phase 5; normalized estimate updated to 46%.
+- `docs/IMPLEMENTATION_PLAN.md` — Phase 4 status section updated; Phase 5 entry-gate
+  task block inserted before the Phase 5 slices table; exact blockers and gate conditions
+  recorded; Phase 5.1 prerequisites updated to require Section H approval.
+- `docs/PHASE_5_AI_DECISION_ENGINE_ENTRY_GATE.md` — created; nine sections covering
+  purpose, verified prerequisites, benchmark-label acquisition options, numeric thresholds,
+  provider/runtime decisions, privacy/payload minimization, shadow-output storage, Phase 5.1
+  implementation gate, proposed Phase 5.1 scope, and a structured approval checklist.
+- `docs/finance-rebuild-run.md` — checkpoint appended; recurring migration-credential risk
+  documented.
+- `docs/product/agent-mode-progress.md` — this checkpoint appended.
+
+### Phase 5 blockers (all must be resolved before Phase 5.1 begins)
+
+1. Labeling strategy decision — zero confirmed labels in 221-row benchmark
+2. Numeric acceptance thresholds — none committed
+3. Provider, region, and model identifier — none approved
+4. Server-only credentials approach — none approved
+5. Privacy and data-retention policy — none approved
+6. Budget and operational limits — none approved
+7. Shadow-output persistence policy — none approved
+8. Default-off and kill-switch behavior — not explicitly approved
+9. Rollback and no-booking validation plan — not approved
+
+### Exact next task after owner decisions
+
+Owner must review `docs/PHASE_5_AI_DECISION_ENGINE_ENTRY_GATE.md` and complete the Section J
+approval checklist. No implementation begins until all nine gate conditions in Section H are
+explicitly approved. After approval, the next task is Phase 5.1 only: server-only disabled
+Bedrock inference adapter with safety tests — no AWS SDK, no credentials, no model calls.
+
+
+
+## Phase 5 entry-gate correction — 2026-08-01
+
+### Status
+
+- Program Phase 4: **COMPLETE**
+- Program Phase 5: **UNSTARTED — BLOCKED (Gate A approval pending)**
+- Program Phase 6: **BLOCKED ON PHASE 5 SHADOW OUTPUT AND LABELED BENCHMARK**
+- Program Phase 7: **BLOCKED ON PHASE 6 GO/NO-GO**
+
+### What changed
+
+Documentation-only slice. No code, schema, migration, configuration, dependency, generated
+file, production command, or external provider call changed.
+
+The Phase 5 entry-gate brief was revised to remove a circular dependency. The initial brief
+required model accuracy, provider failure rate, inference latency, cost, coverage, abstention,
+and false-high-confidence rate as prerequisites for Phase 5.1. Phase 5.1 is a permanently
+disabled server-only provider abstraction that makes no external calls and produces no model
+output. Those measurable properties do not exist at Phase 5.1 time.
+
+### Tiered gate summary
+
+- Gate A (Phase 5.1): architectural safety checklist only; no provider, model, accuracy, or
+  cost decision required.
+- Gate B (Phase 5.2–5.3): payload, contract, and ID decisions; no live Bedrock required.
+- Gate C (Phase 5.4–5.8): provider, region, model (from live catalog), credentials, cost,
+  privacy, kill switch.
+- Gate D (Phase 6–7): numeric model-performance thresholds, applicable only after Phase 5
+  shadow output and confirmed labels exist.
+
+### No prior production evidence changed
+
+Production HEAD `8717a22` remains healthy. 902 transactions, 681 confirmed bookings, 663
+pending suggestions, 221 unresolved, 0 ReviewDecision records. All financial baselines and
+accounting invariants are unchanged.
+
+### Exact next owner decision
+
+Gate A only — review Section J, Approval A of
+`docs/PHASE_5_AI_DECISION_ENGINE_ENTRY_GATE.md`.
+
+All live Bedrock and benchmark-evaluation gates remain pending.
+
+
+
+## Phase 5 entry-gate documentation correction — 2026-08-01
+
+### Status
+
+- Program Phase 4: **COMPLETE**
+- Program Phase 5: **UNSTARTED — BLOCKED (Gate A approval pending)**
+- Program Phase 6: **BLOCKED ON PHASE 5 SHADOW OUTPUT AND LABELED BENCHMARK**
+- Program Phase 7: **BLOCKED ON PHASE 6 GO/NO-GO**
+
+### What changed
+
+Documentation-only correction. No code, schema, migration, configuration, dependency,
+generated file, production command, or external provider call changed.
+
+### Corrections applied
+
+- Tiered gate structure confirmed and propagated into `ROADMAP.md` and `IMPLEMENTATION_PLAN.md`.
+  Stale global Phase 5 prerequisite (requiring privacy/security/provider/cost design before all
+  of Phase 5) replaced with tiered language.
+- Phase 5.1 is now explicitly an isolated, configuration-free disabled boundary. It does not
+  modify `deterministicDecisionOrchestrationService.ts`, introduces no optional inference-contributor
+  slot, and is not called by any route, review read, benchmark runner, background job, or startup
+  code. No provider configuration surface. Always returns `PROVIDER_DISABLED`.
+- Anticipated Phase 5.1 files: exactly `server/services/bedrockInferenceAdapter.ts` and
+  `tests/services/bedrockInferenceAdapter.test.ts`. Tests are under `tests/services/`.
+- Labeling strategy decision moved from Gate A to pre-Gate-C. Selecting a strategy is not
+  required to implement Phase 5.1. Creating labels is not authorized before Gate C.
+- Approval A now contains A1–A14 only (safety-boundary decisions). Labeling strategy (formerly
+  A15) is now a pre-Gate-C requirement.
+- Phase 5.1 tests corrected: removed "missing provider configuration" tests; added isolation,
+  determinism, workspace-identity, no-SDK, no-credential, no-dependency, and rollback tests.
+- No Phase 5 code was implemented.
+
+### Exact next owner decision
+
+Gate A only: A1–A14 in Section J, Approval A of
+`docs/PHASE_5_AI_DECISION_ENGINE_ENTRY_GATE.md`. No labeling strategy, provider, model,
+credential, cost, or benchmark threshold decision is required for Gate A.
+
+
+
+## Phase 5.1 implementation closeout — 2026-08-01
+
+### Gate A approval
+
+Owner explicitly approved Gate A conditions A1–A14 through the Phase 5.1 implementation
+instruction on 2026-08-01. All fourteen conditions are confirmed in Section H and
+Section J of `docs/PHASE_5_AI_DECISION_ENGINE_ENTRY_GATE.md`.
+
+### Files created
+
+Two new files only — no existing file modified:
+
+- `server/services/bedrockInferenceAdapter.ts`
+- `tests/services/bedrockInferenceAdapter.test.ts`
+
+### Compile-time contract evidence
+
+`assertInvocationIdentityTypeContract` (side-effect-free function reference) uses
+`@ts-expect-error` to prove both `workspaceId` and `targetTransactionId` are required at
+compile time. `npx tsc --noEmit -p tsconfig.json` produced zero errors for the new files
+and zero `TS2578` (unused `@ts-expect-error`) diagnostics.
+
+### Security scan
+
+Test repair removed a credential-shaped test fixture and all `process.env` mutation.
+Replaced with harmless `'phase5-disabled-adapter-sentinel'` — a plain string used only to
+confirm the adapter does not echo arbitrary input values. Secret scan over both new files
+is clean. No values recognized as secret-shaped by the repository security scanner,
+environment read, or SDK import appears in either file.
+
+### Validation results
+
+- Focused tests: **12/12 passed**
+- Deterministic orchestration regression: **10/10 passed**
+- Server build: **passed**
+- Application build: **passed**
+- TypeScript check (new files): **zero errors; zero TS2578**
+- `git diff --check`: **clean**
+- Secret and forbidden-import scan: **clean**
+- No existing runtime module imports the adapter: **confirmed**
+
+### Boundaries
+
+- No provider configuration, SDK, credential, environment variable, network call, database
+  effect, production command, deployment, commit, or push occurred.
+- `deterministicDecisionOrchestrationService.ts` unchanged.
+- All pre-existing uncommitted documentation changes preserved.
+- Phase 5.1 is local and uncommitted.
+- Implementation is fully isolated; rollback is file deletion.
+
+### Current position
+
+| Phase | Status |
+|---|---|
+| Program Phase 5.1 | DONE_LOCAL_UNCOMMITTED |
+| Program Phase 5.2–5.3 | BLOCKED ON GATE B |
+| Program Phase 5.4–5.8 | BLOCKED ON GATE C |
+| Program Phase 6 | BLOCKED ON PHASE 5 SHADOW OUTPUT AND LABELED BENCHMARK |
+| Program Phase 7 | BLOCKED ON PHASE 6 GO/NO-GO |
+
+### Exact next task
+
+Gate B owner decisions. Review Section D and Section J, Approval B of
+`docs/PHASE_5_AI_DECISION_ENGINE_ENTRY_GATE.md`. No Phase 5.2 implementation before
+Gate B is explicitly approved.
+
+---
+
+## Gate B documentation — 2026-08-01
+
+`docs/PHASE_5_AI_DECISION_ENGINE_ENTRY_GATE.md` revised: concrete B1–B9 decisions recorded.
+
+- Three contracts separated: (A) internal invocation envelope (server-only, never sent to
+  provider), (B) provider-bound classification payload (minimum approved fields), (C)
+  provider response contract (strict discriminated union PROPOSED / ABSTAINED).
+- B1–B9 populated with repository-grounded recommendations (all pending owner approval).
+- Phase 5.2 scope boundary corrected: DTOs, schemas, bounds, malformed-output parsing,
+  synthetic fixtures — no candidate membership validation, no Bedrock.
+- Phase 5.3 responsibilities formally separated and blocked on Phase 5.2 completion.
+- Residual facts corrected: Phase 5 uncommitted, not integrated, no live provider contract,
+  no privacy approval, no display labels in candidate records, pre-existing TS errors noted.
+- Gate B: **PENDING**. Gate A: **APPROVED**. Phase 5.1: **DONE_LOCAL_UNCOMMITTED**.
+- No code, schema, migration, package, config, or runtime change in this session.
+
+**Anticipated Phase 5.2 files (per naming conventions):**
+- `server/services/inferenceContractService.ts` — provider-neutral DTOs and Zod schemas
+- `tests/services/inferenceContractService.test.ts` — focused schema and parsing tests
+
+These files are not yet created. Phase 5.2 begins only after Gate B owner approval.
+
+## Gate B correction — 2026-08-01
+
+`docs/PHASE_5_AI_DECISION_ENGINE_ENTRY_GATE.md` rewritten with 11 corrections.
+
+**Contract layering corrected to four objects:**
+- A: trusted internal invocation envelope (server-only; never provider-bound)
+- B: provider-bound classification request (no internal hashes, no workspace/transaction IDs)
+- C: raw provider response (model output only; must NOT echo contractVersion, candidateSetHash, or any trusted internal value)
+- D: internal parsed result (application-side combination of A + C, done server-side)
+
+**Key corrections applied:**
+- Raw response excludes contractVersion, candidateSetHash, confidence, rationale, chain-of-thought, token usage, and provider metadata
+- Abstention taxonomy split: 4 provider-declared reasons (valid in raw ABSTAINED) vs 5 internal/system reasons (generated only by trusted application code)
+- Non-throwing parser: `parseProviderResponseText(rawText: string): ProviderResponseParseResult` — `{ok: true, value}` or `{ok: false, reason: 'MALFORMED_PROVIDER_OUTPUT'}`
+- Direction corrected to lowercase `credit | debit` (exact repository domain values); uppercase and BOTH removed
+- All-or-nothing amount/currency pair; amountMinor as signed base-10 integer string
+- Candidates grouped by dimension arrays (`projects[]`, `transactionTypes[]`, `categories[]`); no redundant `dimension` field
+- 30 = total candidate descriptors (not evidence items); evidence counts are scalars
+- Label enrichment moved out of Phase 5.2 to a later approved slice
+- Phase 5.2 filename corrected to provider-neutral `inferenceContractService.ts`
+- Counterparty and payment-purpose limits deferred to Gate C
+- Approval B rewritten with all corrected values; all items PENDING OWNER APPROVAL
+
+**Security corrections in this file:**
+- Removed executable webhook-token URL (line 797 area) — preserved fact, removed token-in-URL example
+- Removed credential-shaped test fixture literal (line 1104 area) — replaced with generic wording
+
+**Phase 5.1 files unchanged.** No code, schema, migration, package, or config change.
+Gate B status: **PENDING**.
+
+
+
+
+## Workbench checkpoint — Gate B approved and Phase 5.2 complete locally — 2026-08-01
+
+Gate B decisions B1–B9 were explicitly approved by the owner. Phase 5.2 is `DONE_LOCAL_UNCOMMITTED`.
+
+Created:
+
+- `server/services/inferenceContractService.ts`
+- `tests/services/inferenceContractService.test.ts`
+
+Verified behavior:
+
+- strict provider-neutral request schema with grouped project, transaction-type, and category candidates;
+- lowercase `credit` / `debit` directions;
+- optional all-or-nothing `amountMinor` / `currency` pair;
+- strict `PROPOSED` / `ABSTAINED` raw-response union;
+- only four provider-declared abstention reasons accepted from raw output;
+- non-throwing UTF-8 byte-bounded `parseProviderResponseText` parser;
+- no Phase 5.3 candidate membership, stale-set, or direction validation implemented;
+- no Prisma, provider SDK, environment, network, route, orchestration, review, booking, suggestion, accounting, or production dependency.
+
+Validation:
+
+- Phase 5.2 focused suite: 58/58 passed;
+- Phase 5.1 adapter suite: 12/12 passed;
+- deterministic orchestration suite: 10/10 passed;
+- server TypeScript build: passed;
+- Next.js build: passed with only the pre-existing SWC lockfile warning;
+- full `tsconfig.json`: non-zero only for pre-existing repository diagnostics; no diagnostic references Phase 5.1 or Phase 5.2 files;
+- high-risk scan across all Phase 5.1–5.2 files: zero findings;
+- documentation secret-material scan: zero findings after the historical wording repair.
+
+The two Phase 5.1 files were not modified. No package, lockfile, schema, migration, configuration, runtime integration, provider call, production command, deployment, stage, commit, or push occurred.
+
+Current position:
+
+- Phase 5.1: `DONE_LOCAL_UNCOMMITTED`;
+- Phase 5.2: `DONE_LOCAL_UNCOMMITTED`;
+- Phase 5.3: exact next slice;
+- Gate C and Gate D: pending.
+
+Stop boundary remains active. Phase 5.3 must be implemented separately as a pure semantic validator and must not begin automatically from this checkpoint.
+
+
+
+## Workbench checkpoint — Phase 5.3 semantic validation complete locally — 2026-08-01 21:02 +01:00
+
+Program Phase 5.3 is `DONE_LOCAL_UNCOMMITTED` under approved Gate B.
+
+Created exactly:
+
+- `server/services/inferenceCandidateValidationService.ts`
+- `tests/services/inferenceCandidateValidationService.test.ts`
+
+Validated behavior and ordering:
+
+1. trusted workspace, target-transaction, and candidate-set identity are checked before every provider outcome;
+2. a structurally valid provider-declared abstention passes through unchanged only after trusted-context validation;
+3. proposals are defensively rejected for incomplete, empty, or duplicate IDs;
+4. proposals require a trusted candidate result with `status: 'MATCHED'`;
+5. each ID must belong to exactly one correct dimension and the supplied candidate set;
+6. every selected candidate must remain active, direction-compatible, and dimension-correct.
+
+Failure results are internal only:
+
+- `STALE_CANDIDATE_SET` for workspace, target-transaction, or candidate-set identity mismatch;
+- `INVALID_CANDIDATE_SELECTION` for all proposal membership and candidate-integrity failures.
+
+Validation:
+
+- Phase 5.3 focused suite: 25/25 passed;
+- Phase 5.2 contract suite: 58/58 passed after the owner-approved type-only-import assertion repair;
+- Phase 5.1 adapter suite: 12/12 passed;
+- restricted-candidate suite: 12/12 passed;
+- deterministic orchestration suite: 10/10 passed;
+- server TypeScript build: passed;
+- Next.js build: passed with only the pre-existing SWC lockfile warning;
+- full `tsconfig.json`: exit code 2 from pre-existing diagnostics only; no diagnostic references Phase 5.1, Phase 5.2, or Phase 5.3 files;
+- high-risk scan across all six Phase 5.1–5.3 code and test files: zero findings.
+
+Phase 5.1 and Phase 5.2 implementation files remained unchanged. The sole existing TypeScript-file change was the explicitly approved narrow repair to `tests/services/inferenceContractService.test.ts`, preserving its runtime-import prohibition while permitting erased type-only imports.
+
+No runtime integration, provider call, environment access, Prisma access, database effect, production command, label creation, proposal execution, suggestion mutation, `ReviewDecision`, booking, deployment, stage, commit, or push occurred.
+
+Current position:
+
+- Phase 5.1: `DONE_LOCAL_UNCOMMITTED`;
+- Phase 5.2: `DONE_LOCAL_UNCOMMITTED`;
+- Phase 5.3: `DONE_LOCAL_UNCOMMITTED`;
+- Phase 5.4–5.8: `BLOCKED ON GATE C`;
+- Phase 6: blocked on shadow output and frozen labels;
+- Phase 7: blocked on Phase 6 go/no-go.
+
+Exact next owner action: Gate C decision preparation only. Phase 5.4 has not started.
+
+
+
+## Workbench checkpoint — Gate C owner-decision package prepared — 2026-08-02 00:41 +01:00
+
+Gate C is `PENDING OWNER APPROVAL`. Phase 5.1–5.3 remain `DONE_LOCAL_UNCOMMITTED`; Phase 5.4 has not started.
+
+The authoritative decision package is in `docs/PHASE_5_AI_DECISION_ENGINE_ENTRY_GATE.md`, Section G.1 and Approval C. It now contains concrete C1–C14 options and a fully filled owner checklist for deployment identity, live region/model/access verification, server-only credentials, privacy, payload scope, operational limits, budget, observability, default-off behavior, kill switch, shadow-output handling, and no-booking rollback evidence.
+
+Verified repository facts:
+
+- production runs in Docker with `node scripts/start-prod.mjs`;
+- the repository does not establish that the Dokploy host supports AWS workload identity;
+- no provider SDK, provider configuration, provider credential, region, model identifier, or runtime inference integration exists;
+- the Phase 5.1–5.3 code and tests were not modified during this documentation task.
+
+Recommended Gate C baseline, every item still pending:
+
+- verify the live host first; prefer proven workload identity, otherwise renewable short-lived credentials;
+- select region and a pinned model only from the live AWS account and model catalog;
+- use the Phase 5.2 minimum payload and omit counterparty, payment purpose, merchant labels, and history examples initially;
+- use conservative shadow-mode timeout, retry, concurrency, rate, circuit-breaker, duplicate-prevention, and wall-time limits;
+- require explicit numeric monetary caps before any real invocation;
+- retain operational metadata only, with no request/response bodies or persistent Decision storage;
+- keep inference default-off and use an initial Dokploy-managed runtime kill switch requiring a controlled container restart but no image rebuild;
+- choose G1 ephemeral report-only shadow output;
+- require zero accounting, review, suggestion, trusted-history, workspace, or locked-period side effects.
+
+Labeling options 1–4 remain pending. The recommended pending strategy is Option 2: a reproducible 60–100 transaction stratified cohort with randomized selection within project, direction, amount, and evidence/conflict strata. No labels were created and no option was selected.
+
+Live verification remains required for account identity, host capability, region, model availability, entitlement, permission, quota, pricing, provider data use/retention, and credential delivery. No live verification is authorized by this checkpoint.
+
+No AWS query, provider call, credential creation, environment change, package change, Prisma change, migration, production command, label creation, proposal execution, suggestion mutation, review decision, booking, deployment, stage, commit, or push occurred.
+
+Exact next owner action: review and approve or override C1–C14 and select a labeling strategy. A later Phase 5.4 planning task may begin only after those decisions and separately authorized live-verification evidence.
+
+
+
+## Gate C policy approved — live-verification plan prepared — 2026-08-02
+
+Owner approved all Gate C policy decisions (C1–C14) and labeling strategy on 2026-08-02.
+
+**Approved decisions:**
+- C1: verify live host; workload identity if proven; otherwise renewable short-lived credentials
+- C2: live-verification process approved; region value pending live check
+- C3: live-catalog selection approved; model ID pending live check
+- C4: verification checklist approved; evidence pending
+- C5: server-only, least-privilege, revocable, rotatable, fail-closed credentials
+- C6: direction + optional amount/currency + candidate IDs/labels + optional evidence counts only
+- C7: all optional expansion fields omitted initially
+- C8: 10 s timeout; 1 retry; 500 ms backoff; concurrency 2; 20 req/min; circuit breaker
+- C9: 10-request smoke-run; 4,096 input / 256 output tokens; monetary caps pending pricing
+- C10: ephemeral metadata only
+- C11: default-off future control
+- C12: Dokploy-managed kill switch + restart
+- C13: G1 ephemeral report-only
+- C14: zero-side-effect checklist
+- Labeling: Option 2 stratified 60–100 transactions (strategy only; no labels created)
+
+**Still-unresolved live values (blocking Phase 5.4):**
+- C2 region, C3 model ID, C4 evidence, C9 monetary caps
+
+**Live-verification plan** recorded in Section G.2 of the entry-gate document with five
+read-only steps: host identity, region selection, model/entitlement/pricing, monetary cap
+calculation, and evidence summary.
+
+**Boundaries:** documentation-only, uncommitted. No AWS access, credential creation, model
+invocation, label creation, code/schema/config change, deployment, commit, or push.
+
+**Next task:** owner authorizes live-verification steps (Section G.2) as a separate task.
+
+
+
+## Gate C documentation corrections — 2026-08-02
+
+Applied seven corrections to Gate C documentation. No live access, model invocation, code
+change, or credential was touched.
+
+**Key corrections:**
+- IMPLEMENTATION_PLAN.md and ROADMAP.md: reconciled to
+  `GATE C POLICY APPROVED — LIVE VALUES AND EXACT LABELING COHORT SIZE PENDING`
+- Exact Option 2 cohort size remains `OWNER_TO_SELECT_EXACT_COHORT_SIZE_FROM_60_TO_100`
+- Section G.2 is now metadata-only (no synthetic invocation)
+- New Section G.3 defines synthetic invocation as a separate authorization with explicit
+  prerequisites, constraints, and a statement that catalog metadata does not prove invocation
+- C4 split into C4a (metadata evidence) and C4b (`INVOCATION CAPABILITY NOT YET PROVEN`)
+- Monetary-cap section presents scenarios; 221-row is reference only; owner enters explicit caps
+- Gate C conditions and Approval C updated to reflect C4a/C4b and pending cohort size
+
+**Still unresolved:** C2, C3, C4a evidence, C4b invocation proof, C9 monetary caps, exact cohort size
+
+**Phase 5.4 remains unstarted.** No live access, credential, secret, or model invocation
+occurred. No code, schema, migration, package, or config changed. All work uncommitted.
+
+---
+
+## Gate C sequencing correction — 2026-08-02
+
+**Scope:** documentation-only. No code, TypeScript, tests, Prisma, migrations, packages,
+lockfiles, Docker files, environment templates, configuration, deployment, commit, push, or
+model invocation. Phase 5.1–5.3 unchanged.
+
+**Problem corrected:** Circular dependency in Gate C documentation. Prior G.3 listed controls
+(default-off, kill switch, logging, provider path) as prerequisites for the synthetic smoke
+invocation (C4b). These controls can only exist after Phase 5.4A is implemented. But Phase 5.4A
+was blocked on C4b from G.3. The prior structure made Phase 5.4 permanently impossible to start.
+
+**Corrections applied:**
+
+1. **Five-stage non-circular Gate C:** Gate C-P (policy — COMPLETE), Gate C-M (metadata-only
+   live values — PENDING), Phase 5.4A (no-invocation provider integration — NOT STARTED),
+   Gate C-S (one authorized synthetic invocation post-Phase-5.4A — BLOCKED ON PHASE 5.4A),
+   Phase 5.4B (first real shadow run — BLOCKED).
+
+2. **C4b blocks Phase 5.4B, not Phase 5.4A.** C4b resolved by Gate C-S after Phase 5.4A
+   implements the controls G.3 validates.
+
+3. **G.3 is a post-Phase-5.4A validation gate.** Not a pre-implementation prerequisite.
+   Gate C-S is its corrected role.
+
+4. **Exact cohort size and frozen labels block Phase 5.4B only.** Not required for Phase 5.4A
+   or Gate C-M or one Gate C-S synthetic invocation.
+
+5. **Status language across all five authorized files:**
+   `GATE C POLICY APPROVED — METADATA VALUES PENDING — PHASE 5.4A NOT STARTED — SYNTHETIC SMOKE BLOCKED ON PHASE 5.4A — REAL SHADOW RUN BLOCKED`
+
+6. **No live verification, model invocation, code change, label creation, or deployment.**
+   Phase 5.4A remains unstarted.
+
+**Still unresolved:** C2 region, C3 model ID, C4a catalog/pricing/terms metadata, C4b invocation
+proof (pending Phase 5.4A + Gate C-S), C9 monetary caps, exact cohort size (required before
+Phase 5.4B only). All work uncommitted.
+
+---
+
+## Production go-live and manual-review readiness audit — 2026-08-02
+
+**Scope:** read-only. No production mutation occurred.
+
+**Production verified:**
+- SHA: `8717a22163278d12f0b14f7aacc5779f8536186a` (matches expected)
+- Health: `ok`
+- Transactions: 902 / Bookings: 681 / Unresolved: 221 / Suggestions: 663 / ReviewDecisions: 0
+- Cash: PASSED / Classification: PENDING / Close: BLOCKED
+- Duplicate fingerprints: 0 / Running-balance errors: 0
+- Reference data: 6 projects, 12 types, 67 categories — all available
+- Stale suggestion IDs: 0
+
+**Manual-review readiness:**
+- All 221 items reachable across 9 pages (pageSize=25), 5 pages (50), 3 pages (100)
+- All 221 items have a complete proposal; all are `deterministicStatus: conflict`
+- All proposals use valid live reference-data IDs (0 stale)
+- Incomplete-dimension PATCH rejected with 400
+- ADMIN role required for confirmation; locked-period and workspace checks enforced
+- No confirmation submitted
+
+**Workload:** 94 debit / 127 credit; 221 conflict-status items require manual selection (no deterministic single-winner); all `DEFAULT` confidence. Month distribution: Jan 29, Feb 34, Mar 44, Apr 44, May 28, Jun 37, Jul 5. Project distribution: FTK 189, WLJ 12, FR 9, Algemeen 6, VS 5.
+
+**Manual review and close are independent of the AI roadmap.** Gate C-M and later are not prerequisites. Phase 5.1–5.3 remain local, uncommitted, isolated, undeployed.
+
+**No code, schema, migration, package, config, deployment, commit, or push occurred.**
+
+---
+
+## Best-prefill hardening — production comparison verified — 2026-08-03
+
+**Status: BEST-PREFILL HARDENING — PRODUCTION COMPARISON VERIFIED / DEPLOYMENT PENDING**
+
+**Scope:** code changes local only; production comparison read-only. No production mutation occurred.
+
+**Changes (uncommitted):**
+- `server/services/reviewQueueService.ts` — strict `checkPrefillEligibility` (INVALID_TRUSTED_CONTEXT, SUGGESTION_NOT_PENDING added); canonical `selectReviewPrefill` exported with 4-tier precedence (AUTHORITATIVE_TRANSACTION → EXISTING_BOOKING → OWNER_HISTORY_V2 → LEGACY_HISTORY_FALLBACK)
+- `server/cli/runBestPrefillComparison.ts` — findUnique scope validation; full transaction query; canonical selector; sanitized error codes; loadEnvConfig
+- `tests/services/reviewQueueService.test.ts` — fixture fixes (transactionId, status, workspaceId arg)
+- `tests/cli/runBestPrefillComparison.test.ts` — new: 26 tests
+
+**Local test results:** 1788 pass / 1 pre-existing failure (model002DomainSchema Prisma output format) / 2 skipped. Builds pass. Zero TypeScript errors in changed files.
+
+**Production comparison (2026-08-03, read-only):**
+- totalUnresolvedTransactions: 221
+- selectedAuthoritativeTransaction: 0 / selectedExistingBooking: 0
+- selectedOwnerHistoryV2: 178 / selectedLegacyFallback: 43 / selectedNone: 0
+- completePrefills: 221 (100%) — **all 221 unresolved transactions receive a complete prefill**
+- assertionsPassed: true (--expected-total 221 --expected-complete-prefills 221 --expected-none 0)
+- v2Covered: 178 / v2Abstained: 43; eligibleLegacy: 663 / invalidLegacy: 0
+- tripleAgreement: 167 / tripleDisagreement: 11
+- writesPerformed: false
+
+**Production data unchanged.** No code, schema, migration, package, config, deployment, commit, or push.
+
+
+
+## Best-prefill deployment attempt — local commit complete, push blocked — 2026-08-03 16:12 +01:00
+
+Workbench run: `agent-5f22b27a-50c9-496e-8fad-c362d8f24898`
+
+### Completed locally
+
+- Final fail-closed eligibility correction applied:
+  - missing or mismatched `transactionId` now always produces `TRANSACTION_MISMATCH`;
+  - missing or non-`PENDING` status now always produces `SUGGESTION_NOT_PENDING`;
+  - removed the remaining `as any` status access.
+- Added focused tests for missing transaction ID, missing status, non-pending status, and valid pending transaction match.
+- Removed the password-shaped secret-scan fixture from the comparison CLI test.
+- Directly affected suites: 125/125 passed.
+- Server TypeScript build: passed.
+- Next.js production build: passed; only the existing SWC lockfile warning remained.
+- Full TypeScript check retained the repository's existing unrelated diagnostic baseline; no diagnostic referenced the final edited selector or CLI test files.
+- Secret-material scan over the exact deployment scope: zero findings.
+- High-risk scan over server/CLI/UI-helper/test files: zero findings. The broad scan only flagged the existing client `fetch()` calls in `src/libs/api.ts`.
+- Full Vitest execution covered all suites. The all-files worker did not exit before the 300-second Workbench validation deadline, but every emitted suite passed; `tests/services/statementControlService.test.ts` was run separately and passed 4/4.
+
+### Exact commit
+
+- Commit: `6785257 feat(review): deploy producer-aware best-prefill selection`
+- Exactly 17 approved code, UI, tooling, and test paths were committed.
+- Documentation and Phase 5 inference files were excluded and remain uncommitted.
+
+### Blocker
+
+Push did not occur. Workbench's `git_push` backend attempted to start the GitHub CLI and failed with `spawn gh ENOENT`. A retry using the valid command envelope produced the same environment-level blocker. No alternate push mechanism, shell command, credential change, or deployment trigger was attempted.
+
+Because the commit is not on `origin/main`:
+
+- GitHub Actions did not run for `6785257`;
+- Dokploy was not triggered;
+- production remains on the previously deployed SHA until the commit is pushed;
+- no owner-history-v2 proposal execution is authorized;
+- no suggestion, booking, review decision, or transaction was changed.
+
+### Exact resume point
+
+Restore or provide the approved GitHub push capability for Workbench, then:
+
+1. verify local `main` still points to `6785257` and the unrelated worktree is unchanged;
+2. push `main` to `origin/main` without force;
+3. inspect the `Build and Deploy` GitHub Actions run;
+4. wait for Dokploy convergence to the pushed full SHA;
+5. perform the read-only post-deployment checks;
+6. stop before owner-history-v2 execution and prepare its separate authorization prompt.

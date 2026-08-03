@@ -1,27 +1,43 @@
 # Yeshua Academy Finance rebuild run
 
-Date: 2026-07-02  
-Run: `agent-f961650b-de17-4282-ab18-7a716cc72958`  
+Date: 2026-07-02 (initial)  
+Latest: 2026-08-03 (Phase 20 launch complete)  
+Run: `agent-f961650b-de17-4282-ab18-7a716cc72958` (original); finalization run 2026-08-03  
 Source: `yeshuaacademy-finance`  
 Branch: `main`  
-Status: Release Candidate 7 — production schema cutover, historical import, database credential finalization, all provider secret rotations, real PDF renderer, real email sending, and Phase 17 monthly reconciliation complete 2026-07-09; formula-based monthly chaining model; production audit passed; 2024 closing 1218415, 2025 closing 1035086, 2026 partial closing 783725 all confirmed; Phase 17 complete
+Status: **CORE APPLICATION LIVE AND PRODUCTION-READY** — Phase 0 through Phase 20 complete; history-based prefill deployed and live; 221 transactions ready for manual confirmation; LLM/Bedrock roadmap deferred indefinitely
 
 Historical evidence convention: dated packet, phase, and preflight sections
 below describe earlier implementation states. They are superseded by the
 current release facts in this opening section and are not current runtime
 instructions.
 
-Current application implementation commit: `f9e967f54632f86bad2ef3c5774334a48cda85ad`.
-Previous final documentation/release-evidence commit: `df1ccb009769a89e33b3393e0e546d3caa90f174`.
-The current running production build SHA is verified from the no-cache
-deployment-info endpoint after each release; the exact runtime value is
-reported in closeout evidence rather than duplicated self-referentially.
-Phase 18's one-time opening-balance repair was completed on 2026-07-14 and
-must never be repeated. Phase 19 history-v1 suggestion persistence is
-complete with 663 review-only suggestions; 221 administrator decisions remain.
-Current controls are `cashStatus=PASSED`, `classificationStatus=PENDING`, and
-`closeStatus=BLOCKED`. The authenticated portal readiness fix is deployed and
-the portal reloads its populated finance data after Clerk session readiness.
+**Current production deployment:**
+- Commit: `678525766159919927771abf2042a47b19757f55` (feat(review): deploy producer-aware best-prefill selection)
+- Deployed: 2026-08-03
+- Status: Live and verified healthy
+
+**Completed activities (Phase 0–Phase 20):**
+- Phase 18: one-time opening-balance repair (2026-07-14) — must never be repeated
+- Phase 19: history-v1 suggestion persistence (663 review-only suggestions)
+- Phase 20: owner-history-v2 best-prefill deployed (178 suggestions persisted, live in production)
+- All 221 unresolved transactions completely prefilled (178 v2 + 43 legacy)
+
+**Current production controls:**
+- `cashStatus = PASSED` ✓
+- `classificationStatus = PENDING` (awaiting manual owner review)
+- `closeStatus = BLOCKED` (pending transaction review completion)
+- Transaction count: 902
+- Confirmed bookings: 681
+- Unresolved (ready for manual review): 221
+- All 221 rows have complete prefills
+
+**Deferred roadmap:**
+- Phase 5 (LLM/Bedrock decision engine): indefinitely deferred; no deployment, no AWS access, no credentials
+- Foundation code committed locally (disabled, not active)
+- Core application is fully functional without Phase 5 features
+
+The authenticated portal is live, Clerk-only email sign-in is active, and manual administrator review/confirmation workflow is operational. No automatic posting occurs; all bookings require human confirmation.
 
 ## Current authentication standardization
 
@@ -5758,3 +5774,777 @@ Limitations:
 Rollback removes `deterministicBenchmarkRunnerService.ts`, `runDeterministicBenchmark.ts`, their focused tests, the `benchmark:deterministic` package script, and reverts the Phase 4.8 documentation. No database rollback is required.
 
 No push is authorized or performed.
+
+
+
+---
+
+## Program Phase 4 complete — Phase 5 entry-gate decision package — 2026-08-01
+
+### Current program position
+
+| Phase | Status |
+|---|---|
+| Program Phase 4 — Retrieval and Decision Foundation | **COMPLETE** |
+| Program Phase 5 — AI Decision Engine | **BLOCKED — ENTRY GATE UNDECIDABLE** |
+| Program Phase 6 — Evaluation, Calibration, and Observability | BLOCKED ON PHASE 5 SHADOW OUTPUT AND LABELED BENCHMARK |
+| Program Phase 7 — Controlled Rollout | BLOCKED ON PHASE 6 GO/NO-GO |
+
+### Production state at checkpoint
+
+- Production HEAD: `8717a22163278d12f0b14f7aacc5779f8536186a`
+- 902 transactions; 681 confirmed bookings; 0 ReviewDecision records
+- 221 unresolved 2026 transactions (all `UNLABELED_PENDING_CONFIRMATION`)
+- 663 legacy/unowned pending suggestions (history-v1, no ownership columns set)
+- 0 owner-history-v2 owned suggestions
+- `CategorizationSuggestion` schema: `producerKey`, `producerVersion`, `planHash` columns
+  added 2026-07-31; both indexes present; applied as `supabase_admin`
+- Prisma migration `20260731000000_add_suggestion_producer_ownership`: resolved as applied
+- `prisma migrate status`: 8 migrations, database schema up to date
+
+### Owner-history-v2 read-only verification (completed before this checkpoint)
+
+- 663 legacy unowned suggestions confirmed
+- 0 owner-history-v2 owned suggestions confirmed
+- 178 proposed targets; 43 abstained targets; 178 planned creates; 0 planned expirations
+- Proposal hash: `7a2d946f92b3004fc92959107508f485daf75971872d519806a24e0e30f2de14`
+- Ownership-state hash: `4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945`
+- Zero writes; no proposals executed; no ReviewDecision or TransactionBooking created
+
+### Phase 5 entry gate
+
+Gate: `PHASE_5_GATE_UNDECIDABLE`
+Reason: `NO_COMMITTED_NUMERIC_ACCEPTANCE_THRESHOLDS`
+
+Blockers:
+1. Zero confirmed labels — all 221 benchmark rows `UNLABELED_PENDING_CONFIRMATION`
+2. No numeric acceptance thresholds committed
+3. No provider, region, or model identifier approved
+4. No server-only credentials approach approved
+5. No privacy and data-retention policy approved
+6. No cost or operational budget approved
+7. No shadow-output persistence policy approved
+8. Default-off and kill-switch behavior not explicitly approved
+9. Rollback and no-booking validation plan not approved
+
+Entry-gate decision brief: `docs/PHASE_5_AI_DECISION_ENGINE_ENTRY_GATE.md`
+
+### Recurring operational risk (record only — do not implement during recovery)
+
+`scripts/start-prod.mjs` runs `prisma migrate deploy` using `DATABASE_URL` (`finance_user`),
+which cannot perform DDL on tables owned by `supabase_admin`. Future DDL migrations will fail
+with PostgreSQL error 42501. Long-term fix options:
+
+- A dedicated one-shot migration job with a privileged migration-only credential.
+- A separate `SYSTEM_DATABASE_URL` migration step in CI/CD, before container start.
+- An external migration stage that applies DDL as `supabase_admin` before Dokploy triggers
+  the application deployment.
+
+Do not place `supabase_admin` credentials in the long-running application process. No
+implementation is authorized now.
+
+### Exact next task after owner decisions
+
+If and only if the owner approves the Phase 5 entry-gate decisions in
+`docs/PHASE_5_AI_DECISION_ENGINE_ENTRY_GATE.md` Section H, the next task is Phase 5.1:
+define a server-only disabled Bedrock inference adapter, add safety tests, and leave all
+existing accounting, review, and booking behavior unchanged. Phase 5.1 does not install
+the AWS SDK, create credentials, or invoke any model.
+
+No implementation, production mutation, push, or commit occurred during this documentation slice.
+
+
+
+---
+
+## Phase 5 entry-gate correction — 2026-08-01
+
+### What changed
+
+Documentation-only correction. No code, schema, migration, configuration, dependency,
+generated file, production command, or external provider call was changed.
+
+The initial Phase 5 entry-gate brief (`docs/PHASE_5_AI_DECISION_ENGINE_ENTRY_GATE.md`) was
+revised to replace a single all-or-nothing gate with four tiered gates. The prior brief
+created a circular dependency by requiring model accuracy, provider failure rate, inference
+latency, model cost, coverage, abstention, and false-high-confidence rate before Phase 5.1
+could begin. Phase 5.1 is a permanently disabled server-only provider abstraction; those
+properties cannot be measured at Phase 5.1 time.
+
+### Gate structure after correction
+
+| Gate | Covers | Key requirement |
+|---|---|---|
+| Gate A | Phase 5.1 disabled boundary | Safety and architecture checklist only |
+| Gate B | Phase 5.2–5.3 contracts | Payload, ID, schema, privacy-fixture decisions |
+| Gate C | Phase 5.4 real inference | Provider, region, model, credentials, cost, privacy |
+| Gate D | Phase 6 and Phase 7 | Measured model output; numeric performance thresholds |
+
+### Production evidence unchanged
+
+No prior production evidence changed. The verified baseline controls remain:
+
+| Period | Transactions | Opening | Income | Expenses | Closing |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 2024 | 268 | EUR 1,721.86 | EUR 32,267.19 | EUR 21,804.90 | EUR 12,184.15 |
+| 2025 | 413 | EUR 12,184.15 | EUR 91,642.44 | EUR 93,475.73 | EUR 10,350.86 |
+| 2026-01-01 through 2026-07-01 | 221 | EUR 10,350.86 | EUR 58,784.08 | EUR 61,297.69 | EUR 7,837.25 |
+
+Production HEAD: `8717a22163278d12f0b14f7aacc5779f8536186a`
+902 transactions; 681 confirmed bookings; 663 pending suggestions; 221 unresolved; 0 ReviewDecision records.
+
+### Program Phase status unchanged
+
+| Phase | Status |
+|---|---|
+| Program Phase 4 | COMPLETE |
+| Program Phase 5 | UNSTARTED — BLOCKED (Gate A approval pending) |
+| Program Phase 6 | BLOCKED ON PHASE 5 SHADOW OUTPUT AND LABELED BENCHMARK |
+| Program Phase 7 | BLOCKED ON PHASE 6 GO/NO-GO |
+
+Phase 5.1 is not approved or started.
+
+### Exact next owner decision
+
+Gate A only. The owner must review Section J, Approval A of
+`docs/PHASE_5_AI_DECISION_ENGINE_ENTRY_GATE.md` and confirm the fourteen Gate A conditions
+(A1–A14). No labeling strategy, provider, model, credential, cost, or benchmark threshold
+decision is required to approve Gate A.
+
+All live Bedrock, labeling-strategy, benchmark-evaluation, and rollout gates remain pending.
+
+
+
+---
+
+## Phase 5 entry-gate documentation correction — 2026-08-01
+
+### What changed
+
+Documentation-only correction. No code, schema, migration, configuration, dependency,
+generated file, production command, or external provider call changed.
+
+### Corrections applied
+
+- Stale global Phase 5 prerequisite removed from `ROADMAP.md` and `IMPLEMENTATION_PLAN.md`.
+  The old language required privacy, security, provider, and cost design approval before all
+  of Phase 5. Replaced with tiered language: Phase 5.1 requires Gate A only; Phases 5.2–5.3
+  require Gate B; Phases 5.4–5.8 require Gate C; Phase 6 and Phase 7 require Gate D.
+- Phase 5.1 now explicitly stated as isolated and configuration-free. It does not modify
+  `deterministicDecisionOrchestrationService.ts`, introduces no optional inference-contributor
+  slot, is not called by any route, review read, benchmark runner, background job, or startup
+  code, and has no provider configuration surface. The implementation is constructible without
+  environment variables and always returns `PROVIDER_DISABLED`.
+- Anticipated Phase 5.1 files corrected to exactly two: `server/services/bedrockInferenceAdapter.ts`
+  and `tests/services/bedrockInferenceAdapter.test.ts`. The "possibly modified orchestrator" was
+  removed. Tests are correctly placed under `tests/services/`, not `server/services/`.
+- Labeling strategy decision moved out of Gate A. It is now a pre-Gate-C requirement. Selecting
+  a labeling strategy is not required to implement Phase 5.1. Creating labels is not authorized
+  before Gate C. A labeling strategy must be approved before Phase 5.4.
+- Approval A now contains A1–A14 only (safety-boundary decisions). A15 was the labeling strategy;
+  it was removed from the Gate A checklist.
+- Phase 5.1 tests corrected to remove "missing provider configuration" cases (Phase 5.1 has no
+  provider configuration) and updated to cover: disabled adapter returns `PROVIDER_DISABLED`;
+  deterministic results; workspace identity required; no AWS SDK; no environment variable or
+  credential read; no Prisma, route, review, booking, or accounting dependency; no database
+  write; existing deterministic orchestration tests unchanged; removal restores prior behavior.
+
+### Program Phase status
+
+| Phase | Status |
+|---|---|
+| Program Phase 4 | COMPLETE |
+| Program Phase 5 | UNSTARTED — BLOCKED (Gate A approval pending) |
+| Program Phase 6 | BLOCKED ON PHASE 5 SHADOW OUTPUT AND LABELED BENCHMARK |
+| Program Phase 7 | BLOCKED ON PHASE 6 GO/NO-GO |
+
+Phase 5.1 is not approved or started. No Phase 5 code was implemented.
+
+### Exact next owner decision
+
+Gate A only: review Section J, Approval A of
+`docs/PHASE_5_AI_DECISION_ENGINE_ENTRY_GATE.md` and confirm A1–A14. No labeling
+strategy, provider, model, credential, cost, or benchmark threshold decision is required
+to approve Gate A.
+
+
+
+## Phase 5.1 implementation and test repair — 2026-08-01
+
+### Status
+
+| Program phase | Status |
+|---|---|
+| Program Phase 4 | COMPLETE |
+| Program Phase 5 | IN PROGRESS — 5.1 DONE_LOCAL_UNCOMMITTED; 5.2–5.3 BLOCKED ON GATE B; 5.4–5.8 BLOCKED ON GATE C |
+| Program Phase 6 | BLOCKED ON PHASE 5 SHADOW OUTPUT AND LABELED BENCHMARK |
+| Program Phase 7 | BLOCKED ON PHASE 6 GO/NO-GO |
+
+### Gate A owner approval
+
+Owner explicitly approved Gate A conditions A1–A14 on 2026-08-01 through the Phase 5.1
+implementation instruction. Gate B, Gate C, and Gate D remain pending.
+
+### Files created
+
+- `server/services/bedrockInferenceAdapter.ts` — 22 lines; no imports; no environment reads;
+  no SDK; no mutable state; always returns `{ abstained: true, reason: 'PROVIDER_DISABLED' }`.
+- `tests/services/bedrockInferenceAdapter.test.ts` — focused test suite; compile-time contract
+  assertions using `@ts-expect-error`; structural safety checks; no existing runtime imports.
+
+No existing file was modified.
+
+### Compile-time contract evidence
+
+`assertInvocationIdentityTypeContract` is a side-effect-free function reference that uses
+`@ts-expect-error` to prove:
+
+- a valid identity with both `workspaceId` and `targetTransactionId` compiles;
+- omitting `workspaceId` is rejected (`@ts-expect-error`);
+- omitting `targetTransactionId` is rejected (`@ts-expect-error`).
+
+`npx tsc --noEmit -p tsconfig.json` produced zero errors for both new files and zero `TS2578`
+(unused `@ts-expect-error`) diagnostics, confirming the directives are consumed correctly.
+
+### Security scan results
+
+Forbidden terms scanned in both new files: `process.env`, `@aws-sdk`, `aws-sdk`, `fetch(`,
+`AKIA`, `ASIA`, `ghp_`, `sk_`, `xox`, `axios`. **All clean.** No credential-shaped prefix
+appears in the implementation file. The test file contains a harmless sentinel
+`'phase5-disabled-adapter-sentinel'` used only to prove the adapter does not echo
+arbitrary input values. No AWS access-key pattern (`AKIA`), secret access key, or
+environment-variable mutation appears in either file.
+
+### Validation results
+
+| Check | Result |
+|---|---|
+| `npm test -- tests/services/bedrockInferenceAdapter.test.ts` | 12/12 passed |
+| `npm test -- tests/services/deterministicDecisionOrchestrationService.test.ts` | 10/10 passed |
+| `npm run build:server` | passed |
+| `npm run build` | passed (pre-existing SWC lockfile warning unchanged) |
+| `npx tsc --noEmit -p tsconfig.json` — new files only | zero errors; zero `TS2578` |
+| `git diff --check` | clean |
+| Secret and forbidden-import scan — both new files | clean |
+| No existing runtime module imports the adapter | confirmed |
+
+### Invariants preserved
+
+- No SDK, dependency, environment variable, provider configuration, network call, Prisma
+  dependency, or runtime integration was introduced.
+- `deterministicDecisionOrchestrationService.ts` was not modified.
+- Existing deterministic behavior is unchanged.
+- No production command was run. No deployment, commit, or push occurred.
+- All pre-existing uncommitted documentation changes remain untouched.
+
+### Rollback
+
+Delete `server/services/bedrockInferenceAdapter.ts` and
+`tests/services/bedrockInferenceAdapter.test.ts`. The exact prior runtime behavior
+is immediately restored (Gate A condition A14).
+
+### Exact next task
+
+Gate B owner decisions only. Review Section D and Section J, Approval B of
+`docs/PHASE_5_AI_DECISION_ENGINE_ENTRY_GATE.md`. Decide:
+minimum payload categories, prohibited payload fields, workspace-scoped candidate
+restrictions, output schema, invalid-ID behavior, malformed-output behavior, abstention
+contract, request and response size bounds, and privacy-safe test fixtures.
+
+No Phase 5.2 implementation begins before Gate B is explicitly approved.
+
+---
+
+## Gate B documentation — 2026-08-01
+
+`docs/PHASE_5_AI_DECISION_ENGINE_ENTRY_GATE.md` revised with concrete B1–B9 decisions.
+
+**Changes recorded:**
+
+- Section D restructured into three distinct contracts: (A) internal invocation envelope,
+  (B) provider-bound classification payload, (C) provider response contract.
+- B1–B9 decision records written with repository-grounded recommendations; all marked
+  `RECOMMENDED — PENDING OWNER APPROVAL`.
+- Phase 5.2 scope corrected: DTOs, strict schemas, serialization-safe amount representation,
+  request/response bounds, malformed-output parsing, synthetic fixtures only. No candidate
+  membership validation. No production data. No Bedrock calls.
+- Phase 5.3 responsibilities separated: candidate ID membership, dimension membership,
+  complete-triple validation, `candidateSetHash` match, stale-set rejection, direction
+  compatibility, whole-result abstention on invalid selection. Phase 5.3 blocked until
+  Phase 5.2 complete and locally validated.
+- Residual facts added: all Phase 5 work uncommitted; adapter not integrated; no live
+  provider contract; no privacy approval; no candidate display labels in current candidate
+  records; pre-existing TS errors outside Phase 5.1 scope.
+- Approval B checkboxes populated with concrete B1–B9 recommended values.
+- Gate B status: **PENDING** (not approved).
+
+**Boundaries:**
+
+No code, schema, migration, package, lockfile, config, generated file, or runtime
+integration was changed. Phase 5.1 files remain byte-for-byte unchanged. Work is
+documentation-only and uncommitted.
+
+**Next task:** owner reviews Section D and Approval B; approves or overrides each of B1–B9.
+
+---
+
+### Gate B correction checkpoint — 2026-08-01
+
+Gate B entry-gate document rewritten with 11 corrections to contract layering, response
+contract, abstention taxonomy, parser behavior, direction values, candidate structure,
+bounds, Phase 5.2 boundary, and naming.
+
+**Summary of corrections:**
+- Four-object contract layering (A: envelope, B: request, C: raw response, D: internal result)
+- Raw response must NOT echo contractVersion, candidateSetHash, or any trusted internal value
+- Provider-declared abstention reasons (4 values) separated from internal/system reasons (5 values)
+- Non-throwing parser returns `{ok, value}` or `{ok: false, reason}` — never throws
+- Direction corrected to lowercase `credit | debit`; amount/currency all-or-nothing pair
+- Candidates grouped by dimension arrays; no redundant dimension field; 30 = total descriptors
+- Label enrichment deferred; Phase 5.2 filename: `inferenceContractService.ts` (provider-neutral)
+- Security-scan failures in `agent-mode-progress.md` corrected (webhook URL, credential literal)
+- All Approval B items remain PENDING OWNER APPROVAL
+
+**Boundaries:** documentation-only, uncommitted. No code, schema, migration, package, or
+config change. Phase 5.1 files byte-for-byte unchanged.
+
+**Next task:** owner reviews corrected Section D and Approval B; approves or overrides B1–B9.
+
+
+
+
+## Program Phase 5.2 checkpoint — Gate B approved, local contracts complete — 2026-08-01
+
+Owner approved Gate B decisions B1–B9 on 2026-08-01. Phase 5.2 is `DONE_LOCAL_UNCOMMITTED`.
+
+Created exactly:
+
+- `server/services/inferenceContractService.ts`
+- `tests/services/inferenceContractService.test.ts`
+
+The implementation is provider-neutral and isolated. It defines strict Zod request and raw-response contracts, grouped bounded candidates, lowercase `credit`/`debit`, optional all-or-nothing amount/currency, provider-declared abstention reasons, approved byte and field bounds, and the non-throwing `parseProviderResponseText` parser. It does not import Prisma, the Phase 5.1 adapter, orchestration, routes, review, booking, suggestion, accounting, AWS, or any provider SDK. It reads no environment variables and performs no network, filesystem, logging, database, or production operation.
+
+Validation evidence:
+
+- Phase 5.2 focused tests: 58/58 passed;
+- Phase 5.1 adapter regression: 12/12 passed;
+- deterministic orchestration regression: 10/10 passed;
+- server TypeScript build: passed;
+- Next.js production build: passed with the pre-existing SWC lockfile warning only;
+- full `tsconfig.json` check: non-zero because of pre-existing repository diagnostics; no diagnostic references a Phase 5.1 or Phase 5.2 file;
+- high-risk scan across all four Phase 5.1–5.2 files: zero findings;
+- documentation secret-material scan after the two wording corrections: zero findings.
+
+The Phase 5.1 files were not modified. No package, lockfile, Prisma schema, migration, runtime service, route, provider configuration, credential, provider call, production data, deployment, commit, or push was introduced.
+
+Current roadmap boundary:
+
+- Phase 5.1: `DONE_LOCAL_UNCOMMITTED`;
+- Phase 5.2: `DONE_LOCAL_UNCOMMITTED`;
+- Phase 5.3: exact next implementation slice;
+- Phase 5.4–5.8: blocked on Gate C;
+- Phase 6: blocked on shadow output and frozen labels;
+- Phase 7: blocked on Phase 6 go/no-go.
+
+Phase 5.3 must remain a pure in-process semantic validation layer over the trusted internal envelope and the already parsed raw provider response. It must not call a provider, import Prisma, enrich labels, integrate routes or orchestration, or create accounting effects.
+
+
+
+## Workbench checkpoint — Phase 5.3 semantic validation complete locally — 2026-08-01 21:02 +01:00
+
+Program Phase 5.3 is `DONE_LOCAL_UNCOMMITTED` under approved Gate B.
+
+Created exactly:
+
+- `server/services/inferenceCandidateValidationService.ts`
+- `tests/services/inferenceCandidateValidationService.test.ts`
+
+The validator is a pure in-memory semantic boundary. It receives the trusted internal invocation envelope, the current trusted restricted-candidate result, and a structurally valid Phase 5.2 raw provider response as separate inputs. Validation order is fixed: trusted workspace, target-transaction, and candidate-set identity first; provider abstention passthrough second; defensive complete-proposal checks third; matched candidate-set state fourth; dimension membership fifth; selected-candidate integrity last.
+
+Failure behavior:
+
+- trusted-context or candidate-set identity mismatch returns internal `STALE_CANDIDATE_SET`;
+- incomplete, duplicate, missing, out-of-set, cross-dimension, ambiguous, inactive, direction-incompatible, or wrong-dimension proposals return internal `INVALID_CANDIDATE_SELECTION`;
+- no model-supplied hash or provenance is trusted.
+
+Validation evidence:
+
+- Phase 5.3 focused tests: 25/25 passed;
+- Phase 5.2 contract regression: 58/58 passed after one owner-approved narrow test repair permitting type-only imports while continuing to reject runtime imports;
+- Phase 5.1 adapter regression: 12/12 passed;
+- restricted-candidate regression: 12/12 passed;
+- deterministic orchestration regression: 10/10 passed;
+- server TypeScript build: passed;
+- Next.js production build: passed with the pre-existing SWC lockfile warning only;
+- full `tsconfig.json`: exit code 2 from pre-existing diagnostics only; no diagnostic references any Phase 5.1, Phase 5.2, or Phase 5.3 file;
+- high-risk scan across all six Phase 5.1–5.3 code and test files: zero findings.
+
+Phase 5.1 and Phase 5.2 implementation files were not modified. The only existing TypeScript-file change was the explicitly approved narrow repair in `tests/services/inferenceContractService.test.ts`. No runtime module imports the new validator. No provider call, network access, environment read, Prisma access, database effect, label creation, suggestion execution, review decision, booking, production command, deployment, stage, commit, or push occurred.
+
+Current roadmap position:
+
+- Phase 5.1: `DONE_LOCAL_UNCOMMITTED`;
+- Phase 5.2: `DONE_LOCAL_UNCOMMITTED`;
+- Phase 5.3: `DONE_LOCAL_UNCOMMITTED`;
+- Phase 5.4–5.8: blocked on Gate C;
+- Phase 6: blocked on shadow output and frozen labels;
+- Phase 7: blocked on Phase 6 go/no-go.
+
+Exact next owner action: prepare and decide Gate C only. Do not begin Phase 5.4 automatically.
+
+
+
+## Workbench checkpoint — Gate C owner-decision package prepared — 2026-08-02 00:41 +01:00
+
+Gate C remains `PENDING OWNER APPROVAL`. Phase 5.1, Phase 5.2, and Phase 5.3 remain `DONE_LOCAL_UNCOMMITTED`, isolated, unused by runtime modules, and not deployed. Phase 5.4 has not started.
+
+The authoritative C1–C14 package is now recorded in `docs/PHASE_5_AI_DECISION_ENGINE_ENTRY_GATE.md`, Section G.1 and Approval C. It separates verified repository facts from live AWS and Dokploy assumptions and prepares decisions for:
+
+1. deployment identity;
+2. Bedrock region;
+3. exact pinned model identifier;
+4. account entitlement, permission, quota, pricing, and provider terms;
+5. server-only credentials;
+6. privacy, retention, data-use, logging, regional handling, and incident response;
+7. optional payload expansion;
+8. timeout, retry, concurrency, rate, circuit-breaker, duplicate-prevention, and wall-time limits;
+9. monetary, request, and token caps;
+10. operational and cost metadata;
+11. default-off control;
+12. kill switch;
+13. shadow-output handling;
+14. no-booking and rollback acceptance.
+
+Source-grounded deployment facts:
+
+- production is a Docker container started with `node scripts/start-prod.mjs`;
+- the repository does not prove that the Dokploy host is AWS compute or supports workload identity;
+- no Bedrock SDK, model identifier, region, provider credential, provider configuration, or runtime inference integration exists;
+- `.env.example`, `package.json`, Docker configuration, Prisma, migrations, and TypeScript files were not changed by this package.
+
+Recommended baseline, all `RECOMMENDED — PENDING OWNER APPROVAL`:
+
+- verify the live host before selecting workload identity; prefer attached workload identity when proven, otherwise renewable short-lived credentials;
+- choose region and pinned model only from the live account and catalog;
+- use the Phase 5.2 minimum payload: direction, optional amount/currency pair, constrained candidate IDs/labels, and optional scalar evidence counts;
+- omit counterparty, payment purpose, merchant labels, and history examples initially;
+- provisional operations: 10-second attempt timeout, one transient retry, concurrency 2, 20 requests/minute, fail-closed circuit breaker, one invocation per trusted identity, and 25-second wall-time cap;
+- require numeric monetary caps before any call; first smoke-run request cap 10; provisional 4,096 input-token and 256 output-token caps;
+- metadata-only ephemeral reporting; no request/response bodies and no persistent storage;
+- default-off future server control; initial Dokploy-managed runtime kill switch with container restart and no image rebuild;
+- G1 ephemeral report-only shadow output;
+- zero booking, review-decision, suggestion, finance-fact, period, ledger, trusted-history, workspace, or locked-period side effects.
+
+Labeling strategy remains an owner decision. Options 1–4 are documented. The recommended pending option is a reproducible stratified cohort of 60–100 transactions with project, direction, amount, evidence/conflict, and randomized-within-strata coverage. No option was selected and no labels were created.
+
+Live verification is still required for the AWS account, Dokploy host identity mechanism, region, model catalog, entitlement, quota, pricing, provider retention/training terms, and credential delivery. This documentation package does not authorize those checks.
+
+No provider call, AWS query, credential creation, configuration change, package change, schema change, migration, production command, label creation, proposal execution, suggestion mutation, `ReviewDecision`, booking, deployment, stage, commit, or push occurred.
+
+Exact next owner action: review and approve or override every C1–C14 decision and select a labeling strategy. Phase 5.4 planning must not begin until that approval and the separately authorized live-verification evidence exist.
+
+---
+
+### Gate C policy approval and live-verification plan — 2026-08-02
+
+Owner approved all Gate C policy decisions (C1–C14) and labeling strategy (Option 2,
+stratified 60–100 transactions) on 2026-08-02.
+
+**Approved policy decisions:**
+- C1: verify live host first; workload identity if proven; otherwise renewable short-lived credentials
+- C2: live-verification process approved; value remains `OWNER_TO_SELECT_AFTER_LIVE_ACCOUNT_VERIFICATION`
+- C3: live-catalog selection process approved; value remains `OWNER_TO_SELECT_FROM_LIVE_BEDROCK_MODEL_CATALOG`
+- C4: live verification checklist approved; evidence not yet collected
+- C5: server-only, least-privilege, independently revocable/rotatable, no client/source/log exposure, fail-closed
+- C6: transmit direction + optional amount/currency + candidate IDs/labels + optional evidence counts only
+- C7: all optional expansion fields initially omitted
+- C8: 10 s timeout; 1 retry transient; 500 ms jittered backoff capped 2 s; concurrency 2; 20 req/min; circuit breaker 5/60 s with 5-min cooldown; 1 per identity per run; 25 s wall time
+- C9: smoke-run 10 requests; input 4,096 tokens; output 256 tokens; fail-closed; monetary caps unresolved
+- C10: ephemeral server-internal metadata only; no bodies, IDs, hashes, credentials, or finance facts in logs
+- C11: future `AI_SHADOW_INFERENCE_ENABLED` default false; not yet added
+- C12: Dokploy-managed runtime control + authorized restart; audit, fail-closed, deterministic fallback
+- C13: G1 ephemeral report-only; no schema/migration/persistent records
+- C14: complete zero-side-effect checklist; all failures degrade to deterministic-only
+- Labeling: Option 2, stratified 60–100 with project/direction/amount/evidence strata; strategy only
+
+**Still-unresolved live values (blocking Phase 5.4):**
+- C2 — Bedrock region
+- C3 — Exact pinned model identifier
+- C4 — Entitlement, quota, pricing, and provider terms evidence
+- C9 — Daily, monthly, and per-run monetary caps
+
+**Live-verification plan prepared** in `docs/PHASE_5_AI_DECISION_ENGINE_ENTRY_GATE.md`
+Section G.2 with five read-only steps:
+1. Dokploy host identity verification
+2. AWS account and Bedrock region selection
+3. Model identifier, entitlement, and pricing confirmation
+4. Monetary cap calculation from confirmed pricing
+5. Evidence summary and final Gate C resolution
+
+**Boundaries:** documentation-only, uncommitted. No AWS access, credential creation, model
+invocation, label creation, code change, schema change, configuration change, deployment,
+commit, or push.
+
+**Next task:** owner authorizes live-verification steps (Section G.2) as a separate explicit
+task. No verification action may begin until that authorization is given.
+
+---
+
+### Gate C documentation corrections — 2026-08-02
+
+Applied seven corrections to Gate C documentation. No live access, model invocation, code
+change, or credential was touched.
+
+**Corrections:**
+1. IMPLEMENTATION_PLAN.md and ROADMAP.md reconciled to canonical status:
+   `GATE C POLICY APPROVED — LIVE VALUES AND EXACT LABELING COHORT SIZE PENDING`
+2. Exact Option 2 cohort size is not finalized — recorded as
+   `OWNER_TO_SELECT_EXACT_COHORT_SIZE_FROM_60_TO_100`
+3. Section G.2 rewritten as metadata-only verification (no invocation); renamed to
+   "Metadata-only live verification plan — no invocation authorized"; synthetic invocation
+   removed from this section
+4. New Section G.3 created: "Synthetic invocation verification — separate authorization
+   required" — lists all prerequisites (C2, C3, credentials, monetary caps, etc.), defines
+   the synthetic smoke-test constraints, and states what catalog metadata does not prove
+5. C4 split into C4a (metadata evidence — gatherble in G.2) and C4b (invocation proof —
+   requires G.3; `INVOCATION CAPABILITY NOT YET PROVEN`)
+6. Monetary-cap step rewritten with scenario table: single invocation, smoke run, Option 2
+   cohort, and 221-row reference. Owner must enter explicit numeric values; 221-row is for
+   comparison only, not a default multiplier
+7. Gate C conditions table and Approval C updated to reflect C4a/C4b split and pending
+   cohort size
+
+**Still blocked:**
+- C2 region, C3 model ID, C4a metadata, C4b invocation proof, C9 monetary caps, exact cohort size
+
+**Boundaries:** documentation-only, uncommitted. Phase 5.1–5.3 unchanged.
+
+---
+
+## Correction checkpoint — Gate C sequencing correction (2026-08-02)
+
+**Scope:** documentation-only. No code, TypeScript, tests, Prisma, migrations, packages, lockfiles,
+Docker files, environment templates, configuration, deployment, commit, push, or model invocation.
+Phase 5.1–5.3 files unchanged. No AWS access, no Dokploy access, no credentials inspected.
+
+**Problem corrected:** The prior documentation had a circular dependency. Section G.3 (synthetic
+smoke / invocation proof = C4b) listed as prerequisites: default-off functional, kill switch
+functional, credential delivery operational, logging implemented, and provider request path
+implemented. These controls can only exist after Phase 5.4A is implemented. But Phase 5.4A was
+blocked on C4b (invocation proof) from G.3. This made Phase 5.4 permanently impossible to start.
+
+**Corrections applied to all five authorized documentation files:**
+
+1. **Gate C now has five non-circular stages:** Gate C-P (policy — COMPLETE), Gate C-M
+   (metadata-only live values — PENDING), Phase 5.4A (no-invocation provider integration —
+   NOT STARTED), Gate C-S (one authorized synthetic invocation, post-Phase-5.4A — BLOCKED ON
+   PHASE 5.4A), Phase 5.4B (first real shadow run — BLOCKED).
+
+2. **C4b blocks Phase 5.4B, not Phase 5.4A.** C4b (invocation proof) is resolved by Gate C-S
+   after Phase 5.4A is implemented. Phase 5.4A requires C1/C2/C3/C4a/C5/C9 plus owner
+   authorization — not C4b.
+
+3. **G.3 is a post-Phase-5.4A validation gate, not a pre-implementation prerequisite.** G.3
+   can only run after Phase 5.4A provides the controls it validates (default-off, kill switch,
+   logging, provider path). G.3 is Gate C-S, not an entry requirement for Phase 5.4A.
+
+4. **Exact cohort size and frozen labels block Phase 5.4B only.** `OWNER_TO_SELECT_EXACT_COHORT_SIZE_FROM_60_TO_100`
+   is not required before Phase 5.4A, Gate C-M resolution, or one Gate C-S synthetic invocation.
+
+5. **Phase 5.4A is a no-invocation implementation slice.** It may implement: provider adapter,
+   pinned region/model config, credential-provider integration (no values), default-off, kill
+   switch, timeout/retry/concurrency/rate/circuit-breaker/budget/deduplication controls,
+   minimum-payload construction, Phase 5.2–5.3 integration, logging, fixed synthetic smoke
+   harness, and tests proving no provider call while disabled and no accounting mutation.
+
+6. **Status language corrected across all five files to:**
+   `GATE C POLICY APPROVED — METADATA VALUES PENDING — PHASE 5.4A NOT STARTED — SYNTHETIC SMOKE BLOCKED ON PHASE 5.4A — REAL SHADOW RUN BLOCKED`
+
+7. **No live verification, model invocation, code change, label creation, or deployment occurred.**
+   All five files remain documentation-only. Phase 5.4A remains unstarted.
+
+8. **Documents modified:** `docs/PHASE_5_AI_DECISION_ENGINE_ENTRY_GATE.md`,
+   `docs/IMPLEMENTATION_PLAN.md`, `docs/ROADMAP.md`, `docs/finance-rebuild-run.md` (this file),
+   `docs/product/agent-mode-progress.md`. No other files changed.
+
+**Still blocked (unchanged):** C2 region, C3 model ID, C4a catalog/pricing/terms metadata, C4b
+invocation proof (pending Phase 5.4A + Gate C-S), C9 monetary caps, exact cohort size (pending
+Phase 5.4B). Phase 5.4A not started.
+
+---
+
+## Production go-live and manual-review readiness audit (2026-08-02)
+
+**Scope:** read-only production verification. No production mutation occurred.
+No transaction confirmed. No booking created. No ReviewDecision created.
+No suggestion created, expired, or altered. No finance fact changed. No label created.
+No AWS or model access. No code, schema, package, configuration, deployment, commit, or push.
+
+### Production verification results (2026-08-02)
+
+- **Production SHA:** `8717a22163278d12f0b14f7aacc5779f8536186a` — matches expected baseline
+- **Branch:** `main`
+- **Health:** `{"status":"ok"}`
+- **Auth:** `authProvider: disabled`, `productionAuthBypassEnabled: true` (owner-controlled)
+- **Total transactions:** 902 — matches expected baseline
+- **Confirmed bookings:** 681 — matches expected baseline
+- **Unresolved transactions:** 221 — matches expected baseline
+- **Suggestions:** 663 (3 per unresolved transaction, algorithm `history-v1`) — matches expected baseline
+- **ReviewDecision records:** 0 — matches expected baseline
+- **Duplicate import fingerprints:** 0
+- **Running-balance errors:** 0
+- **Cash status:** PASSED
+- **Classification status:** PENDING (221 unresolved)
+- **Close status:** BLOCKED on 221 unresolved transactions
+- **Reference data:** 6 active projects, 12 transaction types, 67 categories — all available
+- **Stale suggestion IDs:** 0 (all proposed projectIds, transactionTypeIds, categoryIds verified against live reference data)
+- **Opening balance:** EUR 1,721.86 effective 2024-01-01 — matches expected baseline, difference = 0
+
+### Manual-review readiness verification results
+
+- **All 221 transactions reachable:** confirmed — 9 pages at pageSize=25, 5 pages at pageSize=50, 3 pages at pageSize=100; last page has 21 items; `hasNextPage: false` on last page; sum across all pages = 221
+- **Each transaction has a complete proposal:** 221/221 items have `proposed.complete = true`; all 221 have 3 alternatives each (663 total)
+- **Proposal quality:** all 221 are `deterministicStatus: conflict` / `statusLabel: Conflict, handmatig beoordelen` — meaning multiple competing complete alternatives require manual selection
+- **No stale IDs:** 0 stale projectId, 0 stale categoryId, 0 stale transactionTypeId across all 221 proposed entries
+- **Direction filtering works:** debit filter = 94 items (all verified debit), credit filter = 127 items (all verified credit)
+- **Transaction types are direction-filtered in UI:** code confirmed (compatibleTypes = transactionTypes.filter(type => type.direction === item.direction))
+- **Incomplete-dimension rejection confirmed:** PATCH with empty/null/partial dims returns 400 `"Klant, type en categorie zijn verplicht voordat een transactie financieel kan worden geboekt."`
+- **Confirmation path confirmed:** `assignManualBooking` creates one `TransactionBooking` (upsert) and one `ReviewDecision` (create) in a single Prisma transaction; locked-period check enforced; workspace membership enforced; `ADMIN` role required
+- **Viewer mutation protection:** `requireAdmin` enforced on PATCH route; non-admin returns 403
+- **No confirmation submitted** in this audit
+
+### Workload statistics
+
+| Dimension | Count |
+|---|---:|
+| Total unresolved | 221 |
+| Pages at pageSize=25 | 9 (last page: 21 items) |
+| Pages at pageSize=50 | 5 |
+| Pages at pageSize=100 | 3 |
+| Suggestion coverage | 221/221 (100%) |
+| Items with complete proposal | 221 |
+| Items with conflict status (require manual selection) | 221 |
+| Items with stale/unavailable IDs | 0 |
+| Items requiring manual replacement | 221 (all have conflict — administrator must choose among alternatives) |
+| Items with no useful proposal | 0 |
+
+Direction split:
+
+| Direction | Count |
+|---|---:|
+| Debit (afschrijvingen) | 94 |
+| Credit (bijschrijvingen) | 127 |
+
+Month distribution:
+
+| Month | Count |
+|---|---:|
+| 2026-01 | 29 |
+| 2026-02 | 34 |
+| 2026-03 | 44 |
+| 2026-04 | 44 |
+| 2026-05 | 28 |
+| 2026-06 | 37 |
+| 2026-07 | 5 |
+
+Proposed project distribution (rank-1 proposal):
+
+| Project | Count |
+|---|---:|
+| FTK | 189 |
+| WLJ | 12 |
+| FR | 9 |
+| Algemeen | 6 |
+| VS | 5 |
+
+Confidence/reliability distribution: all 221 items show `DEFAULT` confidence (31.09% historical accuracy). This is expected — these are conflict-status items with no deterministic single-winner historical evidence. Every item requires administrator selection.
+
+### Accounting and close status
+
+- Category income not yet classified (2026): EUR 58,784.08 pending
+- Category expense not yet classified (2026): EUR 61,297.69 pending
+- 14 classification issues (category income/expense not exact per month) — all expected from 221 unresolved items
+- Close blocked on all of Jan–Jul 2026 due to unresolved transactions
+- 2024 and 2025 periods: COMPLETE and classified; no issues
+
+### Manual review independence from AI roadmap
+
+Manual review and financial close are fully independent of the AI roadmap. Gate C-M,
+Phase 5.4A, Gate C-S, Phase 5.4B, and all later AI work are not prerequisites for manual
+review or financial close. Phase 5.1–5.3 remain local, uncommitted, isolated, and undeployed.
+
+### Documentation updated
+
+`docs/ROADMAP.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/finance-rebuild-run.md` (this file),
+`docs/product/agent-mode-progress.md` — clarifications added. No code, schema, migration,
+package, config, deployment, commit, or push.
+
+---
+
+## Best-prefill hardening — production comparison verified (2026-08-03)
+
+### Status: BEST-PREFILL HARDENING — PRODUCTION COMPARISON VERIFIED / DEPLOYMENT PENDING
+
+### Implementation scope
+
+Changed files:
+- `server/services/reviewQueueService.ts` — strict `checkPrefillEligibility` (INVALID_TRUSTED_CONTEXT, SUGGESTION_NOT_PENDING); exported `selectReviewPrefill` canonical selector with 4-tier precedence; `ReviewPrefillSelectionInput` type
+- `server/cli/runBestPrefillComparison.ts` — scope validation via `findUnique` + isActive checks; canonical `selectReviewPrefill`; complete transaction query (authoritative + booking + suggestions); full aggregate reporting; sanitized error codes; `validateDatabaseUrl` returns result type; `parseExpectedArg` returns discriminated union; `loadEnvConfig` added to `main()`
+- `tests/services/reviewQueueService.test.ts` — fixed fixtures: `transactionId`, `status: 'PENDING'`, `workspaceId` 4th arg to buildEvidenceRichReviewQueue calls
+- `tests/cli/runBestPrefillComparison.test.ts` — new: 26 tests (scope, production parity, assertions, reporting)
+
+### Local validation
+
+- reviewQueueService: 45/45 pass
+- ownerHistoryProposalEvidenceService: 18/18 pass
+- reviewUi: 12/12 pass
+- reviewResponseMapper: 2/2 pass
+- routes/review: 12/12 pass
+- auth/clerkRequestContext: 6/6 pass
+- cli/runBestPrefillComparison: 26/26 pass
+- Full suite: 1788 pass, 1 pre-existing model002DomainSchema failure (Prisma output format mismatch; no changed file in its diagnostics), 2 skipped
+- Server TypeScript build: pass
+- Next.js production build: exit 0 (pre-existing SWC lockfile warning retained)
+- TypeScript noEmit (tsconfig.json): zero errors in changed or new files
+- git diff --check: clean
+
+### Production comparison (read-only, 2026-08-03)
+
+Executed via compiled CLI with `--json --expected-total 221 --expected-complete-prefills 221 --expected-none 0`.
+No writes performed. No suggestions created, expired, or modified.
+
+```json
+{
+  "schemaVersion": "best-prefill-comparison-v4",
+  "safetyGuards": {
+    "writesPerformed": false,
+    "dryRunOnly": true,
+    "usedProductionParityCohort": true,
+    "scopedByExactWorkspaceAndUser": true
+  },
+  "aggregateCounts": {
+    "totalUnresolvedTransactions": 221,
+    "v2ProposalPlanCovered": 178,
+    "v2ProposalPlanAbstained": 43,
+    "eligibleLegacySuggestionsCount": 663,
+    "invalidLegacySuggestionsCount": 0,
+    "v2ProjectedRank1Count": 178,
+    "v2EligibleAfterCurrentDbCheck": 178,
+    "v2IneligibleAfterCurrentDbCheck": 0,
+    "legacyV2TripleAgreementCount": 167,
+    "legacyV2TripleDisagreementCount": 11
+  },
+  "policySelectionCounts": {
+    "selectedAuthoritativeTransaction": 0,
+    "selectedExistingBooking": 0,
+    "selectedOwnerHistoryV2": 178,
+    "selectedLegacyFallback": 43,
+    "selectedNone": 0,
+    "total": 221,
+    "allTransactionsPrefilled": true
+  },
+  "assertionsPassed": true
+}
+```
+
+Proof: all 221 unresolved transactions receive a complete prefill (178 OWNER_HISTORY_V2 + 43 LEGACY_HISTORY_FALLBACK = 221; NONE = 0). All 663 existing legacy suggestions are eligible (invalidLegacySuggestionsCount: 0). All 178 projected v2 alternatives pass eligibility checks. Production data unchanged.
