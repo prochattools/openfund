@@ -1065,7 +1065,7 @@ export const fetchReferenceTransactionTypes = async (): Promise<ReferenceTransac
   return data.items;
 };
 
-export const createReferenceTransactionType = async (payload: { literalName: string; direction: 'credit' | 'debit'; sortOrder?: number }): Promise<ReferenceTransactionTypeItem> =>
+export const createReferenceTransactionType = async (payload: { literalName: string; direction: 'credit' | 'debit' | null; sortOrder?: number }): Promise<ReferenceTransactionTypeItem> =>
   readJson(await fetch(getApiUrl('/api/reference-data/transaction-types'), withUserHeader({
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

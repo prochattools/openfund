@@ -99,14 +99,14 @@ export const getReviewSelectionValidity = (input: {
     issues.push({
       field: 'project',
       code: 'missing-project-id',
-      message: 'Kies een geldig project.',
+      message: 'Kies een geldige Klant.',
       rawId: null,
     });
   } else if (!projectVisible) {
     issues.push({
       field: 'project',
       code: 'unavailable-project',
-      message: 'Het voorgestelde project is niet meer beschikbaar. Kies een geldig project.',
+      message: 'De voorgestelde Klant is niet meer beschikbaar. Kies een geldige Klant.',
       rawId: input.projectId,
     });
   }

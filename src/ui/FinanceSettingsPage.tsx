@@ -376,8 +376,8 @@ function ProjectsPanel({ admin }: { admin: boolean }) {
   return (
     <section className="rounded-[2rem] border border-[#ded5c8] bg-[#fbf8f2] p-6 shadow-[0_24px_70px_rgba(87,67,45,0.08)]">
       <p className="text-sm font-medium text-[#7d6d5a]">Referentiedata</p>
-      <h3 className="mt-1 text-2xl font-semibold tracking-[-0.04em]">Projecten / Klanten</h3>
-      {!admin && <p className="mt-3 rounded-2xl bg-[#f5f1ea] p-4 text-sm text-[#6f6253]">Alleen beheerders kunnen projecten beheren.</p>}
+      <h3 className="mt-1 text-2xl font-semibold tracking-[-0.04em]">Klanten</h3>
+      {!admin && <p className="mt-3 rounded-2xl bg-[#f5f1ea] p-4 text-sm text-[#6f6253]">Alleen beheerders kunnen klanten beheren.</p>}
       {admin && (
         <form onSubmit={handleCreate} className="mt-4 flex flex-wrap gap-2">
           <input value={newCode} onChange={(e) => setNewCode(e.target.value)} placeholder="Code (bijv. YA)" className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm" />
@@ -479,7 +479,7 @@ function TransactionTypesPanel({ admin }: { admin: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [newName, setNewName] = useState('');
-  const [newDirection, setNewDirection] = useState<'credit' | 'debit'>('credit');
+  const [newDirection, setNewDirection] = useState<'credit' | 'debit' | 'both'>('both');
 
   const load = () => {
     fetchReferenceTransactionTypes()
@@ -494,7 +494,10 @@ function TransactionTypesPanel({ admin }: { admin: boolean }) {
     if (!admin) return;
     setBusy(true);
     try {
-      await createReferenceTransactionType({ literalName: newName.trim(), direction: newDirection });
+      await createReferenceTransactionType({
+        literalName: newName.trim(),
+        direction: newDirection === 'both' ? null : newDirection,
+      });
       setNewName('');
       load();
     } catch (err) {
@@ -528,7 +531,8 @@ function TransactionTypesPanel({ admin }: { admin: boolean }) {
       {admin && (
         <form onSubmit={handleCreate} className="mt-4 flex flex-wrap gap-2">
           <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Type-naam (literal)" className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm flex-1 min-w-[160px]" />
-          <select value={newDirection} onChange={(e) => setNewDirection(e.target.value as 'credit' | 'debit')} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
+          <select value={newDirection} onChange={(e) => setNewDirection(e.target.value as 'credit' | 'debit' | 'both')} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
+            <option value="both">Beide richtingen</option>
             <option value="credit">Bijschrijving (credit)</option>
             <option value="debit">Afschrijving (debit)</option>
           </select>
@@ -541,9 +545,9 @@ function TransactionTypesPanel({ admin }: { admin: boolean }) {
           <div key={item.id} className={`flex items-center justify-between rounded-xl px-3 py-2 text-sm ${item.isActive ? 'bg-[#f5f1ea]' : 'bg-[#fdf5f5] opacity-60'}`}>
             <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <span>{item.literalName}</span>
-              {directionLabel(item.direction)
+              {item.direction
                 ? <span className="text-xs text-[#8a7965]">{directionLabel(item.direction)}</span>
-                : <span className="rounded-full bg-[#fff7df] px-2 py-0.5 text-xs font-semibold text-[#7a5512]">Richting ontbreekt</span>}
+                : <span className="rounded-full bg-[#edf5ec] px-2 py-0.5 text-xs font-semibold text-[#1f5f4a]">Beide richtingen</span>}
               {item.isHistorical ? <span className="text-xs text-[#8a7965]">(historisch)</span> : null}
             </span>
             {admin && (

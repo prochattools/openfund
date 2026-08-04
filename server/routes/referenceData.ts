@@ -227,11 +227,15 @@ export const createTransactionType = async (req: Request, res: Response) => {
 
   const body = req.body as Record<string, unknown>;
   const literalName = readString(body.literalName);
-  const direction = body.direction === 'credit' ? 'credit' : body.direction === 'debit' ? 'debit' : null;
+  const direction = body.direction === 'credit' ? 'credit' as const
+    : body.direction === 'debit' ? 'debit' as const
+    : null;
   const sortOrder = readOptionalInt(body.sortOrder);
 
   if (!literalName) return res.status(400).json({ error: 'Transactietype-naam is verplicht.' });
-  if (!direction) return res.status(400).json({ error: "Richting is verplicht ('credit' of 'debit')." });
+  if ('direction' in body && body.direction !== null && body.direction !== 'credit' && body.direction !== 'debit') {
+    return res.status(400).json({ error: "Richting moet 'credit', 'debit' of null zijn." });
+  }
 
   try {
     const item = await prisma.transactionType.create({

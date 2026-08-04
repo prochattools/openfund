@@ -137,13 +137,14 @@ describe('create endpoints', () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it('createTransactionType returns 400 when direction is missing', async () => {
+  it('createTransactionType allows null direction (both)', async () => {
     mocks.requireAdmin.mockResolvedValue(adminActor);
+    mocks.transactionTypeCreate.mockResolvedValue({ id: 't0', literalName: 'Schenking', direction: null, sortOrder: null, isActive: true, isHistorical: false });
     const res = makeRes();
     await createTransactionType(makeReq({ body: { literalName: 'Schenking' } }), res);
-    expect(res.statusCode).toBe(400);
-    const body = res.body as { error: string };
-    expect(body.error).toMatch(/richting/i);
+    expect(res.statusCode).toBe(201);
+    const body = res.body as { direction: null };
+    expect(body.direction).toBeNull();
   });
 
   it('createTransactionType returns 400 for invalid direction', async () => {
@@ -151,6 +152,16 @@ describe('create endpoints', () => {
     const res = makeRes();
     await createTransactionType(makeReq({ body: { literalName: 'X', direction: 'invalid' } }), res);
     expect(res.statusCode).toBe(400);
+  });
+
+  it('createTransactionType stores null direction for both directions', async () => {
+    mocks.requireAdmin.mockResolvedValue(adminActor);
+    mocks.transactionTypeCreate.mockResolvedValue({ id: 't0b', literalName: 'Schenking', direction: null, sortOrder: null, isActive: true, isHistorical: false });
+    const res = makeRes();
+    await createTransactionType(makeReq({ body: { literalName: 'Schenking', direction: null } }), res);
+    expect(res.statusCode).toBe(201);
+    const body = res.body as { direction: null };
+    expect(body.direction).toBeNull();
   });
 
   it('createTransactionType stores credit direction', async () => {

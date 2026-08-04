@@ -67,7 +67,7 @@ function ReviewRow({
   const admin = isClientAdmin();
   const reliability = getReviewReliability(item);
   const changed = projectId !== initialProjectId || transactionTypeId !== initialTypeId || categoryId !== initialCategoryId;
-  const compatibleTypes = transactionTypes.filter((type) => type.direction === item.direction);
+  const compatibleTypes = transactionTypes.filter((type) => type.direction === null || type.direction === item.direction);
   const selectionValidity = getReviewSelectionValidity({
     admin,
     busy,
@@ -133,11 +133,11 @@ function ReviewRow({
         </div>
         <div className={`font-semibold xl:text-right ${item.amount < 0 ? 'text-[#914f35]' : 'text-[#1f5f4a]'}`}><span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Bedrag</span>{moneyFormatter.format(item.amount)}</div>
         <label className="grid gap-1" aria-describedby={projectIssue ? projectWarningId : undefined}>
-          <span className="text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Project</span>
-          <select aria-label="Klant of project" aria-invalid={Boolean(projectIssue)} disabled={!admin || busy} value={projectValue} onChange={(event) => setProjectId(event.target.value)} className="w-full rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
+          <span className="text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Klant</span>
+          <select aria-label="Klant" aria-invalid={Boolean(projectIssue)} disabled={!admin || busy} value={projectValue} onChange={(event) => setProjectId(event.target.value)} className="w-full rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
             {projectIssue?.code === 'unavailable-project' ? <option value={INVALID_SELECT_VALUE} disabled>Ongeldig voorstel — kies opnieuw</option> : null}
-            <option value="">Kies project</option>
-            {projects.map((project) => <option key={project.id} value={project.id}>{project.code} · {project.name}</option>)}
+            <option value="">Kies klant</option>
+            {projects.map((project) => <option key={project.id} value={project.id}>{project.code === project.name ? project.name : `${project.code} · ${project.name}`}</option>)}
           </select>
           {projectIssue ? renderSelectionWarning(projectIssue, 'Voorgestelde project-id', projectWarningId) : null}
         </label>
@@ -155,7 +155,7 @@ function ReviewRow({
           {transactionTypeIssue ? renderSelectionWarning(transactionTypeIssue, 'Voorgestelde transactietype-id', transactionTypeWarningId) : null}
         </label>
         <label className="grid gap-1" aria-describedby={categoryIssue ? categoryWarningId : undefined}>
-          <span className="text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Categorie</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Category</span>
           <select aria-label="Categorie" aria-invalid={Boolean(categoryIssue)} disabled={!admin || busy} value={categoryValue} onChange={(event) => setCategoryId(event.target.value)} className="w-full rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
             {categoryIssue?.code === 'unavailable-category' ? <option value={INVALID_SELECT_VALUE} disabled>Ongeldig voorstel — kies opnieuw</option> : null}
             <option value="">Kies categorie</option>
@@ -256,7 +256,7 @@ export default function FinanceReviewPage() {
       <section className="mb-4 grid gap-3 rounded-2xl border border-[#ded5c8] bg-[#fbf8f2] p-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <select aria-label="Betrouwbaarheid filter" value={confidence} onChange={(event) => { setConfidence(event.target.value as ReviewConfidenceFilter); setPage(1); }} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm"><option value="all">Alle betrouwbaarheid</option><option value="green">Zeer betrouwbaar</option><option value="amber">Controleer zorgvuldig</option><option value="red">Onzeker</option><option value="gray">Onvoldoende bewijs</option></select>
         <select aria-label="Richting filter" value={direction} onChange={(event) => { setDirection(event.target.value as typeof direction); setPage(1); }} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm"><option value="all">Alle richtingen</option><option value="debit">Afschrijvingen</option><option value="credit">Bijschrijvingen</option></select>
-        <select aria-label="Project filter" value={projectFilter} onChange={(event) => { setProjectFilter(event.target.value); setPage(1); }} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm"><option value="">Alle projecten</option>{data?.projects.map((project) => <option key={project.id} value={project.id}>{project.code} · {project.name}</option>)}</select>
+        <select aria-label="Klant filter" value={projectFilter} onChange={(event) => { setProjectFilter(event.target.value); setPage(1); }} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm"><option value="">Alle klanten</option>{data?.projects.map((project) => <option key={project.id} value={project.id}>{project.code === project.name ? project.name : `${project.code} · ${project.name}`}</option>)}</select>
         <select aria-label="Categorie filter" value={categoryFilter} onChange={(event) => { setCategoryFilter(event.target.value); setPage(1); }} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm"><option value="">Alle categorieën</option>{data?.categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select>
         <select aria-label="Status filter" value={stateFilter} onChange={(event) => { setStateFilter(event.target.value as 'all' | 'incomplete'); setPage(1); }} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm"><option value="all">Alle open transacties</option><option value="incomplete">Onvolledige voorstellen</option></select>
         <select aria-label="Aantal per pagina" value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value) as PageSize); setPage(1); }} className="rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">{PAGE_SIZES.map((size) => <option key={size} value={size}>{size} per pagina</option>)}</select>
@@ -267,7 +267,7 @@ export default function FinanceReviewPage() {
       {data && data.pagination.totalItems > 0 ? (
         <section className="rounded-2xl border border-[#ded5c8] bg-[#fbf8f2]">
           <div className="overflow-x-auto">
-            <div className="hidden min-w-[1100px] bg-[#f5f1ea] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[#7d6d5a] xl:grid xl:grid-cols-[110px_minmax(190px,1.2fr)_minmax(220px,1.5fr)_110px_minmax(170px,1fr)_minmax(170px,1fr)_minmax(180px,1fr)_145px_140px] xl:gap-3"><span>Datum</span><span>Tegenpartij</span><span>Omschrijving</span><span className="text-right">Bedrag</span><span>Project</span><span>Type</span><span>Categorie</span><span>Betrouwbaarheid</span><span>Actie</span></div>
+            <div className="hidden min-w-[1100px] bg-[#f5f1ea] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[#7d6d5a] xl:grid xl:grid-cols-[110px_minmax(190px,1.2fr)_minmax(220px,1.5fr)_110px_minmax(170px,1fr)_minmax(170px,1fr)_minmax(180px,1fr)_145px_140px] xl:gap-3"><span>Datum</span><span>Tegenpartij</span><span>Omschrijving</span><span className="text-right">Bedrag</span><span>Klant</span><span>Type</span><span>Category</span><span>Betrouwbaarheid</span><span>Actie</span></div>
             {visibleTransactions.map((item) => <ReviewRow key={item.transactionId} item={item} categories={data.categories} projects={data.projects} transactionTypes={data.transactionTypes} onConfirmed={load} />)}
             {!visibleTransactions.length ? <div className="p-8 text-center text-sm text-[#6f6253]">Geen transacties op deze pagina voldoen aan de filters.</div> : null}
           </div>

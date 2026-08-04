@@ -130,7 +130,7 @@ describe('review UI helpers', () => {
       expect.objectContaining({
         field: 'project',
         code: 'missing-project-id',
-        message: 'Kies een geldig project.',
+        message: 'Kies een geldige Klant.',
         rawId: null,
       }),
     ]);
@@ -153,7 +153,7 @@ describe('review UI helpers', () => {
     expect(validity.issues[0]).toMatchObject({
       field: 'project',
       code: 'unavailable-project',
-      message: 'Het voorgestelde project is niet meer beschikbaar. Kies een geldig project.',
+      message: 'De voorgestelde Klant is niet meer beschikbaar. Kies een geldige Klant.',
       rawId: 'project-missing',
     });
   });
@@ -240,6 +240,53 @@ describe('review UI helpers', () => {
 
     expect(getReviewSelectionValidity({ admin: false, busy: false, ...validInput }).canConfirm).toBe(false);
     expect(getReviewSelectionValidity({ admin: true, busy: true, ...validInput }).canConfirm).toBe(false);
+  });
+
+  it('accepts null-direction (both) types as compatible with credit transactions', () => {
+    const validity = getReviewSelectionValidity({
+      admin: true,
+      busy: false,
+      projectId: 'project-1',
+      transactionTypeId: 'type-both',
+      categoryId: 'category-1',
+      projects: [{ id: 'project-1', code: 'FTK', name: 'FTK' }],
+      transactionTypes: [{ id: 'type-both', literalName: 'Schenking', direction: null }],
+      compatibleTransactionTypes: [{ id: 'type-both', literalName: 'Schenking', direction: null }],
+      categories: [{ id: 'category-1', name: 'schenking FTK' }],
+    });
+    expect(validity.canConfirm).toBe(true);
+    expect(validity.issues).toEqual([]);
+  });
+
+  it('accepts null-direction (both) types as compatible with debit transactions', () => {
+    const validity = getReviewSelectionValidity({
+      admin: true,
+      busy: false,
+      projectId: 'project-1',
+      transactionTypeId: 'type-both',
+      categoryId: 'category-1',
+      projects: [{ id: 'project-1', code: 'FTK', name: 'FTK' }],
+      transactionTypes: [{ id: 'type-both', literalName: 'Ondersteuning', direction: null }],
+      compatibleTransactionTypes: [{ id: 'type-both', literalName: 'Ondersteuning', direction: null }],
+      categories: [{ id: 'category-1', name: 'Ondersteuning Zambia' }],
+    });
+    expect(validity.canConfirm).toBe(true);
+    expect(validity.issues).toEqual([]);
+  });
+
+  it('uses Klant terminology in missing-project-id message', () => {
+    const validity = getReviewSelectionValidity({
+      admin: true,
+      busy: false,
+      projectId: '',
+      transactionTypeId: 'type-both',
+      categoryId: 'category-1',
+      projects: [{ id: 'project-1', code: 'FTK', name: 'FTK' }],
+      transactionTypes: [{ id: 'type-both', literalName: 'Schenking', direction: null }],
+      compatibleTransactionTypes: [{ id: 'type-both', literalName: 'Schenking', direction: null }],
+      categories: [{ id: 'category-1', name: 'schenking FTK' }],
+    });
+    expect(validity.issues[0]).toMatchObject({ field: 'project', code: 'missing-project-id', message: 'Kies een geldige Klant.' });
   });
 
   it('keeps the changed label separate from confirmation eligibility and reliability', () => {
