@@ -47,6 +47,26 @@ export const setRequestActor = (request: object, actor: RequestActor): void => {
 export const getRequestActor = (req: Request): RequestActor | null =>
   REQUEST_ACTORS.get(req) ?? null;
 
+// Discovery helper for migration diagnostics only. Must never be called from runtime
+// request handling or used to silently select a default actor.
+export const discoverUniqueAdminForDiagnostics = async (
+  workspaceId: string,
+): Promise<{ found: true; userId: string; email: string } | { found: false }> => {
+  const memberships = await prisma.workspaceMembership.findMany({
+    where: {
+      workspaceId,
+      role: 'ADMIN',
+      isActive: true,
+      workspace: { isActive: true },
+      user: { isActive: true },
+    },
+    select: { user: { select: { id: true, email: true } } },
+    take: 2,
+  });
+  if (memberships.length !== 1) return { found: false };
+  return { found: true, userId: memberships[0].user.id, email: memberships[0].user.email };
+};
+
 const resolveConfiguredLocalActor = async (): Promise<AuthResolution> => {
   if (AUTH_PROVIDER !== 'disabled') {
     return unauthenticated();
@@ -64,65 +84,36 @@ const resolveConfiguredLocalActor = async (): Promise<AuthResolution> => {
   if (!workspaceId) return misconfigured();
 
   const configuredUserId = process.env.DEFAULT_USER_ID?.trim();
-
-  if (configuredUserId) {
-    const user = await prisma.user.findFirst({
-      where: { id: configuredUserId, isActive: true },
-      select: { id: true, email: true },
-    });
-
-    if (user) {
-      const membership = await prisma.workspaceMembership.findFirst({
-        where: {
-          userId: user.id,
-          workspaceId,
-          isActive: true,
-          workspace: { isActive: true },
-        },
-        select: { role: true },
-      });
-
-      if (membership) {
-        return {
-          actor: {
-            userId: user.id,
-            workspaceId,
-            role: membership.role === 'ADMIN' ? 'admin' : 'viewer',
-            actorId: user.id,
-            actorEmail: user.email,
-          },
-          error: null,
-        };
-      }
-    }
+  if (!configuredUserId) {
+    // No configured user: allowed in non-production dev, not in production bypass
+    if (explicitProductionBypass) return misconfigured();
+    return unauthenticated();
   }
 
-  if (!explicitProductionBypass) return unauthenticated();
+  const user = await prisma.user.findFirst({
+    where: { id: configuredUserId, isActive: true },
+    select: { id: true, email: true },
+  });
+  if (!user) return misconfigured();
 
-  const fallbackMemberships = await prisma.workspaceMembership.findMany({
+  const membership = await prisma.workspaceMembership.findFirst({
     where: {
+      userId: user.id,
       workspaceId,
-      role: 'ADMIN',
       isActive: true,
       workspace: { isActive: true },
-      user: { isActive: true },
     },
-    select: {
-      user: { select: { id: true, email: true } },
-    },
-    take: 2,
+    select: { role: true },
   });
+  if (!membership) return misconfigured();
 
-  if (fallbackMemberships.length !== 1) return forbidden();
-
-  const fallbackUser = fallbackMemberships[0].user;
   return {
     actor: {
-      userId: fallbackUser.id,
+      userId: user.id,
       workspaceId,
-      role: 'admin',
-      actorId: fallbackUser.id,
-      actorEmail: fallbackUser.email,
+      role: membership.role === 'ADMIN' ? 'admin' : 'viewer',
+      actorId: user.id,
+      actorEmail: user.email,
     },
     error: null,
   };
