@@ -692,3 +692,19 @@ Program Phase 5.1 may begin only after Gate A is explicitly approved. Program Ph
 **Rollback/safety:** AI presentation, Sonnet routing, and calibrated confidence exposure can be disabled independently without affecting deterministic review or final bookings; sensitive, unusual, locked-period, or materially significant transactions may remain permanently human-reviewed.
 
 **Architecture references:** `docs/architecture/ARCHITECTURAL_INVARIANTS.md`, `docs/architecture/SYSTEM_ARCHITECTURE.md`, and `docs/architecture/DECISION_ENGINE_ARCHITECTURE.md`.
+
+
+
+## Deferred Program Phase 8 — Confirmed Transaction Corrections and Reopen Workflow
+
+**Status:** DEFERRED. Not required for the current manual-review launch.
+
+**Objective:** allow an administrator to reopen or edit a previously confirmed transaction from the ledger while preserving complete accounting and reviewer history.
+
+**Scope:** ledger-level Edit/Reopen controls; locked-period protection; append-only `CHANGE_BOOKING` and `REMOVE_BOOKING` decisions; before/after Klant, Type, and Category evidence; booking replacement or removal; return-to-review behavior; reporting and close recalculation; role enforcement; reason capture; idempotency; concurrency protection; and administrator-facing correction history.
+
+**Accounting contract:** imported bank facts remain immutable. A correction never rewrites or deletes historical evidence silently. It creates a compensating decision and audit entry, updates or removes only the current booking, and recalculates review and close readiness.
+
+**Validation requirements:** exact transaction targeting; workspace isolation; administrator authorization; locked-ledger rejection; stale-write rejection; append-only audit evidence; deterministic before/after counts; no suggestion mutation unless separately authorized; reports and balances remain reproducible; full rollback and production acceptance tests.
+
+**Completed exception:** the owner-authorized one-record repair for the mistaken +€88.55 credit dated 17 March 2026 (`F VAN BREUGEL`), paired with the unbooked −€88.55 Vistaprint debit, was executed through a guarded dry-run, confirmation hash, compensating `REMOVE_BOOKING` decision, and audit log. The credit returned to review with a complete editable prefill. This remains an operational repair only, not the deferred UI feature.

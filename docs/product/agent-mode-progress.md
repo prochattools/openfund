@@ -1572,3 +1572,87 @@ Workbench run: `agent-17a271e9-d654-4446-b6b1-bb4317fb7161`
 2. Commit and push `main`.
 3. Verify GitHub Actions/Dokploy convergence and production health.
 4. Confirm the deployed review page exposes inline creation without performing a production creation or transaction confirmation.
+
+
+
+## One-record confirmed-transaction reopen — implementation checkpoint — 2026-08-05 20:06 +01:00
+
+Workbench run: `agent-edbc2b87-3e6f-4f3a-a762-48be47345ed5`
+
+### Owner request
+
+- Reopen only the latest mistakenly confirmed +€88.55 Vistaprint counter-transaction.
+- Expected unresolved count: 34 before, 35 after.
+- Return the transaction to `/review` without changing suggestions or imported bank facts.
+- Defer the full ledger edit/reopen UI to the roadmap.
+
+### Guarded implementation
+
+- Added `server/services/manualBookingReopenService.ts`.
+- Added `server/cli/runLatestManualBookingReopen.ts`.
+- Added focused service and CLI tests.
+- The plan requires the latest manual confirmation to match exact amount, direction, merchant, current booking, first-confirmation state, one decision, one booking reference, unlocked ledger, and expected unresolved baseline.
+- Dry-run produces a deterministic plan hash and performs zero writes.
+- Execution requires the exact hash and `--authorize-single-reopen`.
+- Execution preserves history by detaching the deleted booking FK from the original assignment decision, creating an append-only `REMOVE_BOOKING` decision, creating an audit log, deleting exactly one current booking, and resetting only the transaction classification fields.
+- Suggestions and imported bank facts are never modified.
+
+### Validation
+
+- New tests: 9/9 passed.
+- Server TypeScript build: passed.
+- Authoritative roadmap now contains deferred Program Phase 8 for the full confirmed-transaction correction and reopen workflow.
+
+### Next exact step
+
+Run the CLI in dry-run mode against production with exact expectations:
+
+- amount minor: `8855`
+- direction: `credit`
+- merchant: `vistaprint`
+- unresolved before: `34`
+- unique-admin diagnostic resolution allowed only if the local configured user is stale
+
+Stop on any mismatch. If the dry-run uniquely identifies the latest authorized transaction and reports 34→35, execute once with the returned confirmation hash, then perform read-only verification.
+
+
+
+
+## One-record confirmed-transaction reopen — executed and verified — 2026-08-05 22:12 +01:00
+
+Workbench run: `agent-88d3bab9-e05b-41cb-8480-9cb58afbce2e`
+
+### Authorized target
+
+- Mistaken confirmed transaction: +€88.55 credit dated 2026-03-17, description `F VAN BREUGEL`.
+- Paired counter-transaction: −€88.55 debit dated 2026-03-17, `Vistaprint B.V.`.
+- Confirmed plan hash: `5dfdd630c01d0fd3f33b0d59032b87948e6e26caccb48d5eaf4ca5500c2b3db6`.
+
+### Execution result
+
+- Status: `REOPENED`.
+- Exactly one current booking deleted.
+- Exactly one compensating `REMOVE_BOOKING` decision created.
+- Exactly one transaction classification reset.
+- Suggestions changed: 0.
+- Imported bank facts changed: 0.
+
+### Post-execution verification
+
+- Total transactions: 902.
+- Confirmed bookings: 867.
+- Unresolved transactions: 35.
+- Review queue items: 35.
+- The +€88.55 credit is present in review.
+- It has a complete editable `OWNER_HISTORY_V2` Klant, Type, and Category prefill.
+- Latest decision action: `REMOVE_BOOKING`.
+- Cash status: `PASSED`.
+- Duplicate fingerprints: 0.
+- Running-balance errors: 0.
+- Production health: healthy.
+
+### Validation
+
+- Focused service and CLI tests: 9/9 passed.
+- Server TypeScript build: passed.
+- The full confirmed-transaction edit/reopen UI remains deferred in Roadmap Program Phase 8.
