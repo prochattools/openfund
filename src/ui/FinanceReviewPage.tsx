@@ -13,6 +13,9 @@ import {
   type ReviewConfidenceFilter,
 } from '@/helpers/review-ui';
 import {
+  createReferenceCategory,
+  createReferenceProject,
+  createReferenceTransactionType,
   fetchReview,
   isClientAdmin,
   updateCategory,
@@ -33,6 +36,8 @@ const dateFormatter = new Intl.DateTimeFormat('nl-NL', {
 });
 const moneyFormatter = new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' });
 const INVALID_SELECT_VALUE = '__invalid-review-selection__';
+type InlineReferenceKind = 'project' | 'transactionType' | 'category';
+type InlineTypeDirection = 'credit' | 'debit' | 'both';
 
 function EmptyReviewState() {
   return (
@@ -49,12 +54,18 @@ function ReviewRow({
   projects,
   transactionTypes,
   onConfirmed,
+  onCreateProject,
+  onCreateTransactionType,
+  onCreateCategory,
 }: {
   item: EvidenceRichReviewItem;
   categories: ReviewCategoryOption[];
   projects: ReviewProjectOption[];
   transactionTypes: ReviewTransactionTypeOption[];
   onConfirmed: () => Promise<void>;
+  onCreateProject: (name: string) => Promise<ReviewProjectOption>;
+  onCreateTransactionType: (literalName: string, direction: 'credit' | 'debit' | null) => Promise<ReviewTransactionTypeOption>;
+  onCreateCategory: (name: string) => Promise<ReviewCategoryOption>;
 }) {
   const initialProjectId = item.proposed?.projectId ?? '';
   const initialTypeId = item.proposed?.transactionTypeId ?? '';
@@ -64,13 +75,18 @@ function ReviewRow({
   const [categoryId, setCategoryId] = useState(initialCategoryId);
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
+  const [inlineReferenceKind, setInlineReferenceKind] = useState<InlineReferenceKind | null>(null);
+  const [inlineReferenceName, setInlineReferenceName] = useState('');
+  const [inlineTypeDirection, setInlineTypeDirection] = useState<InlineTypeDirection>(item.direction);
+  const [creatingReference, setCreatingReference] = useState(false);
   const admin = isClientAdmin();
+  const interactionBusy = busy || creatingReference;
   const reliability = getReviewReliability(item);
   const changed = projectId !== initialProjectId || transactionTypeId !== initialTypeId || categoryId !== initialCategoryId;
   const compatibleTypes = transactionTypes.filter((type) => type.direction === null || type.direction === item.direction);
   const selectionValidity = getReviewSelectionValidity({
     admin,
-    busy,
+    busy: interactionBusy,
     projectId,
     transactionTypeId,
     categoryId,
@@ -79,7 +95,7 @@ function ReviewRow({
     compatibleTransactionTypes: compatibleTypes,
     categories,
   });
-  const canConfirm = selectionValidity.canConfirm && canConfirmReviewRow({ admin, busy, projectId, transactionTypeId, categoryId });
+  const canConfirm = selectionValidity.canConfirm && canConfirmReviewRow({ admin, busy: interactionBusy, projectId, transactionTypeId, categoryId });
   const projectIssue = selectionValidity.issues.find((issue) => issue.field === 'project');
   const transactionTypeIssue = selectionValidity.issues.find((issue) => issue.field === 'transactionType');
   const categoryIssue = selectionValidity.issues.find((issue) => issue.field === 'category');
@@ -101,6 +117,53 @@ function ReviewRow({
       {issue.rawId ? <div className="mt-1 text-[11px] text-amber-800">{rawIdLabel}: {issue.rawId}</div> : null}
     </div>
   );
+
+  const openInlineReference = (kind: InlineReferenceKind) => {
+    setInlineReferenceKind(kind);
+    setInlineReferenceName('');
+    setInlineTypeDirection(item.direction);
+  };
+
+  const closeInlineReference = () => {
+    if (creatingReference) return;
+    setInlineReferenceKind(null);
+    setInlineReferenceName('');
+    setInlineTypeDirection(item.direction);
+  };
+
+  const createInlineReference = async () => {
+    if (!admin || creatingReference || !inlineReferenceKind) return;
+    const name = inlineReferenceName.trim();
+    if (!name) {
+      toast.error('Vul eerst een naam in.');
+      return;
+    }
+
+    setCreatingReference(true);
+    try {
+      if (inlineReferenceKind === 'project') {
+        const project = await onCreateProject(name);
+        setProjectId(project.id);
+        toast.success(`Klant “${project.name}” toegevoegd en geselecteerd.`);
+      } else if (inlineReferenceKind === 'transactionType') {
+        const direction = inlineTypeDirection === 'both' ? null : inlineTypeDirection;
+        const transactionType = await onCreateTransactionType(name, direction);
+        setTransactionTypeId(transactionType.id);
+        toast.success(`Type “${transactionType.literalName}” toegevoegd en geselecteerd.`);
+      } else {
+        const category = await onCreateCategory(name);
+        setCategoryId(category.id);
+        toast.success(`Category “${category.name}” toegevoegd en geselecteerd.`);
+      }
+      setInlineReferenceKind(null);
+      setInlineReferenceName('');
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : 'De nieuwe waarde kon niet worden toegevoegd.');
+    } finally {
+      setCreatingReference(false);
+    }
+  };
 
   const confirm = async () => {
     if (!canConfirm) return;
@@ -132,37 +195,40 @@ function ReviewRow({
           <p className="truncate text-xs text-[#7d6d5a]" title={item.paymentPurpose ?? ''}>{item.paymentPurpose ?? 'Geen extra omschrijving'}</p>
         </div>
         <div className={`font-semibold xl:text-right ${item.amount < 0 ? 'text-[#914f35]' : 'text-[#1f5f4a]'}`}><span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Bedrag</span>{moneyFormatter.format(item.amount)}</div>
-        <label className="grid gap-1" aria-describedby={projectIssue ? projectWarningId : undefined}>
+        <div className="grid gap-1" aria-describedby={projectIssue ? projectWarningId : undefined}>
           <span className="text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Klant</span>
-          <select aria-label="Klant" aria-invalid={Boolean(projectIssue)} disabled={!admin || busy} value={projectValue} onChange={(event) => setProjectId(event.target.value)} className="w-full rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
+          <select aria-label="Klant" aria-invalid={Boolean(projectIssue)} disabled={!admin || interactionBusy} value={projectValue} onChange={(event) => setProjectId(event.target.value)} className="w-full rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
             {projectIssue?.code === 'unavailable-project' ? <option value={INVALID_SELECT_VALUE} disabled>Ongeldig voorstel — kies opnieuw</option> : null}
             <option value="">Kies klant</option>
             {projects.map((project) => <option key={project.id} value={project.id}>{project.code === project.name ? project.name : `${project.code} · ${project.name}`}</option>)}
           </select>
+          {admin ? <button type="button" disabled={interactionBusy} onClick={() => openInlineReference('project')} className="text-left text-xs font-semibold text-[#1f5f4a] disabled:opacity-50">+ Nieuwe Klant</button> : null}
           {projectIssue ? renderSelectionWarning(projectIssue, 'Voorgestelde project-id', projectWarningId) : null}
-        </label>
-        <label className="grid gap-1" aria-describedby={transactionTypeIssue ? transactionTypeWarningId : undefined}>
+        </div>
+        <div className="grid gap-1" aria-describedby={transactionTypeIssue ? transactionTypeWarningId : undefined}>
           <span className="text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Type</span>
-          <select aria-label="Transactietype" aria-invalid={Boolean(transactionTypeIssue)} disabled={!admin || busy} value={transactionTypeValue} onChange={(event) => setTransactionTypeId(event.target.value)} className="w-full rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
+          <select aria-label="Transactietype" aria-invalid={Boolean(transactionTypeIssue)} disabled={!admin || interactionBusy} value={transactionTypeValue} onChange={(event) => setTransactionTypeId(event.target.value)} className="w-full rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
             {transactionTypeIssue?.code === 'unavailable-transaction-type' || transactionTypeIssue?.code === 'wrong-direction-transaction-type'
               ? <option value={INVALID_SELECT_VALUE} disabled>Ongeldig voorstel — kies opnieuw</option>
               : null}
             {!compatibleTypes.length
-              ? <option value="" disabled>Geen typen voor deze richting — voeg toe via Instellingen</option>
+              ? <option value="" disabled>Geen typen voor deze richting — voeg een nieuw Type toe</option>
               : <option value="">Kies type</option>}
             {compatibleTypes.map((type) => <option key={type.id} value={type.id}>{type.literalName}</option>)}
           </select>
+          {admin ? <button type="button" disabled={interactionBusy} onClick={() => openInlineReference('transactionType')} className="text-left text-xs font-semibold text-[#1f5f4a] disabled:opacity-50">+ Nieuw Type</button> : null}
           {transactionTypeIssue ? renderSelectionWarning(transactionTypeIssue, 'Voorgestelde transactietype-id', transactionTypeWarningId) : null}
-        </label>
-        <label className="grid gap-1" aria-describedby={categoryIssue ? categoryWarningId : undefined}>
+        </div>
+        <div className="grid gap-1" aria-describedby={categoryIssue ? categoryWarningId : undefined}>
           <span className="text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Category</span>
-          <select aria-label="Categorie" aria-invalid={Boolean(categoryIssue)} disabled={!admin || busy} value={categoryValue} onChange={(event) => setCategoryId(event.target.value)} className="w-full rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
+          <select aria-label="Category" aria-invalid={Boolean(categoryIssue)} disabled={!admin || interactionBusy} value={categoryValue} onChange={(event) => setCategoryId(event.target.value)} className="w-full rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
             {categoryIssue?.code === 'unavailable-category' ? <option value={INVALID_SELECT_VALUE} disabled>Ongeldig voorstel — kies opnieuw</option> : null}
-            <option value="">Kies categorie</option>
+            <option value="">Kies Category</option>
             {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
           </select>
-          {categoryIssue ? renderSelectionWarning(categoryIssue, 'Voorgestelde categorie-id', categoryWarningId) : null}
-        </label>
+          {admin ? <button type="button" disabled={interactionBusy} onClick={() => openInlineReference('category')} className="text-left text-xs font-semibold text-[#1f5f4a] disabled:opacity-50">+ Nieuwe Category</button> : null}
+          {categoryIssue ? renderSelectionWarning(categoryIssue, 'Voorgestelde Category-id', categoryWarningId) : null}
+        </div>
         <div><span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Betrouwbaarheid</span><div className={`rounded-xl border px-3 py-2 text-xs font-semibold ${reliability.className}`}>
           <span aria-hidden="true">● </span>{reliability.score === null ? reliability.label : `${reliability.score}% · ${reliability.label}`}
         </div></div>
@@ -184,6 +250,47 @@ function ReviewRow({
           {getReviewConfirmLabel({ admin, busy, changed })}
         </button>
       </div>
+      {inlineReferenceKind ? (
+        <div className="mt-3 rounded-2xl border border-[#c9dfd5] bg-[#eef7f2] p-4" role="region" aria-label="Nieuwe referentiewaarde toevoegen">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+            <label className="grid min-w-0 flex-1 gap-1 text-sm font-semibold">
+              {inlineReferenceKind === 'project' ? 'Nieuwe Klant' : inlineReferenceKind === 'transactionType' ? 'Nieuw Type' : 'Nieuwe Category'}
+              <input
+                autoFocus
+                value={inlineReferenceName}
+                disabled={creatingReference}
+                onChange={(event) => setInlineReferenceName(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    void createInlineReference();
+                  }
+                  if (event.key === 'Escape') closeInlineReference();
+                }}
+                placeholder={inlineReferenceKind === 'project' ? 'Naam van de Klant' : inlineReferenceKind === 'transactionType' ? 'Naam van het Type' : 'Naam van de Category'}
+                className="rounded-xl border border-[#b9cfc5] bg-white px-3 py-2 font-normal"
+              />
+            </label>
+            {inlineReferenceKind === 'transactionType' ? (
+              <label className="grid gap-1 text-sm font-semibold">
+                Richting
+                <select value={inlineTypeDirection} disabled={creatingReference} onChange={(event) => setInlineTypeDirection(event.target.value as InlineTypeDirection)} className="rounded-xl border border-[#b9cfc5] bg-white px-3 py-2 font-normal">
+                  <option value="debit">Afschrijving</option>
+                  <option value="credit">Bijschrijving</option>
+                  <option value="both">Beide richtingen</option>
+                </select>
+              </label>
+            ) : null}
+            <div className="flex gap-2">
+              <button type="button" disabled={creatingReference || !inlineReferenceName.trim()} onClick={() => void createInlineReference()} className="rounded-xl bg-[#1f5f4a] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                {creatingReference ? 'Toevoegen…' : 'Toevoegen en selecteren'}
+              </button>
+              <button type="button" disabled={creatingReference} onClick={closeInlineReference} className="rounded-xl border border-[#b9cfc5] bg-white px-4 py-2 text-sm font-semibold disabled:opacity-50">Annuleren</button>
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-[#476554]">De nieuwe waarde wordt direct actief en alleen voor deze transactie geselecteerd. Bevestigen blijft een aparte handeling.</p>
+        </div>
+      ) : null}
       {hasSelectionWarnings ? (
         <div id={warningId} className="mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="status" aria-live="polite">
           <p className="font-semibold">Controleer het voorstel opnieuw voordat je bevestigt.</p>
@@ -239,6 +346,42 @@ export default function FinanceReviewPage() {
     }
   }, [page, pageSize, confidence, direction, projectFilter, categoryFilter, stateFilter]);
 
+  const createProjectOption = useCallback(async (name: string): Promise<ReviewProjectOption> => {
+    const item = await createReferenceProject({ code: name, name });
+    const option = { id: item.id, code: item.code, name: item.name };
+    setData((current) => current ? {
+      ...current,
+      projects: [...current.projects.filter((project) => project.id !== option.id), option]
+        .sort((left, right) => left.name.localeCompare(right.name, 'nl')),
+    } : current);
+    return option;
+  }, []);
+
+  const createTransactionTypeOption = useCallback(async (
+    literalName: string,
+    typeDirection: 'credit' | 'debit' | null,
+  ): Promise<ReviewTransactionTypeOption> => {
+    const item = await createReferenceTransactionType({ literalName, direction: typeDirection });
+    const option = { id: item.id, literalName: item.literalName, direction: item.direction };
+    setData((current) => current ? {
+      ...current,
+      transactionTypes: [...current.transactionTypes.filter((type) => type.id !== option.id), option]
+        .sort((left, right) => left.literalName.localeCompare(right.literalName, 'nl')),
+    } : current);
+    return option;
+  }, []);
+
+  const createCategoryOption = useCallback(async (name: string): Promise<ReviewCategoryOption> => {
+    const item = await createReferenceCategory({ name });
+    const option = { id: item.id, name: item.name };
+    setData((current) => current ? {
+      ...current,
+      categories: [...current.categories.filter((category) => category.id !== option.id), option]
+        .sort((left, right) => left.name.localeCompare(right.name, 'nl')),
+    } : current);
+    return option;
+  }, []);
+
   useEffect(() => { void load(); }, [load]);
 
   const visibleTransactions = data?.transactions ?? [];
@@ -268,7 +411,7 @@ export default function FinanceReviewPage() {
         <section className="rounded-2xl border border-[#ded5c8] bg-[#fbf8f2]">
           <div className="overflow-x-auto">
             <div className="hidden min-w-[1100px] bg-[#f5f1ea] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[#7d6d5a] xl:grid xl:grid-cols-[110px_minmax(190px,1.2fr)_minmax(220px,1.5fr)_110px_minmax(170px,1fr)_minmax(170px,1fr)_minmax(180px,1fr)_145px_140px] xl:gap-3"><span>Datum</span><span>Tegenpartij</span><span>Omschrijving</span><span className="text-right">Bedrag</span><span>Klant</span><span>Type</span><span>Category</span><span>Betrouwbaarheid</span><span>Actie</span></div>
-            {visibleTransactions.map((item) => <ReviewRow key={item.transactionId} item={item} categories={data.categories} projects={data.projects} transactionTypes={data.transactionTypes} onConfirmed={load} />)}
+            {visibleTransactions.map((item) => <ReviewRow key={item.transactionId} item={item} categories={data.categories} projects={data.projects} transactionTypes={data.transactionTypes} onConfirmed={load} onCreateProject={createProjectOption} onCreateTransactionType={createTransactionTypeOption} onCreateCategory={createCategoryOption} />)}
             {!visibleTransactions.length ? <div className="p-8 text-center text-sm text-[#6f6253]">Geen transacties op deze pagina voldoen aan de filters.</div> : null}
           </div>
         </section>

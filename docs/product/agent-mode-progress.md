@@ -1538,3 +1538,37 @@ Restore or provide the approved GitHub push capability for Workbench, then:
 4. wait for Dokploy convergence to the pushed full SHA;
 5. perform the read-only post-deployment checks;
 6. stop before owner-history-v2 execution and prepare its separate authorization prompt.
+
+
+
+## Inline review reference creation — implementation checkpoint — 2026-08-05
+
+Workbench run: `agent-17a271e9-d654-4446-b6b1-bb4317fb7161`
+
+### Implemented
+
+- Added administrator-only inline creation beside every review dropdown:
+  - `+ Nieuwe Klant`
+  - `+ Nieuw Type`
+  - `+ Nieuwe Category`
+- New values use the existing guarded reference-data APIs and are inserted into the shared page option lists immediately.
+- The newly created value is selected only for the current transaction; transaction confirmation remains a separate explicit action.
+- New Types support Afschrijving, Bijschrijving, or Beide richtingen (`direction = null`).
+- All visible review terminology remains exactly `Klant`, `Type`, and `Category`.
+- No accounting fact, booking, ReviewDecision, suggestion, or production data was changed during implementation.
+
+### Validation
+
+- Focused UI/reference-data/review tests: 44/44 passed.
+- New inline-reference source-contract tests: 5/5 passed.
+- Next.js production build: passed.
+- Full TypeScript command still reports the repository's existing unrelated baseline diagnostics; no diagnostic referenced `src/ui/FinanceReviewPage.tsx` or `tests/ui/financeReviewInlineReference.test.ts`.
+- Secret-material scan over changed code/test paths: zero findings.
+- High-risk scan over changed code/test paths: zero findings.
+
+### Remaining deployment steps
+
+1. Review and stage only the review UI, focused test, and this handoff.
+2. Commit and push `main`.
+3. Verify GitHub Actions/Dokploy convergence and production health.
+4. Confirm the deployed review page exposes inline creation without performing a production creation or transaction confirmation.
