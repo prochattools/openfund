@@ -21,7 +21,12 @@ import { prisma } from '../prismaClient';
 import { requireAdmin } from '../auth/requestContext';
 import { generateMonthlyReportSnapshot } from '../services/reportSnapshotService';
 import { generateAndStoreReportArtifacts, type ArtifactSnapshotInput } from '../services/reportArtifactService';
-import { approveSnapshot, prepareDispatch, executeDispatch } from '../services/reportApprovalDispatchService';
+import {
+  approveSnapshot,
+  prepareDispatch,
+  executeDispatch,
+  ReportApprovalError,
+} from '../services/reportApprovalDispatchService';
 import { ResendReportEmailProvider } from '../services/reportEmailProvider';
 import { hashEvidence } from '../services/reviewDecisionService';
 import { DispatchStatus } from '@prisma/client';
@@ -107,11 +112,24 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
       });
     }
 
+    // Compute recipient and content hashes for duplicate detection
+    const { hashEvidence } = await import('../services/reviewDecisionService');
+    const recipientHash = hashEvidence(
+      recipients
+        .map((r) => ({
+          email: r.email.toLowerCase(),
+          name: r.name ?? null,
+        }))
+        .sort((a, b) => a.email.localeCompare(b.email)),
+    );
+
     const fromAddress = process.env.REPORT_EMAIL_FROM?.trim() || CANONICAL_FROM_ADDRESS;
     const subject = `Maandrapport ${year}-${String(month).padStart(2, '0')}`;
 
     // Phase 1: Create snapshot + artifacts + approval + dispatch preparation in one transaction
     const prepared = await prisma.$transaction(async (tx) => {
+      // First, compute content hash within the transaction to ensure atomicity
+      // for duplicate detection (we'll store it after artifacts are generated)
       const snapshotResult = await generateMonthlyReportSnapshot(tx, {
         actor: { userId, role: actor.role },
         workspaceId,
@@ -231,6 +249,30 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
     });
   } catch (err: unknown) {
     console.error('[POST /api/reports/monthly/send]', err instanceof Error ? err.message : String(err));
+
+    // Handle ReportApprovalError (service-layer validation)
+    if (err instanceof ReportApprovalError) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
+
+    // Handle Prisma unique constraint violation (duplicate dispatch identity race)
+    if (
+      err &&
+      typeof err === 'object' &&
+      'code' in err &&
+      err.code === 'P2002' &&
+      'meta' in err &&
+      typeof err.meta === 'object' &&
+      err.meta !== null &&
+      'target' in err.meta &&
+      Array.isArray(err.meta.target) &&
+      err.meta.target.includes('ReportDispatch_unique_dispatch_identity')
+    ) {
+      return res.status(409).json({
+        error: 'Dit rapport met deze ontvangers en inhoud is al geverifieerd. Wijzig de ontvangers of inhoud om opnieuw in te dienen.',
+      });
+    }
+
     const message = err instanceof Error ? err.message : 'Onbekende fout.';
     // Sanitize any PII from error messages before returning
     const sanitized = message.replace(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g, '[EMAIL]');

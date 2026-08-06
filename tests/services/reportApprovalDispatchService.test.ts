@@ -97,6 +97,11 @@ const makeApprovalDb = (opts: {
       },
     },
     reportDispatch: {
+      findFirst: async (_args: any) => {
+        calls.push('dispatch.findFirst');
+        // Return null by default (no existing dispatch)
+        return null;
+      },
       create: async (args: any) => {
         calls.push('dispatch.create');
         return {
