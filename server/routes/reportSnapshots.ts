@@ -34,6 +34,8 @@ import {
   ReportApprovalError,
 } from '../services/reportApprovalDispatchService';
 import { PeriodCloseError } from '../services/periodCloseService';
+import { normalizeRecipients } from '../services/recipientNormalization';
+import { computeDeliveryKey } from '../services/deliveryKeyService';
 import { ReportKind, ReportLineKind } from '@prisma/client';
 
 // ─── REPORT-001: Monthly snapshot preview ────────────────────────────────────
@@ -435,15 +437,26 @@ export const postPrepareReportDispatch = async (req: Request, res: Response) => 
   if (!contentHash) return res.status(400).json({ error: 'Inhoud-hash is verplicht.' });
 
   try {
+    const { recipients: normalizedRecipients, recipientHash } = normalizeRecipients(
+      recipients.map((r) => ({ email: r.email, name: r.name ?? null })),
+    );
+
+    // Note: This endpoint does NOT compute a delivery key (it's for testing dispatch preparation separately).
+    // In production, deliveryKey should be computed with period close evidence and passed here.
+    // For backward compatibility with tests, we use a synthetic key.
+    const deliveryKey = `dispatch-prepare-test-${Math.random().toString(36).slice(2)}`;
+
     const result = await prisma.$transaction(async (tx) => {
       return prepareDispatch(tx, {
         actor: { userId: actor.userId, role: actor.role, actorId: actor.actorId },
         workspaceId,
         reportSnapshotId: snapshotId,
         reportApprovalId,
+        deliveryKey,
         fromAddress,
         subject,
-        recipients,
+        recipients: normalizedRecipients,
+        recipientHash,
         contentHash,
       });
     });
