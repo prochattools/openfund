@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { fetchReportSummary } from '@/libs/api';
+import { fetchReportSummary, sendMonthlyReport, fetchEmailRecipients } from '@/libs/api';
 import { useLedger } from '@/context/ledger-context';
 import { FinanceAppFrame } from '@/ui/FinanceAppFrame';
 import {
@@ -82,6 +82,252 @@ function ReportExplanation({ summary }: { summary: ReportSummary }) {
         <p className="mt-3">
           Deze tekst is bedoeld als eenvoudige basis voor interne controle en publieke financiële verantwoording. Controleer de categorieën en toelichting altijd handmatig voordat je dit publiceert.
         </p>
+      </div>
+    </section>
+  );
+}
+
+type MonthReadiness = {
+  coverageStatus: string | null;
+  closeEligible: boolean;
+  unresolvedCount: number;
+  balanceDifferenceMinor: string;
+  categoryIncomeDifferenceMinor: string;
+  categoryExpenseDifferenceMinor: string;
+  periodCloseStatus: string | null;
+};
+
+function ReadinessBlocker({ label }: { label: string }) {
+  return (
+    <li className="flex items-center gap-2 text-sm text-[#c62828]">
+      <span aria-hidden>✗</span>
+      <span>{label}</span>
+    </li>
+  );
+}
+
+function ReadinessOk({ label }: { label: string }) {
+  return (
+    <li className="flex items-center gap-2 text-sm text-[#2e7d32]">
+      <span aria-hidden>✓</span>
+      <span>{label}</span>
+    </li>
+  );
+}
+
+function MonthlySendPanel({ year, month }: { year: number; month: number | null }) {
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [readiness, setReadiness] = useState<MonthReadiness | null>(null);
+  const [recipientCount, setRecipientCount] = useState<number | null>(null);
+  const [readinessLoading, setReadinessLoading] = useState(false);
+
+  useEffect(() => {
+    if (!month) return;
+    let cancelled = false;
+    setReadinessLoading(true);
+    setReadiness(null);
+
+    // Load accounting audit data and recipient count in parallel
+    Promise.all([
+      fetch('/api/accounting/audit', { credentials: 'include', cache: 'no-store' })
+        .then((r) => r.ok ? r.json() : null),
+      fetchEmailRecipients(),
+    ])
+      .then(([auditData, recipients]) => {
+        if (cancelled) return;
+        setRecipientCount(recipients.filter((r) => r.isActive).length);
+        if (auditData && Array.isArray(auditData.months)) {
+          const monthData = (auditData.months as Array<{
+            year: number;
+            month: number;
+            coverageStatus: string;
+            closeEligible: boolean;
+            unresolvedTransactionCount: number;
+            balanceDifferenceMinor: string;
+            categoryIncomeDifferenceMinor: string;
+            categoryExpenseDifferenceMinor: string;
+          }>).find((m) => m.year === year && m.month === month);
+
+          // Find the period close status from closed periods
+          // Use the accounting close status to determine periodCloseStatus
+          const isClosed = auditData.closedMonths
+            ? Array.isArray(auditData.closedMonths) && auditData.closedMonths.includes(
+                `${year}-${String(month).padStart(2, '0')}`,
+              )
+            : false;
+
+          if (monthData) {
+            setReadiness({
+              coverageStatus: monthData.coverageStatus ?? null,
+              closeEligible: monthData.closeEligible,
+              unresolvedCount: monthData.unresolvedTransactionCount,
+              balanceDifferenceMinor: monthData.balanceDifferenceMinor,
+              categoryIncomeDifferenceMinor: monthData.categoryIncomeDifferenceMinor,
+              categoryExpenseDifferenceMinor: monthData.categoryExpenseDifferenceMinor,
+              periodCloseStatus: isClosed ? 'CLOSED' : null,
+            });
+          }
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setReadiness(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setReadinessLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [year, month]);
+
+  if (!month) return null;
+
+  const isClosed = readiness?.periodCloseStatus === 'CLOSED';
+  const hasRecipients = recipientCount !== null && recipientCount > 0;
+  const hasUnresolved = readiness !== null && readiness.unresolvedCount > 0;
+  const canSend = isClosed && hasRecipients && !hasUnresolved;
+
+  const handleSend = async () => {
+    if (!canSend) return;
+    setLoading(true);
+    setMessage(null);
+    try {
+      const result = await sendMonthlyReport({
+        year,
+        month,
+        confirmed: true,
+      });
+      setMessage({
+        type: 'success',
+        text: `Rapport verstuurd naar ${result.recipientCount} ontvangers.`,
+      });
+      setShowConfirm(false);
+    } catch (err: unknown) {
+      setMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Rapport verzenden mislukt.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const yearMonth = `${year}-${String(month).padStart(2, '0')}`;
+
+  return (
+    <section className="rounded-[2rem] border border-[#ded5c8] bg-[#fbf8f2] p-6 shadow-[0_24px_70px_rgba(87,67,45,0.08)]">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h3 className="text-2xl font-semibold tracking-[-0.04em]">Maandrapport</h3>
+          <p className="mt-2 text-sm text-[#7d6d5a]">
+            Stuur dit maandrapport naar actieve e-mailontvangers.
+          </p>
+        </div>
+        <Link
+          href="/settings"
+          className="shrink-0 rounded-full bg-[#1f5f4a] px-4 py-2 text-sm font-semibold text-white hover:bg-[#184838]"
+        >
+          Ontvangers beheren
+        </Link>
+      </div>
+
+      {/* Readiness diagnostics */}
+      {readinessLoading && (
+        <div className="mt-4 rounded-lg bg-[#f5f1ea] p-3 text-sm text-[#6f6253]">
+          Gereedheid controleren…
+        </div>
+      )}
+
+      {!readinessLoading && (
+        <div className="mt-4 rounded-lg bg-[#f5f1ea] p-4">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#7d6d5a]">
+            Gereedheid {yearMonth}
+          </p>
+          <ul className="space-y-1">
+            {readiness?.coverageStatus === 'COMPLETE'
+              ? <ReadinessOk label="Bankdekking volledig" />
+              : <ReadinessBlocker label="Bankdekking niet volledig" />}
+
+            {readiness?.balanceDifferenceMinor === '0'
+              ? <ReadinessOk label="Banksaldo klopt" />
+              : <ReadinessBlocker label={`Bankverschil: ${readiness?.balanceDifferenceMinor ?? '—'} cent`} />}
+
+            {readiness?.categoryIncomeDifferenceMinor === '0' && readiness?.categoryExpenseDifferenceMinor === '0'
+              ? <ReadinessOk label="Categorietotalen kloppen" />
+              : <ReadinessBlocker label="Categorie-verschillen aanwezig" />}
+
+            {hasUnresolved
+              ? <ReadinessBlocker label={`${readiness!.unresolvedCount} ongeboekte transacties`} />
+              : <ReadinessOk label="Alle transacties geboekt" />}
+
+            {isClosed
+              ? <ReadinessOk label="Periode is afgesloten (CLOSED)" />
+              : <ReadinessBlocker label="Periode is niet afgesloten — sluit de maand eerst af" />}
+
+            {hasRecipients
+              ? <ReadinessOk label={`${recipientCount} actieve ontvangers`} />
+              : <ReadinessBlocker label="Geen actieve e-mailontvangers — voeg ontvangers toe in Instellingen" />}
+          </ul>
+        </div>
+      )}
+
+      {/* Result message */}
+      {message && (
+        <div
+          className={`mt-4 rounded-lg p-3 text-sm ${
+            message.type === 'success'
+              ? 'border border-[#4caf50] bg-[#f1f8f4] text-[#2e7d32]'
+              : 'border border-[#f44336] bg-[#ffebee] text-[#c62828]'
+          }`}
+        >
+          {message.text}
+        </div>
+      )}
+
+      {/* Send action */}
+      <div className="mt-4">
+        {showConfirm ? (
+          <div className="rounded-lg border border-[#e6b85c] bg-[#fff7df] p-4">
+            <p className="text-sm text-[#7a5512]">
+              Weet je zeker dat je het maandrapport voor {yearMonth} wilt versturen naar {recipientCount ?? 0}{' '}
+              {recipientCount === 1 ? 'ontvanger' : 'ontvangers'}?
+            </p>
+            <div className="mt-3 flex gap-2">
+              <button
+                onClick={handleSend}
+                disabled={loading || !canSend}
+                className="rounded-full bg-[#1f5f4a] px-4 py-2 text-sm font-semibold text-white hover:bg-[#184838] disabled:opacity-50"
+              >
+                {loading ? 'Verzenden…' : 'Bevestigen en versturen'}
+              </button>
+              <button
+                onClick={() => setShowConfirm(false)}
+                disabled={loading}
+                className="rounded-full border border-[#7a5512] px-4 py-2 text-sm font-semibold text-[#7a5512] hover:bg-[#f5f1ea] disabled:opacity-50"
+              >
+                Annuleren
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowConfirm(true)}
+            disabled={!canSend || loading}
+            title={
+              !canSend
+                ? 'Los de openstaande punten boven op voordat je het rapport verstuurt'
+                : undefined
+            }
+            className="rounded-full bg-[#1f5f4a] px-6 py-3 text-sm font-semibold text-white hover:bg-[#184838] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Verstuur maandrapport
+          </button>
+        )}
       </div>
     </section>
   );
@@ -173,6 +419,8 @@ export default function FinanceReportsPage({ initialYear, initialMonth }: { init
           <BreakdownList title="Inkomsten" items={report.incomeByCategory} />
           <BreakdownList title="Uitgaven" items={report.expensesByCategory} />
         </section>
+
+        {month && <MonthlySendPanel year={year} month={month} />}
 
         <ReportExplanation summary={report} />
       </div>

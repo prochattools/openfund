@@ -51,6 +51,7 @@ import {
   listTransactionTypes, createTransactionType, updateTransactionType,
 } from './routes/referenceData';
 import { postDirectionInference, postOwnerHistoryProposals, postTransactionTypeDirectionUsageAudit } from './routes/operatorTools';
+import { postMonthlySendReport } from './routes/monthlySendReport';
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -131,6 +132,7 @@ app.post('/api/reports/yearly/:year/snapshot', postYearlyReportSnapshot);
 app.post('/api/reports/:snapshotId/artifacts', postReportArtifacts);
 app.post('/api/reports/:snapshotId/approve', postApproveReportSnapshot);
 app.post('/api/reports/:snapshotId/dispatch/prepare', postPrepareReportDispatch);
+app.post('/api/reports/monthly/send', postMonthlySendReport);
 
 async function start() {
   try {

@@ -1191,3 +1191,26 @@ export const postTransactionTypeDirectionUsageAudit = async (): Promise<Transact
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({}),
   })));
+
+// ─── Reports — monthly send ───────────────────────────────────────────────────
+
+export type MonthlySendReportRequest = {
+  year: number;
+  month: number;
+  confirmed: true;
+};
+
+export type MonthlySendReportResponse = {
+  status: 'SENT' | 'FAILED';
+  month: string;
+  recipientCount: number;
+  snapshotId: string;
+  dispatchId: string;
+};
+
+export const sendMonthlyReport = async (request: MonthlySendReportRequest): Promise<MonthlySendReportResponse> =>
+  readJson(await fetch(getApiUrl('/api/reports/monthly/send'), withUserHeader({
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  })));
