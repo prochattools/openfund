@@ -42,6 +42,20 @@ vi.mock('../../server/services/reviewDecisionService', () => ({
   hashEvidence: vi.fn((input) => `hash-${JSON.stringify(input).slice(0, 16)}`),
 }));
 
+vi.mock('../../server/services/recipientNormalization', async () => {
+  const actual = await vi.importActual<
+    typeof import('../../server/services/recipientNormalization')
+  >('../../server/services/recipientNormalization');
+  return actual;
+});
+
+vi.mock('../../server/services/deliveryKeyService', async () => {
+  const actual = await vi.importActual<
+    typeof import('../../server/services/deliveryKeyService')
+  >('../../server/services/deliveryKeyService');
+  return actual;
+});
+
 vi.mock('../../server/auth/requestContext', async () => {
   const actual = await vi.importActual<
     typeof import('../../server/auth/requestContext')
@@ -340,25 +354,27 @@ describe('POST /api/reports/monthly/send', () => {
       await postMonthlySendReport(req, res);
 
       expect((res as any).statusCode).toBe(409);
-      expect((res as any).jsonData.error).toContain('geverifieerd');
+      // Early check error contains "ingediend", service-layer error contains "geverifieerd"
+      expect((res as any).jsonData.error).toMatch(/ingediend|geverifieerd/);
     });
 
-    it('handles Prisma P2002 unique constraint violation', async () => {
+    it('handles Prisma P2002 unique constraint violation on deliveryKey', async () => {
       (prisma.statementPeriod.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
         { id: 'period-1' },
       ]);
       (prisma.periodClose.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
         status: 'CLOSED',
         version: 1,
+        id: 'close-1',
       });
       (prisma.emailRecipient.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
         { id: 'r1', email: 'test@example.com', name: 'Test' },
       ]);
 
-      const p2002Error = new Error('Unique constraint failed');
+      const p2002Error = new Error('Unique constraint failed on deliveryKey');
       (p2002Error as any).code = 'P2002';
       (p2002Error as any).meta = {
-        target: ['ReportDispatch_unique_dispatch_identity'],
+        target: ['deliveryKey'],
       };
 
       (prisma.$transaction as ReturnType<typeof vi.fn>).mockRejectedValue(p2002Error);
@@ -369,7 +385,7 @@ describe('POST /api/reports/monthly/send', () => {
       await postMonthlySendReport(req, res);
 
       expect((res as any).statusCode).toBe(409);
-      expect((res as any).jsonData.error).toContain('geverifieerd');
+      expect((res as any).jsonData.error).toMatch(/ingediend|geverifieerd/);
     });
   });
 

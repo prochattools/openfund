@@ -618,6 +618,7 @@ model ReportDispatch {
   id                String                    @id @default(uuid())
   reportSnapshotId  String
   reportApprovalId  String
+  deliveryKey       String                    @unique
   status            DispatchStatus            @default(PENDING)
   fromAddress       String
   subject           String

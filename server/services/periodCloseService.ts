@@ -101,9 +101,11 @@ export type ApproveReportSnapshotInput = {
 export type CreateReportDispatchInput = {
   reportSnapshotId: string;
   reportApprovalId: string;
+  deliveryKey: string;
   fromAddress: string;
   subject: string;
-  recipients: Array<{ email: string; name?: string | null }>;
+  recipients: Array<{ email: string; name: string | null }>;
+  recipientHash: string;
   contentHash: string;
   sentBy: string;
 };
@@ -342,25 +344,21 @@ export const createReportDispatch = async (db: TxClient, input: CreateReportDisp
     throw new PeriodCloseError('Rapportverzending vereist een actieve goedkeuring.', 409);
   }
 
-  const recipientHash = hashEvidence(input.recipients.map((recipient) => ({
-    email: recipient.email.toLowerCase(),
-    name: recipient.name ?? null,
-  })));
-
   return db.reportDispatch.create({
     data: {
       reportSnapshotId: input.reportSnapshotId,
       reportApprovalId: input.reportApprovalId,
+      deliveryKey: input.deliveryKey,
       status: DispatchStatus.PENDING,
       fromAddress: input.fromAddress,
       subject: input.subject,
-      recipientHash,
+      recipientHash: input.recipientHash,
       contentHash: input.contentHash,
       sentBy: input.sentBy,
       recipients: {
         create: input.recipients.map((recipient) => ({
           email: recipient.email,
-          name: recipient.name ?? null,
+          name: recipient.name,
         })),
       },
     },

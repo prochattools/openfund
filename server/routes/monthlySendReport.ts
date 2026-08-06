@@ -1,17 +1,19 @@
 /**
  * POST /api/reports/monthly/send
  *
- * Admin-only endpoint that:
- *   1. Requires a CLOSED period for the given year/month.
- *   2. Loads active EmailRecipient records for actor.userId.
- *   3. Rejects with Dutch message if zero recipients.
- *   4. Verifies RESEND_API_KEY is present (throws before any DB writes).
- *   5. Creates/reuses immutable snapshot.
- *   6. Generates HTML/XLSX/PDF artifacts.
- *   7. Approves the snapshot hash.
- *   8. Prepares dispatch metadata (PENDING).
- *   9. Sends via real ResendReportEmailProvider — outside the DB transaction.
- *  10. Persists SENT or sanitized FAILED status via a second DB write.
+ * Stable end-to-end idempotent report dispatch workflow:
+ *
+ * 1. Validate request and configuration.
+ * 2. Verify all statement periods for the month are CLOSED.
+ * 3. Load active recipients and normalize them canonically.
+ * 4. Compute delivery key from immutable evidence (workspace, period closes with versions, recipients).
+ * 5. Check for existing dispatch with same delivery key (duplicate prevention).
+ * 6. If new: create snapshot, artifacts, approval, and dispatch (all in one transaction).
+ * 7. Send via Resend outside the transaction.
+ * 8. Update dispatch status to SENT or FAILED.
+ *
+ * A second identical request with the same month, same CLOSED periods, and same active recipients
+ * will receive HTTP 409 without creating new records or calling the provider.
  *
  * Never returns recipient email addresses in any response or log.
  */
@@ -29,6 +31,8 @@ import {
 } from '../services/reportApprovalDispatchService';
 import { ResendReportEmailProvider } from '../services/reportEmailProvider';
 import { hashEvidence } from '../services/reviewDecisionService';
+import { normalizeRecipients } from '../services/recipientNormalization';
+import { computeDeliveryKey } from '../services/deliveryKeyService';
 import { DispatchStatus } from '@prisma/client';
 
 const CANONICAL_FROM_ADDRESS = 'rapport@yeshuaacademy.nl';
@@ -61,11 +65,10 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
   const { userId, workspaceId } = actor;
 
   try {
-    // Verify ALL canonical statement periods overlapping this month are CLOSED
+    // Step 1: Verify ALL canonical statement periods overlapping this month are CLOSED
     const periodStart = new Date(Date.UTC(year, month - 1, 1));
     const periodEnd = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
 
-    // Find all canonical statement periods for this month
     const statementPeriods = await prisma.statementPeriod.findMany({
       where: {
         workspaceId,
@@ -83,12 +86,13 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
     }
 
     // Verify each statement period's LATEST close is CLOSED (not reopened or partial)
+    const periodCloseRecords: Array<{ id: string; version: number }> = [];
     for (const sp of statementPeriods) {
       const latestClose = await prisma.periodClose.findFirst({
         where: {
           statementPeriodId: sp.id,
         },
-        select: { status: true, version: true },
+        select: { id: true, status: true, version: true },
         orderBy: { version: 'desc' },
       });
 
@@ -98,38 +102,56 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
           error: `Afschriftperiode ${sp.id} is ${reason}. Sluit alle perioden voor maand ${year}-${String(month).padStart(2, '0')} af voordat u het rapport verzendt.`,
         });
       }
+
+      periodCloseRecords.push({ id: latestClose.id, version: latestClose.version });
     }
 
-    // Load active recipients
-    const recipients = await prisma.emailRecipient.findMany({
+    // Step 2: Load active recipients and normalize canonically
+    const rawRecipients = await prisma.emailRecipient.findMany({
       where: { userId, isActive: true },
-      select: { id: true, email: true, name: true },
+      select: { email: true, name: true },
     });
 
-    if (recipients.length === 0) {
+    if (rawRecipients.length === 0) {
       return res.status(400).json({
         error: 'Er zijn geen actieve e-mailontvangers ingesteld. Voeg ontvangers toe in Instellingen.',
       });
     }
 
-    // Compute recipient and content hashes for duplicate detection
-    const { hashEvidence } = await import('../services/reviewDecisionService');
-    const recipientHash = hashEvidence(
-      recipients
-        .map((r) => ({
-          email: r.email.toLowerCase(),
-          name: r.name ?? null,
-        }))
-        .sort((a, b) => a.email.localeCompare(b.email)),
+    const { recipients, recipientHash } = normalizeRecipients(
+      rawRecipients.map((r) => ({ email: r.email, name: r.name })),
     );
+
+    // Step 3: Compute delivery key (immutable dispatch identity)
+    const deliveryKey = computeDeliveryKey({
+      workspaceId,
+      kind: 'MONTHLY',
+      year,
+      month,
+      periodCloses: periodCloseRecords,
+      recipientHash,
+    });
+
+    // Step 4: Check for existing dispatch with same delivery key (EARLY duplicate check)
+    const existingDispatch = await prisma.reportDispatch.findFirst({
+      where: {
+        deliveryKey,
+        status: { in: [DispatchStatus.PENDING, DispatchStatus.SENT, DispatchStatus.FAILED] },
+      },
+      select: { id: true, status: true },
+    });
+
+    if (existingDispatch) {
+      return res.status(409).json({
+        error: 'Dit rapport is al ingediend. Als u het rapport opnieuw wilt versturen, wijzig alstublieft de ontvangers of de inhoud.',
+      });
+    }
 
     const fromAddress = process.env.REPORT_EMAIL_FROM?.trim() || CANONICAL_FROM_ADDRESS;
     const subject = `Maandrapport ${year}-${String(month).padStart(2, '0')}`;
 
-    // Phase 1: Create snapshot + artifacts + approval + dispatch preparation in one transaction
+    // Step 5: Create all immutable records in one transaction
     const prepared = await prisma.$transaction(async (tx) => {
-      // First, compute content hash within the transaction to ensure atomicity
-      // for duplicate detection (we'll store it after artifacts are generated)
       const snapshotResult = await generateMonthlyReportSnapshot(tx, {
         actor: { userId, role: actor.role },
         workspaceId,
@@ -181,10 +203,28 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
         expectedSnapshotHash: snapshotResult.snapshotHash,
       });
 
+      // Compute content hash from artifact SHA-256 digests (not IDs)
+      const artifacts = await Promise.all([
+        tx.reportArtifact.findUnique({
+          where: { id: artifactResult.htmlArtifactId },
+          select: { sha256: true },
+        }),
+        tx.reportArtifact.findUnique({
+          where: { id: artifactResult.xlsxArtifactId },
+          select: { sha256: true },
+        }),
+        tx.reportArtifact.findUnique({
+          where: { id: artifactResult.pdfArtifactId },
+          select: { sha256: true },
+        }),
+      ]);
+
       const contentHash = hashEvidence({
-        htmlArtifactId: artifactResult.htmlArtifactId,
-        xlsxArtifactId: artifactResult.xlsxArtifactId,
-        pdfArtifactId: artifactResult.pdfArtifactId,
+        artifacts: [
+          { format: 'HTML', sha256: artifacts[0]?.sha256 },
+          { format: 'XLSX', sha256: artifacts[1]?.sha256 },
+          { format: 'PDF', sha256: artifacts[2]?.sha256 },
+        ],
       });
 
       const dispatch = await prepareDispatch(tx, {
@@ -192,9 +232,11 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
         workspaceId,
         reportSnapshotId: snapshotResult.snapshotId,
         reportApprovalId: approval.approvalId,
+        deliveryKey,
         fromAddress,
         subject,
-        recipients: recipients.map((r) => ({ email: r.email, name: r.name || undefined })),
+        recipients,
+        recipientHash,
         contentHash,
       });
 
@@ -224,7 +266,7 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
       };
     });
 
-    // Phase 2: Send email outside the transaction (avoid holding DB connection during HTTP call)
+    // Step 6: Send email outside the transaction (avoid holding DB connection during HTTP call)
     const provider = new ResendReportEmailProvider();
     const sendResult = await executeDispatch(prisma, {
       actor: { userId, role: actor.role },
@@ -234,7 +276,7 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
       dispatchId: prepared.dispatchId,
       fromAddress,
       subject,
-      recipients: recipients.map((r) => ({ email: r.email, name: r.name || undefined })),
+      recipients,
       contentHash: prepared.contentHash,
       html: prepared.htmlContent,
       provider,
@@ -255,7 +297,7 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
       return res.status(err.statusCode).json({ error: err.message });
     }
 
-    // Handle Prisma unique constraint violation (duplicate dispatch identity race)
+    // Handle Prisma unique constraint violation on deliveryKey (concurrent duplicate race)
     if (
       err &&
       typeof err === 'object' &&
@@ -266,10 +308,10 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
       err.meta !== null &&
       'target' in err.meta &&
       Array.isArray(err.meta.target) &&
-      err.meta.target.includes('ReportDispatch_unique_dispatch_identity')
+      err.meta.target.includes('deliveryKey')
     ) {
       return res.status(409).json({
-        error: 'Dit rapport met deze ontvangers en inhoud is al geverifieerd. Wijzig de ontvangers of inhoud om opnieuw in te dienen.',
+        error: 'Dit rapport is al ingediend. Als u het rapport opnieuw wilt versturen, wijzig alstublieft de ontvangers of de inhoud.',
       });
     }
 

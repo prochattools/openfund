@@ -67,9 +67,11 @@ export type PrepareDispatchInput = {
   workspaceId: string;
   reportSnapshotId: string;
   reportApprovalId: string;
+  deliveryKey: string;
   fromAddress: string;
   subject: string;
-  recipients: Array<{ email: string; name?: string | null }>;
+  recipients: Array<{ email: string; name: string | null }>;
+  recipientHash: string;
   /** Hash of the content that would be sent (artifact sha256s combined). */
   contentHash: string;
 };
@@ -232,14 +234,12 @@ export const approveSnapshot = async (
  *   - The approval does not belong to the snapshot.
  *   - The approval is revoked (e.g. after period reopen).
  *   - No recipients are supplied.
- *   - An existing dispatch with the same snapshot, recipients, and content already exists (duplicate protection).
  *
  * Does NOT send email. Does NOT call any external provider.
  * Dispatch status is always PENDING after this call.
  *
- * In tests, the status remains PENDING. Real dispatch would require a separate
- * operator-approved step that updates the status to SENT or FAILED after
- * verifying the external provider call — that step is outside this service.
+ * The deliveryKey and recipientHash are pre-computed by the caller, ensuring
+ * a single canonical normalization point.
  */
 export const prepareDispatch = async (
   db: TxClient,
@@ -279,40 +279,16 @@ export const prepareDispatch = async (
     );
   }
 
-  // Compute the recipient hash for duplicate detection
-  const recipientHash = hashEvidence(
-    input.recipients
-      .map((r) => ({
-        email: r.email.toLowerCase(),
-        name: r.name ?? null,
-      }))
-      .sort((a, b) => a.email.localeCompare(b.email)),
-  );
-
-  // Check for existing dispatch with the same snapshot, recipients, and content (duplicate protection)
-  const existingDispatch = await db.reportDispatch.findFirst({
-    where: {
-      reportSnapshotId: input.reportSnapshotId,
-      recipientHash,
-      contentHash: input.contentHash,
-    },
-  });
-
-  if (existingDispatch) {
-    throw new ReportApprovalError(
-      'Dit rapport met deze ontvangers en inhoud is al geverifieerd. Wijzig de ontvangers of inhoud om opnieuw in te dienen.',
-      409,
-    );
-  }
-
   const actorId = input.actor.actorId ?? input.actor.userId;
 
   const dispatch = await createReportDispatch(db, {
     reportSnapshotId: input.reportSnapshotId,
     reportApprovalId: input.reportApprovalId,
+    deliveryKey: input.deliveryKey,
     fromAddress: input.fromAddress,
     subject: input.subject,
     recipients: input.recipients,
+    recipientHash: input.recipientHash,
     contentHash: input.contentHash,
     sentBy: actorId,
   });
@@ -322,7 +298,7 @@ export const prepareDispatch = async (
     reportSnapshotId: input.reportSnapshotId,
     reportApprovalId: input.reportApprovalId,
     status: 'PENDING',
-    recipientHash,
+    recipientHash: input.recipientHash,
     contentHash: input.contentHash,
     sideEffects: {
       createsReportDispatch: true,

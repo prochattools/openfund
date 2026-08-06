@@ -238,14 +238,20 @@ describe('report approval', () => {
 // ─── REPORT-005: Prepare dispatch ────────────────────────────────────────────
 
 describe('report dispatch', () => {
+  const normalizedRecipients = [{ email: 'admin@example.test', name: 'Administrator' }];
+  const recipientHash = 'a'.repeat(64);
+  const deliveryKey = 'b'.repeat(64);
+
   const dispatchInput = {
     actor: adminActor,
     workspaceId: WORKSPACE_ID,
     reportSnapshotId: SNAPSHOT_ID,
     reportApprovalId: 'approval-1',
+    deliveryKey,
     fromAddress: 'finance@example.test',
-    subject: 'Financieel rapport januari 2026',
-    recipients: [{ email: 'admin@example.test', name: 'Administrator' }],
+    subject: 'Financieel rapport januar 2026',
+    recipients: normalizedRecipients,
+    recipientHash,
     contentHash: 'content-hash-' + 'b'.repeat(51),
   };
 
@@ -258,7 +264,7 @@ describe('report dispatch', () => {
     expect(result.reportApprovalId).toBe('approval-1');
     expect(result.status).toBe('PENDING');
     expect(result.contentHash).toBe(dispatchInput.contentHash);
-    expect(result.recipientHash).toHaveLength(64);
+    expect(result.recipientHash).toBe(recipientHash);
     expect(result.sideEffects.createsReportDispatch).toBe(true);
     expect(result.sideEffects.sendsEmail).toBe(false);
     expect(result.sideEffects.callsExternalProvider).toBe(false);
@@ -268,8 +274,8 @@ describe('report dispatch', () => {
     const db = makeApprovalDb();
     const result = await prepareDispatch(db, dispatchInput);
 
-    // recipientHash is a 64-char hex sha256, not a raw email
-    expect(result.recipientHash).toHaveLength(64);
+    // recipientHash is returned as-is from input (pre-computed by caller)
+    expect(result.recipientHash).toBe(recipientHash);
     expect(result.recipientHash).not.toContain('@');
   });
 
