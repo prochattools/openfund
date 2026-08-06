@@ -38,8 +38,8 @@ export type StrictPeriodCloseInput = {
   workspaceId: string;
   ledgerId: string;
   statementPeriodId: string;
-  expectedCloseControlHash?: string | null;
-  confirmed?: boolean;
+  expectedCloseControlHash: string | null;
+  confirmed: boolean;
 };
 
 export type StrictPeriodCloseResult = {
@@ -137,6 +137,18 @@ const assertConfirmed = (confirmed: boolean | undefined) => {
   }
 };
 
+const assertHashRequiredWhenConfirmed = (
+  confirmed: boolean | undefined,
+  expectedHash: string | null | undefined,
+) => {
+  if (confirmed && (!expectedHash || typeof expectedHash !== 'string' || !expectedHash.trim())) {
+    throw new StrictPeriodCloseError(
+      'Sluitingscontrolehash is verplicht wanneer confirmed=true.',
+      400,
+    );
+  }
+};
+
 const assertNoActiveClose = async (
   db: TxClient,
   statementPeriodId: string,
@@ -161,6 +173,7 @@ export const executeStrictPeriodClose = async (
 ): Promise<StrictPeriodCloseResult> => {
   assertAdminActor(input.actor);
   assertConfirmed(input.confirmed);
+  assertHashRequiredWhenConfirmed(input.confirmed, input.expectedCloseControlHash);
 
   const statementPeriod = await db.statementPeriod.findFirst({
     where: { id: input.statementPeriodId },

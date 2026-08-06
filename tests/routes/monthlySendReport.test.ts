@@ -197,6 +197,13 @@ describe('monthly send report route', () => {
     });
 
     it('rejects zero active recipients', async () => {
+      (prisma.statementPeriod.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { id: 'period-1' },
+      ]);
+      (prisma.periodClose.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
+        status: 'CLOSED',
+        version: 1,
+      });
       (prisma.emailRecipient.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
       const req = mockReq({ year: 2024, month: 1, confirmed: true }, adminHeaders);

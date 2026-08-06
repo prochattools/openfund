@@ -108,7 +108,36 @@ describe('strict period close route', () => {
     const req = mockReq(
       { id: 'period-1' },
       adminHeaders,
-      { confirmed: true },
+      { confirmed: true, expectedCloseControlHash: 'hash-123' },
+    );
+    const res = mockRes();
+
+    await postStrictPeriodClose(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
+
+  it('requires hash when confirmed=true', async () => {
+    const req = mockReq(
+      { id: 'period-1' },
+      adminHeaders,
+      { ledgerId: 'ledger-1', confirmed: true, expectedCloseControlHash: null },
+    );
+    const res = mockRes();
+
+    await postStrictPeriodClose(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.stringContaining('hash') }),
+    );
+  });
+
+  it('rejects empty hash', async () => {
+    const req = mockReq(
+      { id: 'period-1' },
+      adminHeaders,
+      { ledgerId: 'ledger-1', confirmed: true, expectedCloseControlHash: '  ' },
     );
     const res = mockRes();
 
@@ -121,7 +150,7 @@ describe('strict period close route', () => {
     const req = mockReq(
       { id: 'period-1' },
       { 'x-user-id': 'user-1', 'x-user-role': 'admin' },
-      { ledgerId: 'ledger-1', confirmed: true },
+      { ledgerId: 'ledger-1', confirmed: true, expectedCloseControlHash: 'hash-123' },
     );
     const res = mockRes();
 
@@ -167,7 +196,7 @@ describe('strict period close route', () => {
     const req = mockReq(
       { id: 'period-1' },
       adminHeaders,
-      { ledgerId: 'ledger-1', confirmed: true },
+      { ledgerId: 'ledger-1', confirmed: true, expectedCloseControlHash: 'hash-123' },
     );
     const res = mockRes();
 
@@ -211,7 +240,7 @@ describe('strict period close route', () => {
     const req = mockReq(
       { id: 'period-1' },
       adminHeaders,
-      { ledgerId: 'ledger-1', confirmed: true },
+      { ledgerId: 'ledger-1', confirmed: true, expectedCloseControlHash: 'hash-123' },
     );
     const res = mockRes();
 
@@ -251,7 +280,7 @@ describe('strict period close route', () => {
     const req = mockReq(
       { id: 'period-1' },
       adminHeaders,
-      { ledgerId: 'ledger-1', confirmed: true },
+      { ledgerId: 'ledger-1', confirmed: true, expectedCloseControlHash: 'hash-123' },
     );
     const res = mockRes();
 

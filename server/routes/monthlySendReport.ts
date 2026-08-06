@@ -77,20 +77,20 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
       });
     }
 
-    // Verify each statement period has a latest CLOSED PeriodClose
+    // Verify each statement period's LATEST close is CLOSED (not reopened or partial)
     for (const sp of statementPeriods) {
       const latestClose = await prisma.periodClose.findFirst({
         where: {
           statementPeriodId: sp.id,
-          status: 'CLOSED',
         },
-        select: { id: true },
+        select: { status: true, version: true },
         orderBy: { version: 'desc' },
       });
 
-      if (!latestClose) {
+      if (!latestClose || latestClose.status !== 'CLOSED') {
+        const reason = !latestClose ? 'niet afgesloten' : `status ${latestClose.status} (niet CLOSED)`;
         return res.status(409).json({
-          error: `Afschriftperiode ${sp.id} is niet afgesloten. Sluit alle perioden voor maand ${year}-${String(month).padStart(2, '0')} af voordat u het rapport verzendt.`,
+          error: `Afschriftperiode ${sp.id} is ${reason}. Sluit alle perioden voor maand ${year}-${String(month).padStart(2, '0')} af voordat u het rapport verzendt.`,
         });
       }
     }

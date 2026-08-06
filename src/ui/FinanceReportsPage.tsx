@@ -214,7 +214,7 @@ function MonthlySendPanel({ year, month }: { year: number; month: number | null 
       : readiness?.closeEligible && !allPeriodsAreClosed;
 
   const handleClose = async (statementPeriodId: string, closeControlHash: string | null) => {
-    if (!readiness) return;
+    if (!readiness || !closeControlHash) return;
     setCloseLoading(true);
     setCloseMessage(null);
     try {
@@ -243,7 +243,7 @@ function MonthlySendPanel({ year, month }: { year: number; month: number | null 
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             ledgerId: previewData.ledger.id,
-            expectedCloseControlHash: closeControlHash || null,
+            expectedCloseControlHash: closeControlHash,
             confirmed: true,
           }),
         },
@@ -431,7 +431,7 @@ function MonthlySendPanel({ year, month }: { year: number; month: number | null 
                     <p className="mt-1 text-xs text-[#2e7d32]">✓ Klaar voor afsluiting</p>
                   )}
                 </div>
-                {period.preview.closeEligible && !period.isClosed && (
+                {period.preview.closeEligible && !period.isClosed && period.closeControlHash && (
                   <button
                     onClick={() => handleClose(period.statementPeriodId, period.closeControlHash)}
                     disabled={closeLoading}

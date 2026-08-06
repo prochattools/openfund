@@ -16,7 +16,10 @@ export type PeriodClosePreviewItem = {
   accountIdentifier: string;
   periodStart: string;
   periodEnd: string;
-  closeControlHash: string | null;
+  closeControlHash: string;
+  latestCloseStatus: string | null;
+  latestCloseVersion: number | null;
+  isClosed: boolean;
   preview: {
     status: string;
     closeEligible: boolean;
@@ -172,12 +175,22 @@ export const getMonthlyClosePreview = async (req: Request, res: Response) => {
       const combined = buildCloseControlPreview(statementPreview, categoryControls);
       const closeControlHash = buildCloseControlHashFromParts(sp.id, ledger.id, combined);
 
+      // Load latest close (any status) by highest version
+      const latestClose = await prisma.periodClose.findFirst({
+        where: { statementPeriodId: sp.id },
+        select: { version: true, status: true },
+        orderBy: { version: 'desc' },
+      });
+
       previews.push({
         statementPeriodId: sp.id,
         accountIdentifier: sp.statement.bankAccountIdentifier,
         periodStart: sp.periodStart.toISOString().slice(0, 10),
         periodEnd: sp.periodEnd.toISOString().slice(0, 10),
         closeControlHash,
+        latestCloseStatus: latestClose?.status ?? null,
+        latestCloseVersion: latestClose?.version ?? null,
+        isClosed: latestClose?.status === 'CLOSED',
         preview: {
           status: combined.combinedStatus,
           closeEligible: combined.combinedCloseEligible,

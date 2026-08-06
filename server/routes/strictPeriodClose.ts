@@ -16,12 +16,21 @@ export const postStrictPeriodClose = async (req: Request, res: Response) => {
 
   const { ledgerId, expectedCloseControlHash, confirmed } = req.body as {
     ledgerId?: string;
-    expectedCloseControlHash?: string | null;
-    confirmed?: boolean;
+    expectedCloseControlHash?: unknown;
+    confirmed?: unknown;
   };
 
   if (!ledgerId || typeof ledgerId !== 'string') {
     return res.status(400).json({ error: 'Grootboek-ID is verplicht.' });
+  }
+
+  if (confirmed !== true) {
+    return res.status(400).json({ error: 'confirmed moet true zijn.' });
+  }
+
+  const hash = typeof expectedCloseControlHash === 'string' ? expectedCloseControlHash : null;
+  if (!hash || !hash.trim()) {
+    return res.status(400).json({ error: 'Sluitingscontrolehash is verplicht.' });
   }
 
   const workspaceId = req.header('x-workspace-id') ?? req.body.workspaceId;
@@ -41,8 +50,8 @@ export const postStrictPeriodClose = async (req: Request, res: Response) => {
         workspaceId,
         ledgerId,
         statementPeriodId,
-        expectedCloseControlHash: expectedCloseControlHash ?? null,
-        confirmed: confirmed === true,
+        expectedCloseControlHash: hash,
+        confirmed: true,
       });
     });
 
