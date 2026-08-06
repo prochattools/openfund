@@ -122,6 +122,18 @@ function MonthlySendPanel({ year, month }: { year: number; month: number | null 
   const [readiness, setReadiness] = useState<MonthReadiness | null>(null);
   const [recipientCount, setRecipientCount] = useState<number | null>(null);
   const [readinessLoading, setReadinessLoading] = useState(false);
+  const [closeLoading, setCloseLoading] = useState(false);
+  const [closeMessage, setCloseMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const [periodPreviews, setPeriodPreviews] = useState<Array<{
+    statementPeriodId: string;
+    accountIdentifier: string;
+    periodStart: string;
+    periodEnd: string;
+    closeControlHash: string | null;
+    preview: { status: string; closeEligible: boolean; blockers: string[] };
+    isClosed?: boolean;
+  }> | null>(null);
 
   useEffect(() => {
     if (!month) return;
@@ -187,52 +199,51 @@ function MonthlySendPanel({ year, month }: { year: number; month: number | null 
 
   if (!month) return null;
 
-  const isClosed = readiness?.periodCloseStatus === 'CLOSED';
+  const allPeriodsAreClosed =
+    periodPreviews !== null && periodPreviews.length > 0
+      ? periodPreviews.every((p) => p.isClosed)
+      : readiness?.periodCloseStatus === 'CLOSED';
+
   const hasRecipients = recipientCount !== null && recipientCount > 0;
   const hasUnresolved = readiness !== null && readiness.unresolvedCount > 0;
-  const canSend = isClosed && hasRecipients && !hasUnresolved;
+  const canSend = allPeriodsAreClosed && hasRecipients && !hasUnresolved;
 
-  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
-  const [closeLoading, setCloseLoading] = useState(false);
-  const [closeMessage, setCloseMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const anyPeriodEligibleToClose =
+    periodPreviews !== null && periodPreviews.length > 0
+      ? periodPreviews.some((p) => p.preview.closeEligible && !p.isClosed)
+      : readiness?.closeEligible && !allPeriodsAreClosed;
 
-  const canClose = readiness?.closeEligible && !isClosed;
-
-  const handleClose = async () => {
-    if (!canClose || !readiness) return;
+  const handleClose = async (statementPeriodId: string, closeControlHash: string | null) => {
+    if (!readiness) return;
     setCloseLoading(true);
     setCloseMessage(null);
     try {
-      // Get statement period and close control hash
+      // Get ledger ID from preview
       const previewResponse = await fetch(
         `/api/reconciliation/statement-periods/close-preview?year=${year}&month=${month}`,
         { credentials: 'include', cache: 'no-store' },
       );
 
       if (!previewResponse.ok) {
-        throw new Error('Afschriftperiode kon niet worden geladen.');
+        throw new Error('Ledger kon niet worden geladen.');
       }
 
-      const previewData = await previewResponse.json() as {
-        statementPeriod?: { id: string };
-        ledger?: { id: string };
-        closeControlHash?: string;
-      };
+      const previewData = await previewResponse.json() as { ledger?: { id: string } };
 
-      if (!previewData.statementPeriod?.id || !previewData.ledger?.id) {
-        throw new Error('Afschriftperiode of grootboek niet gevonden.');
+      if (!previewData.ledger?.id) {
+        throw new Error('Ledger niet gevonden.');
       }
 
-      // Close the period using the strict period close endpoint
+      // Close the specific period using the strict period close endpoint
       const closeResponse = await fetch(
-        `/api/reconciliation/statement-periods/${previewData.statementPeriod.id}/close`,
+        `/api/reconciliation/statement-periods/${statementPeriodId}/close`,
         {
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             ledgerId: previewData.ledger.id,
-            expectedCloseControlHash: previewData.closeControlHash || null,
+            expectedCloseControlHash: closeControlHash || null,
             confirmed: true,
           }),
         },
@@ -245,13 +256,14 @@ function MonthlySendPanel({ year, month }: { year: number; month: number | null 
 
       setCloseMessage({
         type: 'success',
-        text: 'Periode is afgesloten. Ververs de pagina om het rapport te versturen.',
+        text: 'Periode is afgesloten. Ververs de pagina om alle perioden te sluiten en het rapport te versturen.',
       });
       setShowCloseConfirm(false);
 
-      // Refresh readiness after a short delay
+      // Refresh previews and readiness after a short delay
       setTimeout(() => {
         setReadinessLoading(true);
+        setPeriodPreviews(null);
       }, 1000);
     } catch (err: unknown) {
       setCloseMessage({
@@ -262,6 +274,35 @@ function MonthlySendPanel({ year, month }: { year: number; month: number | null 
       setCloseLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!month) return;
+    let cancelled = false;
+
+    fetch(`/api/reconciliation/statement-periods/close-preview?year=${year}&month=${month}`, {
+      credentials: 'include',
+      cache: 'no-store',
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled) return;
+        if (data?.periods) {
+          setPeriodPreviews(
+            data.periods.map((p: any) => ({
+              ...p,
+              isClosed: p.preview?.status === 'CLOSED',
+            })),
+          );
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setPeriodPreviews(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [year, month]);
 
   const handleSend = async () => {
     if (!canSend) return;
@@ -336,9 +377,9 @@ function MonthlySendPanel({ year, month }: { year: number; month: number | null 
               ? <ReadinessBlocker label={`${readiness!.unresolvedCount} ongeboekte transacties`} />
               : <ReadinessOk label="Alle transacties geboekt" />}
 
-            {isClosed
-              ? <ReadinessOk label="Periode is afgesloten (CLOSED)" />
-              : <ReadinessBlocker label="Periode is niet afgesloten — sluit de maand eerst af" />}
+            {allPeriodsAreClosed
+              ? <ReadinessOk label="Alle perioden zijn afgesloten (CLOSED)" />
+              : <ReadinessBlocker label="Perioden zijn niet afgesloten — sluit de maanden eerst af" />}
 
             {hasRecipients
               ? <ReadinessOk label={`${recipientCount} actieve ontvangers`} />
@@ -360,40 +401,60 @@ function MonthlySendPanel({ year, month }: { year: number; month: number | null 
         </div>
       )}
 
-      {/* Close action (only when eligible and not yet closed) */}
-      {canClose && (
-        <div className="mt-4">
-          {showCloseConfirm ? (
-            <div className="rounded-lg border border-[#e6b85c] bg-[#fff7df] p-4">
-              <p className="text-sm text-[#7a5512]">
-                Weet je zeker dat je maand {yearMonth} wilt afsluiten? Dit kan niet ongedaan gemaakt worden zonder beheerderinvoer.
-              </p>
-              <div className="mt-3 flex gap-2">
-                <button
-                  onClick={handleClose}
-                  disabled={closeLoading}
-                  className="rounded-full bg-[#1f5f4a] px-4 py-2 text-sm font-semibold text-white hover:bg-[#184838] disabled:opacity-50"
-                >
-                  {closeLoading ? 'Afsluiten…' : 'Bevestigen'}
-                </button>
-                <button
-                  onClick={() => setShowCloseConfirm(false)}
-                  disabled={closeLoading}
-                  className="rounded-full border border-[#7a5512] px-4 py-2 text-sm font-semibold text-[#7a5512] hover:bg-[#f5f1ea] disabled:opacity-50"
-                >
-                  Annuleren
-                </button>
+      {/* Per-period close previews */}
+      {periodPreviews && periodPreviews.length > 0 && (
+        <div className="mt-4 space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#7d6d5a]">
+            Bankafschriften ({periodPreviews.length})
+          </p>
+          {periodPreviews.map((period) => (
+            <div
+              key={period.statementPeriodId}
+              className="rounded-lg border border-[#ded5c8] bg-[#f5f1ea] p-4"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="font-semibold text-[#4a4036]">
+                    {period.accountIdentifier} ({period.periodStart} tot {period.periodEnd})
+                  </p>
+                  {period.preview.blockers.length > 0 && (
+                    <ul className="mt-2 space-y-1">
+                      {period.preview.blockers.map((blocker, idx) => (
+                        <li key={idx} className="flex items-center gap-2 text-xs text-[#c62828]">
+                          <span aria-hidden>✗</span>
+                          <span>{blocker}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {period.preview.blockers.length === 0 && (
+                    <p className="mt-1 text-xs text-[#2e7d32]">✓ Klaar voor afsluiting</p>
+                  )}
+                </div>
+                {period.preview.closeEligible && !period.isClosed && (
+                  <button
+                    onClick={() => handleClose(period.statementPeriodId, period.closeControlHash)}
+                    disabled={closeLoading}
+                    className="shrink-0 rounded-full bg-[#1f5f4a] px-4 py-2 text-xs font-semibold text-white hover:bg-[#184838] disabled:opacity-50"
+                  >
+                    {closeLoading ? 'Afsluiten…' : 'Afsluiten'}
+                  </button>
+                )}
+                {period.isClosed && (
+                  <div className="shrink-0 rounded-full bg-[#e8f5e9] px-4 py-2 text-xs font-semibold text-[#2e7d32]">
+                    Afgesloten
+                  </div>
+                )}
               </div>
             </div>
-          ) : (
-            <button
-              onClick={() => setShowCloseConfirm(true)}
-              disabled={closeLoading}
-              className="rounded-full bg-[#1f5f4a] px-6 py-3 text-sm font-semibold text-white hover:bg-[#184838] disabled:opacity-50"
-            >
-              Maand afsluiten
-            </button>
-          )}
+          ))}
+        </div>
+      )}
+
+      {/* Close action reminder (only when there are open periods) */}
+      {anyPeriodEligibleToClose && (
+        <div className="mt-4 rounded-lg border border-[#e6b85c] bg-[#fff7df] p-4 text-sm text-[#7a5512]">
+          Sluit alle afschriftperioden hierboven af voordat je het maandrapport verstuurt.
         </div>
       )}
 

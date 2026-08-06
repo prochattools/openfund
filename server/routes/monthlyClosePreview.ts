@@ -1,6 +1,28 @@
 import { Request, Response } from 'express';
 import { requireAdmin } from '../auth/requestContext';
 import { prisma } from '../prismaClient';
+import {
+  buildStatementReconciliationPreview,
+  type BookedTransactionSummary,
+} from '../services/statementReconciliationControlService';
+import {
+  buildCategoryControlTotals,
+  buildCloseControlPreview,
+} from '../services/categoryControlTotalsService';
+import { buildCloseControlHashFromParts } from '../services/strictPeriodCloseService';
+
+export type PeriodClosePreviewItem = {
+  statementPeriodId: string;
+  accountIdentifier: string;
+  periodStart: string;
+  periodEnd: string;
+  closeControlHash: string | null;
+  preview: {
+    status: string;
+    closeEligible: boolean;
+    blockers: string[];
+  };
+};
 
 export const getMonthlyClosePreview = async (req: Request, res: Response) => {
   const actor = await requireAdmin(req, res);
@@ -22,7 +44,7 @@ export const getMonthlyClosePreview = async (req: Request, res: Response) => {
 
     // Find the ledger for this period
     const ledger = await prisma.ledger.findFirst({
-      where: { userId: actor.userId },
+      where: { userId: actor.userId, month, year },
       select: { id: true },
     });
 
@@ -30,35 +52,144 @@ export const getMonthlyClosePreview = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Grootboek niet gevonden.' });
     }
 
-    // Find all statement periods that overlap with this month
+    // Find all statement periods that overlap with this month, ordered by account and period
     const statementPeriods = await prisma.statementPeriod.findMany({
       where: {
         account: { userId: actor.userId },
         periodStart: { lte: periodEnd },
         periodEnd: { gte: periodStart },
       },
-      select: { id: true },
-      take: 1,
+      include: { statement: true, account: true },
+      orderBy: [{ accountId: 'asc' }, { periodStart: 'asc' }],
     });
 
     if (statementPeriods.length === 0) {
       return res.status(404).json({ error: 'Geen bankafschriften voor deze maand.' });
     }
 
-    const statementPeriod = statementPeriods[0]!;
+    // Build preview for each statement period
+    const previews: PeriodClosePreviewItem[] = [];
+
+    for (const sp of statementPeriods) {
+      const transactions = await prisma.transaction.findMany({
+        where: {
+          userId: actor.userId,
+          accountId: sp.accountId,
+          date: {
+            gte: sp.periodStart,
+            lte: sp.periodEnd,
+          },
+        },
+        select: {
+          id: true,
+          amountMinor: true,
+          direction: true,
+          transactionBooking: {
+            select: {
+              projectId: true,
+              transactionTypeId: true,
+              categoryId: true,
+              literalProjectLabel: true,
+              literalTypeLabel: true,
+              literalCategoryLabel: true,
+            },
+          },
+          categorizationSuggestions: {
+            where: { status: 'PENDING' },
+            select: { id: true },
+          },
+        },
+      });
+
+      const bookedTransactions: BookedTransactionSummary[] = transactions.map((tx) => {
+        const booking = tx.transactionBooking;
+        const hasCompleteBooking = Boolean(
+          booking && booking.projectId && booking.transactionTypeId && booking.categoryId,
+        );
+        const hasPendingSuggestions = tx.categorizationSuggestions.length > 0;
+        const isUnresolved = !hasCompleteBooking && hasPendingSuggestions;
+        return {
+          transactionId: tx.id,
+          amountMinor: tx.amountMinor,
+          direction: tx.direction as 'credit' | 'debit',
+          hasCompleteBooking,
+          isUnresolved,
+        };
+      });
+
+      const categoryTransactions = transactions.map((tx) => {
+        const booking = tx.transactionBooking;
+        const hasCompleteBooking = Boolean(
+          booking && booking.projectId && booking.transactionTypeId && booking.categoryId,
+        );
+        const hasPendingSuggestions = tx.categorizationSuggestions.length > 0;
+        const isUnresolved = !hasCompleteBooking && hasPendingSuggestions;
+        return {
+          transactionId: tx.id,
+          amountMinor: tx.amountMinor,
+          direction: tx.direction as 'credit' | 'debit',
+          hasCompleteBooking,
+          isUnresolved,
+          projectId: booking?.projectId ?? null,
+          transactionTypeId: booking?.transactionTypeId ?? null,
+          categoryId: booking?.categoryId ?? null,
+          literalProjectLabel: booking?.literalProjectLabel ?? null,
+          literalTypeLabel: booking?.literalTypeLabel ?? null,
+          literalCategoryLabel: booking?.literalCategoryLabel ?? null,
+        };
+      });
+
+      const statementPreview = buildStatementReconciliationPreview({
+        workspaceId: sp.workspaceId,
+        accountId: sp.accountId,
+        accountIdentifier: sp.statement.bankAccountIdentifier,
+        statementPeriodId: sp.id,
+        periodStart: sp.periodStart,
+        periodEnd: sp.periodEnd,
+        coverageStatus: sp.coverageStatus,
+        statementTotals: {
+          openingBalanceMinor: sp.openingBalanceMinor,
+          incomeMinor: sp.incomeMinor,
+          expenseMinor: sp.expenseMinor,
+          closingBalanceMinor: sp.closingBalanceMinor,
+          transactionCount: sp.transactionCount,
+        },
+        bookedTransactions,
+      });
+
+      const categoryControls = buildCategoryControlTotals({
+        workspaceId: sp.workspaceId,
+        accountId: sp.accountId,
+        accountIdentifier: sp.statement.bankAccountIdentifier,
+        periodStart: sp.periodStart,
+        periodEnd: sp.periodEnd,
+        statementIncomeMinor: sp.incomeMinor,
+        statementExpenseMinor: sp.expenseMinor,
+        statementTransactionCount: sp.transactionCount,
+        transactions: categoryTransactions,
+      });
+
+      const combined = buildCloseControlPreview(statementPreview, categoryControls);
+      const closeControlHash = buildCloseControlHashFromParts(sp.id, ledger.id, combined);
+
+      previews.push({
+        statementPeriodId: sp.id,
+        accountIdentifier: sp.statement.bankAccountIdentifier,
+        periodStart: sp.periodStart.toISOString().slice(0, 10),
+        periodEnd: sp.periodEnd.toISOString().slice(0, 10),
+        closeControlHash,
+        preview: {
+          status: combined.combinedStatus,
+          closeEligible: combined.combinedCloseEligible,
+          blockers: combined.combinedReasons,
+        },
+      });
+    }
 
     return res.json({
-      statementPeriod: {
-        id: statementPeriod.id,
-      },
-      ledger: {
-        id: ledger.id,
-      },
-      closeControlHash: null,
-      preview: {
-        status: 'BALANCED',
-        closeEligible: true,
-      },
+      ledger: { id: ledger.id },
+      month: `${year}-${String(month).padStart(2, '0')}`,
+      periods: previews,
     });
   } catch (err: unknown) {
     console.error('[GET /api/reconciliation/statement-periods/close-preview]', err);

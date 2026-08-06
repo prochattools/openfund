@@ -56,25 +56,43 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
   const { userId, workspaceId } = actor;
 
   try {
-    // Verify the period is CLOSED
+    // Verify ALL canonical statement periods overlapping this month are CLOSED
     const periodStart = new Date(Date.UTC(year, month - 1, 1));
     const periodEnd = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
 
-    const periodClose = await prisma.periodClose.findFirst({
+    // Find all canonical statement periods for this month
+    const statementPeriods = await prisma.statementPeriod.findMany({
       where: {
         workspaceId,
-        status: 'CLOSED',
-        periodStart: { gte: periodStart },
-        periodEnd: { lte: periodEnd },
+        account: { userId },
+        periodStart: { lte: periodEnd },
+        periodEnd: { gte: periodStart },
       },
-      select: { id: true, status: true },
-      orderBy: { version: 'desc' },
+      select: { id: true },
     });
 
-    if (!periodClose) {
+    if (statementPeriods.length === 0) {
       return res.status(409).json({
-        error: `Maand ${year}-${String(month).padStart(2, '0')} is niet afgesloten. Sluit de periode eerst af.`,
+        error: `Maand ${year}-${String(month).padStart(2, '0')} heeft geen bankafschriften.`,
       });
+    }
+
+    // Verify each statement period has a latest CLOSED PeriodClose
+    for (const sp of statementPeriods) {
+      const latestClose = await prisma.periodClose.findFirst({
+        where: {
+          statementPeriodId: sp.id,
+          status: 'CLOSED',
+        },
+        select: { id: true },
+        orderBy: { version: 'desc' },
+      });
+
+      if (!latestClose) {
+        return res.status(409).json({
+          error: `Afschriftperiode ${sp.id} is niet afgesloten. Sluit alle perioden voor maand ${year}-${String(month).padStart(2, '0')} af voordat u het rapport verzendt.`,
+        });
+      }
     }
 
     // Load active recipients
