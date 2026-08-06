@@ -98,15 +98,91 @@ const mockRes = () => {
   const res: any = {};
   res.statusCode = undefined;
   res.jsonData = undefined;
-  res.status = function (code: number) {
+  res.status = vi.fn((code: number) => {
     res.statusCode = code;
     return res;
-  };
-  res.json = function (data: any) {
+  });
+  res.json = vi.fn((data: any) => {
     res.jsonData = data;
     return res;
-  };
+  });
   return res as Response;
+};
+
+const configureSuccessfulWorkflow = (
+  recipientRows: Array<{ id: string; email: string; name: string | null }> = [
+    { id: 'r1', email: 'test@example.com', name: 'Test' },
+  ],
+) => {
+  let existingDeliveryKey: string | null = null;
+
+  (prisma.statementPeriod.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
+    { id: 'period-1' },
+  ]);
+  (prisma.periodClose.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
+    id: 'close-1',
+    status: 'CLOSED',
+    version: 1,
+  });
+  (prisma.emailRecipient.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(recipientRows);
+  (prisma.reportDispatch.findFirst as ReturnType<typeof vi.fn>).mockImplementation(
+    async ({ where }: { where: { deliveryKey: string } }) =>
+      existingDeliveryKey === where.deliveryKey
+        ? { id: 'dispatch-1', status: 'SENT' }
+        : null,
+  );
+
+  const tx = {
+    reportSnapshotLine: { findMany: vi.fn().mockResolvedValue([]) },
+    reportArtifact: {
+      findUnique: vi.fn().mockImplementation(async ({ where }: { where: { id: string } }) => ({
+        sha256: `sha-${where.id}`,
+        content: where.id === 'art-html' ? Buffer.from('<html>rapport</html>') : Buffer.alloc(0),
+      })),
+    },
+  };
+  (prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation(
+    async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
+  );
+
+  (generateMonthlyReportSnapshot as ReturnType<typeof vi.fn>).mockResolvedValue({
+    snapshotId: 'snap-1',
+    snapshotHash: 'snapshot-hash-1',
+    kind: 'MONTHLY',
+    year: 2024,
+    month: 1,
+    openingBalanceMinor: 0n,
+    incomeMinor: 1000n,
+    expenseMinor: 500n,
+    netMinor: 500n,
+    closingBalanceMinor: 500n,
+    transactionCount: 2,
+    generatedBy: 'user-1',
+    generatedAt: new Date('2024-02-01T00:00:00.000Z'),
+  });
+  (generateAndStoreReportArtifacts as ReturnType<typeof vi.fn>).mockResolvedValue({
+    htmlArtifactId: 'art-html',
+    xlsxArtifactId: 'art-xlsx',
+    pdfArtifactId: 'art-pdf',
+  });
+  (approveSnapshot as ReturnType<typeof vi.fn>).mockResolvedValue({
+    approvalId: 'approval-1',
+  });
+  (prepareDispatch as ReturnType<typeof vi.fn>).mockImplementation(
+    async (_client: unknown, input: { deliveryKey: string }) => {
+      existingDeliveryKey = input.deliveryKey;
+      return { dispatchId: 'dispatch-1' };
+    },
+  );
+  (executeDispatch as ReturnType<typeof vi.fn>).mockResolvedValue({
+    dispatchId: 'dispatch-1',
+    status: 'SENT',
+  });
+  (ResendReportEmailProvider as ReturnType<typeof vi.fn>).mockImplementation(() => ({
+    send: vi.fn().mockResolvedValue({ success: true }),
+  }));
+
+  return { tx };
 };
 
 describe('POST /api/reports/monthly/send', () => {
@@ -202,27 +278,25 @@ describe('POST /api/reports/monthly/send', () => {
       expect((res as any).jsonData.error).toContain('Afschriftperiode');
     });
 
-    it('allows send when all periods are CLOSED', async () => {
-      (prisma.statementPeriod.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
-        { id: 'period-1' },
-      ]);
-      (prisma.periodClose.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
-        status: 'CLOSED',
-        version: 1,
-      });
-      (prisma.emailRecipient.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
-        { id: 'r1', email: 'test@example.com', name: 'Test' },
-      ]);
-
-      // Route should not return 400/409 when all periods are CLOSED
+    it('completes the full workflow when all periods are CLOSED', async () => {
+      configureSuccessfulWorkflow();
       const req = mockReq({ year: 2024, month: 1, confirmed: true });
       const res = mockRes();
 
       await postMonthlySendReport(req, res);
 
-      // Should pass initial validation (not 400/409 from period checks)
-      expect((res as any).statusCode).not.toBe(400);
-      expect((res as any).statusCode).not.toBe(409);
+      expect((res as any).jsonData).toEqual({
+        status: 'SENT',
+        month: '2024-01',
+        recipientCount: 1,
+        snapshotId: 'snap-1',
+        dispatchId: 'dispatch-1',
+      });
+      expect(generateMonthlyReportSnapshot).toHaveBeenCalledTimes(1);
+      expect(generateAndStoreReportArtifacts).toHaveBeenCalledTimes(1);
+      expect(approveSnapshot).toHaveBeenCalledTimes(1);
+      expect(prepareDispatch).toHaveBeenCalledTimes(1);
+      expect(executeDispatch).toHaveBeenCalledTimes(1);
     });
 
     it('rejects REOPENED period', async () => {
@@ -267,17 +341,10 @@ describe('POST /api/reports/monthly/send', () => {
       expect((res as any).jsonData.error).toContain('ontvangers');
     });
 
-    it('includes multiple active recipients', async () => {
-      (prisma.statementPeriod.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
-        { id: 'period-1' },
-      ]);
-      (prisma.periodClose.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
-        status: 'CLOSED',
-        version: 1,
-      });
-      (prisma.emailRecipient.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
+    it('passes all active recipients to dispatch in canonical order', async () => {
+      configureSuccessfulWorkflow([
+        { id: 'r2', email: ' R2@TEST.COM ', name: ' Recipient 2 ' },
         { id: 'r1', email: 'r1@test.com', name: 'Recipient 1' },
-        { id: 'r2', email: 'r2@test.com', name: 'Recipient 2' },
       ]);
 
       const req = mockReq({ year: 2024, month: 1, confirmed: true });
@@ -285,12 +352,56 @@ describe('POST /api/reports/monthly/send', () => {
 
       await postMonthlySendReport(req, res);
 
-      // Both recipients should be included (not rejected for 0 recipients)
-      expect((res as any).statusCode).not.toBe(400);
+      expect((res as any).jsonData.recipientCount).toBe(2);
+      expect(executeDispatch).toHaveBeenCalledWith(
+        prisma,
+        expect.objectContaining({
+          recipients: [
+            { email: 'r1@test.com', name: 'Recipient 1' },
+            { email: 'r2@test.com', name: 'Recipient 2' },
+          ],
+        }),
+      );
     });
   });
 
   describe('duplicate dispatch protection', () => {
+    it('blocks a second identical request before any additional writes or provider call', async () => {
+      configureSuccessfulWorkflow([
+        { id: 'r2', email: 'SECOND@EXAMPLE.COM', name: 'Second' },
+        { id: 'r1', email: 'first@example.com', name: 'First' },
+      ]);
+
+      const firstResponse = mockRes();
+      await postMonthlySendReport(
+        mockReq({ year: 2024, month: 1, confirmed: true }),
+        firstResponse,
+      );
+
+      expect((firstResponse as any).jsonData.status).toBe('SENT');
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+      expect(generateMonthlyReportSnapshot).toHaveBeenCalledTimes(1);
+      expect(generateAndStoreReportArtifacts).toHaveBeenCalledTimes(1);
+      expect(approveSnapshot).toHaveBeenCalledTimes(1);
+      expect(prepareDispatch).toHaveBeenCalledTimes(1);
+      expect(executeDispatch).toHaveBeenCalledTimes(1);
+
+      const secondResponse = mockRes();
+      await postMonthlySendReport(
+        mockReq({ year: 2024, month: 1, confirmed: true }),
+        secondResponse,
+      );
+
+      expect((secondResponse as any).statusCode).toBe(409);
+      expect((secondResponse as any).jsonData.error).not.toContain('@');
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+      expect(generateMonthlyReportSnapshot).toHaveBeenCalledTimes(1);
+      expect(generateAndStoreReportArtifacts).toHaveBeenCalledTimes(1);
+      expect(approveSnapshot).toHaveBeenCalledTimes(1);
+      expect(prepareDispatch).toHaveBeenCalledTimes(1);
+      expect(executeDispatch).toHaveBeenCalledTimes(1);
+    });
+
     it('rejects duplicate with ReportApprovalError', async () => {
       (prisma.statementPeriod.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
         { id: 'period-1' },

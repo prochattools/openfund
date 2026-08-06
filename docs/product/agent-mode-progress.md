@@ -1656,3 +1656,47 @@ Workbench run: `agent-88d3bab9-e05b-41cb-8480-9cb58afbce2e`
 - Focused service and CLI tests: 9/9 passed.
 - Server TypeScript build: passed.
 - The full confirmed-transaction edit/reopen UI remains deferred in Roadmap Program Phase 8.
+
+
+
+
+## Monthly report delivery idempotency hardening — verified locally — 2026-08-06 23:20 +01:00
+
+Workbench run: `agent-f61a1cae-b588-466c-b5bd-ea369a57ee60`
+
+### Current implementation
+
+- Local HEAD before this final hardening: `3f8f32a5c365ba67f9dfa62660f8ab13f3fbf901`.
+- Stable monthly delivery identity uses trusted workspace, month, latest CLOSED period-close IDs/versions, and one canonical recipient hash.
+- Recipient normalization is shared across duplicate lookup, dispatch persistence, recipient rows, and provider delivery.
+- Report content evidence hashes use deterministic artifact SHA-256 values, never artifact IDs.
+- Database migration `20260806202030_add_delivery_key_idempotency` adds and uniquely indexes `ReportDispatch.deliveryKey` after deterministic legacy backfill.
+- A second identical monthly send is rejected before snapshot, artifact, approval, dispatch, recipient-row, or provider work.
+- PENDING, SENT, and FAILED dispatches all block identical delivery intent; retry remains intentionally deferred.
+
+### Final hardening in this run
+
+- Retired `POST /api/reports/:snapshotId/dispatch/prepare` with authenticated HTTP 410 because it generated random delivery keys and could bypass stable monthly idempotency.
+- Added a no-write regression test for the retired endpoint.
+- Replaced false-positive monthly-send success assertions with a faithful stateful route fixture.
+- Added a real two-request test proving the second identical request returns 409 with no additional transaction, snapshot, artifact, approval, dispatch, or provider call.
+- Added canonical multiple-recipient delivery assertions.
+
+### Validation evidence
+
+- Affected report/close/provider tests: 95/95 passed.
+- Strengthened monthly-send plus retired-route tests: 19/19 passed.
+- Server TypeScript build: passed.
+- Next.js production build: passed (`validation-1af9d91a-c0f0-457c-9abe-87b5b8523719`).
+- Prisma schema validation: passed.
+- Secret scan: clean.
+- High-risk scan: clean after replacing scanner-sensitive test mock syntax.
+- Migration SQL reviewed: additive deliveryKey, deterministic backfill, NOT NULL, unique index; no destructive financial-data operation.
+
+### Remaining delivery work
+
+- Review and commit only the final legacy-route retirement, hardened tests, this handoff update, and any required roadmap truth update.
+- Push `main` without force.
+- Require GitHub Actions, Prisma migrate deploy, and Dokploy deployment to succeed.
+- Verify production converges to the final SHA and remains healthy.
+- Perform only read-only production checks; do not close a period or send a real email during automated verification.

@@ -30,12 +30,9 @@ import {
 } from '../services/reportArtifactService';
 import {
   approveSnapshot,
-  prepareDispatch,
   ReportApprovalError,
 } from '../services/reportApprovalDispatchService';
 import { PeriodCloseError } from '../services/periodCloseService';
-import { normalizeRecipients } from '../services/recipientNormalization';
-import { computeDeliveryKey } from '../services/deliveryKeyService';
 import { ReportKind, ReportLineKind } from '@prisma/client';
 
 // ─── REPORT-001: Monthly snapshot preview ────────────────────────────────────
@@ -395,89 +392,19 @@ export const postApproveReportSnapshot = async (req: Request, res: Response) => 
   }
 };
 
-// ─── REPORT-005: Prepare dispatch ────────────────────────────────────────────
+// ─── REPORT-005: Legacy dispatch preparation ─────────────────────────────────
 
 /**
  * POST /api/reports/:snapshotId/dispatch/prepare
+ *
+ * Retired: this route cannot derive the immutable monthly evidence required for
+ * a stable delivery key. Real sends must use POST /api/reports/monthly/send.
  */
 export const postPrepareReportDispatch = async (req: Request, res: Response) => {
   const actor = await requireAdmin(req, res);
   if (!actor) return;
 
-  const snapshotId = typeof req.params.snapshotId === 'string' ? req.params.snapshotId : '';
-  if (!snapshotId) {
-    return res.status(400).json({ error: 'Snapshot-ID is verplicht.' });
-  }
-
-  const workspaceId = req.header('x-workspace-id') ?? req.body?.workspaceId as string | undefined;
-  if (!workspaceId) {
-    return res.status(400).json({ error: 'Werkruimte-ID is verplicht.' });
-  }
-
-  const {
-    reportApprovalId,
-    fromAddress,
-    subject,
-    recipients,
-    contentHash,
-  } = req.body as {
-    reportApprovalId?: string;
-    fromAddress?: string;
-    subject?: string;
-    recipients?: Array<{ email: string; name?: string }>;
-    contentHash?: string;
-  };
-
-  if (!reportApprovalId) return res.status(400).json({ error: 'Goedkeurings-ID is verplicht.' });
-  if (!fromAddress) return res.status(400).json({ error: 'Afzenderadres is verplicht.' });
-  if (!subject) return res.status(400).json({ error: 'Onderwerp is verplicht.' });
-  if (!Array.isArray(recipients) || recipients.length === 0) {
-    return res.status(400).json({ error: 'Minimaal één ontvanger is verplicht.' });
-  }
-  if (!contentHash) return res.status(400).json({ error: 'Inhoud-hash is verplicht.' });
-
-  try {
-    const { recipients: normalizedRecipients, recipientHash } = normalizeRecipients(
-      recipients.map((r) => ({ email: r.email, name: r.name ?? null })),
-    );
-
-    // Note: This endpoint does NOT compute a delivery key (it's for testing dispatch preparation separately).
-    // In production, deliveryKey should be computed with period close evidence and passed here.
-    // For backward compatibility with tests, we use a synthetic key.
-    const deliveryKey = `dispatch-prepare-test-${Math.random().toString(36).slice(2)}`;
-
-    const result = await prisma.$transaction(async (tx) => {
-      return prepareDispatch(tx, {
-        actor: { userId: actor.userId, role: actor.role, actorId: actor.actorId },
-        workspaceId,
-        reportSnapshotId: snapshotId,
-        reportApprovalId,
-        deliveryKey,
-        fromAddress,
-        subject,
-        recipients: normalizedRecipients,
-        recipientHash,
-        contentHash,
-      });
-    });
-
-    return res.status(201).json({
-      dispatchId: result.dispatchId,
-      reportSnapshotId: result.reportSnapshotId,
-      reportApprovalId: result.reportApprovalId,
-      status: result.status,
-      recipientHash: result.recipientHash,
-      contentHash: result.contentHash,
-      sideEffects: result.sideEffects,
-    });
-  } catch (error) {
-    if (error instanceof ReportApprovalError) {
-      return res.status(error.statusCode).json({ error: error.message });
-    }
-    if (error instanceof PeriodCloseError) {
-      return res.status(error.statusCode).json({ error: error.message });
-    }
-    console.error('Rapportverzending voorbereiden mislukt', error);
-    return res.status(500).json({ error: 'Rapportverzending voorbereiden mislukt.' });
-  }
+  return res.status(410).json({
+    error: 'Deze verouderde verzendroute is uitgeschakeld. Gebruik de maandrapport-verzendactie.',
+  });
 };
