@@ -33,6 +33,7 @@ import {
 } from './routes/merchantKnowledge';
 import { getRules, postRule, patchRule, removeRule, previewRule, applyRule } from './routes/rules';
 import { getStatementReconciliationPreview } from './routes/statementReconciliationPreview';
+import { getMonthlyClosePreview } from './routes/monthlyClosePreview';
 import { postStrictPeriodClose } from './routes/strictPeriodClose';
 import { postAuditedPeriodReopen } from './routes/auditedPeriodReopen';
 import {
@@ -104,6 +105,7 @@ app.delete('/api/rules/:id', removeRule);
 app.post('/api/rules/:id/preview', previewRule);
 app.post('/api/rules/:id/apply', applyRule);
 app.get('/api/reconciliation/statement-periods/:id/preview', getStatementReconciliationPreview);
+app.get('/api/reconciliation/statement-periods/close-preview', getMonthlyClosePreview);
 app.post('/api/reconciliation/statement-periods/:id/close', postStrictPeriodClose);
 app.post('/api/reconciliation/period-closes/:id/reopen', postAuditedPeriodReopen);
 
