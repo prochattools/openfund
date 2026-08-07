@@ -1852,3 +1852,42 @@ This is a configuration change in Dokploy only; no code, schema, or migration ch
 5. Push and require GitHub Actions + Dokploy success
 6. Verify production: health, migration status, auth provider, transactions, accounting
 7. Final confirmation for owner to add recipients and close/send monthly reports
+
+
+## Production auth hardening — BLOCKED ON OWNER ACTION — 2026-08-07
+
+### Current blocker
+
+Production deployment is complete but authentication remains in bypass mode:
+- `authProvider: disabled`
+- `productionAuthBypassEnabled: true`
+
+Clerk credentials ARE valid and configured:
+- `clerkPublishableKeyConfigured: true`
+- `clerkSecretConfigured: true`
+
+### Owner action required
+
+**In Dokploy dashboard** (https://dokploy.prochat.tools):
+1. Open project "Web" → environment "production" → application "Yeshua Academy Finance"
+2. Go to Environment / Settings tab
+3. Update environment variables:
+   - `AUTH_PROVIDER` = `clerk`
+   - `NEXT_PUBLIC_AUTH_PROVIDER` = `clerk`
+   - `ALLOW_PRODUCTION_AUTH_BYPASS` = (empty/remove)
+4. Click Save
+5. Click Redeploy
+
+### Verification after owner action
+
+After redeploy completes (typically 1-3 minutes):
+
+```bash
+curl https://finance.yeshua.academy/api/deployment-info | jq '.authProvider, .productionAuthBypassEnabled'
+```
+
+Should return: `"clerk"` and `false`
+
+Once verified, automated system will:
+- Confirm all 7 goal requirements satisfied
+- Deliver final YES/NO authorization for owner to add recipients and send monthly reports
