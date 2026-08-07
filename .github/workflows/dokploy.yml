@@ -56,34 +56,12 @@ jobs:
             NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           no-cache: true
 
-      - name: Trigger Dokploy redeploy
-        run: |
-          COMMIT_MSG=$(git log -1 --pretty=format:"%s" ${{ github.sha }})
-          COMMIT_AUTHOR=$(git log -1 --pretty=format:"%an" ${{ github.sha }})
-          COMMIT_DATE=$(git log -1 --pretty=format:"%ci" ${{ github.sha }})
-          DESCRIPTION="${COMMIT_AUTHOR} · ${COMMIT_DATE}"$'\n\n'"${{ github.sha }}"
-
-          RESPONSE=$(curl --silent --show-error \
-            --retry 3 \
-            --retry-delay 5 \
-            --retry-all-errors \
-            -o /tmp/dokploy_response.json \
-            -w "%{http_code}" \
-            -X POST "https://dokploy.prochat.tools/api/application.deploy" \
-            -H "x-api-key: ${{ secrets.DOKPLOY_API_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d "{
-              \"applicationId\": \"${{ secrets.DOKPLOY_APP_ID }}\",
-              \"title\": $(echo "$COMMIT_MSG" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read().strip()))'),
-              \"description\": $(echo "$DESCRIPTION" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read().strip()))')
-            }")
-
-          echo "HTTP status: $RESPONSE"
-          cat /tmp/dokploy_response.json
-
-          if [ "$RESPONSE" != "200" ]; then
-            echo "::error title=Dokploy redeploy failed::Dokploy returned HTTP $RESPONSE. Verify DOKPLOY_API_KEY, DOKPLOY_APP_ID, and Dokploy application availability."
-            exit 1
-          fi
-
-          echo "Deployment triggered successfully."
+      - name: Verify Dokploy configuration, redeploy, and await convergence
+        env:
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+          DOKPLOY_APP_ID: ${{ secrets.DOKPLOY_APP_ID }}
+          DOKPLOY_EXPECTED_IMAGE: ghcr.io/${{ github.repository }}:main
+          EXPECTED_BUILD_SHA: ${{ github.sha }}
+          DOKPLOY_API_BASE: https://dokploy.prochat.tools/api
+          PRODUCTION_ORIGIN: https://finance.yeshua.academy
+        run: node scripts/dokploy-rollout.mjs
