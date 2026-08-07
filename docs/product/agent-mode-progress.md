@@ -1821,37 +1821,42 @@ Workbench run: production cleanup and monthly-send readiness
 
 ### Current production state
 
-- SHA: `ef5af7ba3ae3a1c4d36cdd6fd3550fc2e0c6295f` (HEAD = origin/main)
+- SHA: `16c30f18998f29bc4e08ef3f42fbf017b7c91f34` (deployed production)
 - Health: 200
-- Transactions: 902 / Bookings: 681 / Unresolved: 221 / Suggestions: 663 / ReviewDecisions: 0
+- Transactions: 902 / Confirmed bookings: 902 / Unresolved: 0 / ReviewDecisions: 223
+- Accounting / cash / classification: PASSED
+- Duplicate fingerprints: 0 / Running-balance errors: 0
 - Migrations: 11/11 applied, clean
-- `authProvider: disabled` (ALLOW_PRODUCTION_AUTH_BYPASS = true in Dokploy)
-- `clerkPublishableKeyConfigured: true`, `clerkSecretConfigured: true`
+- Resend: configured
+- Active email recipients: 0
+- Closed months: 0
+- Audited months through 2026-06 are COMPLETE and close-eligible; 2026-07 is PARTIAL and not close-eligible
+- `authProvider: disabled`
+- `productionAuthBypassEnabled: true`
+- Clerk publishable and secret keys were previously verified as configured; values must never be logged or committed
 
 ### Next: Production authentication hardening
 
-Production currently runs with auth disabled and bypass enabled. Clerk credentials are configured in Dokploy:
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_*` (valid)
-- `CLERK_SECRET_KEY=sk_live_*` (valid)
+Production reporting code and schema are deployed, but owner production use remains blocked until Clerk is enabled and the explicit production bypass is removed.
 
-To enable Clerk:
-1. In Dokploy, set `AUTH_PROVIDER=clerk`, `NEXT_PUBLIC_AUTH_PROVIDER=clerk`
-2. Clear or remove `ALLOW_PRODUCTION_AUTH_BYPASS`
-3. Redeploy
-4. Verify unauthenticated protected APIs return 401/redirect
-5. Verify authenticated admin flow works
+Required Dokploy environment changes:
+1. Set `AUTH_PROVIDER=clerk`
+2. Set `NEXT_PUBLIC_AUTH_PROVIDER=clerk`
+3. Clear or remove `ALLOW_PRODUCTION_AUTH_BYPASS`
+4. Redeploy
+5. Verify unauthenticated protected APIs return 401/redirect
+6. Verify an authenticated admin can load Reports and Settings
 
-This is a configuration change in Dokploy only; no code, schema, or migration change required.
+This is a Dokploy configuration change only; no code, schema, or migration change is required for the auth switch.
 
 ### Remaining work
 
-1. Fix production auth: set `AUTH_PROVIDER=clerk` in Dokploy (owner action)
-2. Update documentation: remove stale auth/startup claims from `docs/product/agent-mode-progress.md`
-3. Run validation: startup/auth tests, migration checks, Prisma validate, TypeScript, builds, secret scan, high-risk scan, git diff --check
-4. Commit startup hardening only
-5. Push and require GitHub Actions + Dokploy success
-6. Verify production: health, migration status, auth provider, transactions, accounting
-7. Final confirmation for owner to add recipients and close/send monthly reports
+1. Owner: apply the three Dokploy auth environment changes above and redeploy
+2. Verify `authProvider=clerk` and `productionAuthBypassEnabled=false`
+3. Verify unauthenticated protection and authenticated admin access
+4. Add at least one active email recipient in Settings
+5. Close every required statement period for an eligible month
+6. Send one monthly report and verify duplicate-send protection on an identical second attempt
 
 
 ## Production auth hardening — BLOCKED ON OWNER ACTION — 2026-08-07
@@ -1880,14 +1885,57 @@ Clerk credentials ARE valid and configured:
 
 ### Verification after owner action
 
-After redeploy completes (typically 1-3 minutes):
+After redeploy completes, verify `/api/deployment-info` through the approved production checker.
 
-```bash
-curl https://finance.yeshua.academy/api/deployment-info | jq '.authProvider, .productionAuthBypassEnabled'
-```
-
-Should return: `"clerk"` and `false`
+Expected result: `authProvider="clerk"` and `productionAuthBypassEnabled=false`.
 
 Once verified, automated system will:
 - Confirm all 7 goal requirements satisfied
 - Deliver final YES/NO authorization for owner to add recipients and send monthly reports
+
+
+## Final production cleanup and verification — 2026-08-07
+
+### Status: BLOCKED ON OWNER ACTION (Auth hardening in Dokploy only)
+
+**Current production SHA:** `16c30f18998f29bc4e08ef3f42fbf017b7c91f34`
+
+**What is deployed and READY:**
+- ✓ Fail-closed startup with migration enforcement
+- ✓ All 11 Prisma migrations applied
+- ✓ `ReportDispatch.deliveryKey` (NOT NULL, unique) for stable monthly idempotency
+- ✓ Accounting/cash/classification verified PASSED
+- ✓ 902 transactions, 902 confirmed bookings, 0 unresolved
+- ✓ 223 ReviewDecisions (owner manual confirmations)
+- ✓ 0 duplicate fingerprints, 0 running-balance errors
+- ✓ Resend email provider configured
+- ✓ 0 active email recipients (owner to add)
+- ✓ 0 closed months (owner to close and send)
+- ✓ Monthly close/send endpoints deployed and protected
+- ✓ Stable deliveryKey idempotency prevents duplicate sends
+
+**What is NOT ready:**
+- ✗ Auth provider is still `disabled` (required: `clerk`)
+- ✗ Production auth bypass is still `true` (required: `false`)
+- ✗ Protected endpoints are still unauthenticated
+
+**Why this matters:**
+Monthly email reporting must run with proper authentication. The Clerk provider is configured and valid; it just needs to be enabled in Dokploy.
+
+**Exact owner action required (in Dokploy Dashboard):**
+
+1. Go to https://dokploy.prochat.tools
+2. Projects → Web → production → Yeshua Academy Finance
+3. Environment Variables tab
+4. Set: `AUTH_PROVIDER=clerk`
+5. Set: `NEXT_PUBLIC_AUTH_PROVIDER=clerk`
+6. Clear: `ALLOW_PRODUCTION_AUTH_BYPASS` (leave empty)
+7. Save → Redeploy
+8. Wait 1-3 minutes
+
+**After owner completes that action:**
+- Automated verification will confirm auth is Clerk
+- Final YES/NO verdict will be delivered
+- Owner testing steps will be provided
+
+**No code changes, migrations, or database work required** — Dokploy environment variables only.
