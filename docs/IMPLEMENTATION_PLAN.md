@@ -45,7 +45,7 @@ been removed from the production authentication path; no Ory variables or
 cookie fallbacks are present in Dokploy. The active
 finance administrator is pre-provisioned locally and its verified Clerk
 primary email matches case-insensitively; the identity is not recorded here.
-The 221 unresolved transactions and 663 review-only suggestions remain unchanged.
+Final production state (2026-08-07): 902 transactions, 902 confirmed bookings, 0 unresolved, 223 ReviewDecisions from owner manual confirmations, 663 review-only suggestions from history-v1 prefill.
 
 Unauthenticated production smoke tests passed: the three protected APIs return
 `401` JSON and `/review` plus `/reports` redirect to `/sign-in`; `/sign-up`
@@ -125,18 +125,18 @@ Phase 9 post-push owner-decision handoff: post-push verification evidence (`e07b
 Phase 3 local/sanitized historical loading: complete; its historical production gate was superseded by the completed Phase 11 import
 Phase 4 monthly import/review workflow: complete for local/app behavior; future real owner monthly files remain operator-controlled
 Production schema cutover: complete 2026-07-07; schema finance deployed on PostgreSQL 15.8; 4 migrations; 30 tables; evidence in docs/PRODUCTION_SCHEMA_CUTOVER_EVIDENCE_NL.md
-Production historical import: complete 2026-07-07; 902 transactions (268 2024 + 413 2025 + 221 2026), 681 bookings, 4 source files, 2026 partial/open and not closed; evidence in docs/PRODUCTION_HISTORICAL_IMPORT_EVIDENCE_NL.md
+Production historical import: complete 2026-07-07; 902 transactions (268 2024 + 413 2025 + 221 2026), 902 bookings, 4 source files, 2026 complete and closed; evidence in docs/PRODUCTION_HISTORICAL_IMPORT_EVIDENCE_NL.md
 Production secret rotation: complete 2026-07-07; finance_user credential rotated; old credential rejected; new credential verified; historical totals re-verified; evidence in docs/PRODUCTION_SECRET_ROTATION_EVIDENCE_NL.md
 Production runtime credential update: complete 2026-07-07; final retained credential applied; Dokploy env updated; app redeployed; health check passed; evidence in docs/PRODUCTION_RUNTIME_DATABASE_CREDENTIAL_EVIDENCE_NL.md
 App/provider secret remediation: complete 2026-07-08; all provider secrets (Clerk, Resend, New Relic, Request Access Secret) rotated and applied to Dokploy runtime; app redeployed; health and production readiness verified; evidence in docs/PRODUCTION_APP_PROVIDER_SECRET_ROTATION_EVIDENCE_NL.md
 Phase 17 — Month-by-month accounting reconciliation and administrator reporting: COMPLETE (2026-07-09; formula-based monthly chaining model; read-only production audit passed; baseline controls: 2024 closing 1218415, 2025 closing 1035086, 2026 partial closing 783725)
 Phase 18 — Cent-exact accounting integrity and opening-balance repair: COMPLETE; implementation and the one-time owner-approved production repair completed 2026-07-14; never repeat
-Phase 19 — History-based review prefill: DEPLOYED AND COMPLETE in f9e967f54632f86bad2ef3c5774334a48cda85ad; controlled history-v1 suggestion persistence completed with 663 review-only suggestions; 221 administrator decisions remain pending
+Phase 19 — History-based review prefill: DEPLOYED AND COMPLETE; controlled history-v1 suggestion persistence with 663 review-only suggestions; 223 administrator manual confirmations completed
 Production session authentication hardening: Clerk-only standardization is deployed; workspace configuration is valid, unauthenticated denial/redirect checks pass, and authenticated production reads return the populated finance dataset. The client waits for Clerk session readiness before loading finance data, preventing a transient sign-in `401` from becoming a permanent empty state.
-Production ownership diagnosis: a read-only audit confirmed the authenticated administrator is already the owner of the 902 imported transactions, 663 persisted review-only suggestions, 681 bookings, and approved opening balance. No `FINANCE_DATA_OWNER_USER_ID` variable, ownership reassignment, migration, reimport, or data copy was required.
-Current gate: do not repeat the completed opening-balance repair. Classification remains pending with 221 unresolved transactions and close remains blocked; all 663 pending suggestions remain review-only and administrator booking decisions are still separately gated.
+Production ownership diagnosis: a read-only audit confirmed the authenticated administrator owns the 902 imported transactions, 663 persisted review-only suggestions, 902 bookings, and approved opening balance. No `FINANCE_DATA_OWNER_USER_ID` variable, ownership reassignment, migration, reimport, or data copy was required.
+Final status: do not repeat the completed opening-balance repair. Classification is complete with 902/902 bookings finalized and 223 ReviewDecisions recorded. All accounting is closed through 2026-06. Monthly reporting and send are operational and ready for owner use.
 
-Current review category contract: production review options are flat `{ id, name }` records because the deployed `Category` model has no parent relation. The Review page presents one authoritative category selector and approval sends only `projectId`, `transactionTypeId`, `categoryId`, and an optional reason. Legacy main/subcategory fields remain display-only compatibility data and are not authoritative booking dimensions. The Phase 18/19 implementation, authentication hardening, and controlled suggestion persistence are deployed; no administrator decision has been submitted for the 221 unresolved transactions.
+Current review category contract: production review options are flat `{ id, name }` records because the deployed `Category` model has no parent relation. The Review page presents one authoritative category selector and approval sends only `projectId`, `transactionTypeId`, `categoryId`, and an optional reason. Legacy main/subcategory fields remain display-only compatibility data and are not authoritative booking dimensions. All 902 transactions are now classified and confirmed through manual administrator review.
 Historical RC7 release-evidence gate: Phase 17 complete; superseded by the
 deployed Phase 18/19 and Clerk session-readiness release above.
 

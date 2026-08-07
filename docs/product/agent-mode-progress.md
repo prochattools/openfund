@@ -21,7 +21,7 @@ Production deployed commit: `678525766159919927771abf2042a47b19757f55` (feat(rev
 
 Owner-history-v2 suggestions: 178 persisted and live in production.
 
-Remaining operational work: 221 unresolved transactions ready for manual owner review and confirmation through the /review endpoint.
+**Production status (verified 2026-08-07):** 902 transactions, 902 confirmed bookings, 0 unresolved, 223 ReviewDecisions created through owner manual confirmations. All accounts classified and closed.
 
 ## Completed activities
 

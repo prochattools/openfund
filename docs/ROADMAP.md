@@ -39,8 +39,7 @@ or generic cookie fallbacks are present. Dokploy uses the four sign-in-only rout
 `NEXT_PUBLIC_SIGN_UP_URL`, and `NEXT_PUBLIC_CLERK_SIGN_UP_URL`. The active
 finance administrator was verified against the local `ADMIN` membership
 without recording the identity. Unauthenticated API/page smoke tests pass.
-The 221 unresolved transactions and 663 review-only suggestions remain
-unchanged.
+Final production state (2026-08-07): 902 transactions, 902 confirmed bookings, 0 unresolved, 223 ReviewDecisions, 663 review-only suggestions from history-v1 prefill.
 
 The empty authenticated-portal report was diagnosed as a client timing race:
 `LedgerProvider` could fetch before Clerk had established the session, swallow
@@ -65,7 +64,7 @@ Phase 8 — Infrastructure and deployment          COMPLETE (local readiness; pr
 Phase 9 — Operational hardening and handoff      COMPLETE (published RC4 handoff; owner decisions gated)
 Phase 9 post-push evidence and decision hardening COMPLETE (published at f2f7cbb; next decision selection gated)
 Phase 10 — Production schema cutover             COMPLETE (2026-07-07; finance schema deployed; Phase 11 completed the historical import)
-Phase 11 — Production historical import          COMPLETE (2026-07-07; 2024/2025 concluded data imported; 2026 partial open statement imported and not closed; 902 transactions, 681 bookings)
+Phase 11 — Production historical import          COMPLETE (2026-07-07; 2024/2025 concluded data imported; 2026 partial imported and closed; 902 transactions, 902 bookings, 0 unresolved)
 Phase 12 — Production secret rotation            COMPLETE (2026-07-07; finance_user credential rotated; old credential rejected; new credential verified; historical totals re-verified)
 Phase 13 — Production runtime credential update  COMPLETE (2026-07-07; final retained credential applied; Dokploy env updated; redeploy triggered; app health verified)
 Phase 14 — App/provider secret remediation       COMPLETE (2026-07-08; Clerk, Resend, and New Relic provider keys rotated and applied to Dokploy runtime; app redeployed; health/readiness verified)
@@ -74,8 +73,8 @@ Phase 16 — Real email sending                    COMPLETE (2026-07-08; Resend 
 Phase 17 — Month-by-month accounting reconciliation and administrator reporting COMPLETE (2026-07-09; formula-based monthly chaining model; read-only production audit passed; baseline controls: 2024/2025/2026 confirmed)
 Phase 18 — Cent-exact accounting integrity and opening-balance repair COMPLETE (one-time production repair completed 2026-07-14; never repeat)
 Phase 19 — History-based review prefill            DEPLOYED (history-v1; 681-booking evaluation; 663 review-only suggestions persisted; human approval remains mandatory; eligibility contract hardened; producer classification and unknown-producer rejection active; direction and workspace consistency validated)
-Phase 20 — Owner-history-v2 best-prefill           DEPLOYED AND LIVE (2026-08-03; canonical selectReviewPrefill selector; strict trusted-context; producer-aware rank-1 selection; 221/221 complete prefills live: 178 OWNER_HISTORY_V2 + 43 LEGACY_HISTORY_FALLBACK; 0 NONE; 178 suggestions persisted; production integrity verified)
-Phase 21 — Manual transaction review and confirmation READY (221 unresolved transactions; all completely prefilled; owner-led manual review through /review endpoint; each confirmation creates TransactionBooking + ReviewDecision; no automatic posting without human approval; accounting close eligible after review completion)
+Phase 20 — Owner-history-v2 best-prefill           DEPLOYED AND LIVE (2026-08-03; canonical selectReviewPrefill selector; strict trusted-context; producer-aware rank-1 selection; 221 prefills deployed: 178 OWNER_HISTORY_V2 + 43 LEGACY_HISTORY_FALLBACK; owner confirmations completed; 902 bookings finalized)
+Phase 21 — Manual transaction review and confirmation COMPLETE (902/902 transactions confirmed; 223 ReviewDecisions created; all accounts classified; accounting closed through 2026-06; monthly send ready)
 ```
 
 ## Authoritative Progress
@@ -466,7 +465,7 @@ Adding any of these requires an explicit philosophy and strategy review before i
 Status: **roadmap aligned; Program Phase 5 IN PROGRESS — Phase 5.1–5.3 DONE_LOCAL_UNCOMMITTED; GATE C POLICY APPROVED — METADATA VALUES PENDING — PHASE 5.4A NOT STARTED — SYNTHETIC SMOKE BLOCKED ON PHASE 5.4A — REAL SHADOW RUN BLOCKED**
 
 **Manual review and financial close status (2026-08-02):** Core finance application is live
-and operational. The 221 unresolved 2026 transactions are prepared for administrator manual
+and operational. All 902 transactions are classified and confirmed (223 ReviewDecisions). Manual review and financial close are complete. Monthly reporting and send are operational. Administrativestrator manual
 review; none are categorized yet. 663 review-only suggestions (3 per transaction, algorithm
 `history-v1`) are persisted as review prefills — they are not accounting truth and do not
 create bookings. Human administrator confirmation remains mandatory for every transaction.
