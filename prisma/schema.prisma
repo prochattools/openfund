@@ -633,7 +633,6 @@ model ReportDispatch {
   reportApproval    ReportApproval            @relation(fields: [reportApprovalId], references: [id], onDelete: Restrict)
   recipients        ReportDispatchRecipient[]
 
-  @@unique([reportSnapshotId, recipientHash, contentHash])
   @@index([reportSnapshotId, createdAt])
   @@index([reportApprovalId])
   @@index([status, createdAt])

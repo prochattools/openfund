@@ -1700,3 +1700,54 @@ Workbench run: `agent-f61a1cae-b588-466c-b5bd-ea369a57ee60`
 - Require GitHub Actions, Prisma migrate deploy, and Dokploy deployment to succeed.
 - Verify production converges to the final SHA and remains healthy.
 - Perform only read-only production checks; do not close a period or send a real email during automated verification.
+
+## Dispatch migration-chain repair — prepared and validated — 2026-08-07 10:16 +01:00
+
+Workbench run: `agent-ccff91d4-e18c-4ceb-8a01-f6f9ef3583d9`
+
+### Proven production blocker
+
+- Production remains healthy on `75268f43e7b0c9254b71730d7bde47abf6089912`.
+- `prisma migrate deploy` is blocked by P3009 because `20260806180511_add_dispatch_duplicate_protection` is recorded FAILED.
+- That historical migration contains only the obsolete composite unique constraint on `(reportSnapshotId, recipientHash, contentHash)`.
+- Stable monthly idempotency is now enforced by unique `ReportDispatch.deliveryKey`, so retrying the obsolete migration is neither required nor desired.
+
+### Repository correction
+
+- Removed `@@unique([reportSnapshotId, recipientHash, contentHash])` from the final Prisma schema.
+- Added forward-only migration `20260807085500_drop_obsolete_dispatch_identity` using `DROP CONSTRAINT IF EXISTS "ReportDispatch_unique_dispatch_identity"`.
+- The corrective migration contains no `UPDATE`, `DELETE`, `INSERT`, or financial-table mutation.
+- Historical published migrations remain unchanged.
+
+### Migration-history recovery rationale
+
+The failed historical migration must be resolved with Prisma as **applied**, not rolled back:
+
+- marking it rolled back would make `migrate deploy` retry the obsolete unique constraint and reproduce the failure;
+- marking it applied skips that obsolete effect in migration history;
+- `20260806202030_add_delivery_key_idempotency` then installs the required stable `deliveryKey` column and unique index;
+- `20260807085500_drop_obsolete_dispatch_identity` safely removes the old composite constraint if it happens to exist in any environment.
+
+No manual SQL is required for migration-history recovery.
+
+### Validation before production history repair
+
+- Focused migration/report/idempotency/close/provider suite: 98/98 passed.
+- Prisma format completed.
+- Prisma schema validation passed.
+- Server TypeScript build passed.
+- Next.js production build passed: `validation-a3f8eddf-4e2d-467c-be82-9d2702b8f096`.
+- Secret scan: clean.
+- High-risk scan: clean.
+- Diff reviewed: final schema change is limited to removing the obsolete composite unique plus the new corrective migration/test/handoff.
+
+### Exact next production operation
+
+1. Commit the validated migration-chain correction.
+2. Recheck production migration status.
+3. Run Prisma-supported `migrate resolve --applied 20260806180511_add_dispatch_duplicate_protection` against production.
+4. Run `prisma migrate deploy` against production.
+5. Require `prisma migrate status` to report no failed or pending migrations.
+6. Push `main`, require GitHub Actions/Dokploy convergence, then perform read-only production verification.
+
+Do not close a month, create recipients, send email, or alter financial data during this recovery.
