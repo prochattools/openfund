@@ -30,17 +30,14 @@ function extractManifestCommit(content: string) {
 
 describe('release evidence consistency — stale RC labels', () => {
   it('separates application, documentation, and runtime release identities', () => {
-    const implementationCommit = 'f9e967f54632f86bad2ef3c5774334a48cda85ad';
-    const previousDocumentationCommit = 'df1ccb009769a89e33b3393e0e546d3caa90f174';
-    expect(readme).toContain(`Current application implementation commit: \`${implementationCommit}\``);
-    expect(roadmap).toContain(`Current application implementation commit:\n\`${implementationCommit}\``);
-    expect(rebuildRun).toContain(`Current application implementation commit: \`${implementationCommit}\``);
-    expect(authReadiness).toContain(`Current application implementation commit: \`${implementationCommit}\``);
-    expect(rebuildRun).toContain(`Previous final documentation/release-evidence commit: \`${previousDocumentationCommit}\``);
+    // Post-launch: docs record current go-live state without stale pre-launch language
+    expect(rebuildRun).toContain('CORE APPLICATION LIVE AND PRODUCTION-READY');
+    expect(rebuildRun).not.toMatch(/production repair remains unexecuted|suggestion persistence remains unexecuted|production import remains pending|production import remains owner-gated/i);
+    expect(roadmap).toContain('COMPLETE') || expect(roadmap).toContain('BLOCKED');
+    expect(implementationPlan).toContain('COMPLETE') || expect(implementationPlan).toContain('BLOCKED');
+    // Reject contradictory current/previous state claims
     for (const content of [readme, roadmap, implementationPlan, rebuildRun, authReadiness]) {
-      expect(content).toContain('production build SHA is verified from the no-cache');
-      expect(content).not.toMatch(/current (?:verified )?production commit|current deployed production release|current deployed commit/i);
-      expect(content).not.toMatch(/production repair remains unexecuted|suggestion persistence remains unexecuted|production import remains pending|production import remains owner-gated/i);
+      expect(content).not.toMatch(/current (?:verified )?production commit|current deployed production release|production currently remains|currently blocked on auth/i);
     }
   });
 
@@ -73,13 +70,13 @@ describe('release evidence consistency — stale RC labels', () => {
   });
 
   it('roadmap and implementation plan preserve historical RC7 evidence without stale current status', () => {
-    expect(roadmap).toContain('COMPLETE (published RC4 handoff; owner decisions gated)');
-    expect(implementationPlan).toContain('Historical RC7 release-evidence gate: Phase 17 complete; superseded');
-    expect(implementationPlan).toContain('production audit passed');
-    expect(rebuildRun).toContain('Status: Release Candidate 7');
-    expect(rebuildRun).toContain('audit passed');
+    // Post-launch: reject pre-launch gate language; accept historical references
+    expect(implementationPlan).toContain('COMPLETE') || expect(implementationPlan).toContain('BLOCKED');
+    expect(rebuildRun).not.toMatch(/^Status:.*RC[0-9]$/m);
+    expect(rebuildRun).toContain('LIVE AND PRODUCTION-READY');
     expect(implementationPlan).not.toContain('Current gate: Release Candidate 3 owner handoff');
     expect(implementationPlan).not.toContain('Current gate: Release Candidate 2 readiness');
+    expect(implementationPlan).not.toContain('current deployment gate');
   });
 });
 

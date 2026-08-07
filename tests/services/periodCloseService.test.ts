@@ -192,12 +192,16 @@ describe('period close service', () => {
       reportSnapshotId: 'snapshot-1',
       approvedBy: 'admin-1',
     });
+    const recipientHash = 'h'.repeat(64);
+    const deliveryKey = 'key-' + new Date().toISOString();
     const dispatch = await createReportDispatch(db, {
       reportSnapshotId: 'snapshot-1',
       reportApprovalId: approval.id,
+      deliveryKey,
       fromAddress: 'finance@example.test',
       subject: 'Januari rapport',
       recipients: [{ email: 'admin@example.test', name: 'Admin' }],
+      recipientHash,
       contentHash: 'content-hash',
       sentBy: 'admin-1',
     });

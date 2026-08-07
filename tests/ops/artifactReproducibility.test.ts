@@ -275,14 +275,18 @@ describe('artifact reproducibility', () => {
   // Contract 6: Dispatch metadata references content hashes only
   it('6 — dispatch metadata references content hash and recipient hash, not plain emails', async () => {
     const db = makeApprovalDb();
+    const recipientHash = 'e'.repeat(64);
+    const deliveryKey = 'dispatch-key-' + new Date().toISOString();
     const result = await prepareDispatch(db, {
       actor: adminActor,
       workspaceId: WORKSPACE_ID,
       reportSnapshotId: SNAPSHOT_ID,
       reportApprovalId: 'approval-1',
+      deliveryKey,
       fromAddress: 'finance@example.test',
       subject: 'Rapport',
       recipients: [{ email: 'admin@example.test', name: 'Beheerder' }],
+      recipientHash,
       contentHash: CONTENT_HASH,
     });
 
@@ -295,15 +299,19 @@ describe('artifact reproducibility', () => {
 
   it('6b — dispatch rejected when approval is revoked (e.g. after reopen)', async () => {
     const db = makeApprovalDb({ approvalForDispatch: null });
+    const recipientHash = 'f'.repeat(64);
+    const deliveryKey = 'dispatch-key2-' + new Date().toISOString();
     await expect(
       prepareDispatch(db, {
         actor: adminActor,
         workspaceId: WORKSPACE_ID,
         reportSnapshotId: SNAPSHOT_ID,
         reportApprovalId: 'approval-1',
+        deliveryKey,
         fromAddress: 'finance@example.test',
         subject: 'Rapport',
-        recipients: [{ email: 'admin@example.test' }],
+        recipients: [{ email: 'admin@example.test', name: 'Beheerder' }],
+        recipientHash,
         contentHash: CONTENT_HASH,
       }),
     ).rejects.toThrow(ReportApprovalError);

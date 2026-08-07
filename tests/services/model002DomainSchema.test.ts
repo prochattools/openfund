@@ -160,6 +160,9 @@ describe('MODEL-002 additive domain schema', () => {
       '20260719095000_add_merchant_knowledge',
       '20260729000000_add_transaction_type_direction',
       '20260731000000_add_suggestion_producer_ownership',
+      '20260806180511_add_dispatch_duplicate_protection',
+      '20260806202030_add_delivery_key_idempotency',
+      '20260807085500_drop_obsolete_dispatch_identity',
     ]);
     expect(sha256File(migrationPath)).toBe(model002ExpectedHash);
   });

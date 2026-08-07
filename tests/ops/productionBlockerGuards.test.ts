@@ -103,14 +103,18 @@ const makeDispatchDb = () => ({
 
 describe('production blocker guards — report dispatch', () => {
   it('dispatch sends no email and calls no external provider', async () => {
+    const recipientHash = 'c'.repeat(64);
+    const deliveryKey = 'key-1-' + new Date().toISOString();
     const result = await prepareDispatch(makeDispatchDb(), {
       actor: { userId: 'u1', role: 'admin', actorId: 'a1' },
       workspaceId: 'ws-1',
       reportSnapshotId: 'snapshot-guard-1',
       reportApprovalId: 'approval-guard-1',
+      deliveryKey,
       fromAddress: 'finance@example.test',
       subject: 'Test',
-      recipients: [{ email: 'admin@example.test' }],
+      recipients: [{ email: 'admin@example.test', name: 'Admin' }],
+      recipientHash,
       contentHash: 'x'.repeat(64),
     });
     expect(result.sideEffects.sendsEmail).toBe(false);
@@ -119,14 +123,18 @@ describe('production blocker guards — report dispatch', () => {
   });
 
   it('dispatch recipient hash does not contain plain email addresses', async () => {
+    const recipientHash = 'd'.repeat(64);
+    const deliveryKey = 'key-2-' + new Date().toISOString();
     const result = await prepareDispatch(makeDispatchDb(), {
       actor: { userId: 'u1', role: 'admin', actorId: 'a1' },
       workspaceId: 'ws-1',
       reportSnapshotId: 'snapshot-guard-1',
       reportApprovalId: 'approval-guard-1',
+      deliveryKey,
       fromAddress: 'finance@example.test',
       subject: 'Test',
-      recipients: [{ email: 'admin@example.test' }],
+      recipients: [{ email: 'admin@example.test', name: 'Admin' }],
+      recipientHash,
       contentHash: 'x'.repeat(64),
     });
     expect(result.recipientHash).toHaveLength(64);

@@ -614,14 +614,18 @@ describe('release candidate workflow', () => {
   // Contract 12: Dispatch preparation stores metadata only and sends no email
   it('12 — dispatch metadata: sends no email, calls no external provider', async () => {
     const db = makeApprovalDb();
+    const recipientHash = 'g'.repeat(64);
+    const deliveryKey = 'dispatch-key3-' + new Date().toISOString();
     const result = await prepareDispatch(db, {
       actor: adminActor,
       workspaceId: WORKSPACE_ID,
       reportSnapshotId: SNAPSHOT_ID,
       reportApprovalId: 'approval-1',
+      deliveryKey,
       fromAddress: 'finance@example.test',
       subject: 'Financieel rapport januari 2026',
       recipients: [{ email: 'admin@example.test', name: 'Administrator' }],
+      recipientHash,
       contentHash: 'content-hash-' + 'b'.repeat(51),
     });
 
