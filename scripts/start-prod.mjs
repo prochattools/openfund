@@ -91,15 +91,6 @@ export const runProductionStartup = async ({
         resolve();
         return;
       }
-      // If migration fails due to permissions (typical when using runtime role without DDL privs),
-      // but migrations are already applied in history, proceed with startup anyway.
-      // This allows graceful degradation when MIGRATION_DATABASE_URL is not configured
-      // but the schema is already up-to-date from a previous privileged migration run.
-      if (code === 1 || signal) {
-        log(`Warning: Prisma migration exited with ${code ? `code ${code}` : `signal ${signal}`}. Proceeding with startup - assuming migrations already applied.`);
-        resolve();
-        return;
-      }
       reject(new Error(`Prisma migration failed with code ${code ?? 'null'}${signal ? ` after ${signal}` : ''}.`));
     });
   });
