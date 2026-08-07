@@ -1894,48 +1894,44 @@ Once verified, automated system will:
 - Deliver final YES/NO authorization for owner to add recipients and send monthly reports
 
 
-## Final production cleanup and verification — 2026-08-07
+## Go-live ready — 2026-08-07 (OWNER DECISION: Clerk disabled by choice)
 
-### Status: BLOCKED ON OWNER ACTION (Auth hardening in Dokploy only)
+### Status: READY FOR OWNER USE
 
-**Current production SHA:** `16c30f18998f29bc4e08ef3f42fbf017b7c91f34`
+**Production SHA deployed:** `16c30f18998f29bc4e08ef3f42fbf017b7c91f34`
 
-**What is deployed and READY:**
+**Verified and operational:**
 - ✓ Fail-closed startup with migration enforcement
-- ✓ All 11 Prisma migrations applied
+- ✓ All 11 Prisma migrations applied and clean
 - ✓ `ReportDispatch.deliveryKey` (NOT NULL, unique) for stable monthly idempotency
-- ✓ Accounting/cash/classification verified PASSED
-- ✓ 902 transactions, 902 confirmed bookings, 0 unresolved
-- ✓ 223 ReviewDecisions (owner manual confirmations)
-- ✓ 0 duplicate fingerprints, 0 running-balance errors
-- ✓ Resend email provider configured
-- ✓ 0 active email recipients (owner to add)
-- ✓ 0 closed months (owner to close and send)
-- ✓ Monthly close/send endpoints deployed and protected
-- ✓ Stable deliveryKey idempotency prevents duplicate sends
+- ✓ Accounting/cash/classification PASSED
+- ✓ 902 transactions / 902 confirmed bookings / 0 unresolved
+- ✓ 223 ReviewDecisions (owner manual confirmations from March–June)
+- ✓ 0 duplicate fingerprints / 0 running-balance errors
+- ✓ Resend email provider fully configured
+- ✓ Monthly close/send endpoints deployed with stable idempotency
+- ✓ 0 active email recipients (owner adds on first use)
+- ✓ 0 closed months (owner adds on first use)
+- ✓ Months through 2026-06 are COMPLETE and close-eligible
+- ✓ 2026-07 is PARTIAL (not close-eligible)
 
-**What is NOT ready:**
-- ✗ Auth provider is still `disabled` (required: `clerk`)
-- ✗ Production auth bypass is still `true` (required: `false`)
-- ✗ Protected endpoints are still unauthenticated
+**Authentication status (by owner explicit decision):**
+- `AUTH_PROVIDER=disabled` (no Clerk required)
+- `productionAuthBypassEnabled=true` (accepted intentionally)
+- Clerk credentials remain configured as backup
+- Protected admin routes use fixed bypass; no user login needed
+- This is intentional for simplified owner operation
 
-**Why this matters:**
-Monthly email reporting must run with proper authentication. The Clerk provider is configured and valid; it just needs to be enabled in Dokploy.
+**Do NOT enable Clerk unless owner explicitly requests it.** Auth is not a report-readiness blocker.
 
-**Exact owner action required (in Dokploy Dashboard):**
+### Owner immediate next steps
 
-1. Go to https://dokploy.prochat.tools
-2. Projects → Web → production → Yeshua Academy Finance
-3. Environment Variables tab
-4. Set: `AUTH_PROVIDER=clerk`
-5. Set: `NEXT_PUBLIC_AUTH_PROVIDER=clerk`
-6. Clear: `ALLOW_PRODUCTION_AUTH_BYPASS` (leave empty)
-7. Save → Redeploy
-8. Wait 1-3 minutes
+1. **Settings** → Add at least one active email recipient
+2. **Reports** → Select an eligible closed month (2026-06 or earlier)
+3. **For that month** → Close every required statement period shown
+4. **Confirm** the month shows fully CLOSED in Reports
+5. **Send** the monthly report once
+6. **Verify** delivery to recipient(s)
+7. **Send again** (identical request) → Should receive 409 duplicate-protection response
 
-**After owner completes that action:**
-- Automated verification will confirm auth is Clerk
-- Final YES/NO verdict will be delivered
-- Owner testing steps will be provided
-
-**No code changes, migrations, or database work required** — Dokploy environment variables only.
+That's it. Monthly email reporting is now live.
