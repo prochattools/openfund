@@ -1751,3 +1751,46 @@ No manual SQL is required for migration-history recovery.
 6. Push `main`, require GitHub Actions/Dokploy convergence, then perform read-only production verification.
 
 Do not close a month, create recipients, send email, or alter financial data during this recovery.
+
+
+
+
+## Privileged migration URL support — implemented and locally validated — 2026-08-07 11:49 +01:00
+
+Workbench run: `agent-4c710a0d-4860-49be-92e2-5fc855cf862d`
+
+### Implementation
+
+- Added optional `MIGRATION_DATABASE_URL` support to production startup.
+- Prisma migration child receives `MIGRATION_DATABASE_URL` mapped to its `DATABASE_URL` when present.
+- API and Next.js runtime children continue to receive the normal runtime `DATABASE_URL` only; `MIGRATION_DATABASE_URL` is removed from their environments.
+- Startup remains fail-closed when migrations fail.
+- Missing `MIGRATION_DATABASE_URL` falls back to the runtime `DATABASE_URL` for backward compatibility.
+- Added `.env.example` documentation without any credential value.
+- Added shell-free fixed-operation `scripts/prisma-migration.mjs` for `status`, `deploy`, and `resolve-rolled-back`; `--require-privileged` refuses execution when the owner-level URL is absent.
+
+### Validation
+
+- Startup and migration-runner tests: passed.
+- Full affected migration/report/idempotency/close/provider suite: 110/110 passed.
+- Prisma schema validation: passed.
+- Server TypeScript build: passed.
+- Next.js production build: passed (`validation-53883850-8025-42e0-b354-7a8324cd7c7c`).
+
+### Production blocker
+
+- No approved `MIGRATION_DATABASE_URL` is currently configured in the production environment available to this repository.
+- The production runtime `DATABASE_URL` role is not the owner of `ReportDispatch`, so it cannot apply `20260806202030_add_delivery_key_idempotency`.
+- Per recovery policy, production migration history must not be changed further until an owner-level migration URL is supplied through deployment configuration.
+- Required deployment variable: `MIGRATION_DATABASE_URL` containing a PostgreSQL connection whose role owns `ReportDispatch` (or otherwise has the schema-change privileges required by Prisma migrations).
+- Do not place this credential in Git or logs.
+
+### Resume point
+
+After `MIGRATION_DATABASE_URL` is supplied in the approved production deployment configuration:
+1. run privileged migration status;
+2. reconfirm `deliveryKey` is absent before history repair;
+3. resolve `20260806202030_add_delivery_key_idempotency` as rolled back;
+4. run privileged `migrate deploy`;
+5. require clean migration status and introspect `deliveryKey` NOT NULL + unique;
+6. push/deploy the committed application and verify SHA/accounting convergence without sending email or closing periods.

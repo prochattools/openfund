@@ -39,11 +39,14 @@ export const runProductionStartup = async ({
   if (!databaseUrl) {
     throw new Error('DATABASE_URL is required before production startup.');
   }
+  const migrationDatabaseUrl = env.MIGRATION_DATABASE_URL?.trim() || databaseUrl;
 
-  const baseEnv = { ...env };
-  if (!baseEnv.NEW_RELIC_LICENSE_KEY?.trim()) {
-    delete baseEnv.NODE_OPTIONS;
+  const runtimeEnv = { ...env, DATABASE_URL: databaseUrl };
+  delete runtimeEnv.MIGRATION_DATABASE_URL;
+  if (!runtimeEnv.NEW_RELIC_LICENSE_KEY?.trim()) {
+    delete runtimeEnv.NODE_OPTIONS;
   }
+  const migrationEnv = { ...runtimeEnv, DATABASE_URL: migrationDatabaseUrl };
 
   const commands = buildProductionCommands({ root, port: env.PORT ?? '3000' });
   const processes = [];
@@ -67,10 +70,10 @@ export const runProductionStartup = async ({
     process.on('SIGINT', () => shutdown(0));
   }
 
-  const spawnProcess = ({ name, command, args }, { track = true } = {}) => {
+  const spawnProcess = ({ name, command, args }, { track = true, childEnv = runtimeEnv } = {}) => {
     const child = spawnImpl(command, args, {
       cwd: root,
-      env: baseEnv,
+      env: childEnv,
       stdio: 'inherit',
       shell: false,
     });
@@ -80,7 +83,7 @@ export const runProductionStartup = async ({
     return child;
   };
 
-  const migration = spawnProcess(commands.migration);
+  const migration = spawnProcess(commands.migration, { childEnv: migrationEnv });
   await new Promise((resolve, reject) => {
     migration.once('error', () => reject(new Error('Prisma migration failed to start.')));
     migration.once('exit', (code, signal) => {

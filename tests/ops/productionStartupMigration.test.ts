@@ -36,6 +36,11 @@ const validEnv = {
   PORT: '3000',
 };
 
+const privilegedEnv = {
+  ...validEnv,
+  MIGRATION_DATABASE_URL: 'postgresql://migration_owner:owner-secret@db.internal:5432/finance',
+};
+
 describe('production startup migration gate', () => {
   it('builds a shell-free Prisma migrate deploy command', () => {
     const commands = buildProductionCommands({ root: '/app', port: '3000' });
@@ -72,6 +77,48 @@ describe('production startup migration gate', () => {
       '-p',
       '3000',
     ]);
+  });
+
+  it('uses MIGRATION_DATABASE_URL only for the migration child', async () => {
+    const { calls, spawnImpl } = createSpawnHarness();
+    const startup = runProductionStartup({
+      env: privilegedEnv,
+      spawnImpl,
+      root: '/app',
+      registerSignalHandlers: false,
+    });
+
+    await Promise.resolve();
+    const migrationEnv = calls[0].options.env as NodeJS.ProcessEnv;
+    expect(migrationEnv.DATABASE_URL).toBe(privilegedEnv.MIGRATION_DATABASE_URL);
+    expect(migrationEnv.MIGRATION_DATABASE_URL).toBeUndefined();
+
+    calls[0].child.emit('exit', 0, null);
+    await startup;
+
+    const apiEnv = calls[1].options.env as NodeJS.ProcessEnv;
+    const webEnv = calls[2].options.env as NodeJS.ProcessEnv;
+    expect(apiEnv.DATABASE_URL).toBe(validEnv.DATABASE_URL);
+    expect(webEnv.DATABASE_URL).toBe(validEnv.DATABASE_URL);
+    expect(apiEnv.MIGRATION_DATABASE_URL).toBeUndefined();
+    expect(webEnv.MIGRATION_DATABASE_URL).toBeUndefined();
+  });
+
+  it('falls back to DATABASE_URL for migrations when MIGRATION_DATABASE_URL is absent', async () => {
+    const { calls, spawnImpl } = createSpawnHarness();
+    const startup = runProductionStartup({
+      env: validEnv,
+      spawnImpl,
+      root: '/app',
+      registerSignalHandlers: false,
+    });
+
+    await Promise.resolve();
+    const migrationEnv = calls[0].options.env as NodeJS.ProcessEnv;
+    expect(migrationEnv.DATABASE_URL).toBe(validEnv.DATABASE_URL);
+
+    calls[0].child.emit('exit', 0, null);
+    await startup;
   });
 
   it('fails closed when migration exits non-zero', async () => {
@@ -132,7 +179,7 @@ describe('production startup migration gate', () => {
     });
 
     const startup = runProductionStartup({
-      env: validEnv,
+      env: privilegedEnv,
       spawnImpl,
       root: '/app',
       registerSignalHandlers: false,
@@ -152,6 +199,7 @@ describe('production startup migration gate', () => {
     expect(calls[2].child.kill).toHaveBeenCalledWith('SIGTERM');
     const output = [...log.mock.calls, ...errorLog.mock.calls].flat().join(' ');
     expect(output).not.toContain(validEnv.DATABASE_URL);
+    expect(output).not.toContain(privilegedEnv.MIGRATION_DATABASE_URL);
     expect(calls.every((call) => call.options.shell === false)).toBe(true);
   });
 });
