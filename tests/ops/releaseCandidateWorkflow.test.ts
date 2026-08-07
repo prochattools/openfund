@@ -727,9 +727,11 @@ describe('release candidate workflow', () => {
       workspaceId: WORKSPACE_ID,
       reportSnapshotId: SNAPSHOT_ID,
       reportApprovalId: 'approval-1',
+      deliveryKey: 'key-' + new Date().toISOString(),
       fromAddress: 'finance@example.test',
       subject: 'Test',
-      recipients: [{ email: 'admin@example.test' }],
+      recipients: [{ email: 'admin@example.test', name: 'Admin' }],
+      recipientHash: 'z'.repeat(64),
       contentHash: 'x'.repeat(64),
     });
     expect(dispatchResult.sideEffects.sendsEmail).toBe(false);

@@ -33,8 +33,10 @@ describe('release evidence consistency — stale RC labels', () => {
     // Post-launch: docs record current go-live state without stale pre-launch language
     expect(rebuildRun).toContain('CORE APPLICATION LIVE AND PRODUCTION-READY');
     expect(rebuildRun).not.toMatch(/production repair remains unexecuted|suggestion persistence remains unexecuted|production import remains pending|production import remains owner-gated/i);
-    expect(roadmap).toContain('COMPLETE') || expect(roadmap).toContain('BLOCKED');
-    expect(implementationPlan).toContain('COMPLETE') || expect(implementationPlan).toContain('BLOCKED');
+    const roadmapComplete = roadmap.includes('COMPLETE') || roadmap.includes('BLOCKED');
+    const planComplete = implementationPlan.includes('COMPLETE') || implementationPlan.includes('BLOCKED');
+    expect(roadmapComplete).toBe(true);
+    expect(planComplete).toBe(true);
     // Reject contradictory current/previous state claims
     for (const content of [readme, roadmap, implementationPlan, rebuildRun, authReadiness]) {
       expect(content).not.toMatch(/current (?:verified )?production commit|current deployed production release|production currently remains|currently blocked on auth/i);
@@ -71,7 +73,8 @@ describe('release evidence consistency — stale RC labels', () => {
 
   it('roadmap and implementation plan preserve historical RC7 evidence without stale current status', () => {
     // Post-launch: reject pre-launch gate language; accept historical references
-    expect(implementationPlan).toContain('COMPLETE') || expect(implementationPlan).toContain('BLOCKED');
+    const planHasStatus = implementationPlan.includes('COMPLETE') || implementationPlan.includes('BLOCKED');
+    expect(planHasStatus).toBe(true);
     expect(rebuildRun).not.toMatch(/^Status:.*RC[0-9]$/m);
     expect(rebuildRun).toContain('LIVE AND PRODUCTION-READY');
     expect(implementationPlan).not.toContain('Current gate: Release Candidate 3 owner handoff');
