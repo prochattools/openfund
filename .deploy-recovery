@@ -1,0 +1,5 @@
+Deployment recovery marker
+Trigger: e6fc84e705435439104a4dd2c5b408b04365e919
+Reason: Dokploy webhook accepted (HTTP 200) but application did not roll forward
+Recovery action: Re-trigger build workflow to force image pull and deployment
+Timestamp: 2026-08-07T20:38:47Z
