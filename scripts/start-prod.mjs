@@ -95,6 +95,16 @@ export const runProductionStartup = async ({
     });
   });
 
+  try {
+    const { PrismaClient } = await import('@prisma/client');
+    const db = new PrismaClient();
+    const users = await db.user.findMany({ select: { id: true, email: true, isActive: true } });
+    log(`[startup-diag] users=${JSON.stringify(users)}`);
+    await db.$disconnect();
+  } catch (e) {
+    log(`[startup-diag] error=${e.message}`);
+  }
+
   const startLongRunningProcess = (definition) => {
     const child = spawnProcess(definition);
     child.on('exit', (code, signal) => {
