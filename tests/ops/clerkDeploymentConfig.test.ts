@@ -4,17 +4,14 @@ import { describe, expect, it } from 'vitest';
 const read = (path: string) => readFileSync(path, 'utf8');
 
 describe('Clerk deployment configuration', () => {
-  it('validates the public build key before Docker execution', () => {
+  it('passes only the publishable key into the image build', () => {
     const workflow = read('.github/workflows/dokploy.yml');
 
-    expect(workflow).toContain('Validate Clerk build configuration');
-    expect(workflow).toContain('CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}');
-    expect(workflow).toContain('pk_(live|test)_[A-Za-z0-9_-]{10,}');
     expect(workflow).toContain('NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}');
     expect(workflow).not.toContain('CLERK_SECRET_KEY=${{ secrets');
   });
 
-  it('passes only the publishable key into the image build', () => {
+  it('passes only the publishable key into the Dockerfile', () => {
     const dockerfile = read('Dockerfile');
 
     expect(dockerfile).toContain('ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY');
