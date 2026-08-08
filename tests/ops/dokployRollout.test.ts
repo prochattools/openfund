@@ -32,7 +32,7 @@ describe('Dokploy rollout helper', () => {
           registryUrl: 'ghcr.io',
         });
       }
-      if (url.endsWith('/application.saveDockerProvider') || url.endsWith('/application.deploy')) {
+      if (url.endsWith('/application.saveDockerProvider') || url.endsWith('/application.redeploy')) {
         return jsonResponse(200, {});
       }
       if (url.endsWith('/api/deployment-info')) {
@@ -64,7 +64,7 @@ describe('Dokploy rollout helper', () => {
       password: 'registry-password',
       registryUrl: 'ghcr.io',
     });
-    expect(requests.some((request) => request.url.endsWith('/application.deploy'))).toBe(true);
+    expect(requests.some((request) => request.url.endsWith('/application.redeploy'))).toBe(true);
   });
 
   it('omits registry credentials when Dokploy does not return them', async () => {
@@ -77,7 +77,7 @@ describe('Dokploy rollout helper', () => {
           dockerImage: 'ghcr.io/yeshuaacademy/finance@sha256:old-digest',
         });
       }
-      if (url.endsWith('/application.saveDockerProvider') || url.endsWith('/application.deploy')) {
+      if (url.endsWith('/application.saveDockerProvider') || url.endsWith('/application.redeploy')) {
         return jsonResponse(200, {});
       }
       if (url.endsWith('/api/deployment-info')) return jsonResponse(200, { buildSha: TARGET_SHA });
@@ -110,7 +110,7 @@ describe('Dokploy rollout helper', () => {
       if (url.includes('/application.one')) {
         return jsonResponse(200, { sourceType: 'docker', dockerImage: TARGET_IMAGE });
       }
-      if (url.endsWith('/application.deploy')) return jsonResponse(200, {});
+      if (url.endsWith('/application.redeploy')) return jsonResponse(200, {});
       if (url.endsWith('/api/deployment-info')) return jsonResponse(200, { buildSha: TARGET_SHA });
       if (url.endsWith('/api/health')) return jsonResponse(200, { status: 'ok' });
       throw new Error(`Unexpected URL ${url}`);
@@ -187,7 +187,7 @@ describe('Dokploy rollout helper', () => {
       if (url.includes('/application.one')) {
         return jsonResponse(200, { sourceType: 'docker', dockerImage: TARGET_IMAGE });
       }
-      if (url.endsWith('/application.deploy')) return jsonResponse(200, {});
+      if (url.endsWith('/application.redeploy')) return jsonResponse(200, {});
       if (url.endsWith('/api/deployment-info')) return jsonResponse(200, { buildSha: 'old-sha' });
       if (url.endsWith('/api/health')) return jsonResponse(200, { status: 'ok' });
       throw new Error(`Unexpected URL ${url}`);
