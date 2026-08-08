@@ -96,6 +96,8 @@ export async function runDokployRollout({
     method: 'POST',
     body: {
       applicationId: appId,
+      title: `Deploy ${targetSha.slice(0, 8)}`,
+      description: targetSha,
     },
   });
   if (deployResponse?.error || deployResponse?.success === false) {
