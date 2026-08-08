@@ -92,7 +92,7 @@ export async function runDokployRollout({
     log('Dokploy dockerImage already matches the expected floating tag.');
   }
 
-  await dokployRequest('/application.redeploy', {
+  const redeployResponse = await dokployRequest('/application.redeploy', {
     method: 'POST',
     body: {
       applicationId: appId,
@@ -100,6 +100,9 @@ export async function runDokployRollout({
       description: targetSha,
     },
   });
+  if (redeployResponse?.error || redeployResponse?.success === false) {
+    throw new Error(`Dokploy /application.redeploy failed: ${JSON.stringify(redeployResponse)}.`);
+  }
   log('Dokploy redeploy accepted; verifying production convergence.');
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
