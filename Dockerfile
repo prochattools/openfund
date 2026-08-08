@@ -31,7 +31,7 @@ RUN DISABLE_TS_CHECK=1 SKIP_ENV_VALIDATION=1 npm run build
 FROM node:20-slim AS newrelic-deps
 WORKDIR /nr
 RUN echo '{"dependencies":{"newrelic":"^13.18.0"}}' > package.json
-RUN npm install --omit=dev --ignore-scripts 2>&1 | tail -1
+RUN npm install --omit=dev --ignore-scripts
 
 # ---------- Runtime Stage ----------
 FROM node:20-slim AS runner
