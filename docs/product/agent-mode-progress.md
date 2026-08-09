@@ -1,6 +1,6 @@
 # Agent Mode Progress — All Phases Complete
 
-Updated: 2026-08-09 (monthly report/recipient repair complete)
+Updated: 2026-08-09 (Resend delivery + unlimited resend repair in progress)
 
 ## Repository lock
 
@@ -10,7 +10,59 @@ Updated: 2026-08-09 (monthly report/recipient repair complete)
 
 Do not switch source, branch, or repository.
 
-## Status: COMPLETE — READY FOR OWNER USE
+## Status: COMPLETE — RESEND DELIVERY + UNLIMITED RESEND RESTORED
+
+### 2026-08-09 Resend delivery + unlimited resend follow-up — COMPLETE
+
+Owner confirmed two remaining production failures after the period-close/recipient repair:
+
+1. the UI reported a send attempt, but no message appeared in Resend;
+2. a second send of the same report was blocked as a duplicate. Owner explicitly requires unlimited explicit resend attempts to any active recipient set; identical report content must never be blocked merely because it was sent before.
+
+**Proven production e-mail root cause:**
+
+- The code fallback `rapport@yeshuaacademy.nl` was the effective sender — there was no explicit `REPORT_EMAIL_FROM` environment variable in Dokploy before repair;
+- the configured Resend account has `yeshua.academy` verified, not `yeshuaacademy.nl`;
+- Resend sent-email history contained 0 messages before diagnosis;
+- a safe Resend test using the fallback sender returned HTTP 403: the `yeshuaacademy.nl` domain is not verified;
+- the same safe test using `rapport@yeshua.academy` returned HTTP 200 with a provider message ID;
+- Dokploy has now been explicitly configured with `REPORT_EMAIL_FROM=rapport@yeshua.academy`.
+
+**Additional UI/server defect:**
+
+- `executeDispatch()` correctly marks provider failures as `FAILED`, but `POST /api/reports/monthly/send` currently returns HTTP 200 even when the provider failed;
+- `FinanceReportsPage` therefore renders `Rapport verstuurd...` for an HTTP-200 `FAILED` result;
+- the monthly route intentionally rejects identical content/recipient delivery keys with HTTP 409.
+
+**Repair scope:**
+
+- switch the canonical/default and production runtime sender to `rapport@yeshua.academy`;
+- return a non-2xx API error with a sanitized provider reason when Resend returns `FAILED`;
+- remove the monthly duplicate-send lookup/rejection entirely;
+- preserve `ReportDispatch.deliveryKey @unique` by generating a unique auditable delivery key for every explicit send attempt, so repeated sends remain independently recorded rather than silently overwritten;
+- preserve explicit confirmation, active-recipient validation, booked-transaction validation, immutable snapshots/artifacts/approvals/dispatch history, and all existing finance facts;
+- validate with focused tests plus Resend's documented `delivered@resend.dev` test address; do not send a real owner report automatically during validation.
+
+**Final runtime SHA:** `4f43f48ce5474220d5ff4c60f2cb2f94eb96ce3a`
+**GitHub Actions #31332407905:** SUCCESS
+**Production buildSha:** `4f43f48ce5474220d5ff4c60f2cb2f94eb96ce3a`
+**Sender domain root cause:** code fallback `rapport@yeshuaacademy.nl` was the effective sender — no explicit `REPORT_EMAIL_FROM` in Dokploy before repair; `yeshuaacademy.nl` is unverified in Resend; `yeshua.academy` is verified.
+**Dokploy REPORT_EMAIL_FROM:** `rapport@yeshua.academy` (now explicitly set)
+**Post-deploy Resend test:** HTTP 200, message ID `6852fa28-26a2-4823-a7ad-d3aa0dc74dad`, `rapport@yeshua.academy` → `delivered+finance-production@resend.dev`
+**Unlimited repeat-send:** duplicate lookup, DUPLICATE_DISPATCH, and "Dit rapport is al ingediend" 409 fully removed; unique delivery key per send attempt; confirmed 24/24 repeat-send tests green
+**Period close:** optional (unchanged from prior repair)
+**Production health:** /api/health 200, /api/ledger 902 transactions, /api/review 0 unresolved
+**Finance facts preserved:** 902 confirmed bookings, 223 ReviewDecisions, 0 duplicate fingerprints, 0 running-balance errors
+
+**Validation evidence:**
+- Prisma validate: ✓
+- backup/restore rehearsal --dry-run: ✓
+- git diff --check: ✓ (exit 0)
+- server TypeScript build: ✓ (zero errors)
+- Prisma generate: ✓
+- Secret scan on six changed paths: ✓ (zero findings)
+- 35/35 focused tests (monthlySendReport + monthlyReportSendReadiness): ✓
+- Exactly six intended files in diff, no unintended changes: ✓
 
 ### 2026-08-09 monthly report/recipient repair — COMPLETE
 
