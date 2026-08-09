@@ -1,83 +1,57 @@
-# Deployment Recovery Log — e6fc84e → Production
+# Deployment Recovery Log — CLOSED
 
-## Timeline
+## Incident: 2026-08-07/08 Dokploy deployment failure and recovery
 
-### First Deployment Attempt (e6fc84e)
-- **Time**: 2026-08-07 18:42:39Z
-- **Action**: GitHub Actions workflow `31208193657` completed successfully
-- **Build**: ✓ Image built with tags `latest`, `main`, `e6fc84e705435439104a4dd2c5b408b04365e919`
-- **Push**: ✓ Pushed to ghcr.io (digest: `sha256:547bc2e5a952cfa67dc3da77b1a7c771cceecf85d6c67a0367270553cd4c5ab4`)
-- **Dokploy trigger**: ✓ HTTP 200 accepted at 18:47:43Z
-- **Production rollout**: ✗ FAILED — application still on SHA `16c30f18...` after 60 minutes
+### Summary
 
-### Recovery Deployment Attempt (c48ad35)
-- **Time**: 2026-08-07 19:39:42Z (recovery commit pushed)
-- **Action**: GitHub Actions workflow `31212441573` completed successfully
-- **Build**: ✓ Image rebuilt with recovery commit tag
-- **Dokploy trigger**: ✓ HTTP 200 accepted at 19:44:45Z
-- **Production rollout**: ✗ FAILED — application still on SHA `16c30f18...` after 120+ minutes
+Production deployment stalled after Docker image push and Dokploy HTTP acceptance.
+Root cause identified, fixed, and production converged to exact SHA.
 
-## Root Cause Analysis
+**Status: CLOSED — READY FOR OWNER USE**
 
-All indicators confirm successful build and Dokploy trigger acceptance, but the production container has not updated:
+### Final Production State
 
-1. **GitHub Actions**: Both workflows completed with `conclusion: success`
-2. **Docker Registry**: Images verified in ghcr.io (by digest)
-3. **Dokploy API**: Both webhook calls returned HTTP 200
-4. **Production Health**: `/api/health` returns 200 OK
-5. **Production Metrics**: Unchanged (902 transactions, 0 review)
+| Component | Status | Value |
+|-----------|--------|-------|
+| Deployed SHA | Converged | `189c7d6a2278bb53a6c090d6b19ddd318f93f08f` |
+| GitHub Actions #280 | SUCCESS | Run `31280488648` |
+| `/api/health` | 200 | ok |
+| `/api/deployment-info` | 200 | buildSha matches |
+| Transactions | 902 | confirmed |
+| Unresolved queue | 0 | — |
+| ReviewDecisions | 223 | — |
+| Accounting | PASSED | — |
+| Cash reconciliation | PASSED | — |
+| Classification | PASSED | — |
+| Prisma migrations | 11/11 | clean |
 
-**Diagnosis**: Dokploy application is likely pinned to a specific image digest (not using `latest` or `main` tags), preventing automatic image updates despite successful pushes.
+### Root Cause
 
-## Required Manual Intervention
+1. **Env stripped by Dokploy**: The `application.saveDockerProvider` API call left the application's env field with only `AUTH_PROVIDER=clerk` and `NEXT_PUBLIC_AUTH_PROVIDER=clerk`. All other variables (including `DATABASE_URL`) were missing.
+2. **Container exit code 1**: Without `DATABASE_URL`, `start-prod.mjs` threw immediately, causing Docker Swarm replacement tasks to shut down within seconds and triggering automatic rollback to the old container.
+3. **Auth misconfiguration**: After restoring the full environment, `DEFAULT_USER_ID` was set to `finance_user` (a string slug) instead of the actual database UUID. The auth resolver returned 503 because no matching active User record existed.
 
-**Dokploy dashboard action required:**
-1. Navigate to the finance application in Dokploy
-2. Check the current image configuration:
-   - If pinned to digest: Update to use tag `latest` or `main`
-   - If using tags: Force container restart
-3. Verify container startup logs for errors
-4. Confirm application rolled to new image
+### Resolution
 
-## Evidence
+1. Restored full 21-variable environment via Dokploy `application.saveEnvironment` API.
+2. Deployed a temporary startup diagnostic to discover the correct User UUID from the database.
+3. Set `DEFAULT_USER_ID` to the correct UUID value.
+4. Removed the temporary diagnostic commit.
+5. Production converged at `189c7d6a` with full health verification.
 
-### Deployment Metadata
+### Lessons
 
-| Component | Status | Details |
-|-----------|--------|---------|
-| Git | ✓ Clean | origin/main = `c48ad35`, local synced |
-| GitHub Actions #1 | ✓ Success | e6fc84e workflow `31208193657` completed |
-| GitHub Actions #2 | ✓ Success | c48ad35 workflow `31212441573` completed |
-| Docker Build #1 | ✓ Success | Image digest `547bc2e5a...` built and pushed |
-| Docker Build #2 | ✓ Success | Image rebuilt for c48ad35 |
-| Dokploy Trigger #1 | ✓ Accepted | HTTP 200 at 18:47:43Z |
-| Dokploy Trigger #2 | ✓ Accepted | HTTP 200 at 19:44:45Z |
-| Production Rollout | ✗ Failed | Still on `16c30f18...` |
+- Dokploy HTTP 200 acceptance does not prove deployment success — follow through to Swarm task state and container startup.
+- Exact-SHA image publishing/pulling worked correctly throughout.
+- The actual failure path was: Dokploy env → Swarm task → container startup → immediate exit.
+- `serverId:null` in the Dokploy API response is normal for Docker Swarm applications and is NOT a deployment blocker.
 
-### Production State
+### Incorrect intermediate diagnoses (not root causes)
 
-```
-GET /api/deployment-info
-{
-  "buildSha": "16c30f18998f29bc4e08ef3f42fbf017b7c91f34",  // STALLED
-  "buildRef": "main",
-  "nodeEnv": "production",
-  "hasDatabaseUrl": true,
-  "authProvider": "disabled",
-  ...
-}
-
-GET /api/health
-{"status":"ok"}  // Application is running but on old version
-```
-
-## Next Steps
-
-1. **Owner**: Access Dokploy dashboard and verify application configuration
-2. **Owner**: Check if image is pinned to old digest or stuck in startup loop
-3. **Owner**: Force container restart or reconfigure to use floating tag
-4. **Claude**: Poll `/api/deployment-info` until `buildSha` matches `e6fc84e705...`
+- `serverId:null` meaning "no deployment server" — disproven
+- `composeId:undefined` — irrelevant to Docker provider applications
+- Endpoint path speculation (`/deploy` vs `/redeploy`) — both work; the issue was env, not the trigger
 
 ---
 
-*Auto-generated by deployment recovery procedure*
+*Incident closed 2026-08-09*

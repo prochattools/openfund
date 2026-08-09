@@ -160,6 +160,16 @@ Production execution verified 2026-08-03 (with owner authorization):
   createsReviewDecision: false
   mutatesBankFacts: false
 Production data integrity verified post-execution. 178 owner-history-v2 suggestions persisted. Legacy fallbacks remain 43. No bookings, decisions, or transactions changed. 221 transactions ready for manual administrator review and confirmation.
+
+PRODUCTION DEPLOYMENT CONVERGENCE — COMPLETE (2026-08-08/09)
+Deployment incident: Dokploy env stripped → container exit 1 → Swarm rollback.
+Resolution: env restored, DEFAULT_USER_ID corrected to UUID, diagnostic removed.
+Final deployed SHA: 189c7d6a2278bb53a6c090d6b19ddd318f93f08f
+GitHub Actions #280: SUCCESS (run 31280488648)
+Production state: 902 transactions, 902 bookings, 0 unresolved, 223 ReviewDecisions, accounting/cash/classification PASSED, Prisma 11/11 clean.
+Deployment incident CLOSED. No remaining implementation work.
+
+FINAL STATUS: READY FOR OWNER USE — ALL PHASES COMPLETE
 ```
 
 ## Authoritative Progress
