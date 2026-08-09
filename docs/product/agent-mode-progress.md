@@ -1,18 +1,57 @@
 # Agent Mode Progress — All Phases Complete
 
-Updated: 2026-08-09 (frontend factual-state restoration complete)
+Updated: 2026-08-09 (monthly report/recipient repair complete)
 
 ## Repository lock
 
 - Source: `yeshuaacademy-finance`
 - Branch: `main`
-- Final deployed commit: `2c6cf0b8eae61ab6befd7caa174d066e749755ed`
-- GitHub Actions #281: SUCCESS (run `31311605216`)
 - Dokploy dockerImage: `ghcr.io/yeshuaacademy/finance:latest`
 
 Do not switch source, branch, or repository.
 
 ## Status: COMPLETE — READY FOR OWNER USE
+
+### 2026-08-09 monthly report/recipient repair — COMPLETE
+
+Owner reported two production blockers from the reports/settings UI:
+
+1. adding an e-mail recipient fails with `E-mailontvanger kon niet worden opgeslagen.`;
+2. monthly report sending is disabled unless statement periods are CLOSED, but period closure is explicitly **not** an owner prerequisite for sending a monthly report.
+
+Proven causes:
+
+- `src/app/api/email-recipients/route.ts` implements GET only. Because that Next route exists, POST `/api/email-recipients` is handled by Next and returns 405 instead of falling through to the Express `upsertEmailRecipient` handler.
+- `FinanceReportsPage` includes `allPeriodsAreClosed` in `canSend` and renders open periods as a red blocker/reminder.
+- `postMonthlySendReport` explicitly rejects any statement period without a latest CLOSED `PeriodClose`, and `generateMonthlyReportSnapshot` is closed-period-only.
+
+Repair scope:
+
+- bridge recipient POST to the existing audited/admin-only Express upsert handler;
+- keep accounting period close/reopen functionality available, but make it optional for monthly e-mail reports;
+- send from the current fully-booked monthly transaction/booking state;
+- preserve immutable report snapshot/artifact/approval/dispatch records;
+- preserve duplicate-send protection using a stable report-content evidence hash plus recipient hash instead of PeriodClose evidence for live monthly dispatches;
+- keep the `0 unresolved` prerequisite and active-recipient prerequisite;
+- do not mutate existing transactions, TransactionBookings, ReviewDecisions, recipients except through the explicit owner recipient action, period closes, or accounting facts during the repair/deploy.
+
+**Completed (2026-08-09):**
+
+- `src/app/api/email-recipients/route.ts`: POST export added, bridges to audited Express `upsertEmailRecipient` handler via `invokeExpressJsonHandler`
+- `server/services/reportSnapshotService.ts`: `generateLiveMonthlyReportSnapshot` added — queries current transaction/booking data, requires all transactions fully booked (422 if not), derives opening balance from previous period close, creates immutable snapshot with no `periodCloseLinks`
+- `server/services/deliveryKeyService.ts`: extended with optional `reportEvidenceHash` on live path; `computeReportEvidenceHash` added for content-stable delivery key; existing PeriodClose-based callers unchanged
+- `server/routes/monthlySendReport.ts`: period-close verification removed entirely; uses `generateLiveMonthlyReportSnapshot`; duplicate check moved inside transaction; `ReportSnapshotError` handled with correct status code
+- `src/ui/FinanceReportsPage.tsx`: `canSend` no longer requires `allPeriodsAreClosed`; open periods render as optional advisory, not red blocker; "sluit alle perioden" send reminder removed
+
+**Validation passed:**
+- 47/47 focused tests (recipient bridge, route, idempotency, ops readiness)
+- 1909/1909 full test suite (1 pre-existing Prisma client parallel-worker flake unrelated to changes)
+- server TypeScript: 0 errors
+- Next.js production build: ✓ compiled successfully
+- `git diff --check`: clean
+- Secret scan: no credentials in diff
+
+**Final deployed SHA:** pending production convergence after push
 
 ### 2026-08-09 frontend factual-state restoration — COMPLETE
 

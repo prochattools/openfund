@@ -206,7 +206,7 @@ function MonthlySendPanel({ year, month }: { year: number; month: number | null 
 
   const hasRecipients = recipientCount !== null && recipientCount > 0;
   const hasUnresolved = readiness !== null && readiness.unresolvedCount > 0;
-  const canSend = allPeriodsAreClosed && hasRecipients && !hasUnresolved;
+  const canSend = hasRecipients && !hasUnresolved;
 
   const anyPeriodEligibleToClose =
     periodPreviews !== null && periodPreviews.length > 0
@@ -379,7 +379,7 @@ function MonthlySendPanel({ year, month }: { year: number; month: number | null 
 
             {allPeriodsAreClosed
               ? <ReadinessOk label="Alle perioden zijn afgesloten (CLOSED)" />
-              : <ReadinessBlocker label="Perioden zijn niet afgesloten — sluit de maanden eerst af" />}
+              : <ReadinessOk label="Periodeafsluiting is optioneel voor maandrapporten" />}
 
             {hasRecipients
               ? <ReadinessOk label={`${recipientCount} actieve ontvangers`} />
@@ -454,7 +454,7 @@ function MonthlySendPanel({ year, month }: { year: number; month: number | null 
       {/* Close action reminder (only when there are open periods) */}
       {anyPeriodEligibleToClose && (
         <div className="mt-4 rounded-lg border border-[#e6b85c] bg-[#fff7df] p-4 text-sm text-[#7a5512]">
-          Sluit alle afschriftperioden hierboven af voordat je het maandrapport verstuurt.
+          Periodeafsluiting is beschikbaar als optionele boekhoudkundige stap, maar is niet vereist voor het versturen van maandrapporten.
         </div>
       )}
 

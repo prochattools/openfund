@@ -605,6 +605,257 @@ export const classifyReportLines = (lines: ReportLineInput[]): ClassifiedReportL
     presentation: classifyReportLinePresentation(line.literalTypeLabel, line.literalCategoryLabel),
   }));
 
+// ─── REPORT-001b: Live monthly report snapshot (no period close required) ────
+
+/**
+ * Generate a monthly report snapshot from live transaction/booking data, without
+ * requiring any PeriodClose records to be CLOSED first.
+ *
+ * All transactions in the month must have a TransactionBooking in the workspace;
+ * unbooked transactions cause a 422 error with a Dutch message.
+ *
+ * The opening balance is taken from the most recent CLOSED PeriodClose whose
+ * periodEnd falls before this month. If none exists, opening balance = 0.
+ *
+ * periodCloseLinks are NOT created (live snapshot has no period close evidence).
+ */
+export const generateLiveMonthlyReportSnapshot = async (
+  db: TxClient,
+  input: MonthlyReportInput,
+): Promise<ReportSnapshotResult> => {
+  assertAdminActor(input.actor);
+
+  const periodStart = new Date(Date.UTC(input.year, input.month - 1, 1));
+  const periodEnd = new Date(Date.UTC(input.year, input.month, 0, 23, 59, 59, 999));
+
+  // Step 1: All transactions for the month belonging to this user
+  const transactions = await db.transaction.findMany({
+    where: {
+      userId: input.actor.userId,
+      date: { gte: periodStart, lte: periodEnd },
+    },
+    select: { id: true, amountMinor: true, direction: true },
+    orderBy: { date: 'asc' },
+  });
+
+  // Step 2: All bookings for those transactions in this workspace
+  const bookings = await db.transactionBooking.findMany({
+    where: {
+      workspaceId: input.workspaceId,
+      transactionId: { in: transactions.map((t) => t.id) },
+    },
+    select: {
+      transactionId: true,
+      projectId: true,
+      transactionTypeId: true,
+      categoryId: true,
+      literalProjectLabel: true,
+      literalTypeLabel: true,
+      literalCategoryLabel: true,
+      transaction: { select: { amountMinor: true, direction: true } },
+    },
+  });
+
+  // Step 3: Every transaction must be booked
+  if (bookings.length !== transactions.length) {
+    const monthLabel = `${input.year}-${String(input.month).padStart(2, '0')}`;
+    throw new ReportSnapshotError(
+      `Er zijn ${transactions.length - bookings.length} ongeboekte transacties in ${monthLabel}. Alle transacties moeten geboekt zijn.`,
+      422,
+    );
+  }
+
+  // Step 4: Compute totals directly from transactions
+  let income = 0n;
+  let expense = 0n;
+  for (const t of transactions) {
+    const amount = toBigInt(t.amountMinor);
+    if (t.direction === 'credit') {
+      income += amount;
+    } else {
+      expense += amount;
+    }
+  }
+  const net = income - expense;
+
+  // Opening balance: most recent CLOSED PeriodClose ending before this month
+  const precedingClose = await db.periodClose.findFirst({
+    where: {
+      workspaceId: input.workspaceId,
+      status: 'CLOSED',
+      periodEnd: { lt: periodStart },
+    },
+    orderBy: { periodEnd: 'desc' },
+    select: { closingBalanceMinor: true },
+  });
+  const opening = precedingClose ? toBigInt(precedingClose.closingBalanceMinor) : 0n;
+  const closing = opening + net;
+
+  const totals = {
+    openingBalanceMinor: opening,
+    incomeMinor: income,
+    expenseMinor: expense,
+    netMinor: net,
+    closingBalanceMinor: closing,
+    transactionCount: transactions.length,
+  };
+
+  // Step 5: Build report lines from bookings
+  type LineKey = string;
+  type LineAcc = {
+    projectId: string;
+    transactionTypeId: string;
+    categoryId: string;
+    literalProjectLabel: string;
+    literalTypeLabel: string;
+    literalCategoryLabel: string;
+    direction: 'credit' | 'debit';
+    amountMinor: bigint;
+    transactionCount: number;
+  };
+
+  const lineMap = new Map<LineKey, LineAcc>();
+
+  for (const b of bookings) {
+    const dir = b.transaction.direction as 'credit' | 'debit';
+    const key = [b.projectId, b.transactionTypeId, b.categoryId, dir].join('\x00');
+    const existing = lineMap.get(key);
+    const amount = toBigInt(b.transaction.amountMinor);
+    if (existing) {
+      existing.amountMinor += amount;
+      existing.transactionCount += 1;
+    } else {
+      lineMap.set(key, {
+        projectId: b.projectId,
+        transactionTypeId: b.transactionTypeId,
+        categoryId: b.categoryId,
+        literalProjectLabel: b.literalProjectLabel,
+        literalTypeLabel: b.literalTypeLabel,
+        literalCategoryLabel: b.literalCategoryLabel,
+        direction: dir,
+        amountMinor: amount,
+        transactionCount: 1,
+      });
+    }
+  }
+
+  const sortedLineAccs = Array.from(lineMap.values()).sort((a, b) => {
+    const pc = a.literalProjectLabel.localeCompare(b.literalProjectLabel, 'nl');
+    if (pc !== 0) return pc;
+    const tc = a.literalTypeLabel.localeCompare(b.literalTypeLabel, 'nl');
+    if (tc !== 0) return tc;
+    const cc = a.literalCategoryLabel.localeCompare(b.literalCategoryLabel, 'nl');
+    if (cc !== 0) return cc;
+    return a.direction < b.direction ? -1 : a.direction > b.direction ? 1 : 0;
+  });
+
+  const lines: ReportLineInput[] = sortedLineAccs.map((acc, index) => ({
+    lineKind: ReportLineKind.CATEGORY,
+    projectId: acc.projectId,
+    transactionTypeId: acc.transactionTypeId,
+    categoryId: acc.categoryId,
+    literalProjectLabel: acc.literalProjectLabel,
+    literalTypeLabel: acc.literalTypeLabel,
+    literalCategoryLabel: acc.literalCategoryLabel,
+    direction: acc.direction,
+    amountMinor: acc.amountMinor,
+    transactionCount: acc.transactionCount,
+    sortOrder: index + 1,
+  }));
+
+  // Step 6: Determine version
+  const existingVersion = await db.reportSnapshot.findFirst({
+    where: {
+      workspaceId: input.workspaceId,
+      kind: ReportKind.MONTHLY,
+      year: input.year,
+      month: input.month,
+    },
+    orderBy: { version: 'desc' },
+    select: { version: true },
+  });
+  const version = existingVersion ? existingVersion.version + 1 : 1;
+
+  // Step 7: Compute snapshot hash
+  const snapshotHash = hashEvidence({
+    kind: ReportKind.MONTHLY,
+    year: input.year,
+    month: input.month,
+    version,
+    periodCloseIds: [],
+    totals: {
+      openingBalanceMinor: totals.openingBalanceMinor,
+      incomeMinor: totals.incomeMinor,
+      expenseMinor: totals.expenseMinor,
+      netMinor: totals.netMinor,
+      closingBalanceMinor: totals.closingBalanceMinor,
+    },
+    transactionCount: totals.transactionCount,
+    lines,
+  });
+
+  // Step 8: Write snapshot directly (no periodCloseLinks)
+  const snapshot = await db.reportSnapshot.create({
+    data: {
+      workspaceId: input.workspaceId,
+      kind: ReportKind.MONTHLY,
+      year: input.year,
+      month: input.month,
+      version,
+      openingBalanceMinor: totals.openingBalanceMinor,
+      incomeMinor: totals.incomeMinor,
+      expenseMinor: totals.expenseMinor,
+      netMinor: totals.netMinor,
+      closingBalanceMinor: totals.closingBalanceMinor,
+      transactionCount: totals.transactionCount,
+      snapshotHash,
+      generatedBy: input.actor.actorId ?? input.actor.userId,
+      lines: lines.length ? {
+        create: lines.map((line) => ({
+          lineKind: line.lineKind,
+          projectId: line.projectId ?? null,
+          transactionTypeId: line.transactionTypeId ?? null,
+          categoryId: line.categoryId ?? null,
+          literalProjectLabel: line.literalProjectLabel ?? null,
+          literalTypeLabel: line.literalTypeLabel ?? null,
+          literalCategoryLabel: line.literalCategoryLabel ?? null,
+          direction: line.direction ?? null,
+          reportingClass: line.reportingClass ?? null,
+          amountMinor: line.amountMinor,
+          transactionCount: line.transactionCount,
+          sortOrder: line.sortOrder,
+        })),
+      } : undefined,
+      // No periodCloseLinks — live snapshot
+    },
+  });
+
+  return {
+    snapshotId: snapshot.id,
+    snapshotHash: snapshot.snapshotHash,
+    kind: ReportKind.MONTHLY,
+    year: input.year,
+    month: input.month,
+    version,
+    openingBalanceMinor: totals.openingBalanceMinor.toString(),
+    incomeMinor: totals.incomeMinor.toString(),
+    expenseMinor: totals.expenseMinor.toString(),
+    netMinor: totals.netMinor.toString(),
+    closingBalanceMinor: totals.closingBalanceMinor.toString(),
+    transactionCount: totals.transactionCount,
+    periodCloseIds: [],
+    generatedBy: input.actor.actorId ?? input.actor.userId,
+    generatedAt: snapshot.generatedAt,
+    lines,
+    sideEffects: {
+      createsReportSnapshot: true,
+      createsReportApproval: false,
+      createsReportArtifact: false,
+      dispatchesReport: false,
+    },
+  };
+};
+
 /**
  * Compute operating subtotals (OPERATING-class only) and grand totals (all classes).
  * Returns both so callers can show both in reports.

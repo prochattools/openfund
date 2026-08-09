@@ -4,15 +4,21 @@
  * Stable end-to-end idempotent report dispatch workflow:
  *
  * 1. Validate request and configuration.
- * 2. Verify all statement periods for the month are CLOSED.
- * 3. Load active recipients and normalize them canonically.
- * 4. Compute delivery key from immutable evidence (workspace, period closes with versions, recipients).
- * 5. Check for existing dispatch with same delivery key (duplicate prevention).
- * 6. If new: create snapshot, artifacts, approval, and dispatch (all in one transaction).
- * 7. Send via Resend outside the transaction.
- * 8. Update dispatch status to SENT or FAILED.
+ * 2. Load active recipients and normalize them canonically.
+ * 3. Inside a single transaction:
+ *    a. Generate a live snapshot from current transaction/booking data.
+ *    b. Load snapshot lines.
+ *    c. Compute report evidence hash (derived from snapshot content).
+ *    d. Compute delivery key from evidence hash + recipients.
+ *    e. Check for existing dispatch with same delivery key (duplicate prevention).
+ *    f. Generate artifacts, approval, dispatch.
+ *    g. Load HTML content.
+ * 4. Send via Resend outside the transaction.
+ * 5. Update dispatch status to SENT or FAILED.
  *
- * A second identical request with the same month, same CLOSED periods, and same active recipients
+ * Period close is NOT required. All transactions for the month must be booked.
+ *
+ * A second identical request with the same month content and same active recipients
  * will receive HTTP 409 without creating new records or calling the provider.
  *
  * Never returns recipient email addresses in any response or log.
@@ -21,7 +27,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prismaClient';
 import { requireAdmin } from '../auth/requestContext';
-import { generateMonthlyReportSnapshot } from '../services/reportSnapshotService';
+import { generateLiveMonthlyReportSnapshot, ReportSnapshotError } from '../services/reportSnapshotService';
 import { generateAndStoreReportArtifacts, type ArtifactSnapshotInput } from '../services/reportArtifactService';
 import {
   approveSnapshot,
@@ -32,7 +38,7 @@ import {
 import { ResendReportEmailProvider } from '../services/reportEmailProvider';
 import { hashEvidence } from '../services/reviewDecisionService';
 import { normalizeRecipients } from '../services/recipientNormalization';
-import { computeDeliveryKey } from '../services/deliveryKeyService';
+import { computeDeliveryKey, computeReportEvidenceHash } from '../services/deliveryKeyService';
 import { DispatchStatus } from '@prisma/client';
 
 const CANONICAL_FROM_ADDRESS = 'rapport@yeshuaacademy.nl';
@@ -65,48 +71,7 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
   const { userId, workspaceId } = actor;
 
   try {
-    // Step 1: Verify ALL canonical statement periods overlapping this month are CLOSED
-    const periodStart = new Date(Date.UTC(year, month - 1, 1));
-    const periodEnd = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
-
-    const statementPeriods = await prisma.statementPeriod.findMany({
-      where: {
-        workspaceId,
-        account: { userId },
-        periodStart: { lte: periodEnd },
-        periodEnd: { gte: periodStart },
-      },
-      select: { id: true },
-    });
-
-    if (statementPeriods.length === 0) {
-      return res.status(409).json({
-        error: `Maand ${year}-${String(month).padStart(2, '0')} heeft geen bankafschriften.`,
-      });
-    }
-
-    // Verify each statement period's LATEST close is CLOSED (not reopened or partial)
-    const periodCloseRecords: Array<{ id: string; version: number }> = [];
-    for (const sp of statementPeriods) {
-      const latestClose = await prisma.periodClose.findFirst({
-        where: {
-          statementPeriodId: sp.id,
-        },
-        select: { id: true, status: true, version: true },
-        orderBy: { version: 'desc' },
-      });
-
-      if (!latestClose || latestClose.status !== 'CLOSED') {
-        const reason = !latestClose ? 'niet afgesloten' : `status ${latestClose.status} (niet CLOSED)`;
-        return res.status(409).json({
-          error: `Afschriftperiode ${sp.id} is ${reason}. Sluit alle perioden voor maand ${year}-${String(month).padStart(2, '0')} af voordat u het rapport verzendt.`,
-        });
-      }
-
-      periodCloseRecords.push({ id: latestClose.id, version: latestClose.version });
-    }
-
-    // Step 2: Load active recipients and normalize canonically
+    // Step 1: Load active recipients and normalize canonically
     const rawRecipients = await prisma.emailRecipient.findMany({
       where: { userId, isActive: true },
       select: { email: true, name: true },
@@ -122,48 +87,77 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
       rawRecipients.map((r) => ({ email: r.email, name: r.name })),
     );
 
-    // Step 3: Compute delivery key (immutable dispatch identity)
-    const deliveryKey = computeDeliveryKey({
-      workspaceId,
-      kind: 'MONTHLY',
-      year,
-      month,
-      periodCloses: periodCloseRecords,
-      recipientHash,
-    });
-
-    // Step 4: Check for existing dispatch with same delivery key (EARLY duplicate check)
-    const existingDispatch = await prisma.reportDispatch.findFirst({
-      where: {
-        deliveryKey,
-        status: { in: [DispatchStatus.PENDING, DispatchStatus.SENT, DispatchStatus.FAILED] },
-      },
-      select: { id: true, status: true },
-    });
-
-    if (existingDispatch) {
-      return res.status(409).json({
-        error: 'Dit rapport is al ingediend. Als u het rapport opnieuw wilt versturen, wijzig alstublieft de ontvangers of de inhoud.',
-      });
-    }
-
     const fromAddress = process.env.REPORT_EMAIL_FROM?.trim() || CANONICAL_FROM_ADDRESS;
     const subject = `Maandrapport ${year}-${String(month).padStart(2, '0')}`;
 
-    // Step 5: Create all immutable records in one transaction
+    // Step 2: Create all immutable records in one transaction
     const prepared = await prisma.$transaction(async (tx) => {
-      const snapshotResult = await generateMonthlyReportSnapshot(tx, {
+      // 2a. Generate live snapshot
+      const snapshotResult = await generateLiveMonthlyReportSnapshot(tx, {
         actor: { userId, role: actor.role },
         workspaceId,
         year,
         month,
       });
 
+      // 2b. Load snapshot lines
       const snapshotLines = await tx.reportSnapshotLine.findMany({
         where: { reportSnapshotId: snapshotResult.snapshotId },
         orderBy: { sortOrder: 'asc' },
       });
 
+      // 2c. Compute report evidence hash from snapshot content
+      const reportEvidenceHash = computeReportEvidenceHash({
+        kind: snapshotResult.kind,
+        year: snapshotResult.year,
+        month: snapshotResult.month,
+        openingBalanceMinor: snapshotResult.openingBalanceMinor,
+        incomeMinor: snapshotResult.incomeMinor,
+        expenseMinor: snapshotResult.expenseMinor,
+        netMinor: snapshotResult.netMinor,
+        closingBalanceMinor: snapshotResult.closingBalanceMinor,
+        transactionCount: snapshotResult.transactionCount,
+        lines: snapshotLines.map((l) => ({
+          lineKind: l.lineKind,
+          projectId: l.projectId,
+          transactionTypeId: l.transactionTypeId,
+          categoryId: l.categoryId,
+          literalProjectLabel: l.literalProjectLabel,
+          literalTypeLabel: l.literalTypeLabel,
+          literalCategoryLabel: l.literalCategoryLabel,
+          direction: l.direction,
+          amountMinor: l.amountMinor,
+          transactionCount: l.transactionCount,
+          sortOrder: l.sortOrder,
+        })),
+      });
+
+      // 2d. Compute delivery key from evidence hash + recipients
+      const deliveryKey = computeDeliveryKey({
+        workspaceId,
+        kind: 'MONTHLY',
+        year,
+        month,
+        periodCloses: [],
+        recipientHash,
+        reportEvidenceHash,
+      });
+
+      // 2e. Check for existing dispatch (duplicate check — inside transaction so concurrent
+      //     duplicates roll back cleanly; unique constraint on deliveryKey catches races)
+      const existingDispatch = await tx.reportDispatch.findFirst({
+        where: {
+          deliveryKey,
+          status: { in: [DispatchStatus.PENDING, DispatchStatus.SENT, DispatchStatus.FAILED] },
+        },
+        select: { id: true, status: true },
+      });
+
+      if (existingDispatch) {
+        throw Object.assign(new Error('DUPLICATE_DISPATCH'), { isDuplicate: true });
+      }
+
+      // 2f. Generate artifacts
       const artifactInput: ArtifactSnapshotInput = {
         snapshotId: snapshotResult.snapshotId,
         snapshotHash: snapshotResult.snapshotHash,
@@ -196,6 +190,7 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
 
       const artifactResult = await generateAndStoreReportArtifacts(tx, artifactInput);
 
+      // 2f cont. Approve snapshot
       const approval = await approveSnapshot(tx, {
         actor: { userId, role: actor.role },
         workspaceId,
@@ -203,7 +198,7 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
         expectedSnapshotHash: snapshotResult.snapshotHash,
       });
 
-      // Compute content hash from artifact SHA-256 digests (not IDs)
+      // 2g. Compute content hash from artifact SHA-256 digests (not IDs)
       const artifacts = await Promise.all([
         tx.reportArtifact.findUnique({
           where: { id: artifactResult.htmlArtifactId },
@@ -240,7 +235,7 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
         contentHash,
       });
 
-      // Load HTML content while still in transaction
+      // 2h. Load HTML content while still in transaction
       const htmlArtifact = await tx.reportArtifact.findUnique({
         where: { id: artifactResult.htmlArtifactId },
         select: { content: true },
@@ -266,7 +261,7 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
       };
     });
 
-    // Step 6: Send email outside the transaction (avoid holding DB connection during HTTP call)
+    // Step 3: Send email outside the transaction (avoid holding DB connection during HTTP call)
     const provider = new ResendReportEmailProvider();
     const sendResult = await executeDispatch(prisma, {
       actor: { userId, role: actor.role },
@@ -291,6 +286,18 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
     });
   } catch (err: unknown) {
     console.error('[POST /api/reports/monthly/send]', err instanceof Error ? err.message : String(err));
+
+    // Handle duplicate dispatch sentinel (set inside transaction)
+    if (err && typeof err === 'object' && 'isDuplicate' in err && (err as { isDuplicate: boolean }).isDuplicate) {
+      return res.status(409).json({
+        error: 'Dit rapport is al ingediend. Als u het rapport opnieuw wilt versturen, wijzig alstublieft de ontvangers of de inhoud.',
+      });
+    }
+
+    // Handle ReportSnapshotError (e.g. unbooked transactions)
+    if (err instanceof ReportSnapshotError) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
 
     // Handle ReportApprovalError (service-layer validation)
     if (err instanceof ReportApprovalError) {
