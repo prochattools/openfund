@@ -43,7 +43,7 @@ vi.mock('../../server/services/reportEmailProvider', () => ({
 }));
 
 vi.mock('../../server/services/reviewDecisionService', () => ({
-  hashEvidence: vi.fn((input) => `hash-${JSON.stringify(input).slice(0, 16)}`),
+  hashEvidence: vi.fn((input) => `hash-${JSON.stringify(input)}`),
 }));
 
 vi.mock('../../server/services/recipientNormalization', async () => {
@@ -142,20 +142,14 @@ const configureSuccessfulWorkflow = (
   ],
   snapshotOverrides: object = {},
 ) => {
-  // Track dispatched delivery key for duplicate detection
-  let dispatchedDeliveryKey: string | null = null;
+  const deliveryKeys: string[] = [];
+  let snapshotSequence = 0;
+  let dispatchSequence = 0;
 
   (prisma.emailRecipient.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(recipientRows);
 
   const tx: any = {
     reportSnapshotLine: { findMany: vi.fn().mockResolvedValue([]) },
-    reportDispatch: {
-      findFirst: vi.fn().mockImplementation(async ({ where }: { where: { deliveryKey: string } }) =>
-        dispatchedDeliveryKey === where.deliveryKey
-          ? { id: 'dispatch-existing', status: 'SENT' }
-          : null,
-      ),
-    },
     reportArtifact: {
       findUnique: vi.fn().mockImplementation(async ({ where }: { where: { id: string } }) => ({
         sha256: `sha-${where.id}`,
@@ -167,9 +161,15 @@ const configureSuccessfulWorkflow = (
     async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
   );
 
-  (generateLiveMonthlyReportSnapshot as ReturnType<typeof vi.fn>).mockResolvedValue({
-    ...BASE_SNAPSHOT,
-    ...snapshotOverrides,
+  (generateLiveMonthlyReportSnapshot as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+    snapshotSequence += 1;
+    return {
+      ...BASE_SNAPSHOT,
+      snapshotId: `snap-${snapshotSequence}`,
+      snapshotHash: `snapshot-hash-${snapshotSequence}`,
+      version: snapshotSequence,
+      ...snapshotOverrides,
+    };
   });
   (generateAndStoreReportArtifacts as ReturnType<typeof vi.fn>).mockResolvedValue({
     htmlArtifactId: 'art-html',
@@ -179,24 +179,28 @@ const configureSuccessfulWorkflow = (
   (approveSnapshot as ReturnType<typeof vi.fn>).mockResolvedValue({ approvalId: 'approval-1' });
   (prepareDispatch as ReturnType<typeof vi.fn>).mockImplementation(
     async (_client: unknown, input: { deliveryKey: string }) => {
-      dispatchedDeliveryKey = input.deliveryKey;
-      return { dispatchId: 'dispatch-1' };
+      dispatchSequence += 1;
+      deliveryKeys.push(input.deliveryKey);
+      return { dispatchId: `dispatch-${dispatchSequence}` };
     },
   );
-  (executeDispatch as ReturnType<typeof vi.fn>).mockResolvedValue({
-    dispatchId: 'dispatch-1',
+  (executeDispatch as ReturnType<typeof vi.fn>).mockImplementation(async (_client: unknown, input: { dispatchId: string }) => ({
+    dispatchId: input.dispatchId,
     status: 'SENT',
-  });
+    providerMessageId: `msg-${input.dispatchId}`,
+    errorMessage: null,
+  }));
   (ResendReportEmailProvider as ReturnType<typeof vi.fn>).mockImplementation(() => ({
     send: vi.fn().mockResolvedValue({ success: true }),
   }));
 
-  return { tx };
+  return { tx, deliveryKeys };
 };
 
 describe('POST /api/reports/monthly/send', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    delete process.env.REPORT_EMAIL_FROM;
     process.env.RESEND_API_KEY = 'test-key';
   });
 
@@ -359,9 +363,46 @@ describe('POST /api/reports/monthly/send', () => {
     });
   });
 
-  describe('duplicate dispatch protection', () => {
-    it('blocks a second identical request (same content, same recipients)', async () => {
-      configureSuccessfulWorkflow([
+  describe('Resend delivery handling', () => {
+    it('uses the verified yeshua.academy sender by default', async () => {
+      configureSuccessfulWorkflow();
+      const res = mockRes();
+      await postMonthlySendReport(mockReq({ year: 2024, month: 1, confirmed: true }), res);
+
+      expect(prepareDispatch).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ fromAddress: 'rapport@yeshua.academy' }),
+      );
+      expect(executeDispatch).toHaveBeenCalledWith(
+        prisma,
+        expect.objectContaining({ fromAddress: 'rapport@yeshua.academy' }),
+      );
+    });
+
+    it('returns a provider error instead of false success when Resend rejects the message', async () => {
+      configureSuccessfulWorkflow();
+      (executeDispatch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        dispatchId: 'dispatch-1',
+        status: 'FAILED',
+        providerMessageId: null,
+        errorMessage: 'The sender domain is not verified for owner@example.org.',
+      });
+
+      const res = mockRes();
+      await postMonthlySendReport(mockReq({ year: 2024, month: 1, confirmed: true }), res);
+
+      expect((res as any).statusCode).toBe(502);
+      expect((res as any).jsonData.status).toBe('FAILED');
+      expect((res as any).jsonData.error).toContain('Resend');
+      expect((res as any).jsonData.error).toContain('sender domain');
+      expect((res as any).jsonData.error).toContain('[EMAIL]');
+      expect((res as any).jsonData.error).not.toContain('owner@example.org');
+    });
+  });
+
+  describe('repeat sends', () => {
+    it('allows identical report content to the same recipients repeatedly with distinct audit keys', async () => {
+      const { deliveryKeys } = configureSuccessfulWorkflow([
         { email: 'SECOND@EXAMPLE.COM', name: 'Second' },
         { email: 'first@example.com', name: 'First' },
       ]);
@@ -369,56 +410,29 @@ describe('POST /api/reports/monthly/send', () => {
       const firstRes = mockRes();
       await postMonthlySendReport(mockReq({ year: 2024, month: 1, confirmed: true }), firstRes);
       expect((firstRes as any).jsonData.status).toBe('SENT');
-      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
 
       const secondRes = mockRes();
       await postMonthlySendReport(mockReq({ year: 2024, month: 1, confirmed: true }), secondRes);
-      expect((secondRes as any).statusCode).toBe(409);
-      expect((secondRes as any).jsonData.error).not.toContain('@');
-      // Transaction was called again (to detect duplicate inside), but dispatch not called again
-      expect(executeDispatch).toHaveBeenCalledTimes(1);
-    });
-
-    it('changed report content produces a new delivery key (different snapshot totals)', async () => {
-      configureSuccessfulWorkflow(
-        [{ email: 'test@example.com', name: 'Test' }],
-        { incomeMinor: '200000', netMinor: '150000', closingBalanceMinor: '150000' },
-      );
-
-      const req = mockReq({ year: 2024, month: 1, confirmed: true });
-      const res = mockRes();
-      await postMonthlySendReport(req, res);
-      expect((res as any).jsonData.status).toBe('SENT');
-
-      // Change snapshot content (different income)
-      (generateLiveMonthlyReportSnapshot as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-        ...BASE_SNAPSHOT,
-        incomeMinor: '300000',
-        netMinor: '250000',
-        closingBalanceMinor: '250000',
-      });
-
-      // Different snapshot content → different reportEvidenceHash → different delivery key → not a duplicate
-      const secondRes = mockRes();
-      await postMonthlySendReport(mockReq({ year: 2024, month: 1, confirmed: true }), secondRes);
-      // If delivery key differs, no duplicate → second dispatch proceeds
+      expect((secondRes as any).jsonData.status).toBe('SENT');
       expect(executeDispatch).toHaveBeenCalledTimes(2);
+      expect(deliveryKeys).toHaveLength(2);
+      expect(deliveryKeys[0]).not.toBe(deliveryKeys[1]);
     });
 
-    it('changed recipients produces a different delivery key', async () => {
+    it('allows another send when recipients change', async () => {
       configureSuccessfulWorkflow([{ email: 'alice@example.com', name: 'Alice' }]);
       await postMonthlySendReport(mockReq({ year: 2024, month: 1, confirmed: true }), mockRes());
 
-      // Change recipients
       (prisma.emailRecipient.findMany as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
         { email: 'bob@example.com', name: 'Bob' },
       ]);
       const secondRes = mockRes();
       await postMonthlySendReport(mockReq({ year: 2024, month: 1, confirmed: true }), secondRes);
+      expect((secondRes as any).jsonData.status).toBe('SENT');
       expect(executeDispatch).toHaveBeenCalledTimes(2);
     });
 
-    it('handles Prisma P2002 unique constraint on deliveryKey (concurrent duplicate race)', async () => {
+    it('does not translate an unexpected delivery-key collision into an already-sent restriction', async () => {
       (prisma.emailRecipient.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
         { email: 'test@example.com', name: 'Test' },
       ]);
@@ -430,8 +444,8 @@ describe('POST /api/reports/monthly/send', () => {
 
       const res = mockRes();
       await postMonthlySendReport(mockReq({ year: 2024, month: 1, confirmed: true }), res);
-      expect((res as any).statusCode).toBe(409);
-      expect((res as any).jsonData.error).toMatch(/ingediend/);
+      expect((res as any).statusCode).toBe(500);
+      expect((res as any).jsonData.error).not.toMatch(/al ingediend|opnieuw wilt versturen/i);
     });
 
     it('handles ReportApprovalError from prepareDispatch', async () => {

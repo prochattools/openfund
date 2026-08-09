@@ -1,25 +1,21 @@
 /**
  * POST /api/reports/monthly/send
  *
- * Stable end-to-end idempotent report dispatch workflow:
+ * Explicit monthly report dispatch workflow:
  *
  * 1. Validate request and configuration.
  * 2. Load active recipients and normalize them canonically.
  * 3. Inside a single transaction:
- *    a. Generate a live snapshot from current transaction/booking data.
- *    b. Load snapshot lines.
- *    c. Compute report evidence hash (derived from snapshot content).
- *    d. Compute delivery key from evidence hash + recipients.
- *    e. Check for existing dispatch with same delivery key (duplicate prevention).
- *    f. Generate artifacts, approval, dispatch.
- *    g. Load HTML content.
+ *    a. Generate a fresh live snapshot from current transaction/booking data.
+ *    b. Generate immutable artifacts and approval records.
+ *    c. Create a uniquely keyed dispatch record for this explicit send attempt.
+ *    d. Load HTML content.
  * 4. Send via Resend outside the transaction.
  * 5. Update dispatch status to SENT or FAILED.
  *
  * Period close is NOT required. All transactions for the month must be booked.
- *
- * A second identical request with the same month content and same active recipients
- * will receive HTTP 409 without creating new records or calling the provider.
+ * Repeated explicit sends are always allowed, including identical content and recipients;
+ * each attempt remains independently auditable through its own snapshot/dispatch records.
  *
  * Never returns recipient email addresses in any response or log.
  */
@@ -38,10 +34,8 @@ import {
 import { ResendReportEmailProvider } from '../services/reportEmailProvider';
 import { hashEvidence } from '../services/reviewDecisionService';
 import { normalizeRecipients } from '../services/recipientNormalization';
-import { computeDeliveryKey, computeReportEvidenceHash } from '../services/deliveryKeyService';
-import { DispatchStatus } from '@prisma/client';
 
-const CANONICAL_FROM_ADDRESS = 'rapport@yeshuaacademy.nl';
+const CANONICAL_FROM_ADDRESS = 'rapport@yeshua.academy';
 
 export const postMonthlySendReport = async (req: Request, res: Response) => {
   const actor = await requireAdmin(req, res);
@@ -106,58 +100,21 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
         orderBy: { sortOrder: 'asc' },
       });
 
-      // 2c. Compute report evidence hash from snapshot content
-      const reportEvidenceHash = computeReportEvidenceHash({
-        kind: snapshotResult.kind,
-        year: snapshotResult.year,
-        month: snapshotResult.month,
-        openingBalanceMinor: snapshotResult.openingBalanceMinor,
-        incomeMinor: snapshotResult.incomeMinor,
-        expenseMinor: snapshotResult.expenseMinor,
-        netMinor: snapshotResult.netMinor,
-        closingBalanceMinor: snapshotResult.closingBalanceMinor,
-        transactionCount: snapshotResult.transactionCount,
-        lines: snapshotLines.map((l) => ({
-          lineKind: l.lineKind,
-          projectId: l.projectId,
-          transactionTypeId: l.transactionTypeId,
-          categoryId: l.categoryId,
-          literalProjectLabel: l.literalProjectLabel,
-          literalTypeLabel: l.literalTypeLabel,
-          literalCategoryLabel: l.literalCategoryLabel,
-          direction: l.direction,
-          amountMinor: l.amountMinor,
-          transactionCount: l.transactionCount,
-          sortOrder: l.sortOrder,
-        })),
-      });
-
-      // 2d. Compute delivery key from evidence hash + recipients
-      const deliveryKey = computeDeliveryKey({
+      // 2c. Give every explicit send attempt its own unique audit key.
+      // The live snapshot is freshly created/versioned for every attempt, so using its
+      // immutable identity preserves ReportDispatch.deliveryKey uniqueness without
+      // blocking repeat sends of identical report content to identical recipients.
+      const deliveryKey = hashEvidence({
         workspaceId,
         kind: 'MONTHLY',
         year,
         month,
-        periodCloses: [],
+        reportSnapshotId: snapshotResult.snapshotId,
+        snapshotHash: snapshotResult.snapshotHash,
         recipientHash,
-        reportEvidenceHash,
       });
 
-      // 2e. Check for existing dispatch (duplicate check — inside transaction so concurrent
-      //     duplicates roll back cleanly; unique constraint on deliveryKey catches races)
-      const existingDispatch = await tx.reportDispatch.findFirst({
-        where: {
-          deliveryKey,
-          status: { in: [DispatchStatus.PENDING, DispatchStatus.SENT, DispatchStatus.FAILED] },
-        },
-        select: { id: true, status: true },
-      });
-
-      if (existingDispatch) {
-        throw Object.assign(new Error('DUPLICATE_DISPATCH'), { isDuplicate: true });
-      }
-
-      // 2f. Generate artifacts
+      // 2d. Generate artifacts
       const artifactInput: ArtifactSnapshotInput = {
         snapshotId: snapshotResult.snapshotId,
         snapshotHash: snapshotResult.snapshotHash,
@@ -277,6 +234,20 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
       provider,
     });
 
+    if (sendResult.status === 'FAILED') {
+      const providerReason = (sendResult.errorMessage || 'onbekende providerfout.')
+        .replace(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g, '[EMAIL]')
+        .slice(0, 500);
+      return res.status(502).json({
+        error: `E-mail kon niet worden verzonden via Resend: ${providerReason}`,
+        status: sendResult.status,
+        month: `${year}-${String(month).padStart(2, '0')}`,
+        recipientCount: recipients.length,
+        snapshotId: prepared.snapshotId,
+        dispatchId: prepared.dispatchId,
+      });
+    }
+
     return res.json({
       status: sendResult.status,
       month: `${year}-${String(month).padStart(2, '0')}`,
@@ -287,13 +258,6 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
   } catch (err: unknown) {
     console.error('[POST /api/reports/monthly/send]', err instanceof Error ? err.message : String(err));
 
-    // Handle duplicate dispatch sentinel (set inside transaction)
-    if (err && typeof err === 'object' && 'isDuplicate' in err && (err as { isDuplicate: boolean }).isDuplicate) {
-      return res.status(409).json({
-        error: 'Dit rapport is al ingediend. Als u het rapport opnieuw wilt versturen, wijzig alstublieft de ontvangers of de inhoud.',
-      });
-    }
-
     // Handle ReportSnapshotError (e.g. unbooked transactions)
     if (err instanceof ReportSnapshotError) {
       return res.status(err.statusCode).json({ error: err.message });
@@ -302,24 +266,6 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
     // Handle ReportApprovalError (service-layer validation)
     if (err instanceof ReportApprovalError) {
       return res.status(err.statusCode).json({ error: err.message });
-    }
-
-    // Handle Prisma unique constraint violation on deliveryKey (concurrent duplicate race)
-    if (
-      err &&
-      typeof err === 'object' &&
-      'code' in err &&
-      err.code === 'P2002' &&
-      'meta' in err &&
-      typeof err.meta === 'object' &&
-      err.meta !== null &&
-      'target' in err.meta &&
-      Array.isArray(err.meta.target) &&
-      err.meta.target.includes('deliveryKey')
-    ) {
-      return res.status(409).json({
-        error: 'Dit rapport is al ingediend. Als u het rapport opnieuw wilt versturen, wijzig alstublieft de ontvangers of de inhoud.',
-      });
     }
 
     const message = err instanceof Error ? err.message : 'Onbekende fout.';

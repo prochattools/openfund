@@ -1,8 +1,11 @@
 /**
  * REPORT-001 / REPORT-002: Snapshot-based monthly and yearly report generation.
  *
- * Generates immutable ReportSnapshot records from closed PeriodClose evidence only.
- * Open, partial, or reopened periods are rejected with a Dutch reason.
+ * Closed-period snapshot APIs still require immutable CLOSED PeriodClose evidence and
+ * reject open, partial, or reopened periods. Live monthly e-mail dispatch uses
+ * generateLiveMonthlyReportSnapshot instead, deriving an immutable snapshot from the
+ * current fully booked Transaction/TransactionBooking state with no periodCloseLinks.
+ * Period close remains optional for monthly e-mail reporting.
  *
  * No approvals, artifacts, dispatches, or emails are created by this service.
  */

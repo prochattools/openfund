@@ -12,21 +12,17 @@ export type DeliveryKeyInput = {
 };
 
 /**
- * Computes a stable delivery key that uniquely identifies a report dispatch intent.
+ * Computes a stable delivery key for legacy/idempotent report-dispatch callers.
  *
- * The key is derived from:
- * - workspace ID (scopes to tenant)
- * - report kind (MONTHLY or YEARLY)
- * - year and month (time period)
- * - sorted PeriodClose records with their versions (immutable evidence)
- * - recipient hash (who receives it)
+ * Closed-period mode derives the key from workspace, report kind, year/month,
+ * sorted PeriodClose IDs + versions, and recipientHash.
  *
- * The key does NOT include snapshot ID, snapshot version, artifact IDs, or content hashes.
- * Those are byproducts of the dispatch. If the same month, same closed periods, and same
- * recipients are delivered again, the key will match and the dispatch will be rejected as a duplicate.
+ * Live-evidence mode (for callers that still opt into content idempotency) replaces
+ * PeriodClose evidence with reportEvidenceHash plus recipientHash. The evidence hash
+ * should exclude generated IDs/timestamps so unchanged report content remains stable.
  *
- * If a period is reopened and re-closed, its version increments, producing a new key.
- * If recipients change, the hash changes, producing a new key. Both behaviors are correct.
+ * Monthly e-mail sending no longer uses this helper as a user-facing resend restriction:
+ * each explicit send attempt is keyed to its fresh immutable snapshot/dispatch attempt.
  */
 export function computeDeliveryKey(input: DeliveryKeyInput): string {
   const { workspaceId, kind, year, month, periodCloses, recipientHash } = input;

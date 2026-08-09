@@ -67,10 +67,20 @@ describe('monthlySendReport route — period close removed', () => {
     expect(route).not.toContain('generateMonthlyReportSnapshot(');
   });
 
-  it('uses computeReportEvidenceHash for delivery key derivation', () => {
+  it('allows repeat sends by keying each dispatch to the fresh snapshot attempt', () => {
     const route = read('server/routes/monthlySendReport.ts');
-    expect(route).toContain('computeReportEvidenceHash');
-    expect(route).toContain('reportEvidenceHash');
+    expect(route).toContain('reportSnapshotId: snapshotResult.snapshotId');
+    expect(route).not.toContain('DUPLICATE_DISPATCH');
+    expect(route).not.toContain('Dit rapport is al ingediend');
+    expect(route).not.toContain('computeReportEvidenceHash');
+  });
+
+  it('uses the verified yeshua.academy sender and surfaces provider failures', () => {
+    const route = read('server/routes/monthlySendReport.ts');
+    expect(route).toContain("rapport@yeshua.academy");
+    expect(route).not.toContain('rapport@yeshuaacademy.nl');
+    expect(route).toContain("sendResult.status === 'FAILED'");
+    expect(route).toContain('res.status(502)');
   });
 
   it('handles ReportSnapshotError with its own status code', () => {
