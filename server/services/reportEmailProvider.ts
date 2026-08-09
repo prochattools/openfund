@@ -1,10 +1,16 @@
 import { Resend } from 'resend';
 
+export type ReportEmailAttachment = {
+  filename: string;
+  content: Buffer;
+};
+
 export type ReportEmailPayload = {
   from: string;
   to: string[];
   subject: string;
   html: string;
+  attachments?: ReportEmailAttachment[];
 };
 
 export type ReportEmailResult = {
@@ -44,6 +50,12 @@ export class ResendReportEmailProvider implements ReportEmailProvider {
         to: payload.to,
         subject: payload.subject,
         html: payload.html,
+        ...(payload.attachments?.length ? {
+          attachments: payload.attachments.map((a) => ({
+            filename: a.filename,
+            content: a.content,
+          })),
+        } : {}),
       });
 
       if (error) {

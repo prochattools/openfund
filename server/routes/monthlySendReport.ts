@@ -31,9 +31,11 @@ import {
   executeDispatch,
   ReportApprovalError,
 } from '../services/reportApprovalDispatchService';
-import { ResendReportEmailProvider } from '../services/reportEmailProvider';
+import { ResendReportEmailProvider, type ReportEmailAttachment } from '../services/reportEmailProvider';
 import { hashEvidence } from '../services/reviewDecisionService';
 import { normalizeRecipients } from '../services/recipientNormalization';
+import { reconcileMonthlyReport, ReportReconciliationError } from '../services/reportReconciliationService';
+import { formatReportSubject } from '../utils/dutchPeriodFormatter';
 
 const CANONICAL_FROM_ADDRESS = 'rapport@yeshua.academy';
 
@@ -82,11 +84,19 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
     );
 
     const fromAddress = process.env.REPORT_EMAIL_FROM?.trim() || CANONICAL_FROM_ADDRESS;
-    const subject = `Maandrapport ${year}-${String(month).padStart(2, '0')}`;
+    const subject = formatReportSubject(year, month);
 
     // Step 2: Create all immutable records in one transaction
     const prepared = await prisma.$transaction(async (tx) => {
-      // 2a. Generate live snapshot
+      // 2a-pre. Reconcile against authoritative bank statement controls
+      const reconciliation = await reconcileMonthlyReport(tx, {
+        workspaceId,
+        userId,
+        year,
+        month,
+      });
+
+      // 2a. Generate live snapshot (now with correct absolute-value arithmetic)
       const snapshotResult = await generateLiveMonthlyReportSnapshot(tx, {
         actor: { userId, role: actor.role },
         workspaceId,
@@ -114,7 +124,7 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
         recipientHash,
       });
 
-      // 2d. Generate artifacts
+      // 2d. Generate artifacts (with counterparty summary from reconciliation)
       const artifactInput: ArtifactSnapshotInput = {
         snapshotId: snapshotResult.snapshotId,
         snapshotHash: snapshotResult.snapshotHash,
@@ -143,6 +153,7 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
           transactionCount: l.transactionCount,
           sortOrder: l.sortOrder,
         })),
+        counterparties: reconciliation.counterparties,
       };
 
       const artifactResult = await generateAndStoreReportArtifacts(tx, artifactInput);
@@ -208,6 +219,41 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
           ? htmlArtifact.content
           : Buffer.from(htmlArtifact.content).toString('utf-8');
 
+      // 2i. Load original bank statement source files for attachment
+      const csvSourceFile = await tx.sourceFile.findUnique({
+        where: { id: reconciliation.sourceFileId },
+        select: { filename: true, content: true, mediaType: true },
+      });
+      if (!csvSourceFile) {
+        throw new ReportReconciliationError(
+          'Het originele bankafschrift (CSV) ontbreekt in de database. Upload dit bestand opnieuw.',
+          'MISSING_CSV_ATTACHMENT',
+          'CSV SourceFile aanwezig',
+          'niet gevonden',
+        );
+      }
+
+      let pdfSourceFile: { filename: string; content: Buffer | Uint8Array; mediaType: string } | null = null;
+      if (reconciliation.supportingPdfFileId) {
+        pdfSourceFile = await tx.sourceFile.findUnique({
+          where: { id: reconciliation.supportingPdfFileId },
+          select: { filename: true, content: true, mediaType: true },
+        });
+      }
+      if (!pdfSourceFile) {
+        throw new ReportReconciliationError(
+          'Het ondersteunende bankafschrift (PDF) ontbreekt in de database. Upload dit bestand opnieuw.',
+          'MISSING_PDF_ATTACHMENT',
+          'PDF SourceFile aanwezig',
+          'niet gevonden',
+        );
+      }
+
+      const attachments: ReportEmailAttachment[] = [
+        { filename: csvSourceFile.filename, content: Buffer.from(csvSourceFile.content) },
+        { filename: pdfSourceFile.filename, content: Buffer.from(pdfSourceFile.content) },
+      ];
+
       return {
         snapshotId: snapshotResult.snapshotId,
         snapshotHash: snapshotResult.snapshotHash,
@@ -215,6 +261,7 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
         dispatchId: dispatch.dispatchId,
         contentHash,
         htmlContent,
+        attachments,
       };
     });
 
@@ -232,6 +279,7 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
       contentHash: prepared.contentHash,
       html: prepared.htmlContent,
       provider,
+      attachments: prepared.attachments,
     });
 
     if (sendResult.status === 'FAILED') {
@@ -261,6 +309,16 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
     // Handle ReportSnapshotError (e.g. unbooked transactions)
     if (err instanceof ReportSnapshotError) {
       return res.status(err.statusCode).json({ error: err.message });
+    }
+
+    // Handle ReportReconciliationError (bank statement control mismatch)
+    if (err instanceof ReportReconciliationError) {
+      return res.status(err.statusCode).json({
+        error: err.message,
+        invariant: err.invariant,
+        expected: err.expected,
+        actual: err.actual,
+      });
     }
 
     // Handle ReportApprovalError (service-layer validation)

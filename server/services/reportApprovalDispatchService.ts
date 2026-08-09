@@ -102,6 +102,7 @@ export type ExecuteDispatchInput = {
   contentHash: string;
   html: string;
   provider: ReportEmailProvider;
+  attachments?: Array<{ filename: string; content: Buffer }>;
 };
 
 export type ExecuteDispatchResult = {
@@ -409,6 +410,7 @@ export const executeDispatch = async (
     to: normalizedEmails,
     subject: input.subject,
     html: input.html,
+    attachments: input.attachments,
   });
 
   // Update dispatch status

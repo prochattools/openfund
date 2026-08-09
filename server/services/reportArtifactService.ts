@@ -20,6 +20,8 @@ import * as XLSX from 'xlsx';
 import type { Prisma, ReportSnapshotLine, ReportArtifactFormat } from '@prisma/client';
 import { hashEvidence } from './reviewDecisionService';
 import type { ReportLineInput } from './periodCloseService';
+import { formatDutchMonthYear } from '../utils/dutchPeriodFormatter';
+import type { CounterpartySummary } from './reportReconciliationService';
 
 export class ReportArtifactError extends Error {
   statusCode: number;
@@ -51,6 +53,7 @@ export type ArtifactSnapshotInput = {
   generatedBy: string;
   generatedAt: Date;
   lines: ReportLineInput[];
+  counterparties?: CounterpartySummary[];
 };
 
 export type ArtifactGenerationResult = {
@@ -78,14 +81,9 @@ const centsToEuro = (v: string | bigint | number): string => {
   return `${sign}EUR ${euros}.${String(remainder).padStart(2, '0')}`;
 };
 
-const DUTCH_MONTHS = [
-  'januari', 'februari', 'maart', 'april', 'mei', 'juni',
-  'juli', 'augustus', 'september', 'oktober', 'november', 'december',
-];
-
 const periodLabel = (kind: 'MONTHLY' | 'YEARLY', year: number, month: number | null): string => {
   if (kind === 'MONTHLY' && month) {
-    return `${DUTCH_MONTHS[month - 1]} ${year}`;
+    return formatDutchMonthYear(year, month);
   }
   return `Jaar ${year}`;
 };
@@ -100,7 +98,6 @@ const escapeHtml = (s: string): string =>
 export const generateHtmlArtifact = (snapshot: ArtifactSnapshotInput): Buffer => {
   const period = periodLabel(snapshot.kind, snapshot.year, snapshot.month);
   const snapshotStatus = statusLabel(snapshot);
-  const generatedAt = snapshot.generatedAt.toISOString();
 
   const incomeLines = snapshot.lines.filter((l) => l.direction === 'credit');
   const expenseLines = snapshot.lines.filter((l) => l.direction === 'debit');
@@ -119,19 +116,36 @@ export const generateHtmlArtifact = (snapshot: ArtifactSnapshotInput): Buffer =>
       )
       .join('\n');
 
+  const renderCounterparties = (counterparties: CounterpartySummary[]): string => {
+    if (!counterparties.length) return '<tr><td colspan="4">Geen klantgegevens.</td></tr>';
+    return counterparties
+      .map((cp) => {
+        const diff = cp.differenceMinor;
+        const color = diff > 0n ? '#2e7d32' : diff < 0n ? '#c62828' : '#333';
+        return `<tr>
+          <td>${escapeHtml(cp.counterparty)}</td>
+          <td>${centsToEuro(cp.incomeMinor)}</td>
+          <td>${centsToEuro(cp.expenseMinor)}</td>
+          <td style="color: ${color}; font-weight: bold;">${centsToEuro(cp.differenceMinor)}</td>
+        </tr>`;
+      })
+      .join('\n');
+  };
+
   const html = `<!DOCTYPE html>
 <html lang="nl">
 <head>
   <meta charset="UTF-8">
   <title>Financieel Rapport — ${escapeHtml(period)}</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 2rem; color: #333; }
+    body { font-family: Arial, sans-serif; margin: 2rem; color: #333; background: #fff; }
     h1 { color: #1a1a1a; }
+    h2 { color: #333; margin-top: 2rem; }
     table { border-collapse: collapse; width: 100%; margin-bottom: 1.5rem; }
     th, td { border: 1px solid #ccc; padding: 0.4rem 0.6rem; text-align: left; }
     th { background: #f0f0f0; }
     .totals { font-weight: bold; }
-    .meta { font-size: 0.85rem; color: #666; margin-top: 2rem; }
+    .signature { margin-top: 3rem; font-size: 1rem; color: #333; }
   </style>
 </head>
 <body>
@@ -167,11 +181,19 @@ export const generateHtmlArtifact = (snapshot: ArtifactSnapshotInput): Buffer =>
     </tbody>
   </table>
 
-  <div class="meta">
-    <p>Snapshot-ID: ${escapeHtml(snapshot.snapshotId)}</p>
-    <p>Snapshot-hash: ${escapeHtml(snapshot.snapshotHash)}</p>
-    <p>Aangemaakt door: ${escapeHtml(snapshot.generatedBy)}</p>
-    <p>Aangemaakt op: ${escapeHtml(generatedAt)}</p>
+  <h2>Inkomsten en uitgaven per klant</h2>
+  <table>
+    <thead>
+      <tr><th>Klant</th><th>Inkomsten</th><th>Uitgaven</th><th>Verschil</th></tr>
+    </thead>
+    <tbody>
+      ${renderCounterparties(snapshot.counterparties ?? [])}
+    </tbody>
+  </table>
+
+  <div class="signature">
+    <p>Met vriendelijke groet,</p>
+    <p><strong>Steve</strong></p>
   </div>
 </body>
 </html>`;

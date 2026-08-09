@@ -104,19 +104,20 @@ const makeArtifactDb = (opts: {
 // ─── HTML generation ──────────────────────────────────────────────────────────
 
 describe('report artifact — HTML', () => {
-  it('generates HTML with correct period label and snapshot id', () => {
+  it('generates HTML with correct period label and totals', () => {
     const buf = generateHtmlArtifact(baseSnapshot);
     const html = buf.toString('utf-8');
 
-    expect(html).toContain('januari 2026');
-    expect(html).toContain(baseSnapshot.snapshotId);
-    expect(html).toContain(baseSnapshot.snapshotHash);
+    expect(html).toContain('Januari 2026');
     expect(html).toContain('EUR 2500.00'); // 250000 cents = EUR 2500.00
     expect(html).toContain('EUR 1000.00'); // 100000 cents
     expect(html).toContain('YA');
     expect(html).toContain('Schenking');
     expect(html).toContain('Giften in');
     expect(html).toContain('Administratiekosten uit');
+    // Public report must NOT expose technical metadata
+    expect(html).not.toContain(baseSnapshot.snapshotId);
+    expect(html).not.toContain(baseSnapshot.snapshotHash);
   });
 
   it('HTML artifact is a Buffer with sha256 equal to hash of its bytes', () => {
@@ -285,8 +286,9 @@ describe('report artifact — store artifacts from one snapshot', () => {
 
     expect(html).toContain('EUR 2500.00'); // incomeMinor = 250000 cents
     expect(html).toContain('EUR 1000.00'); // expenseMinor = 100000 cents
-    expect(html).toContain(baseSnapshot.snapshotId);
-    expect(html).toContain(baseSnapshot.snapshotHash);
+    // Public HTML must NOT include technical metadata
+    expect(html).not.toContain(baseSnapshot.snapshotId);
+    expect(html).not.toContain(baseSnapshot.snapshotHash);
 
     // Verify XLSX can be generated without error
     const xlsxBuf = generateXlsxArtifact(baseSnapshot);

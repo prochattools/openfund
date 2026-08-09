@@ -46,6 +46,24 @@ vi.mock('../../server/services/reviewDecisionService', () => ({
   hashEvidence: vi.fn((input) => `hash-${JSON.stringify(input)}`),
 }));
 
+vi.mock('../../server/services/reportReconciliationService', () => ({
+  reconcileMonthlyReport: vi.fn(),
+  ReportReconciliationError: class ReportReconciliationError extends Error {
+    statusCode: number;
+    invariant: string;
+    expected: string;
+    actual: string;
+    constructor(message: string, invariant: string, expected: string, actual: string, statusCode = 422) {
+      super(message);
+      this.name = 'ReportReconciliationError';
+      this.statusCode = statusCode;
+      this.invariant = invariant;
+      this.expected = expected;
+      this.actual = actual;
+    }
+  },
+}));
+
 vi.mock('../../server/services/recipientNormalization', async () => {
   const actual = await vi.importActual<
     typeof import('../../server/services/recipientNormalization')
@@ -85,6 +103,7 @@ import {
 import { generateLiveMonthlyReportSnapshot } from '../../server/services/reportSnapshotService';
 import { generateAndStoreReportArtifacts } from '../../server/services/reportArtifactService';
 import { ResendReportEmailProvider } from '../../server/services/reportEmailProvider';
+import { reconcileMonthlyReport } from '../../server/services/reportReconciliationService';
 
 const mockReq = (body: object = {}): Request => {
   const request = { body } as Request;
@@ -136,6 +155,28 @@ const BASE_SNAPSHOT = {
   },
 };
 
+const MOCK_RECONCILIATION = {
+  bankStatementId: 'stmt-1',
+  accountId: 'acct-1',
+  sourceFileId: 'sf-csv-1',
+  supportingPdfFileId: 'sf-pdf-1',
+  periodStart: new Date('2024-01-01T00:00:00.000Z'),
+  periodEnd: new Date('2024-01-31T23:59:59.999Z'),
+  openingBalanceMinor: 0n,
+  incomeMinor: 100000n,
+  expenseMinor: 50000n,
+  netMinor: 50000n,
+  closingBalanceMinor: 50000n,
+  transactionCount: 2,
+  ledgerIncomeMinor: 100000n,
+  ledgerExpenseMinor: 50000n,
+  ledgerNetMinor: 50000n,
+  ledgerTransactionCount: 2,
+  bookedTransactionCount: 2,
+  passed: true as const,
+  counterparties: [],
+};
+
 const configureSuccessfulWorkflow = (
   recipientRows: Array<{ email: string; name: string | null }> = [
     { email: 'test@example.com', name: 'Test' },
@@ -147,6 +188,7 @@ const configureSuccessfulWorkflow = (
   let dispatchSequence = 0;
 
   (prisma.emailRecipient.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(recipientRows);
+  (reconcileMonthlyReport as ReturnType<typeof vi.fn>).mockResolvedValue(MOCK_RECONCILIATION);
 
   const tx: any = {
     reportSnapshotLine: { findMany: vi.fn().mockResolvedValue([]) },
@@ -154,6 +196,13 @@ const configureSuccessfulWorkflow = (
       findUnique: vi.fn().mockImplementation(async ({ where }: { where: { id: string } }) => ({
         sha256: `sha-${where.id}`,
         content: where.id === 'art-html' ? Buffer.from('<html>rapport</html>') : Buffer.alloc(0),
+      })),
+    },
+    sourceFile: {
+      findUnique: vi.fn().mockImplementation(async ({ where }: { where: { id: string } }) => ({
+        filename: where.id === 'sf-csv-1' ? 'bankafschrift-2024-01.csv' : 'bankafschrift-2024-01.pdf',
+        content: Buffer.from('test-content'),
+        mediaType: where.id === 'sf-csv-1' ? 'text/csv' : 'application/pdf',
       })),
     },
   };
@@ -279,15 +328,17 @@ describe('POST /api/reports/monthly/send', () => {
   });
 
   describe('unbooked transactions block send', () => {
-    it('returns 422 when generateLiveMonthlyReportSnapshot throws ReportSnapshotError for unbooked transactions', async () => {
+    it('returns 422 when reconcileMonthlyReport throws ReportReconciliationError for unbooked transactions', async () => {
       (prisma.emailRecipient.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
         { email: 'test@example.com', name: 'Test' },
       ]);
 
-      const { ReportSnapshotError } = await import('../../server/services/reportSnapshotService');
-      const unbookedError = new ReportSnapshotError(
-        'Er zijn 3 ongeboekte transacties in 2024-01. Alle transacties moeten geboekt zijn.',
-        422,
+      const { ReportReconciliationError } = await import('../../server/services/reportReconciliationService');
+      const unbookedError = new ReportReconciliationError(
+        'Er zijn 2 ongeboekte transacties in 2024-01. Alle transacties moeten geboekt zijn.',
+        'UNBOOKED_TRANSACTIONS',
+        '0',
+        '2',
       );
 
       const tx: any = {
@@ -298,7 +349,7 @@ describe('POST /api/reports/monthly/send', () => {
       (prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation(
         async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
       );
-      (generateLiveMonthlyReportSnapshot as ReturnType<typeof vi.fn>).mockRejectedValue(unbookedError);
+      (reconcileMonthlyReport as ReturnType<typeof vi.fn>).mockRejectedValue(unbookedError);
 
       const req = mockReq({ year: 2024, month: 1, confirmed: true });
       const res = mockRes();
@@ -306,6 +357,7 @@ describe('POST /api/reports/monthly/send', () => {
 
       expect((res as any).statusCode).toBe(422);
       expect((res as any).jsonData.error).toContain('ongeboekte transacties');
+      expect((res as any).jsonData.invariant).toBe('UNBOOKED_TRANSACTIONS');
     });
   });
 
@@ -452,11 +504,19 @@ describe('POST /api/reports/monthly/send', () => {
       (prisma.emailRecipient.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
         { email: 'test@example.com', name: 'Test' },
       ]);
+      (reconcileMonthlyReport as ReturnType<typeof vi.fn>).mockResolvedValue(MOCK_RECONCILIATION);
       const tx: any = {
         reportSnapshotLine: { findMany: vi.fn().mockResolvedValue([]) },
         reportDispatch: { findFirst: vi.fn().mockResolvedValue(null) },
         reportArtifact: {
           findUnique: vi.fn().mockResolvedValue({ sha256: 'abc', content: '<html></html>' }),
+        },
+        sourceFile: {
+          findUnique: vi.fn().mockResolvedValue({
+            filename: 'stmt.csv',
+            content: Buffer.from('test'),
+            mediaType: 'text/csv',
+          }),
         },
       };
       (prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation(
@@ -540,6 +600,7 @@ describe('POST /api/reports/monthly/send', () => {
       (prisma.emailRecipient.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
         { email: 'secret@example.com', name: 'Test' },
       ]);
+      (reconcileMonthlyReport as ReturnType<typeof vi.fn>).mockResolvedValue(MOCK_RECONCILIATION);
       const tx: any = {
         reportSnapshotLine: { findMany: vi.fn().mockResolvedValue([]) },
         reportDispatch: { findFirst: vi.fn().mockResolvedValue(null) },
@@ -547,6 +608,13 @@ describe('POST /api/reports/monthly/send', () => {
           findUnique: vi.fn().mockImplementation(async ({ where }: { where: { id: string } }) => ({
             sha256: `sha-${where.id}`,
             content: where.id === 'art-html' ? Buffer.from('<html></html>') : Buffer.alloc(0),
+          })),
+        },
+        sourceFile: {
+          findUnique: vi.fn().mockImplementation(async ({ where }: { where: { id: string } }) => ({
+            filename: where.id === 'sf-csv-1' ? 'stmt.csv' : 'stmt.pdf',
+            content: Buffer.from('test'),
+            mediaType: where.id === 'sf-csv-1' ? 'text/csv' : 'application/pdf',
           })),
         },
       };

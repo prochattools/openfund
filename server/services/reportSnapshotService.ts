@@ -668,30 +668,45 @@ export const generateLiveMonthlyReportSnapshot = async (
     );
   }
 
-  // Step 4: Compute totals directly from transactions
+  // Step 4: Compute totals directly from transactions using absolute amounts
   let income = 0n;
   let expense = 0n;
   for (const t of transactions) {
     const amount = toBigInt(t.amountMinor);
     if (t.direction === 'credit') {
-      income += amount;
+      income += amount < 0n ? -amount : amount;
     } else {
-      expense += amount;
+      expense += amount < 0n ? -amount : amount;
     }
   }
   const net = income - expense;
 
-  // Opening balance: most recent CLOSED PeriodClose ending before this month
-  const precedingClose = await db.periodClose.findFirst({
+  // Opening balance: from authoritative BankStatement for this month, or
+  // most recent CLOSED PeriodClose ending before this month as fallback
+  const statement = await db.bankStatement.findFirst({
     where: {
       workspaceId: input.workspaceId,
-      status: 'CLOSED',
-      periodEnd: { lt: periodStart },
+      periodStart: { gte: periodStart },
+      periodEnd: { lte: periodEnd },
     },
-    orderBy: { periodEnd: 'desc' },
-    select: { closingBalanceMinor: true },
+    orderBy: { createdAt: 'desc' },
+    select: { openingBalanceMinor: true },
   });
-  const opening = precedingClose ? toBigInt(precedingClose.closingBalanceMinor) : 0n;
+  let opening: bigint;
+  if (statement) {
+    opening = toBigInt(statement.openingBalanceMinor);
+  } else {
+    const precedingClose = await db.periodClose.findFirst({
+      where: {
+        workspaceId: input.workspaceId,
+        status: 'CLOSED',
+        periodEnd: { lt: periodStart },
+      },
+      orderBy: { periodEnd: 'desc' },
+      select: { closingBalanceMinor: true },
+    });
+    opening = precedingClose ? toBigInt(precedingClose.closingBalanceMinor) : 0n;
+  }
   const closing = opening + net;
 
   const totals = {

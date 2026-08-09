@@ -187,11 +187,11 @@ describe('artifact reproducibility', () => {
     expect(sha256).toHaveLength(64);
   });
 
-  // Contract 2: HTML/XLSX/PDF include same snapshot id/hash/totals
-  it('2 — HTML includes snapshot id, hash, and totals', () => {
+  // Contract 2: HTML is public-facing — includes totals but NOT technical metadata
+  it('2 — HTML includes totals but excludes snapshot id/hash (public report)', () => {
     const html = generateHtmlArtifact(baseSnapshot).toString('utf-8');
-    expect(html).toContain(SNAPSHOT_ID);
-    expect(html).toContain(SNAPSHOT_HASH);
+    expect(html).not.toContain(SNAPSHOT_ID);
+    expect(html).not.toContain(SNAPSHOT_HASH);
     expect(html).toContain('EUR 2500.00'); // 250000 cents
     expect(html).toContain('EUR 1000.00'); // 100000 cents
   });
