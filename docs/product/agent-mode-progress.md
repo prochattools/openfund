@@ -1,23 +1,43 @@
 # Agent Mode Progress — All Phases Complete
 
-Updated: 2026-08-09 (production deployment convergence verified and closed)
+Updated: 2026-08-09 (frontend factual-state restoration complete)
 
 ## Repository lock
 
 - Source: `yeshuaacademy-finance`
 - Branch: `main`
-- Final deployed commit: `189c7d6a2278bb53a6c090d6b19ddd318f93f08f`
-- GitHub Actions #280: SUCCESS (run `31280488648`)
+- Final deployed commit: `2c6cf0b8eae61ab6befd7caa174d066e749755ed`
+- GitHub Actions #281: SUCCESS (run `31311605216`)
+- Dokploy dockerImage: `ghcr.io/yeshuaacademy/finance:latest`
 
 Do not switch source, branch, or repository.
 
 ## Status: COMPLETE — READY FOR OWNER USE
 
-**2026-08-09:** All implementation phases complete. Production deployment convergence achieved.
+### 2026-08-09 frontend factual-state restoration — COMPLETE
 
-Final deployed commit: `189c7d6a2278bb53a6c090d6b19ddd318f93f08f` (fix(deploy): remove startup diagnostic and restore clean start)
+Owner reported the production frontend rendered without ledger data even though the factual server state remained intact. Read-only production verification confirmed `/api/ledger` still serves all 902 transactions, `/api/review` has 0 unresolved rows, and runtime `authProvider=disabled` with the configured production bypass.
 
-**Final production state (verified 2026-08-09):** 902 transactions, 902 confirmed bookings, 0 unresolved, 223 ReviewDecisions, accounting/cash/classification PASSED, Prisma 11/11 clean, Resend configured, monthly send ready.
+**Root cause:** The Docker/Actions build did not pass `NEXT_PUBLIC_AUTH_PROVIDER=disabled`, so the browser bundle compiled into Clerk-gated mode. `isFinanceSessionReady()` returns `!authEnabled`, so with `authEnabled=true` in the bundle the ledger provider withheld `fetchLedger()` indefinitely.
+
+**Recovery (commit `2c6cf0b`):**
+- Dockerfile: bakes `NEXT_PUBLIC_AUTH_PROVIDER=disabled` as build ARG/ENV
+- GitHub Actions: passes `--build-arg NEXT_PUBLIC_AUTH_PROVIDER=disabled`
+- Dokploy image restored to `ghcr.io/yeshuaacademy/finance:latest`
+- `EXPECTED_BUILD_SHA=${{ github.sha }}` retained for exact-SHA convergence
+- No finance data mutated
+
+**Verified production state (2026-08-09):**
+- buildSha: `2c6cf0b8eae61ab6befd7caa174d066e749755ed`
+- authProvider: `disabled`
+- productionAuthBypassEnabled: `true`
+- /api/health: 200
+- /api/ledger: 902 transactions
+- /api/review: 0 unresolved
+- 902 confirmed bookings, 223 ReviewDecisions preserved
+- accounting/cash/classification: PASSED
+- Frontend: `isFinanceSessionReady()` returns `true` immediately (authEnabled=false)
+- Ledger data loads without Clerk session gate
 
 ## Completed activities
 
