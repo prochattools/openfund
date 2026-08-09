@@ -51,7 +51,11 @@ Repair scope:
 - `git diff --check`: clean
 - Secret scan: no credentials in diff
 
-**Final deployed SHA:** pending production convergence after push
+**Final deployed SHA:** `44bf34a6cdd3550b7c440c74abcf0b0be7496cd2`
+**GitHub Actions #282:** SUCCESS (run `31320544982`)
+**Production verified:** buildSha `44bf34a6`, authProvider=disabled, /api/health 200, /api/ledger 902, /api/review 0 unresolved, 902 bookings/223 ReviewDecisions preserved
+**POST /api/email-recipients:** route reachable, upsert confirmed (test recipient deactivated, no real address saved)
+**Monthly send readiness:** period close not required; open periods shown as optional; send gated only on recipients + 0 unresolved; no real e-mail sent automatically
 
 ### 2026-08-09 frontend factual-state restoration — COMPLETE
 
