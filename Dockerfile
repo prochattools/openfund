@@ -16,8 +16,10 @@ RUN npm ci --ignore-scripts || npm install --ignore-scripts
 # Copy app source
 COPY . .
 
-# This key is intentionally public and is required by the Clerk client bundle.
-# The Clerk secret remains runtime-only in Dokploy.
+# Compile the client with the same auth mode used by production runtime.
+# Clerk stays available as an optional public client key, but Finance is owner-configured with auth disabled.
+ARG NEXT_PUBLIC_AUTH_PROVIDER=disabled
+ENV NEXT_PUBLIC_AUTH_PROVIDER=$NEXT_PUBLIC_AUTH_PROVIDER
 ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 

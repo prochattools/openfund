@@ -41,6 +41,7 @@ jobs:
           build-args: |
             BUILD_SHA=${{ github.sha }}
             BUILD_REF=${{ github.ref_name }}
+            NEXT_PUBLIC_AUTH_PROVIDER=disabled
             NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           no-cache: true
 
@@ -48,7 +49,7 @@ jobs:
         env:
           DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
           DOKPLOY_APP_ID: ${{ secrets.DOKPLOY_APP_ID }}
-          DOKPLOY_EXPECTED_IMAGE: ghcr.io/${{ github.repository }}:${{ github.sha }}
+          DOKPLOY_EXPECTED_IMAGE: ghcr.io/${{ github.repository }}:latest
           EXPECTED_BUILD_SHA: ${{ github.sha }}
           DOKPLOY_API_BASE: https://dokploy.prochat.tools/api
           PRODUCTION_ORIGIN: https://finance.yeshua.academy
