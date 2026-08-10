@@ -1,6 +1,6 @@
 # Agent Mode Progress — All Phases Complete
 
-Updated: 2026-08-10 (historical monthly statement evidence backfill deployed)
+Updated: 2026-08-10 (single-file staging + partial historical statement completion deployed)
 
 ## Repository lock
 
@@ -10,58 +10,44 @@ Updated: 2026-08-10 (historical monthly statement evidence backfill deployed)
 
 Do not switch source, branch, or repository.
 
-## Status: COMPLETE — HISTORICAL MONTHLY STATEMENT BACKFILL DEPLOYED
+## Status: COMPLETE — SINGLE-FILE + PARTIAL HISTORICAL STATEMENT COMPLETION DEPLOYED
 
-### 2026-08-10 historical monthly statement evidence backfill — COMPLETE
+### 2026-08-10 staged statement evidence and partial historical completion — COMPLETE
 
-Uploading a CSV+PDF for a past month whose transactions already exist now backfills the bank statement evidence without reinserting transactions. The administration month selector defaults to the last completed month and exposes all completed months of the current year.
+The owner may upload the ING CSV, the ING PDF, or both. One file is stored safely and waits for its counterpart; when both are available the application reconciles and links them to the month. Historical months may be incomplete: existing rows that are an exact immutable subset of the uploaded CSV are preserved and only missing bank transactions are inserted.
 
-**How it works:**
+**Production diagnosis that drove this repair:**
 
-- The administration month selector now always exposes all completed months of the current year (January–July as of 2026-08-10).
-- Default selection is the last completed month (2026-07 on 2026-08-10).
-- `UploadCsvButton` receives `periodKey` from the selected administration month, displays it, and sends it with the CSV+PDF multipart request.
-- `/api/statements/import` validates the `periodKey` (YYYY-MM format); a mismatch between selected month and the PDF's authoritative period returns `SELECTED_MONTH_MISMATCH` 422.
-- Files still determine the authoritative account and month; the selected month is only an expected-period guard.
-- Historical backfill matching uses an **immutable multiset of bank facts** (date + signed amount); count/multiplicity must match exactly. Parser-version `importFingerprint` is no longer compared.
-- PDF income/expense/opening/closing controls still reconcile; account and period still must match; conflicting bank facts block.
-- Matching historical transactions → `EVIDENCE_BACKFILLED` (BankStatement + SourceFiles created, no transactions inserted).
-- Exact existing BankStatement/source evidence → `ALREADY_IMPORTED` (idempotent no-op).
-- Classifications and bookings are never touched by the backfill path.
+- The owner-supplied July 2026 ING CSV/PDF contain 37 transactions and reconcile to PDF controls: opening EUR 9,412.24, incoming EUR 10,767.51, outgoing EUR 9,433.15, closing EUR 10,746.60.
+- Read-only production inspection before this release showed only 5 July ledger transactions. The previous implementation incorrectly treated any non-empty historical month as an all-or-nothing backfill candidate and returned `EXISTING_LEDGER_MISMATCH` instead of completing the missing 32 rows.
+- No owner files were automatically imported during deployment verification; production remained at 902 transactions until owner retest.
 
-**Owner retest sequence (after deployment):**
-1. Administration defaults to July 2026; dropdown contains January–July 2026.
-2. Select June; upload matching June CSV+PDF.
-3. Existing June transactions must NOT be inserted again.
-4. Matching immutable bank facts → evidence backfill succeeds.
-5. June BankStatement/SourceFiles become available; June monthly report no longer says bank statement missing.
-6. Repeat January–May/July manually as desired.
+**How it works now:**
 
-**Changes made:**
-
-1. `server/routes/upload.ts`: validates `periodKey` from request body; passes `expectedMonthKey` to service.
-2. `server/services/monthlyStatementPackageService.ts`: `SELECTED_MONTH_MISMATCH` guard; historical backfill uses immutable bank-fact multiset instead of `importFingerprint`; `EVIDENCE_BACKFILLED` / `ALREADY_IMPORTED` outcomes.
-3. `src/components/ledger/UploadCsvButton.tsx`: accepts `periodKey` prop, displays selected month, sends it with request.
-4. `src/helpers/ledger-page.ts`: `buildMonthOptions` always exposes all completed months of current year; `getLastCompletedMonthKey()` added.
-5. `src/libs/api.ts`: `uploadStatementPackage(csv, pdf, periodKey)` signature.
-6. `src/ui/FinanceLedgerPage.tsx`: initializes `selectedMonth` to last completed month; passes `periodKey` to upload button.
-7. `tests/helpers/ledgerPage.test.ts`: updated for new helpers (6/6 pass).
-8. `tests/services/monthlyStatementPackageService.test.ts`: new — historical backfill scenarios (3/3 pass).
+- Administration defaults to the last completed month and exposes January–July 2026 for backlog import as of 2026-08-10.
+- `/api/statements/import` accepts CSV-only, PDF-only, or both. At least one file is required.
+- CSV-only: transactions are parsed, existing immutable bank facts are deduplicated, only missing rows are inserted, and the original CSV is staged until the matching PDF arrives.
+- PDF-only: the original PDF and authoritative controls are staged until the matching CSV arrives.
+- Combined or completed staged pair: account/month/income/expense/opening/closing are reconciled and `BankStatement` links the exact original CSV/PDF files.
+- Exact existing statement evidence returns `ALREADY_IMPORTED` without changing data.
+- Historical matching uses account + date + signed amount with multiplicity. Parser-version hashes cannot cause duplicate bank rows during verified statement completion.
+- A historical partial month is allowed through the ledger lock only inside the verified statement-evidence workflow; ordinary imports remain blocked by the financial lock.
+- Conflicting immutable bank facts still return `EXISTING_LEDGER_MISMATCH`; categorization/bookings are never overwritten.
+- Monthly report sending continues to resolve the month-specific original CSV/PDF from the reconciled `BankStatement` and attach them to email.
 
 **Validation evidence:**
-- ingStatementPdfService parser: 11/11
-- ledger page helpers: 6/6
-- monthlyStatementPackageService backfill: 3/3
-- upload route: 6/6
-- monthlySendReport: 24/24
-- server TypeScript: 0 errors
-- git diff --check: ✓ (exit 0)
-- Secret scan on diff: ✓ (zero findings)
 
-**Final runtime SHA:** `c4488ca74ec27edc6b02e9286c2b932a0b8f7ec2`
-**GitHub Actions #31412386567:** SUCCESS
-**Production buildSha:** `c4488ca74ec27edc6b02e9286c2b932a0b8f7ec2`
-**Production verified:** /api/health 200, /api/ledger 902 transactions, review 0, bookings/categories unchanged, Dokploy ghcr.io/yeshuaacademy/finance:latest
+- monthly statement package focused suite: 6/6
+- ING real-layout PDF parser: 11/11
+- upload-route relevant suites: PASS
+- server TypeScript: PASS
+- Next production build + Prisma generate: PASS
+- changed-path secret scan: zero findings
+- full release suite: 1,980 tests passed / 5 skipped; one unrelated local `node_modules/.prisma/client/package.json` corruption prevented the suite from reaching later chained commands. This pre-existing local environment issue was not repaired or treated as an application failure.
+
+**Runtime implementation SHA:** `3cd4b992b2f4242cb89d2721d585b203f70266ca`
+**Production buildSha verified:** `3cd4b992b2f4242cb89d2721d585b203f70266ca`
+**Production verified before owner retest:** `/api/health` 200, `/api/ledger` 902 transactions, review queue 0, no owner finance data mutated by deployment verification.
 
 ---
 
