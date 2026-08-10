@@ -7,6 +7,7 @@ import {
   filterTransactionsByMonth,
   formatEuro,
   getLedgerCategoryLabel,
+  getLastCompletedMonthKey,
   getMonthKeyForTransaction,
   getMonthLabelForKey,
   groupTransactionsByYear,
@@ -45,7 +46,8 @@ describe('ledger page helpers', () => {
     expect(parseLedgerDate('geen datum').toISOString()).toBe('1970-01-01T00:00:00.000Z');
   });
 
-  it('builds Dutch month options with latest month first and a current fallback', () => {
+  it('builds completed-month options and defaults to the last full month', () => {
+    const now = new Date('2026-08-10T12:00:00.000Z');
     const transactions = [
       makeTx({ id: 'may', date: '2026-05-15T00:00:00.000Z' }),
       makeTx({ id: 'june', date: '2026-06-01T00:00:00.000Z' }),
@@ -54,12 +56,12 @@ describe('ledger page helpers', () => {
 
     expect(getMonthKeyForTransaction(transactions[0])).toBe('2026-05');
     expect(getMonthLabelForKey('2026-05')).toBe('mei 2026');
-    expect(buildMonthOptions(transactions)).toEqual([
-      { key: '2026-06', label: 'juni 2026' },
-      { key: '2026-05', label: 'mei 2026' },
+    expect(getLastCompletedMonthKey(now)).toBe('2026-07');
+    expect(buildMonthOptions(transactions, now).map((option) => option.key)).toEqual([
+      '2026-07', '2026-06', '2026-05', '2026-04', '2026-03', '2026-02', '2026-01',
     ]);
-    expect(buildMonthOptions([], new Date('2027-02-01T00:00:00.000Z'))).toEqual([
-      { key: '2027-02', label: 'februari 2027' },
+    expect(buildMonthOptions([], new Date('2027-02-01T00:00:00.000Z')).map((option) => option.key)).toEqual([
+      '2027-01',
     ]);
   });
 

@@ -49,14 +49,25 @@ export const getMonthLabelForKey = (key: string) => {
 export const getLedgerCategoryLabel = (transaction: LedgerTransaction) =>
   transaction.mainCategoryName ?? transaction.categoryName ?? transaction.suggestedMainCategoryName ?? 'Nog te beoordelen';
 
-export const buildMonthOptions = (transactions: LedgerTransaction[], now: Date = new Date()): MonthOption[] => {
-  const keys = Array.from(new Set(transactions.map(getMonthKeyForTransaction))).sort().reverse();
+export const getLastCompletedMonthKey = (now: Date = new Date()): string => {
+  const previousMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+  return `${previousMonth.getUTCFullYear()}-${String(previousMonth.getUTCMonth() + 1).padStart(2, '0')}`;
+};
 
-  if (!keys.length) {
-    keys.push(`${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`);
+export const buildMonthOptions = (transactions: LedgerTransaction[], now: Date = new Date()): MonthOption[] => {
+  const keys = new Set(transactions.map(getMonthKeyForTransaction));
+  const lastCompleted = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+
+  for (let month = 0; month <= lastCompleted.getUTCMonth(); month += 1) {
+    keys.add(`${lastCompleted.getUTCFullYear()}-${String(month + 1).padStart(2, '0')}`);
   }
 
-  return keys.map((key) => ({ key, label: getMonthLabelForKey(key) }));
+  if (!keys.size) keys.add(getLastCompletedMonthKey(now));
+
+  return Array.from(keys)
+    .sort()
+    .reverse()
+    .map((key) => ({ key, label: getMonthLabelForKey(key) }));
 };
 
 export const resolveActiveMonth = (monthOptions: MonthOption[], selectedMonth: string) =>

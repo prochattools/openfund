@@ -1,6 +1,6 @@
 # Agent Mode Progress — All Phases Complete
 
-Updated: 2026-08-10 (bank-truth / categorization decoupling)
+Updated: 2026-08-10 (historical monthly statement evidence backfill)
 
 ## Repository lock
 
@@ -10,7 +10,59 @@ Updated: 2026-08-10 (bank-truth / categorization decoupling)
 
 Do not switch source, branch, or repository.
 
-## Status: COMPLETE — BANK TRUTH IMMUTABLE, CATEGORIZATION PERMANENTLY EDITABLE
+## Status: IN PROGRESS — HISTORICAL MONTHLY STATEMENT BACKFILL (pending deployment verification)
+
+### 2026-08-10 historical monthly statement evidence backfill — IN PROGRESS
+
+Uploading a CSV+PDF for a past month whose transactions already exist now backfills the bank statement evidence without reinserting transactions. The administration month selector defaults to the last completed month and exposes all completed months of the current year.
+
+**How it works:**
+
+- The administration month selector now always exposes all completed months of the current year (January–July as of 2026-08-10).
+- Default selection is the last completed month (2026-07 on 2026-08-10).
+- `UploadCsvButton` receives `periodKey` from the selected administration month, displays it, and sends it with the CSV+PDF multipart request.
+- `/api/statements/import` validates the `periodKey` (YYYY-MM format); a mismatch between selected month and the PDF's authoritative period returns `SELECTED_MONTH_MISMATCH` 422.
+- Files still determine the authoritative account and month; the selected month is only an expected-period guard.
+- Historical backfill matching uses an **immutable multiset of bank facts** (date + signed amount); count/multiplicity must match exactly. Parser-version `importFingerprint` is no longer compared.
+- PDF income/expense/opening/closing controls still reconcile; account and period still must match; conflicting bank facts block.
+- Matching historical transactions → `EVIDENCE_BACKFILLED` (BankStatement + SourceFiles created, no transactions inserted).
+- Exact existing BankStatement/source evidence → `ALREADY_IMPORTED` (idempotent no-op).
+- Classifications and bookings are never touched by the backfill path.
+
+**Owner retest sequence (after deployment):**
+1. Administration defaults to July 2026; dropdown contains January–July 2026.
+2. Select June; upload matching June CSV+PDF.
+3. Existing June transactions must NOT be inserted again.
+4. Matching immutable bank facts → evidence backfill succeeds.
+5. June BankStatement/SourceFiles become available; June monthly report no longer says bank statement missing.
+6. Repeat January–May/July manually as desired.
+
+**Changes made:**
+
+1. `server/routes/upload.ts`: validates `periodKey` from request body; passes `expectedMonthKey` to service.
+2. `server/services/monthlyStatementPackageService.ts`: `SELECTED_MONTH_MISMATCH` guard; historical backfill uses immutable bank-fact multiset instead of `importFingerprint`; `EVIDENCE_BACKFILLED` / `ALREADY_IMPORTED` outcomes.
+3. `src/components/ledger/UploadCsvButton.tsx`: accepts `periodKey` prop, displays selected month, sends it with request.
+4. `src/helpers/ledger-page.ts`: `buildMonthOptions` always exposes all completed months of current year; `getLastCompletedMonthKey()` added.
+5. `src/libs/api.ts`: `uploadStatementPackage(csv, pdf, periodKey)` signature.
+6. `src/ui/FinanceLedgerPage.tsx`: initializes `selectedMonth` to last completed month; passes `periodKey` to upload button.
+7. `tests/helpers/ledgerPage.test.ts`: updated for new helpers (6/6 pass).
+8. `tests/services/monthlyStatementPackageService.test.ts`: new — historical backfill scenarios (3/3 pass).
+
+**Validation evidence:**
+- ingStatementPdfService parser: 11/11
+- ledger page helpers: 6/6
+- monthlyStatementPackageService backfill: 3/3
+- upload route: 6/6
+- monthlySendReport: 24/24
+- server TypeScript: 0 errors
+- git diff --check: ✓ (exit 0)
+- Secret scan on diff: ✓ (zero findings)
+
+**Final runtime SHA:** _pending_
+**GitHub Actions:** _pending_
+**Production verified:** _pending_
+
+---
 
 ### 2026-08-10 bank-truth / categorization decoupling — COMPLETE
 

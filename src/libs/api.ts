@@ -229,10 +229,11 @@ export const uploadImportFile = async (formData: FormData) => {
   return response.json();
 };
 
-export const uploadStatementPackage = async (csv: File, pdf: File) => {
+export const uploadStatementPackage = async (csv: File, pdf: File, periodKey?: string) => {
   const formData = new FormData();
   formData.append('csv', csv);
   formData.append('pdf', pdf);
+  if (periodKey) formData.append('periodKey', periodKey);
 
   const response = await fetch(getApiUrl('/api/statements/import'), withUserHeader({
     method: 'POST',

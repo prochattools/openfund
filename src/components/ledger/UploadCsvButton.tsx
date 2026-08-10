@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { useLedger } from '@/context/ledger-context';
 import { isClientAdmin, uploadStatementPackage } from '@/libs/api';
 
-export function UploadCsvButton() {
+export function UploadCsvButton({ periodKey }: { periodKey: string }) {
   const csvRef = useRef<HTMLInputElement | null>(null);
   const pdfRef = useRef<HTMLInputElement | null>(null);
   const [csv, setCsv] = useState<File | null>(null);
@@ -30,7 +30,7 @@ export function UploadCsvButton() {
 
     setBusy(true);
     try {
-      const result = await uploadStatementPackage(csv, pdf);
+      const result = await uploadStatementPackage(csv, pdf, periodKey);
       toast.success(result.message ?? 'Bankafschrift is geïmporteerd, gecontroleerd en opgeslagen.', { duration: 6500 });
       await refreshLedger();
       setCsv(null);
@@ -49,6 +49,7 @@ export function UploadCsvButton() {
     <div className="flex flex-col gap-3 rounded-2xl border border-black/10 bg-white/60 p-4">
       <div>
         <div className="text-sm font-semibold">ING maandafschrift importeren</div>
+        <div className="mt-1 text-xs font-semibold text-[#1f5f4a]">Geselecteerde maand: {periodKey}</div>
         <p className="mt-1 max-w-xl text-xs text-black/60">
           De CSV bevat de transacties. Het PDF-bankafschrift bevat de officiële begin- en eindsaldi en controletotalen. Beide bestanden worden samen gecontroleerd en opgeslagen.
         </p>

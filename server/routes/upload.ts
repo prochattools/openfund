@@ -108,11 +108,17 @@ export const handleStatementPackageImport = async (req: Request, res: Response) 
   if (!csv.buffer?.length) return res.status(400).json({ error: 'Het CSV-bestand is leeg.', code: 'CSV_EMPTY' });
   if (!pdf.buffer?.length) return res.status(400).json({ error: 'Het PDF-bankafschrift is leeg.', code: 'PDF_EMPTY' });
 
+  const periodKey = typeof req.body?.periodKey === 'string' ? req.body.periodKey.trim() : '';
+  if (periodKey && !/^\d{4}-\d{2}$/.test(periodKey)) {
+    return res.status(400).json({ error: 'De geselecteerde maand is ongeldig.', code: 'PERIOD_KEY_INVALID' });
+  }
+
   try {
     const result = await prisma.$transaction((tx) => importMonthlyStatementPackage({
       db: tx,
       userId: actor.userId,
       workspaceId: actor.workspaceId,
+      expectedMonthKey: periodKey || null,
       csv: { buffer: csv.buffer, filename: csv.originalname, mediaType: csv.mimetype },
       pdf: { buffer: pdf.buffer, filename: pdf.originalname, mediaType: pdf.mimetype },
     }), { timeout: 60_000 });

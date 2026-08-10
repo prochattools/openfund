@@ -12,6 +12,7 @@ import {
   filterTransactionsByMonth,
   formatEuro,
   getLedgerCategoryLabel,
+  getLastCompletedMonthKey,
   parseLedgerDate,
   resolveActiveMonth,
   summarizeLedgerTransactions,
@@ -71,7 +72,7 @@ function Kpi({ label, value, helper, tone = 'neutral' }: { label: string; value:
   );
 }
 
-function ImportPanel() {
+function ImportPanel({ selectedMonth }: { selectedMonth: string }) {
   return (
     <section id="importeren" className="rounded-[2rem] border border-[#ded5c8] bg-[#fbf8f2] p-6 shadow-[0_24px_70px_rgba(87,67,45,0.08)]">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -82,7 +83,7 @@ function ImportPanel() {
             Upload de CSV-export uit ING. Dubbele transacties worden automatisch genegeerd en onbekende transacties komen in de beoordelingsrij.
           </p>
         </div>
-        <UploadCsvButton />
+        <UploadCsvButton periodKey={selectedMonth} />
       </div>
       <div className="mt-5 grid gap-3 md:grid-cols-3">
         <StateCard title="Goed bestand" body="ING CSV met datum, omschrijving, rekening, bedrag en bij/af." />
@@ -212,7 +213,7 @@ export default function FinanceLedgerPage() {
 
   const monthOptions = useMemo<MonthOption[]>(() => buildMonthOptions(transactions), [transactions]);
 
-  const [selectedMonth, setSelectedMonth] = useState(monthOptions[0]?.key ?? '');
+  const [selectedMonth, setSelectedMonth] = useState(() => getLastCompletedMonthKey());
   const activeMonth = resolveActiveMonth(monthOptions, selectedMonth);
 
   const monthTransactions = useMemo(() => filterTransactionsByMonth(transactions, activeMonth), [activeMonth, transactions]);
@@ -228,7 +229,7 @@ export default function FinanceLedgerPage() {
           <Kpi label="Saldo verandering" value={formatEuro(monthSummary.result)} helper="Inkomsten min uitgaven" />
           <Kpi label="Nog te beoordelen" value={String(monthSummary.reviewCount)} helper="Transacties zonder definitieve categorie" tone="review" />
         </section>
-        <ImportPanel />
+        <ImportPanel selectedMonth={activeMonth} />
         <TransactionTable transactions={monthTransactions} />
         <YearOverview transactions={transactions} />
       </div>

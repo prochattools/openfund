@@ -2,7 +2,6 @@ import { Prisma } from '@prisma/client';
 import { parseIngCsv } from '../../lib/import/csv_ING';
 import { normalizeAccountIdentifier } from '../../lib/import/normalizers';
 import { processImportBufferWithClient } from './importService';
-import { buildImportFingerprint } from './transactionFingerprint';
 import {
   acceptBankStatement,
   hashSourceContent,
@@ -31,6 +30,7 @@ export type MonthlyStatementPackageInput = {
   db: Tx;
   userId: string;
   workspaceId: string;
+  expectedMonthKey?: string | null;
   csv: { buffer: Buffer; filename: string; mediaType: string };
   pdf: { buffer: Buffer; filename: string; mediaType: string };
 };
@@ -59,16 +59,11 @@ const nextDay = (date: Date): Date => new Date(Date.UTC(
 
 const sameInstant = (a: Date, b: Date): boolean => a.getTime() === b.getTime();
 
-const expectedFingerprints = (rows: Awaited<ReturnType<typeof parseIngCsv>>['successes']): string[] =>
-  rows.map((row) => buildImportFingerprint({
-    accountIdentifier: row.accountIdentifier,
-    date: row.date,
-    amountMinor: row.amountMinor,
-    description: row.description,
-    counterparty: row.counterparty,
-    reference: row.reference,
-    raw: row.raw,
-  })).sort();
+const bankFactKey = (date: Date, amountMinor: bigint): string =>
+  `${date.toISOString().slice(0, 10)}|${amountMinor.toString()}`;
+
+const expectedBankFacts = (rows: Awaited<ReturnType<typeof parseIngCsv>>['successes']): string[] =>
+  rows.map((row) => bankFactKey(row.date, row.amountMinor)).sort();
 
 const assertExactExistingTransactions = async (
   db: Tx,
@@ -86,12 +81,12 @@ const assertExactExistingTransactions = async (
       accountId: params.accountId,
       date: { gte: params.periodStart, lt: nextDay(params.periodEnd) },
     },
-    select: { importFingerprint: true },
+    select: { date: true, amountMinor: true },
   });
-  const actual = transactions.map((row) => row.importFingerprint).filter((value): value is string => Boolean(value)).sort();
+  const actual = transactions.map((row) => bankFactKey(row.date, row.amountMinor)).sort();
   if (actual.length !== params.expected.length || actual.some((value, index) => value !== params.expected[index])) {
     throw new MonthlyStatementPackageError(
-      'De bestaande transacties voor deze maand komen niet exact overeen met de geüploade CSV. De bankgegevens zijn niet gewijzigd.',
+      'De bestaande transacties voor deze maand komen niet exact overeen met de geldbedragen en boekingsdata in de geüploade CSV. De bankgegevens zijn niet gewijzigd.',
       'EXISTING_LEDGER_MISMATCH',
       409,
     );
@@ -102,6 +97,7 @@ export const importMonthlyStatementPackage = async ({
   db,
   userId,
   workspaceId,
+  expectedMonthKey,
   csv,
   pdf,
 }: MonthlyStatementPackageInput): Promise<MonthlyStatementPackageResult> => {
@@ -152,6 +148,14 @@ export const importMonthlyStatementPackage = async ({
   const months = [...new Set(parsed.successes.map((row) => monthKey(row.date)))];
   if (months.length !== 1 || monthKey(controls.periodStart) !== monthKey(controls.periodEnd) || months[0] !== monthKey(controls.periodStart)) {
     throw new MonthlyStatementPackageError('De CSV en PDF moeten samen precies één kalendermaand vertegenwoordigen.', 'MONTH_MISMATCH');
+  }
+  const actualMonthKey = monthKey(controls.periodStart);
+  if (expectedMonthKey && expectedMonthKey !== actualMonthKey) {
+    throw new MonthlyStatementPackageError(
+      `De geselecteerde maand (${expectedMonthKey}) komt niet overeen met het bankafschrift (${actualMonthKey}).`,
+      'SELECTED_MONTH_MISMATCH',
+      422,
+    );
   }
 
   const incomeMinor = parsed.successes.reduce((sum, row) => sum + (row.amountMinor > 0n ? row.amountMinor : 0n), 0n);
@@ -214,7 +218,7 @@ export const importMonthlyStatementPackage = async ({
     }
   }
 
-  const expected = expectedFingerprints(parsed.successes);
+  const expected = expectedBankFacts(parsed.successes);
   let importSummary: Awaited<ReturnType<typeof processImportBufferWithClient>> | null = null;
   let resolvedAccount = account;
   let status: MonthlyStatementPackageResult['status'] = 'IMPORTED';
