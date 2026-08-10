@@ -36,12 +36,21 @@ export type IngStatementPdfControls = {
 const normalizeIban = (value: string): string => value.replace(/\s+/g, '').toUpperCase();
 
 const parseMoneyMinor = (value: string): bigint => {
-  const normalized = value
-    .replace(/\s/g, '')
-    .replace(/EUR/gi, '')
-    .replace(/\./g, '')
-    .replace(',', '.')
-    .replace(/[^0-9.-]/g, '');
+  const cleaned = value.replace(/\s/g, '').replace(/EUR/gi, '');
+  let normalized: string;
+  // Detect format by what follows the last separator:
+  // Dutch:   period=thousands, comma=decimal  (e.g. "9.390,82")  → ends with ,\d{1,2}
+  // English: comma=thousands,  period=decimal (e.g. "9,390.82")  → ends with .\d{1,2}
+  if (/,\d{1,2}$/.test(cleaned)) {
+    // Dutch format: remove periods (thousands sep), replace comma with period (decimal)
+    normalized = cleaned.replace(/\./g, '').replace(',', '.').replace(/[^0-9.-]/g, '');
+  } else if (/\.\d{1,2}$/.test(cleaned)) {
+    // English format: remove commas (thousands sep), keep period as decimal
+    normalized = cleaned.replace(/,/g, '').replace(/[^0-9.-]/g, '');
+  } else {
+    // Fallback: assume Dutch
+    normalized = cleaned.replace(/\./g, '').replace(',', '.').replace(/[^0-9.-]/g, '');
+  }
   if (!normalized || !/^-?\d+(?:\.\d{1,2})?$/.test(normalized)) {
     throw new IngStatementPdfError(`Bedrag kon niet uit het PDF-bankafschrift worden gelezen: ${value}`);
   }
@@ -63,31 +72,72 @@ const parseDutchDate = (value: string): Date => {
   throw new IngStatementPdfError(`Datum kon niet uit het PDF-bankafschrift worden gelezen: ${value}`);
 };
 
-const findMoney = (text: string, labels: RegExp[]): bigint | null => {
-  for (const label of labels) {
-    const match = text.match(new RegExp(`${label.source}[^\d-]{0,40}(-?[\d.]+,\d{2})`, 'i'));
-    if (match?.[1]) return parseMoneyMinor(match[1]);
-  }
-  return null;
-};
-
 export const parseIngStatementPdfText = (rawText: string): IngStatementPdfControls => {
-  const text = rawText.replace(/\u00a0/g, ' ').replace(/[ \t]+/g, ' ');
-  const ibanMatch = text.match(/\bNL\s*\d{2}\s*INGB(?:\s*\d{4}){2,3}\b/i)
-    ?? text.match(/\bNL\d{2}INGB\d{10}\b/i);
+  // Normalize: preserve newlines, collapse other whitespace
+  const text = rawText.replace(/ /g, ' ').replace(/[ \t]+/g, ' ');
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+  // Helper: find the value on the next non-empty line after a line matching labelPattern
+  const findNextLineAfter = (labelPattern: RegExp): string | null => {
+    for (let i = 0; i < lines.length - 1; i++) {
+      if (labelPattern.test(lines[i])) return lines[i + 1];
+    }
+    return null;
+  };
+
+  // Helper: try to parse money from the next line after any matching label
+  const findMoneyNextLine = (labelPatterns: RegExp[]): bigint | null => {
+    for (const pat of labelPatterns) {
+      const val = findNextLineAfter(pat);
+      if (val) {
+        try { return parseMoneyMinor(val); } catch { /* try next */ }
+      }
+    }
+    return null;
+  };
+
+  // Helper: find money inline after a label (legacy Dutch layout)
+  const findMoneyInline = (labelPatterns: RegExp[]): bigint | null => {
+    for (const label of labelPatterns) {
+      // Strip ^ and $ anchors — they are used in line-matching but break inline search
+      const src = label.source.replace(/^\^/, '').replace(/\$$/, '');
+      // Match Dutch format (X.XXX,XX) or English format (X,XXX.XX) inline after label
+      const match = text.match(new RegExp(src + '[^\\d-]{0,40}(-?[\\d.,]+)', 'i'));
+      if (match?.[1]) {
+        try { return parseMoneyMinor(match[1]); } catch { /* try next */ }
+      }
+    }
+    return null;
+  };
+
+  // IBAN: look on next line after "Account number", or search full text.
+  // Use [\s\d]{10,14} to flexibly handle spaced groups like "0006 3699 60" (last group may be 2 digits).
+  const ibanLineValue = findNextLineAfter(/^account\s+number$/i);
+  const ibanSearchText = ibanLineValue ? ibanLineValue + '\n' + text : text;
+  const ibanMatch = ibanSearchText.match(/\bNL\s*\d{2}\s*INGB[\s\d]{10,14}\b/i)
+    ?? ibanSearchText.match(/\bNL\d{2}INGB\d{10}\b/i);
   if (!ibanMatch) throw new IngStatementPdfError('Het rekeningnummer kon niet uit het PDF-bankafschrift worden gelezen.');
 
-  const periodMatch = text.match(/(?:periode|afschriftperiode)[^\d]{0,25}(\d{1,2}[\/-]\d{1,2}[\/-]\d{4})\s*(?:t\/m|tot|[-–])\s*(\d{1,2}[\/-]\d{1,2}[\/-]\d{4})/i)
+  // Period: look on next line after "Period" / "Periode", or search full text inline
+  const periodLineValue = findNextLineAfter(/^period$/i) ?? findNextLineAfter(/^periou?de?$/i);
+  const periodSource = periodLineValue ?? text;
+  const periodMatch = periodSource.match(/(\d{1,2}[\/-]\d{1,2}[\/-]\d{4})\s*(?:t\/m|till|tot|[-–])\s*(\d{1,2}[\/-]\d{1,2}[\/-]\d{4})/i)
+    ?? text.match(/(?:periode|afschriftperiode|period)[^\d]{0,25}(\d{1,2}[\/-]\d{1,2}[\/-]\d{4})\s*(?:t\/m|till|tot|[-–])\s*(\d{1,2}[\/-]\d{1,2}[\/-]\d{4})/i)
     ?? text.match(/(\d{1,2}\s+[a-zé]+\s+\d{4})\s*(?:t\/m|tot|[-–])\s*(\d{1,2}\s+[a-zé]+\s+\d{4})/i);
   if (!periodMatch) throw new IngStatementPdfError('De afschriftperiode kon niet uit het PDF-bankafschrift worden gelezen.');
 
-  const opening = findMoney(text, [/beginsaldo/i, /saldo\s+begin/i, /openingssaldo/i]);
-  const income = findMoney(text, [/totaal\s+bij/i, /totaal\s+inkomsten/i, /bijgeschreven/i]);
-  const expense = findMoney(text, [/totaal\s+af/i, /totaal\s+uitgaven/i, /afgeschreven/i]);
-  const closing = findMoney(text, [/eindsaldo/i, /saldo\s+einde/i, /slotsaldo/i]);
+  const openingPatterns = [/^opening\s+balance(\s+\(eur\))?$/i, /^beginsaldo$/i, /^saldo\s+begin$/i, /^openingssaldo$/i];
+  const incomePatterns  = [/^total\s+in(\s+\(eur\))?$/i, /^totaal\s+bij$/i, /^totaal\s+inkomsten$/i, /^bijgeschreven$/i];
+  const expensePatterns = [/^total\s+out(\s+\(eur\))?$/i, /^totaal\s+af$/i, /^totaal\s+uitgaven$/i, /^afgeschreven$/i];
+  const closingPatterns = [/^closing\s+balance(\s+\(eur\))?$/i, /^eindsaldo$/i, /^saldo\s+einde$/i, /^slotsaldo$/i];
+
+  const opening = findMoneyNextLine(openingPatterns) ?? findMoneyInline(openingPatterns);
+  const income  = findMoneyNextLine(incomePatterns)  ?? findMoneyInline(incomePatterns);
+  const expense = findMoneyNextLine(expensePatterns) ?? findMoneyInline(expensePatterns);
+  const closing = findMoneyNextLine(closingPatterns) ?? findMoneyInline(closingPatterns);
 
   if (opening == null) throw new IngStatementPdfError('Het openingssaldo kon niet uit het PDF-bankafschrift worden gelezen.');
-  if (income == null) throw new IngStatementPdfError('Het totaal aan inkomsten kon niet uit het PDF-bankafschrift worden gelezen.');
+  if (income == null)  throw new IngStatementPdfError('Het totaal aan inkomsten kon niet uit het PDF-bankafschrift worden gelezen.');
   if (expense == null) throw new IngStatementPdfError('Het totaal aan uitgaven kon niet uit het PDF-bankafschrift worden gelezen.');
   if (closing == null) throw new IngStatementPdfError('Het eindsaldo kon niet uit het PDF-bankafschrift worden gelezen.');
   if (opening + income - expense !== closing) {
