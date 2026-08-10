@@ -1,6 +1,6 @@
 # Agent Mode Progress — All Phases Complete
 
-Updated: 2026-08-10 (single-file staging + partial historical statement completion deployed)
+Updated: 2026-08-11 (July CSV import repair — two-phase commit deployed)
 
 ## Repository lock
 
@@ -10,7 +10,47 @@ Updated: 2026-08-10 (single-file staging + partial historical statement completi
 
 Do not switch source, branch, or repository.
 
-## Status: COMPLETE — SINGLE-FILE + PARTIAL HISTORICAL STATEMENT COMPLETION DEPLOYED
+## Status: COMPLETE — JULY CSV IMPORT REPAIR DEPLOYED
+
+### 2026-08-10 July CSV import repair — two-phase file commit — COMPLETE
+
+Owner July CSV upload was failing with generic `code undefined` after the staged-PDF path was deployed. Root cause: the single-transaction handler for CSV upload attempted to finalize the staged PDF pair inside the same transaction; any finalizer error rolled back the entire upload including the successfully staged/imported CSV rows.
+
+**Production diagnosis:**
+
+- July owner CSV upload failed with generic `code undefined`; PDF-only upload succeeded and July PDF is staged.
+- Production has exactly 5 July transactions (all `2026-07-01`, account `NL89INGB0006369960`).
+- July has no `Ledger` record → failure is not wrong month selection, missing account association, or a locked Ledger.
+- Canonical dedupe `account + date + signed amount + multiplicity` correctly treats existing 5 rows as duplicates; only missing rows would insert.
+
+**Fix (two-phase commit):**
+
+1. `server/services/importService.ts`: historical completion dedupe resolves Account IDs explicitly; no optional `Transaction.account` relation traversal in canonical dedupe path.
+2. `server/services/monthlyStatementPackageService.ts`: CSV-only and PDF-only staging no longer auto-pairs inside the same transaction; `finalizeStagedMonthlyStatement()` added as a separate reconciliation step.
+3. `server/routes/upload.ts`: first transaction commits file staging/import (always commits independently); second transaction attempts staged pair finalization; finalizer failure is logged with safe error name/code only and cannot roll back the committed upload.
+4. `tests/services/monthlyStatementPackageService.test.ts`: new finalizer regression; suite now 7/7.
+
+**Validation evidence:**
+
+- monthly statement package: 7/7
+- ING PDF parser: 11/11
+- upload-route relevant suites: PASS
+- monthlySendReport workflow: PASS
+- server TypeScript: PASS
+- Next production build: PASS
+- Prisma validate: PASS
+- full suite: 1,985 tests / 5 skipped / 204 files PASS
+- backup/restore dry-run: PASS
+- validate:release-candidate: EXIT 0
+- git diff --check: ✓
+- secret scan: zero findings
+
+**Final runtime SHA:** `a29165b1f94dfea746bcc0d2aa78c73507b62635`
+**GitHub Actions #31440504209:** SUCCESS
+**Production buildSha:** `a29165b1f94dfea746bcc0d2aa78c73507b62635`
+**Production verified:** /api/health 200, /api/ledger 902 transactions, July 5 rows unchanged, review 0, staged July PDF preserved, no owner data mutated by deployment
+
+---
 
 ### 2026-08-10 staged statement evidence and partial historical completion — COMPLETE
 
