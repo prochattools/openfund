@@ -65,7 +65,7 @@ const bankFactKey = (date: Date, amountMinor: bigint): string =>
 const expectedBankFacts = (rows: Awaited<ReturnType<typeof parseIngCsv>>['successes']): string[] =>
   rows.map((row) => bankFactKey(row.date, row.amountMinor)).sort();
 
-const assertExactExistingTransactions = async (
+const classifyExistingTransactions = async (
   db: Tx,
   params: {
     userId: string;
@@ -74,7 +74,7 @@ const assertExactExistingTransactions = async (
     periodEnd: Date;
     expected: string[];
   },
-) => {
+): Promise<'NONE' | 'SUBSET' | 'EXACT'> => {
   const transactions = await db.transaction.findMany({
     where: {
       userId: params.userId,
@@ -83,14 +83,23 @@ const assertExactExistingTransactions = async (
     },
     select: { date: true, amountMinor: true },
   });
-  const actual = transactions.map((row) => bankFactKey(row.date, row.amountMinor)).sort();
-  if (actual.length !== params.expected.length || actual.some((value, index) => value !== params.expected[index])) {
-    throw new MonthlyStatementPackageError(
-      'De bestaande transacties voor deze maand komen niet exact overeen met de geldbedragen en boekingsdata in de geüploade CSV. De bankgegevens zijn niet gewijzigd.',
-      'EXISTING_LEDGER_MISMATCH',
-      409,
-    );
+  if (transactions.length === 0) return 'NONE';
+
+  const remaining = new Map<string, number>();
+  for (const key of params.expected) remaining.set(key, (remaining.get(key) ?? 0) + 1);
+  for (const row of transactions) {
+    const key = bankFactKey(row.date, row.amountMinor);
+    const available = remaining.get(key) ?? 0;
+    if (available <= 0) {
+      throw new MonthlyStatementPackageError(
+        'De bestaande transacties voor deze maand bevatten bankboekingen die niet voorkomen in de geüploade CSV. De bankgegevens zijn niet gewijzigd.',
+        'EXISTING_LEDGER_MISMATCH',
+        409,
+      );
+    }
+    remaining.set(key, available - 1);
   }
+  return transactions.length === params.expected.length ? 'EXACT' : 'SUBSET';
 };
 
 export const importMonthlyStatementPackage = async ({
@@ -224,23 +233,19 @@ export const importMonthlyStatementPackage = async ({
   let status: MonthlyStatementPackageResult['status'] = 'IMPORTED';
 
   if (resolvedAccount) {
-    const existingCount = await db.transaction.count({
-      where: {
-        userId,
-        accountId: resolvedAccount.id,
-        date: { gte: controls.periodStart, lt: nextDay(controls.periodEnd) },
-      },
+    const coverage = await classifyExistingTransactions(db, {
+      userId,
+      accountId: resolvedAccount.id,
+      periodStart: controls.periodStart,
+      periodEnd: controls.periodEnd,
+      expected,
     });
-    if (existingCount > 0) {
-      await assertExactExistingTransactions(db, {
-        userId,
-        accountId: resolvedAccount.id,
-        periodStart: controls.periodStart,
-        periodEnd: controls.periodEnd,
-        expected,
-      });
+    if (coverage === 'EXACT') {
       status = 'EVIDENCE_BACKFILLED';
     }
+    // SUBSET intentionally continues through the normal duplicate-aware importer.
+    // This is how a historical partial month (for example the first five July rows)
+    // gains only the missing transactions from the complete monthly export.
   }
 
   if (status === 'IMPORTED') {
@@ -248,6 +253,7 @@ export const importMonthlyStatementPackage = async ({
       buffer: csv.buffer,
       filename: csv.filename,
       userId,
+      allowLockedLedgerCompletion: true,
     });
     resolvedAccount = await db.account.findUnique({
       where: { userId_identifier: { userId, identifier: csvAccount } },
@@ -255,13 +261,20 @@ export const importMonthlyStatementPackage = async ({
     if (!resolvedAccount) {
       throw new MonthlyStatementPackageError('De geïmporteerde bankrekening kon niet worden teruggevonden.', 'ACCOUNT_NOT_FOUND', 500);
     }
-    await assertExactExistingTransactions(db, {
+    const finalCoverage = await classifyExistingTransactions(db, {
       userId,
       accountId: resolvedAccount.id,
       periodStart: controls.periodStart,
       periodEnd: controls.periodEnd,
       expected,
     });
+    if (finalCoverage !== 'EXACT') {
+      throw new MonthlyStatementPackageError(
+        'Na import komt de transactieset nog niet exact overeen met het volledige maandbestand. De bankafschriftgegevens zijn niet opgeslagen.',
+        'POST_IMPORT_MISMATCH',
+        409,
+      );
+    }
   }
 
   if (!resolvedAccount) {
@@ -341,5 +354,339 @@ export const importMonthlyStatementPackage = async ({
     accountIdentifier: csvAccount,
     bankStatementId: statement.id,
     batchId: importSummary?.batchId ?? null,
+  };
+};
+
+
+
+
+export type MonthlyStatementEvidenceInput = {
+  db: Tx;
+  userId: string;
+  workspaceId: string;
+  expectedMonthKey?: string | null;
+  csv?: { buffer: Buffer; filename: string; mediaType: string } | null;
+  pdf?: { buffer: Buffer; filename: string; mediaType: string } | null;
+};
+
+export type MonthlyStatementEvidenceResult = {
+  status: MonthlyStatementPackageResult['status'] | 'CSV_IMPORTED' | 'CSV_STAGED' | 'PDF_STAGED';
+  importedCount: number;
+  duplicateCount: number;
+  transactionCount: number | null;
+  periodStart: Date;
+  periodEnd: Date;
+  accountIdentifier: string;
+  bankStatementId: string | null;
+  batchId: string | null;
+};
+
+type StoredSourceCandidate = {
+  id: string;
+  filename: string;
+  mediaType: string;
+  content: Uint8Array;
+  sha256: string;
+};
+
+type CsvInspection = {
+  parsed: Awaited<ReturnType<typeof parseIngCsv>>;
+  accountIdentifier: string;
+  actualMonthKey: string;
+  periodStart: Date;
+  periodEnd: Date;
+  incomeMinor: bigint;
+  expenseMinor: bigint;
+  expectedFacts: string[];
+};
+
+const calendarMonthBounds = (key: string): { periodStart: Date; periodEnd: Date } => {
+  const [yearRaw, monthRaw] = key.split('-');
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  const periodStart = new Date(Date.UTC(year, month - 1, 1));
+  const periodEnd = new Date(Date.UTC(year, month, 0));
+  return { periodStart, periodEnd };
+};
+
+const assertExpectedMonth = (expectedMonthKey: string | null | undefined, actualMonthKey: string) => {
+  if (expectedMonthKey && expectedMonthKey !== actualMonthKey) {
+    throw new MonthlyStatementPackageError(
+      `De geselecteerde maand (${expectedMonthKey}) komt niet overeen met het bankafschrift (${actualMonthKey}).`,
+      'SELECTED_MONTH_MISMATCH',
+      422,
+    );
+  }
+};
+
+const inspectCsvEvidence = async (
+  csv: NonNullable<MonthlyStatementEvidenceInput['csv']>,
+  expectedMonthKey?: string | null,
+): Promise<CsvInspection> => {
+  if (!csv.buffer.length) throw new MonthlyStatementPackageError('Het CSV-bestand is leeg.', 'EMPTY_CSV', 400);
+  const parsed = await parseIngCsv(csv.buffer);
+  if (parsed.errors.length > 0 || parsed.successes.length === 0) {
+    throw new MonthlyStatementPackageError(
+      parsed.errors[0]?.message ?? 'De CSV bevat geen geldige ING-transacties.',
+      'INVALID_CSV',
+      422,
+    );
+  }
+  const accounts = [...new Set(parsed.successes.map((row) => normalizeAccountIdentifier(row.accountIdentifier)))];
+  if (accounts.length !== 1) {
+    throw new MonthlyStatementPackageError('De CSV bevat transacties van meerdere bankrekeningen.', 'MULTIPLE_CSV_ACCOUNTS');
+  }
+  const months = [...new Set(parsed.successes.map((row) => monthKey(row.date)))];
+  if (months.length !== 1) {
+    throw new MonthlyStatementPackageError('De CSV moet precies één kalendermaand vertegenwoordigen.', 'CSV_MONTH_MISMATCH');
+  }
+  const actualMonthKey = months[0];
+  assertExpectedMonth(expectedMonthKey, actualMonthKey);
+  const { periodStart, periodEnd } = calendarMonthBounds(actualMonthKey);
+  const incomeMinor = parsed.successes.reduce((sum, row) => sum + (row.amountMinor > 0n ? row.amountMinor : 0n), 0n);
+  const expenseMinor = parsed.successes.reduce((sum, row) => sum + (row.amountMinor < 0n ? abs(row.amountMinor) : 0n), 0n);
+  return {
+    parsed,
+    accountIdentifier: accounts[0],
+    actualMonthKey,
+    periodStart,
+    periodEnd,
+    incomeMinor,
+    expenseMinor,
+    expectedFacts: expectedBankFacts(parsed.successes),
+  };
+};
+
+const inspectPdfEvidence = async (
+  pdf: NonNullable<MonthlyStatementEvidenceInput['pdf']>,
+  expectedMonthKey?: string | null,
+) => {
+  if (!pdf.buffer.length) throw new MonthlyStatementPackageError('Het PDF-bankafschrift is leeg.', 'EMPTY_PDF', 400);
+  let controls;
+  try {
+    controls = await extractIngStatementPdfControls(pdf.buffer);
+  } catch (error) {
+    if (error instanceof IngStatementPdfError) {
+      throw new MonthlyStatementPackageError(error.message, 'INVALID_PDF', error.statusCode);
+    }
+    throw error;
+  }
+  if (monthKey(controls.periodStart) !== monthKey(controls.periodEnd)) {
+    throw new MonthlyStatementPackageError('Het PDF-bankafschrift moet precies één kalendermaand vertegenwoordigen.', 'PDF_MONTH_MISMATCH');
+  }
+  const actualMonthKey = monthKey(controls.periodStart);
+  assertExpectedMonth(expectedMonthKey, actualMonthKey);
+  return {
+    controls,
+    accountIdentifier: normalizeAccountIdentifier(controls.bankAccountIdentifier),
+    actualMonthKey,
+  };
+};
+
+const getUnlinkedSourceCandidates = async (db: Tx, workspaceId: string): Promise<StoredSourceCandidate[]> =>
+  db.sourceFile.findMany({
+    where: {
+      workspaceId,
+      sourceStatements: { none: {} },
+      supportingStatements: { none: {} },
+    },
+    select: { id: true, filename: true, mediaType: true, content: true, sha256: true },
+    orderBy: { createdAt: 'desc' },
+    take: 100,
+  });
+
+const findMatchingStagedPdf = async (
+  db: Tx,
+  workspaceId: string,
+  csvInspection: CsvInspection,
+): Promise<NonNullable<MonthlyStatementEvidenceInput['pdf']> | null> => {
+  const candidates = await getUnlinkedSourceCandidates(db, workspaceId);
+  for (const candidate of candidates) {
+    if (!candidate.filename.toLowerCase().endsWith('.pdf') && candidate.mediaType.toLowerCase() !== 'application/pdf') continue;
+    try {
+      const pdf = {
+        buffer: Buffer.from(candidate.content),
+        filename: candidate.filename,
+        mediaType: candidate.mediaType,
+      };
+      const inspected = await inspectPdfEvidence(pdf, csvInspection.actualMonthKey);
+      if (
+        inspected.accountIdentifier === csvInspection.accountIdentifier
+        && inspected.controls.incomeMinor === csvInspection.incomeMinor
+        && inspected.controls.expenseMinor === csvInspection.expenseMinor
+      ) return pdf;
+    } catch {
+      // An unrelated staged file is ignored; the explicitly uploaded file still receives precise errors.
+    }
+  }
+  return null;
+};
+
+const findMatchingStagedCsv = async (
+  db: Tx,
+  workspaceId: string,
+  pdfInspection: Awaited<ReturnType<typeof inspectPdfEvidence>>,
+): Promise<NonNullable<MonthlyStatementEvidenceInput['csv']> | null> => {
+  const candidates = await getUnlinkedSourceCandidates(db, workspaceId);
+  for (const candidate of candidates) {
+    if (!candidate.filename.toLowerCase().endsWith('.csv') && !candidate.mediaType.toLowerCase().includes('csv')) continue;
+    try {
+      const csv = {
+        buffer: Buffer.from(candidate.content),
+        filename: candidate.filename,
+        mediaType: candidate.mediaType,
+      };
+      const inspected = await inspectCsvEvidence(csv, pdfInspection.actualMonthKey);
+      if (
+        inspected.accountIdentifier === pdfInspection.accountIdentifier
+        && inspected.incomeMinor === pdfInspection.controls.incomeMinor
+        && inspected.expenseMinor === pdfInspection.controls.expenseMinor
+      ) return csv;
+    } catch {
+      // Ignore unrelated staged evidence.
+    }
+  }
+  return null;
+};
+
+const existingStatementForSource = async (db: Tx, workspaceId: string, sourceFileId: string) =>
+  db.bankStatement.findFirst({
+    where: {
+      workspaceId,
+      OR: [{ sourceFileId }, { supportingPdfFileId: sourceFileId }],
+    },
+  });
+
+const alreadyImportedEvidenceResult = (statement: {
+  id: string;
+  importBatchId: string | null;
+  transactionCount: number;
+  periodStart: Date;
+  periodEnd: Date;
+  bankAccountIdentifier: string;
+}): MonthlyStatementEvidenceResult => ({
+  status: 'ALREADY_IMPORTED',
+  importedCount: 0,
+  duplicateCount: statement.transactionCount,
+  transactionCount: statement.transactionCount,
+  periodStart: statement.periodStart,
+  periodEnd: statement.periodEnd,
+  accountIdentifier: statement.bankAccountIdentifier,
+  bankStatementId: statement.id,
+  batchId: statement.importBatchId,
+});
+
+export const importMonthlyStatementEvidence = async ({
+  db,
+  userId,
+  workspaceId,
+  expectedMonthKey,
+  csv,
+  pdf,
+}: MonthlyStatementEvidenceInput): Promise<MonthlyStatementEvidenceResult> => {
+  if (!csv && !pdf) {
+    throw new MonthlyStatementPackageError('Selecteer een CSV-bestand, een PDF-bankafschrift of beide.', 'STATEMENT_FILE_REQUIRED', 400);
+  }
+
+  if (csv && pdf) {
+    return importMonthlyStatementPackage({ db, userId, workspaceId, expectedMonthKey, csv, pdf });
+  }
+
+  if (csv) {
+    const inspected = await inspectCsvEvidence(csv, expectedMonthKey);
+    const storedCsv = await storeSourceFile(db, {
+      workspaceId,
+      filename: csv.filename,
+      mediaType: csv.mediaType || 'text/csv',
+      content: csv.buffer,
+      uploadedBy: userId,
+    });
+    const linked = await existingStatementForSource(db, workspaceId, storedCsv.id);
+    if (linked) return alreadyImportedEvidenceResult(linked);
+
+    let resolvedAccount = await db.account.findUnique({
+      where: { userId_identifier: { userId, identifier: inspected.accountIdentifier } },
+    });
+    let importSummary: Awaited<ReturnType<typeof processImportBufferWithClient>> | null = null;
+    let coverage: 'NONE' | 'SUBSET' | 'EXACT' = 'NONE';
+
+    if (resolvedAccount) {
+      coverage = await classifyExistingTransactions(db, {
+        userId,
+        accountId: resolvedAccount.id,
+        periodStart: inspected.periodStart,
+        periodEnd: inspected.periodEnd,
+        expected: inspected.expectedFacts,
+      });
+    }
+    if (coverage !== 'EXACT') {
+      importSummary = await processImportBufferWithClient(db, {
+        buffer: csv.buffer,
+        filename: csv.filename,
+        userId,
+        allowLockedLedgerCompletion: true,
+      });
+      resolvedAccount = await db.account.findUnique({
+        where: { userId_identifier: { userId, identifier: inspected.accountIdentifier } },
+      });
+      if (!resolvedAccount) {
+        throw new MonthlyStatementPackageError('De geïmporteerde bankrekening kon niet worden teruggevonden.', 'ACCOUNT_NOT_FOUND', 500);
+      }
+      const finalCoverage = await classifyExistingTransactions(db, {
+        userId,
+        accountId: resolvedAccount.id,
+        periodStart: inspected.periodStart,
+        periodEnd: inspected.periodEnd,
+        expected: inspected.expectedFacts,
+      });
+      if (finalCoverage !== 'EXACT') {
+        throw new MonthlyStatementPackageError('Na CSV-import is de maand nog niet volledig. Er zijn geen bankafschriftcontroles opgeslagen.', 'POST_IMPORT_MISMATCH', 409);
+      }
+    }
+
+    const stagedPdf = await findMatchingStagedPdf(db, workspaceId, inspected);
+    if (stagedPdf) {
+      return importMonthlyStatementPackage({ db, userId, workspaceId, expectedMonthKey, csv, pdf: stagedPdf });
+    }
+
+    return {
+      status: importSummary?.importedCount ? 'CSV_IMPORTED' : 'CSV_STAGED',
+      importedCount: importSummary?.importedCount ?? 0,
+      duplicateCount: importSummary?.duplicateCount ?? inspected.parsed.successes.length,
+      transactionCount: inspected.parsed.successes.length,
+      periodStart: inspected.periodStart,
+      periodEnd: inspected.periodEnd,
+      accountIdentifier: inspected.accountIdentifier,
+      bankStatementId: null,
+      batchId: importSummary?.batchId ?? null,
+    };
+  }
+
+  const inspectedPdf = await inspectPdfEvidence(pdf!, expectedMonthKey);
+  const storedPdf = await storeSourceFile(db, {
+    workspaceId,
+    filename: pdf!.filename,
+    mediaType: pdf!.mediaType || 'application/pdf',
+    content: pdf!.buffer,
+    uploadedBy: userId,
+  });
+  const linked = await existingStatementForSource(db, workspaceId, storedPdf.id);
+  if (linked) return alreadyImportedEvidenceResult(linked);
+
+  const stagedCsv = await findMatchingStagedCsv(db, workspaceId, inspectedPdf);
+  if (stagedCsv) {
+    return importMonthlyStatementPackage({ db, userId, workspaceId, expectedMonthKey, csv: stagedCsv, pdf: pdf! });
+  }
+
+  return {
+    status: 'PDF_STAGED',
+    importedCount: 0,
+    duplicateCount: 0,
+    transactionCount: null,
+    periodStart: inspectedPdf.controls.periodStart,
+    periodEnd: inspectedPdf.controls.periodEnd,
+    accountIdentifier: inspectedPdf.accountIdentifier,
+    bankStatementId: null,
+    batchId: null,
   };
 };

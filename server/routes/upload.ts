@@ -3,7 +3,7 @@ import { LockedPeriodError, processImportBuffer } from '../services/importServic
 import { LedgerMismatchError, MissingOpeningBalanceError } from '../services/reconciliationService';
 import { requireAdmin } from '../auth/requestContext';
 import { prisma } from '../prismaClient';
-import { importMonthlyStatementPackage, MonthlyStatementPackageError } from '../services/monthlyStatementPackageService';
+import { importMonthlyStatementEvidence, MonthlyStatementPackageError } from '../services/monthlyStatementPackageService';
 import { IngStatementPdfError } from '../services/ingStatementPdfService';
 import {
   buildMonthlyImportPreview,
@@ -101,12 +101,11 @@ export const handleStatementPackageImport = async (req: Request, res: Response) 
   const csv = files?.csv?.[0];
   const pdf = files?.pdf?.[0];
 
-  if (!csv) return res.status(400).json({ error: 'Selecteer eerst de ING CSV met transacties.', code: 'CSV_REQUIRED' });
-  if (!pdf) return res.status(400).json({ error: 'Selecteer eerst het bijbehorende ING PDF-bankafschrift.', code: 'PDF_REQUIRED' });
-  if (!isAllowedStatementCsvUpload(csv)) return res.status(400).json({ error: 'Het transactiebestand moet een ING CSV-bestand zijn.', code: 'CSV_TYPE_INVALID' });
-  if (!isAllowedStatementPdfUpload(pdf)) return res.status(400).json({ error: 'Het bankafschrift moet een PDF-bestand zijn.', code: 'PDF_TYPE_INVALID' });
-  if (!csv.buffer?.length) return res.status(400).json({ error: 'Het CSV-bestand is leeg.', code: 'CSV_EMPTY' });
-  if (!pdf.buffer?.length) return res.status(400).json({ error: 'Het PDF-bankafschrift is leeg.', code: 'PDF_EMPTY' });
+  if (!csv && !pdf) return res.status(400).json({ error: 'Selecteer een CSV-bestand, een PDF-bankafschrift of beide.', code: 'STATEMENT_FILE_REQUIRED' });
+  if (csv && !isAllowedStatementCsvUpload(csv)) return res.status(400).json({ error: 'Het transactiebestand moet een ING CSV-bestand zijn.', code: 'CSV_TYPE_INVALID' });
+  if (pdf && !isAllowedStatementPdfUpload(pdf)) return res.status(400).json({ error: 'Het bankafschrift moet een PDF-bestand zijn.', code: 'PDF_TYPE_INVALID' });
+  if (csv && !csv.buffer?.length) return res.status(400).json({ error: 'Het CSV-bestand is leeg.', code: 'CSV_EMPTY' });
+  if (pdf && !pdf.buffer?.length) return res.status(400).json({ error: 'Het PDF-bankafschrift is leeg.', code: 'PDF_EMPTY' });
 
   const periodKey = typeof req.body?.periodKey === 'string' ? req.body.periodKey.trim() : '';
   if (periodKey && !/^\d{4}-\d{2}$/.test(periodKey)) {
@@ -114,20 +113,26 @@ export const handleStatementPackageImport = async (req: Request, res: Response) 
   }
 
   try {
-    const result = await prisma.$transaction((tx) => importMonthlyStatementPackage({
+    const result = await prisma.$transaction((tx) => importMonthlyStatementEvidence({
       db: tx,
       userId: actor.userId,
       workspaceId: actor.workspaceId,
       expectedMonthKey: periodKey || null,
-      csv: { buffer: csv.buffer, filename: csv.originalname, mediaType: csv.mimetype },
-      pdf: { buffer: pdf.buffer, filename: pdf.originalname, mediaType: pdf.mimetype },
+      csv: csv ? { buffer: csv.buffer, filename: csv.originalname, mediaType: csv.mimetype } : null,
+      pdf: pdf ? { buffer: pdf.buffer, filename: pdf.originalname, mediaType: pdf.mimetype } : null,
     }), { timeout: 60_000 });
 
     const message = result.status === 'ALREADY_IMPORTED'
-      ? 'Dit bankafschrift is al geïmporteerd. Er zijn geen nieuwe transacties toegevoegd.'
+      ? 'Dit bestand hoort bij een bankafschrift dat al volledig is geïmporteerd. Er zijn geen gegevens gewijzigd.'
       : result.status === 'EVIDENCE_BACKFILLED'
-        ? 'Bankafschriftbewijs toegevoegd aan de bestaande transacties. Er zijn geen transacties gewijzigd.'
-        : `Maandafschrift geïmporteerd. ${result.importedCount} transacties toegevoegd en banktotalen exact gecontroleerd.`;
+        ? 'CSV en PDF zijn gekoppeld aan de bestaande transacties. Er zijn geen transacties gewijzigd.'
+        : result.status === 'CSV_IMPORTED'
+          ? `CSV verwerkt. ${result.importedCount} ontbrekende transacties toegevoegd. Upload het PDF-bankafschrift om de maandcontrole te voltooien.`
+          : result.status === 'CSV_STAGED'
+            ? 'CSV opgeslagen. Alle transacties bestonden al. Upload het PDF-bankafschrift om de maandcontrole te voltooien.'
+            : result.status === 'PDF_STAGED'
+              ? 'PDF-bankafschrift opgeslagen. Upload de bijbehorende CSV om transacties en maandcontrole te voltooien.'
+              : `Maandafschrift voltooid. ${result.importedCount} ontbrekende transacties toegevoegd en banktotalen exact gecontroleerd.`;
 
     return res.json({
       ...result,

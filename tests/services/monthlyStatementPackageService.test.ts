@@ -20,7 +20,7 @@ import { parseIngCsv } from '../../lib/import/csv_ING';
 import { extractIngStatementPdfControls } from '../../server/services/ingStatementPdfService';
 import { processImportBufferWithClient } from '../../server/services/importService';
 import { acceptBankStatement, storeSourceFile } from '../../server/services/statementControlService';
-import { importMonthlyStatementPackage } from '../../server/services/monthlyStatementPackageService';
+import { importMonthlyStatementEvidence, importMonthlyStatementPackage } from '../../server/services/monthlyStatementPackageService';
 
 const rows = [
   { accountIdentifier: 'NL89INGB0006369960', date: new Date('2026-06-03T00:00:00.000Z'), amountMinor: 500n, description: 'A', counterparty: 'A', reference: null, raw: {} },
@@ -93,5 +93,80 @@ describe('monthly statement package historical backfill', () => {
       pdf: { buffer: Buffer.from('pdf'), filename: 'june.pdf', mediaType: 'application/pdf' },
     })).rejects.toMatchObject({ code: 'EXISTING_LEDGER_MISMATCH', statusCode: 409 });
     expect(storeSourceFile).not.toHaveBeenCalled();
+  });
+});
+
+
+
+
+describe('monthly statement package partial completion and staged evidence', () => {
+  it('completes a partial historical month instead of treating an exact subset as a conflict', async () => {
+    const db = makeDb();
+    db.transaction.findMany
+      .mockResolvedValueOnce([{ date: rows[0].date, amountMinor: rows[0].amountMinor }])
+      .mockResolvedValueOnce(rows.map((row) => ({ date: row.date, amountMinor: row.amountMinor })));
+    (processImportBufferWithClient as ReturnType<typeof vi.fn>).mockResolvedValue({
+      importedCount: 1,
+      duplicateCount: 1,
+      batchId: 'batch-1',
+    });
+
+    const result = await importMonthlyStatementPackage({
+      db: db as any,
+      userId: 'user-1', workspaceId: 'workspace-1', expectedMonthKey: '2026-06',
+      csv: { buffer: Buffer.from('csv'), filename: 'june.csv', mediaType: 'text/csv' },
+      pdf: { buffer: Buffer.from('pdf'), filename: 'june.pdf', mediaType: 'application/pdf' },
+    });
+
+    expect(result.status).toBe('IMPORTED');
+    expect(processImportBufferWithClient).toHaveBeenCalledWith(db, expect.objectContaining({
+      allowLockedLedgerCompletion: true,
+    }));
+    expect(result.importedCount).toBe(1);
+    expect(acceptBankStatement).toHaveBeenCalledTimes(1);
+  });
+
+  it('accepts CSV-only, imports/dedupes transactions, and stages evidence until PDF arrives', async () => {
+    const db = makeDb() as any;
+    db.sourceFile = { findMany: vi.fn().mockResolvedValue([]) };
+    db.bankStatement.findFirst.mockResolvedValue(null);
+    db.transaction.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce(rows.map((row: any) => ({ date: row.date, amountMinor: row.amountMinor })));
+    (processImportBufferWithClient as ReturnType<typeof vi.fn>).mockResolvedValue({
+      importedCount: 2,
+      duplicateCount: 0,
+      batchId: 'batch-csv',
+    });
+    (storeSourceFile as ReturnType<typeof vi.fn>).mockReset().mockResolvedValue({ id: 'csv-source' });
+
+    const result = await importMonthlyStatementEvidence({
+      db,
+      userId: 'user-1', workspaceId: 'workspace-1', expectedMonthKey: '2026-06',
+      csv: { buffer: Buffer.from('csv'), filename: 'june.csv', mediaType: 'text/csv' },
+      pdf: null,
+    });
+
+    expect(result.status).toBe('CSV_IMPORTED');
+    expect(result.importedCount).toBe(2);
+    expect(result.bankStatementId).toBeNull();
+  });
+
+  it('accepts PDF-only and stages it until the matching CSV arrives', async () => {
+    const db = makeDb() as any;
+    db.sourceFile = { findMany: vi.fn().mockResolvedValue([]) };
+    db.bankStatement.findFirst.mockResolvedValue(null);
+    (storeSourceFile as ReturnType<typeof vi.fn>).mockReset().mockResolvedValue({ id: 'pdf-source' });
+
+    const result = await importMonthlyStatementEvidence({
+      db,
+      userId: 'user-1', workspaceId: 'workspace-1', expectedMonthKey: '2026-06',
+      csv: null,
+      pdf: { buffer: Buffer.from('pdf'), filename: 'june.pdf', mediaType: 'application/pdf' },
+    });
+
+    expect(result.status).toBe('PDF_STAGED');
+    expect(result.importedCount).toBe(0);
+    expect(result.bankStatementId).toBeNull();
   });
 });

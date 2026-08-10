@@ -19,12 +19,8 @@ export function UploadCsvButton({ periodKey }: { periodKey: string }) {
       toast.error('Alleen beheerders mogen ING-maandafschriften importeren.');
       return;
     }
-    if (!csv) {
-      toast.error('Selecteer eerst de ING CSV met transacties.');
-      return;
-    }
-    if (!pdf) {
-      toast.error('Selecteer eerst het bijbehorende ING PDF-bankafschrift.');
+    if (!csv && !pdf) {
+      toast.error('Selecteer een CSV-bestand, een PDF-bankafschrift of beide.');
       return;
     }
 
@@ -51,7 +47,7 @@ export function UploadCsvButton({ periodKey }: { periodKey: string }) {
         <div className="text-sm font-semibold">ING maandafschrift importeren</div>
         <div className="mt-1 text-xs font-semibold text-[#1f5f4a]">Geselecteerde maand: {periodKey}</div>
         <p className="mt-1 max-w-xl text-xs text-black/60">
-          De CSV bevat de transacties. Het PDF-bankafschrift bevat de officiële begin- en eindsaldi en controletotalen. Beide bestanden worden samen gecontroleerd en opgeslagen.
+          De CSV bevat de transacties. Het PDF-bankafschrift bevat de officiële begin- en eindsaldi en controletotalen. Je kunt één bestand nu uploaden en het bijbehorende bestand later, of beide tegelijk. Zodra beide aanwezig zijn worden ze samen gecontroleerd en aan het maandrapport gekoppeld.
         </p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -84,9 +80,9 @@ export function UploadCsvButton({ periodKey }: { periodKey: string }) {
         type="button"
         onClick={handleImport}
         className="w-fit rounded-2xl bg-[#1f5f4a] px-5 py-3 text-sm font-semibold text-[#fbf8f2] shadow-[0_14px_35px_rgba(31,95,74,0.22)] transition hover:-translate-y-0.5 hover:bg-[#174d3b] disabled:cursor-not-allowed disabled:opacity-60"
-        disabled={busy || !canImport || !csv || !pdf}
+        disabled={busy || !canImport || (!csv && !pdf)}
       >
-        {!canImport ? 'Alleen beheerder' : busy ? 'Controleren en importeren…' : 'Maandafschrift importeren'}
+        {!canImport ? 'Alleen beheerder' : busy ? 'Controleren en verwerken…' : 'Bestand(en) verwerken'}
       </button>
     </div>
   );

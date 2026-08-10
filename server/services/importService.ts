@@ -31,6 +31,8 @@ interface ProcessImportOptions {
   buffer: Buffer;
   filename: string;
   userId: string;
+  /** Only statement-evidence workflows may complete a proven partial historical month. */
+  allowLockedLedgerCompletion?: boolean;
 }
 
 type Direction = 'credit' | 'debit';
@@ -261,7 +263,12 @@ export const autoLockLedger = async (tx: TxClient, ledgerId: string, userId: str
   });
 };
 
-const ensureLedger = async (tx: TxClient, userId: string, date: Date): Promise<string> => {
+const ensureLedger = async (
+  tx: TxClient,
+  userId: string,
+  date: Date,
+  allowLockedLedgerCompletion = false,
+): Promise<string> => {
   const year = date.getUTCFullYear();
   const month = date.getUTCMonth() + 1;
 
@@ -282,7 +289,7 @@ const ensureLedger = async (tx: TxClient, userId: string, date: Date): Promise<s
   });
 
   if (existing) {
-    if (LOCKS_ENABLED && existing.lockedAt) {
+    if (LOCKS_ENABLED && existing.lockedAt && !allowLockedLedgerCompletion) {
       throw new LockedPeriodError(`Ledger ${year}-${month} is locked`);
     }
     return existing.id;
@@ -956,6 +963,7 @@ export const processImportBufferWithClient = async (
     buffer,
     filename,
     userId,
+    allowLockedLedgerCompletion = false,
   }: ProcessImportOptions,
 ): Promise<ImportSummary> => {
   const format = detectFormat(filename);
@@ -1053,7 +1061,53 @@ export const processImportBufferWithClient = async (
       }
     });
 
-    const { uniques, duplicates } = partitionDuplicates(enrichedRows, existingHashes);
+    let { uniques, duplicates } = partitionDuplicates(enrichedRows, existingHashes);
+
+    if (allowLockedLedgerCompletion && enrichedRows.length > 0) {
+      const timestamps = enrichedRows.map((row) => row.date.getTime());
+      const accountIdentifiers = [...new Set(enrichedRows.map((row) => row.accountIdentifier))];
+      const canonicalExisting = await tx.transaction.findMany({
+        where: {
+          userId,
+          date: {
+            gte: new Date(Math.min(...timestamps)),
+            lte: new Date(Math.max(...timestamps)),
+          },
+          account: {
+            identifier: { in: accountIdentifiers },
+          },
+        },
+        select: {
+          date: true,
+          amountMinor: true,
+          account: { select: { identifier: true } },
+        },
+      });
+      const canonicalKey = (accountIdentifier: string, date: Date, amountMinor: bigint) =>
+        `${accountIdentifier.replace(/\s+/g, '').toUpperCase()}|${date.toISOString().slice(0, 10)}|${amountMinor.toString()}`;
+      const existingCounts = new Map<string, number>();
+      for (const row of canonicalExisting) {
+        const key = canonicalKey(row.account.identifier, row.date, row.amountMinor);
+        existingCounts.set(key, (existingCounts.get(key) ?? 0) + 1);
+      }
+
+      const completionUniques: EnrichedImportRow[] = [];
+      const completionDuplicates: EnrichedImportRow[] = [];
+      for (const row of enrichedRows) {
+        const key = canonicalKey(row.accountIdentifier, row.date, row.amountMinor);
+        const remaining = existingCounts.get(key) ?? 0;
+        if (remaining > 0) {
+          existingCounts.set(key, remaining - 1);
+          completionDuplicates.push(row);
+        } else {
+          completionUniques.push(row);
+        }
+      }
+
+      const repartitioned = partitionDuplicates(completionUniques, existingHashes);
+      uniques = repartitioned.uniques;
+      duplicates = [...completionDuplicates, ...repartitioned.duplicates];
+    }
 
     const accountMap = await ensureAccounts(tx, userId, uniques);
     const activeRules = await fetchActiveRules(tx, userId);
@@ -1076,7 +1130,7 @@ export const processImportBufferWithClient = async (
       if (cached) {
         return cached;
       }
-      const ledgerId = await ensureLedger(tx, userId, date);
+      const ledgerId = await ensureLedger(tx, userId, date, allowLockedLedgerCompletion);
       ledgerIds.set(key, ledgerId);
       return ledgerId;
     };
