@@ -49,6 +49,13 @@ No financial-period reopen is required to correct categorization.
 - historicalClassificationDecoupling: 13/13
 - phase4MonthlyWorkflowCloseout: 5/5
 - server TypeScript: 0 errors on implementation files
+- git diff --check: ✓ (exit 0)
+- Secret scan on diff: ✓ (zero findings)
+
+**Final runtime SHA:** `0d0f5e0d5c4ebbcf8f385959c260911a1cba4270`
+**GitHub Actions #31368875005:** SUCCESS
+**Production buildSha:** `0d0f5e0d5c4ebbcf8f385959c260911a1cba4270`
+**Production verified:** /api/health 200, /api/ledger 902 transactions, bookings preserved, ReviewDecisions preserved, bank controls intact, Dokploy ghcr.io/yeshuaacademy/finance:latest
 
 ### 2026-08-09 bank-statement reconciliation, polished public email — COMPLETE
 
