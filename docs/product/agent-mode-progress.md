@@ -1,6 +1,6 @@
 # Agent Mode Progress — All Phases Complete
 
-Updated: 2026-08-10 (historical monthly statement evidence backfill)
+Updated: 2026-08-10 (historical monthly statement evidence backfill deployed)
 
 ## Repository lock
 
@@ -10,9 +10,9 @@ Updated: 2026-08-10 (historical monthly statement evidence backfill)
 
 Do not switch source, branch, or repository.
 
-## Status: IN PROGRESS — HISTORICAL MONTHLY STATEMENT BACKFILL (pending deployment verification)
+## Status: COMPLETE — HISTORICAL MONTHLY STATEMENT BACKFILL DEPLOYED
 
-### 2026-08-10 historical monthly statement evidence backfill — IN PROGRESS
+### 2026-08-10 historical monthly statement evidence backfill — COMPLETE
 
 Uploading a CSV+PDF for a past month whose transactions already exist now backfills the bank statement evidence without reinserting transactions. The administration month selector defaults to the last completed month and exposes all completed months of the current year.
 
@@ -58,9 +58,10 @@ Uploading a CSV+PDF for a past month whose transactions already exist now backfi
 - git diff --check: ✓ (exit 0)
 - Secret scan on diff: ✓ (zero findings)
 
-**Final runtime SHA:** _pending_
-**GitHub Actions:** _pending_
-**Production verified:** _pending_
+**Final runtime SHA:** `c4488ca74ec27edc6b02e9286c2b932a0b8f7ec2`
+**GitHub Actions #31412386567:** SUCCESS
+**Production buildSha:** `c4488ca74ec27edc6b02e9286c2b932a0b8f7ec2`
+**Production verified:** /api/health 200, /api/ledger 902 transactions, review 0, bookings/categories unchanged, Dokploy ghcr.io/yeshuaacademy/finance:latest
 
 ---
 
