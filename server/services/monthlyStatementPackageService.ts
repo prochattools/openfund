@@ -644,11 +644,6 @@ export const importMonthlyStatementEvidence = async ({
       }
     }
 
-    const stagedPdf = await findMatchingStagedPdf(db, workspaceId, inspected);
-    if (stagedPdf) {
-      return importMonthlyStatementPackage({ db, userId, workspaceId, expectedMonthKey, csv, pdf: stagedPdf });
-    }
-
     return {
       status: importSummary?.importedCount ? 'CSV_IMPORTED' : 'CSV_STAGED',
       importedCount: importSummary?.importedCount ?? 0,
@@ -673,11 +668,6 @@ export const importMonthlyStatementEvidence = async ({
   const linked = await existingStatementForSource(db, workspaceId, storedPdf.id);
   if (linked) return alreadyImportedEvidenceResult(linked);
 
-  const stagedCsv = await findMatchingStagedCsv(db, workspaceId, inspectedPdf);
-  if (stagedCsv) {
-    return importMonthlyStatementPackage({ db, userId, workspaceId, expectedMonthKey, csv: stagedCsv, pdf: pdf! });
-  }
-
   return {
     status: 'PDF_STAGED',
     importedCount: 0,
@@ -689,4 +679,34 @@ export const importMonthlyStatementEvidence = async ({
     bankStatementId: null,
     batchId: null,
   };
+};
+
+
+
+
+export const finalizeStagedMonthlyStatement = async ({
+  db,
+  userId,
+  workspaceId,
+  expectedMonthKey,
+}: Pick<MonthlyStatementEvidenceInput, 'db' | 'userId' | 'workspaceId' | 'expectedMonthKey'>): Promise<MonthlyStatementPackageResult | null> => {
+  const candidates = await getUnlinkedSourceCandidates(db, workspaceId);
+  for (const candidate of candidates) {
+    if (!candidate.filename.toLowerCase().endsWith('.csv') && !candidate.mediaType.toLowerCase().includes('csv')) continue;
+    try {
+      const csv = {
+        buffer: Buffer.from(candidate.content),
+        filename: candidate.filename,
+        mediaType: candidate.mediaType,
+      };
+      const inspected = await inspectCsvEvidence(csv, expectedMonthKey);
+      const pdf = await findMatchingStagedPdf(db, workspaceId, inspected);
+      if (!pdf) continue;
+      return importMonthlyStatementPackage({ db, userId, workspaceId, expectedMonthKey, csv, pdf });
+    } catch (error) {
+      if (error instanceof MonthlyStatementPackageError && error.code === 'SELECTED_MONTH_MISMATCH') continue;
+      throw error;
+    }
+  }
+  return null;
 };

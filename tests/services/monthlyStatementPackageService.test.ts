@@ -20,7 +20,11 @@ import { parseIngCsv } from '../../lib/import/csv_ING';
 import { extractIngStatementPdfControls } from '../../server/services/ingStatementPdfService';
 import { processImportBufferWithClient } from '../../server/services/importService';
 import { acceptBankStatement, storeSourceFile } from '../../server/services/statementControlService';
-import { importMonthlyStatementEvidence, importMonthlyStatementPackage } from '../../server/services/monthlyStatementPackageService';
+import {
+  finalizeStagedMonthlyStatement,
+  importMonthlyStatementEvidence,
+  importMonthlyStatementPackage,
+} from '../../server/services/monthlyStatementPackageService';
 
 const rows = [
   { accountIdentifier: 'NL89INGB0006369960', date: new Date('2026-06-03T00:00:00.000Z'), amountMinor: 500n, description: 'A', counterparty: 'A', reference: null, raw: {} },
@@ -168,5 +172,29 @@ describe('monthly statement package partial completion and staged evidence', () 
     expect(result.status).toBe('PDF_STAGED');
     expect(result.importedCount).toBe(0);
     expect(result.bankStatementId).toBeNull();
+  });
+
+  it('finalizes a matching staged CSV and PDF in a fresh transaction', async () => {
+    const db = makeDb() as any;
+    const stagedFiles = [
+      { id: 'csv-source', filename: 'june.csv', mediaType: 'text/csv', content: Buffer.from('csv'), sha256: 'sha:csv' },
+      { id: 'pdf-source', filename: 'june.pdf', mediaType: 'application/pdf', content: Buffer.from('pdf'), sha256: 'sha:pdf' },
+    ];
+    db.sourceFile = { findMany: vi.fn().mockResolvedValue(stagedFiles) };
+    db.bankStatement.findFirst.mockResolvedValue(null);
+    db.transaction.findMany.mockResolvedValue(rows.map((row: any) => ({ date: row.date, amountMinor: row.amountMinor })));
+    (storeSourceFile as ReturnType<typeof vi.fn>)
+      .mockReset()
+      .mockResolvedValueOnce({ id: 'csv-source' })
+      .mockResolvedValueOnce({ id: 'pdf-source' });
+
+    const result = await finalizeStagedMonthlyStatement({
+      db,
+      userId: 'user-1', workspaceId: 'workspace-1', expectedMonthKey: '2026-06',
+    });
+
+    expect(result?.status).toBe('EVIDENCE_BACKFILLED');
+    expect(processImportBufferWithClient).not.toHaveBeenCalled();
+    expect(acceptBankStatement).toHaveBeenCalledTimes(1);
   });
 });

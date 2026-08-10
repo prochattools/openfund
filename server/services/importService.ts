@@ -1066,28 +1066,39 @@ export const processImportBufferWithClient = async (
     if (allowLockedLedgerCompletion && enrichedRows.length > 0) {
       const timestamps = enrichedRows.map((row) => row.date.getTime());
       const accountIdentifiers = [...new Set(enrichedRows.map((row) => row.accountIdentifier))];
-      const canonicalExisting = await tx.transaction.findMany({
+      const canonicalAccounts = await tx.account.findMany({
         where: {
           userId,
-          date: {
-            gte: new Date(Math.min(...timestamps)),
-            lte: new Date(Math.max(...timestamps)),
-          },
-          account: {
-            identifier: { in: accountIdentifiers },
-          },
+          identifier: { in: accountIdentifiers },
         },
-        select: {
-          date: true,
-          amountMinor: true,
-          account: { select: { identifier: true } },
-        },
+        select: { id: true, identifier: true },
       });
+      const accountIdentifierById = new Map(canonicalAccounts.map((account) => [account.id, account.identifier]));
+      const canonicalExisting = canonicalAccounts.length
+        ? await tx.transaction.findMany({
+            where: {
+              userId,
+              date: {
+                gte: new Date(Math.min(...timestamps)),
+                lte: new Date(Math.max(...timestamps)),
+              },
+              accountId: { in: canonicalAccounts.map((account) => account.id) },
+            },
+            select: {
+              date: true,
+              amountMinor: true,
+              accountId: true,
+            },
+          })
+        : [];
       const canonicalKey = (accountIdentifier: string, date: Date, amountMinor: bigint) =>
         `${accountIdentifier.replace(/\s+/g, '').toUpperCase()}|${date.toISOString().slice(0, 10)}|${amountMinor.toString()}`;
       const existingCounts = new Map<string, number>();
       for (const row of canonicalExisting) {
-        const key = canonicalKey(row.account.identifier, row.date, row.amountMinor);
+        if (!row.accountId) continue;
+        const accountIdentifier = accountIdentifierById.get(row.accountId);
+        if (!accountIdentifier) continue;
+        const key = canonicalKey(accountIdentifier, row.date, row.amountMinor);
         existingCounts.set(key, (existingCounts.get(key) ?? 0) + 1);
       }
 
