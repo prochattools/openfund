@@ -216,7 +216,7 @@ export class LockedPeriodError extends Error {
   }
 }
 
-const autoLockLedger = async (tx: TxClient, ledgerId: string, userId: string) => {
+export const autoLockLedger = async (tx: TxClient, ledgerId: string, userId: string) => {
   if (!LOCKS_ENABLED) {
     return;
   }
@@ -951,7 +951,7 @@ const ensureReviewCategory = async (tx: TxClient): Promise<string> => {
 };
 
 export const processImportBufferWithClient = async (
-  client: PrismaClient,
+  client: PrismaClient | Prisma.TransactionClient,
   {
     buffer,
     filename,
@@ -962,7 +962,7 @@ export const processImportBufferWithClient = async (
   const parsed = await parseBuffer(format, buffer);
   const totalRows = parsed.successes.length + parsed.errors.length;
 
-  return client.$transaction(async (tx) => {
+  const runImport = async (tx: Prisma.TransactionClient) => {
     const batch = await tx.importBatch.create({
       data: {
         userId,
@@ -1488,7 +1488,13 @@ export const processImportBufferWithClient = async (
       batchId: batch.id,
       errors,
     };
-  });
+  };
+
+  if ('$transaction' in client && typeof client.$transaction === 'function') {
+    return client.$transaction((tx) => runImport(tx));
+  }
+
+  return runImport(client as Prisma.TransactionClient);
 };
 
 export const processImportBuffer = (options: ProcessImportOptions) =>

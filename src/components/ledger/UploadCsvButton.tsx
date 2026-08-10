@@ -3,98 +3,90 @@
 import React, { useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useLedger } from '@/context/ledger-context';
-import { getImportFeedbackCounts, getImportFeedbackMessage, type ImportSummaryWithMessage } from '@/helpers/import-feedback';
-import { isClientAdmin } from '@/libs/api';
+import { isClientAdmin, uploadStatementPackage } from '@/libs/api';
 
 export function UploadCsvButton() {
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const csvRef = useRef<HTMLInputElement | null>(null);
+  const pdfRef = useRef<HTMLInputElement | null>(null);
+  const [csv, setCsv] = useState<File | null>(null);
+  const [pdf, setPdf] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
-  const { importCsv, refreshLedger } = useLedger();
+  const { refreshLedger } = useLedger();
   const canImport = isClientAdmin();
 
-  const handleClick = () => {
+  const handleImport = async () => {
     if (!canImport) {
-      toast.error('Alleen beheerders mogen ING-exportbestanden importeren.');
+      toast.error('Alleen beheerders mogen ING-maandafschriften importeren.');
       return;
     }
-    inputRef.current?.click();
-  };
-
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-
-    if (!file) {
+    if (!csv) {
+      toast.error('Selecteer eerst de ING CSV met transacties.');
+      return;
+    }
+    if (!pdf) {
+      toast.error('Selecteer eerst het bijbehorende ING PDF-bankafschrift.');
       return;
     }
 
     setBusy(true);
-
     try {
-      const summary = (await importCsv(file)) as ImportSummaryWithMessage;
-      const message = getImportFeedbackMessage(summary);
-
-      toast.success(message, { duration: 6500 });
+      const result = await uploadStatementPackage(csv, pdf);
+      toast.success(result.message ?? 'Bankafschrift is geïmporteerd, gecontroleerd en opgeslagen.', { duration: 6500 });
       await refreshLedger();
-
-      const { imported, duplicates, review, auto } = getImportFeedbackCounts(summary);
-
-      toast((t) => (
-        <div className="text-left text-sm">
-          <div className="mb-2 font-semibold">Importoverzicht</div>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-            <span>Nieuw</span><strong>{imported}</strong>
-            <span>Automatisch</span><strong>{auto}</strong>
-            <span>Te beoordelen</span><strong>{review}</strong>
-            <span>Dubbel genegeerd</span><strong>{duplicates}</strong>
-          </div>
-        </div>
-      ), { duration: 6500 });
-
-      if (summary.errors && summary.errors.length) {
-        console.warn('Import row issues', summary.errors);
-        toast((t) => (
-          <div className="text-left text-sm">
-            <div className="mb-1 font-semibold">Import voltooid met waarschuwingen</div>
-            <div className="max-h-32 overflow-y-auto">
-              <ul className="list-disc pl-4">
-                {summary.errors!.slice(0, 3).map((error) => (
-                  <li key={`${error.rowNumber}-${error.message}`}>{`Rij ${error.rowNumber}: ${error.message}`}</li>
-                ))}
-              </ul>
-              {summary.errors.length > 3 ? (
-                <div className="mt-2 text-xs opacity-70">{summary.errors.length - 3} extra rijen overgeslagen</div>
-              ) : null}
-            </div>
-          </div>
-        ));
-      }
+      setCsv(null);
+      setPdf(null);
+      if (csvRef.current) csvRef.current.value = '';
+      if (pdfRef.current) pdfRef.current.value = '';
     } catch (error) {
       console.error(error);
-      const message = error instanceof Error ? error.message : 'De import is niet gelukt. Controleer het bestand en probeer het opnieuw.';
-      toast.error(message);
+      toast.error(error instanceof Error ? error.message : 'Het maandafschrift kon niet veilig worden verwerkt.');
     } finally {
       setBusy(false);
-      event.target.value = '';
     }
   };
 
   return (
-    <>
+    <div className="flex flex-col gap-3 rounded-2xl border border-black/10 bg-white/60 p-4">
+      <div>
+        <div className="text-sm font-semibold">ING maandafschrift importeren</div>
+        <p className="mt-1 max-w-xl text-xs text-black/60">
+          De CSV bevat de transacties. Het PDF-bankafschrift bevat de officiële begin- en eindsaldi en controletotalen. Beide bestanden worden samen gecontroleerd en opgeslagen.
+        </p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="text-xs font-medium">
+          CSV transacties
+          <input
+            ref={csvRef}
+            type="file"
+            accept=".csv,text/csv"
+            disabled={busy || !canImport}
+            className="mt-1 block w-full text-xs"
+            onChange={(event) => setCsv(event.target.files?.[0] ?? null)}
+          />
+          {csv ? <span className="mt-1 block truncate font-normal text-black/60">{csv.name}</span> : null}
+        </label>
+        <label className="text-xs font-medium">
+          PDF bankafschrift
+          <input
+            ref={pdfRef}
+            type="file"
+            accept=".pdf,application/pdf"
+            disabled={busy || !canImport}
+            className="mt-1 block w-full text-xs"
+            onChange={(event) => setPdf(event.target.files?.[0] ?? null)}
+          />
+          {pdf ? <span className="mt-1 block truncate font-normal text-black/60">{pdf.name}</span> : null}
+        </label>
+      </div>
       <button
         type="button"
-        onClick={handleClick}
-        className="rounded-2xl bg-[#1f5f4a] px-5 py-3 text-sm font-semibold text-[#fbf8f2] shadow-[0_14px_35px_rgba(31,95,74,0.22)] transition hover:-translate-y-0.5 hover:bg-[#174d3b] disabled:cursor-not-allowed disabled:opacity-60"
-        disabled={busy || !canImport}
+        onClick={handleImport}
+        className="w-fit rounded-2xl bg-[#1f5f4a] px-5 py-3 text-sm font-semibold text-[#fbf8f2] shadow-[0_14px_35px_rgba(31,95,74,0.22)] transition hover:-translate-y-0.5 hover:bg-[#174d3b] disabled:cursor-not-allowed disabled:opacity-60"
+        disabled={busy || !canImport || !csv || !pdf}
       >
-        {!canImport ? 'Alleen beheerder' : busy ? 'Importeren…' : 'ING-export importeren'}
+        {!canImport ? 'Alleen beheerder' : busy ? 'Controleren en importeren…' : 'Maandafschrift importeren'}
       </button>
-      <input
-        ref={inputRef}
-        type="file"
-        accept=".csv,.xlsx,.xls"
-        className="hidden"
-        onChange={handleFileChange}
-      />
-    </>
+    </div>
   );
 }

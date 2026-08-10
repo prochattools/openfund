@@ -3,6 +3,8 @@ import { LockedPeriodError, processImportBuffer } from '../services/importServic
 import { LedgerMismatchError, MissingOpeningBalanceError } from '../services/reconciliationService';
 import { requireAdmin } from '../auth/requestContext';
 import { prisma } from '../prismaClient';
+import { importMonthlyStatementPackage, MonthlyStatementPackageError } from '../services/monthlyStatementPackageService';
+import { IngStatementPdfError } from '../services/ingStatementPdfService';
 import {
   buildMonthlyImportPreview,
   MonthlyImportPreviewError,
@@ -29,6 +31,18 @@ export const isAllowedUpload = (file: Pick<Express.Multer.File, 'originalname' |
   }
 
   return ALLOWED_MIME_TYPES.has(file.mimetype) || extensionAllowed;
+};
+
+export const isAllowedStatementCsvUpload = (file: Pick<Express.Multer.File, 'originalname' | 'mimetype'>): boolean => {
+  const filename = file.originalname.toLowerCase();
+  const mediaType = (file.mimetype ?? '').toLowerCase().split(';')[0]?.trim() ?? '';
+  return filename.endsWith('.csv') && (!mediaType || ['text/csv', 'application/csv', 'application/vnd.ms-excel'].includes(mediaType));
+};
+
+export const isAllowedStatementPdfUpload = (file: Pick<Express.Multer.File, 'originalname' | 'mimetype'>): boolean => {
+  const filename = file.originalname.toLowerCase();
+  const mediaType = (file.mimetype ?? '').toLowerCase().split(';')[0]?.trim() ?? '';
+  return filename.endsWith('.pdf') && (!mediaType || mediaType === 'application/pdf');
 };
 
 export const isAllowedMonthlyImportPreviewUpload = (
@@ -77,6 +91,57 @@ const parseOptionalDate = (value: unknown): Date | null => {
   if (typeof value !== 'string' || !value.trim()) return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
+};
+
+export const handleStatementPackageImport = async (req: Request, res: Response) => {
+  const actor = await requireAdmin(req, res);
+  if (!actor) return;
+
+  const files = req.files as Record<string, Express.Multer.File[]> | undefined;
+  const csv = files?.csv?.[0];
+  const pdf = files?.pdf?.[0];
+
+  if (!csv) return res.status(400).json({ error: 'Selecteer eerst de ING CSV met transacties.', code: 'CSV_REQUIRED' });
+  if (!pdf) return res.status(400).json({ error: 'Selecteer eerst het bijbehorende ING PDF-bankafschrift.', code: 'PDF_REQUIRED' });
+  if (!isAllowedStatementCsvUpload(csv)) return res.status(400).json({ error: 'Het transactiebestand moet een ING CSV-bestand zijn.', code: 'CSV_TYPE_INVALID' });
+  if (!isAllowedStatementPdfUpload(pdf)) return res.status(400).json({ error: 'Het bankafschrift moet een PDF-bestand zijn.', code: 'PDF_TYPE_INVALID' });
+  if (!csv.buffer?.length) return res.status(400).json({ error: 'Het CSV-bestand is leeg.', code: 'CSV_EMPTY' });
+  if (!pdf.buffer?.length) return res.status(400).json({ error: 'Het PDF-bankafschrift is leeg.', code: 'PDF_EMPTY' });
+
+  try {
+    const result = await prisma.$transaction((tx) => importMonthlyStatementPackage({
+      db: tx,
+      userId: actor.userId,
+      workspaceId: actor.workspaceId,
+      csv: { buffer: csv.buffer, filename: csv.originalname, mediaType: csv.mimetype },
+      pdf: { buffer: pdf.buffer, filename: pdf.originalname, mediaType: pdf.mimetype },
+    }), { timeout: 60_000 });
+
+    const message = result.status === 'ALREADY_IMPORTED'
+      ? 'Dit bankafschrift is al geïmporteerd. Er zijn geen nieuwe transacties toegevoegd.'
+      : result.status === 'EVIDENCE_BACKFILLED'
+        ? 'Bankafschriftbewijs toegevoegd aan de bestaande transacties. Er zijn geen transacties gewijzigd.'
+        : `Maandafschrift geïmporteerd. ${result.importedCount} transacties toegevoegd en banktotalen exact gecontroleerd.`;
+
+    return res.json({
+      ...result,
+      message,
+      periodStart: result.periodStart.toISOString(),
+      periodEnd: result.periodEnd.toISOString(),
+    });
+  } catch (error) {
+    const statusCode = error instanceof MonthlyStatementPackageError
+      ? error.statusCode
+      : error instanceof IngStatementPdfError
+        ? error.statusCode
+        : 500;
+    const message = error instanceof MonthlyStatementPackageError || error instanceof IngStatementPdfError
+      ? error.message
+      : 'Het maandafschrift kon niet veilig worden verwerkt.';
+    const code = error instanceof MonthlyStatementPackageError ? error.code : undefined;
+    console.error('Maandafschriftpakket kon niet worden verwerkt', { code, message });
+    return res.status(statusCode).json({ error: message, code });
+  }
 };
 
 export const handleImportUpload = async (req: Request, res: Response) => {

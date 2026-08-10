@@ -2,7 +2,7 @@ import './loadEnv';
 import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
-import { handleImportUpload, handleMonthlyImportPreviewUpload } from './routes/upload';
+import { handleImportUpload, handleMonthlyImportPreviewUpload, handleStatementPackageImport } from './routes/upload';
 import { getLedger } from './routes/ledger';
 import {
   activateReviewRuleCreation,
@@ -68,6 +68,10 @@ app.use('/api', authenticateExpressRequest);
 
 app.post('/api/upload', upload.single('file'), handleImportUpload);
 app.post('/api/upload/preview', upload.single('file'), handleMonthlyImportPreviewUpload);
+app.post('/api/statements/import', upload.fields([
+  { name: 'csv', maxCount: 1 },
+  { name: 'pdf', maxCount: 1 },
+]), handleStatementPackageImport);
 app.get('/api/ledger', getLedger);
 app.get('/api/review', getReviewTransactions);
 app.post('/api/review/clear', clearReviewQueue);

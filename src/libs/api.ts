@@ -229,6 +229,26 @@ export const uploadImportFile = async (formData: FormData) => {
   return response.json();
 };
 
+export const uploadStatementPackage = async (csv: File, pdf: File) => {
+  const formData = new FormData();
+  formData.append('csv', csv);
+  formData.append('pdf', pdf);
+
+  const response = await fetch(getApiUrl('/api/statements/import'), withUserHeader({
+    method: 'POST',
+    body: formData,
+  }));
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({
+      error: 'Het maandafschrift kon niet veilig worden verwerkt.',
+    }));
+    throw new Error(error.error ?? 'Het maandafschrift kon niet veilig worden verwerkt.');
+  }
+
+  return response.json();
+};
+
 export const updateCategory = async (id: string, payload: {
   categoryId?: string | null;
   categoryName?: string;
