@@ -1,6 +1,6 @@
 # Agent Mode Progress — All Phases Complete
 
-Updated: 2026-08-09 (Resend delivery + unlimited resend repair in progress)
+Updated: 2026-08-10 (bank-truth / categorization decoupling)
 
 ## Repository lock
 
@@ -10,7 +10,52 @@ Updated: 2026-08-09 (Resend delivery + unlimited resend repair in progress)
 
 Do not switch source, branch, or repository.
 
-## Status: COMPLETE — RESEND DELIVERY + UNLIMITED RESEND RESTORED
+## Status: COMPLETE — BANK TRUTH IMMUTABLE, CATEGORIZATION PERMANENTLY EDITABLE
+
+### 2026-08-10 bank-truth / categorization decoupling — COMPLETE
+
+A bank month can be financially reconciled while its categorization remains editable.
+Changing categorization never changes bank reconciliation.
+Previously sent report artifacts are immutable historical snapshots. A new report uses the current categorization.
+No financial-period reopen is required to correct categorization.
+
+**IMMUTABLE BANK FACTS (protected by Ledger.lockedAt):**
+- SourceFile evidence (original CSV/PDF bytes)
+- BankStatement controls (opening/income/expense/net/closing/count)
+- Transaction amount, date, direction, account
+- Import fingerprints
+
+**MUTABLE CLASSIFICATION (editable at any time, regardless of lock state):**
+- Project/customer classification
+- Transaction type
+- Category
+- TransactionBooking
+- ReviewDecision classification audit trail
+
+**Changes made:**
+
+1. `reportReconciliationService.ts`: bank reconciliation no longer fails for missing TransactionBooking; financial invariants A-G/I remain unchanged; result includes `classificationReadiness` reporting booked/unbooked state separately from reconciliation pass/fail
+2. `monthlySendReport.ts`: after successful bank reconciliation, classification readiness is checked separately; incomplete classification throws typed CLASSIFICATION_INCOMPLETE (HTTP 422) with a count of uncategorized transactions
+3. `reviewDecisionService.ts`: removed `assertUnlockedLedger`; `assignManualBooking` no longer fetches `ledger.lockedAt`; documented as mutable classification metadata
+4. `manualBookingReopenService.ts`: removed `LEDGER_LOCKED` gate; classification correction is always allowed regardless of ledger lock state; bank fact protection remains in import paths
+5. Import paths (`importService.ts`, `accounts.ts`, `ledgers.ts`): unchanged — continue to protect financial data behind `Ledger.lockedAt`
+
+**Validation evidence:**
+- 1965/1965 tests pass (2 pre-existing local-DB-only rehearsal failures unrelated)
+- reconcileMonthlyReport: 11/11
+- monthlySendReport route: 24/24
+- reviewDecisionService: 8/8
+- manualBookingReopenService: 6/6
+- historicalClassificationDecoupling: 13/13
+- phase4MonthlyWorkflowCloseout: 5/5
+- server TypeScript: 0 errors on implementation files
+
+### 2026-08-09 bank-statement reconciliation, polished public email — COMPLETE
+
+Upgraded monthly reporting to authoritative bank-statement reconciliation with hard invariants A-J that block sends on any mismatch. Fixed signed-amount arithmetic bug, added counterparty section, Dutch capitalized months, Steve signature, CSV/PDF attachments, removed technical metadata from public HTML.
+
+**Runtime SHA:** `80f45e2fc245b520a7203a4ee3d7abfc448d4b0e`
+**GitHub Actions #31332771687:** SUCCESS
 
 ### 2026-08-09 Resend delivery + unlimited resend follow-up — COMPLETE
 

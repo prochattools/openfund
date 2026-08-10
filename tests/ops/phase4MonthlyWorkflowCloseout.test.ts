@@ -52,7 +52,8 @@ describe('Phase 4 monthly import/review workflow closeout', () => {
     expect(deterministicService).toContain('createsTransactionBooking: false');
     expect(deterministicService).toContain('closesPeriod: false');
     expect(reviewDecisionService).toContain("actor.role && actor.role !== 'admin'");
-    expect(reviewDecisionService).toContain('assertUnlockedLedger(transaction)');
+    expect(reviewDecisionService).not.toContain('assertUnlockedLedger(transaction)');
+    expect(reviewDecisionService).toContain('Financial reconciliation protects imported monetary facts');
     expect(reviewDecisionService).toContain('projectId');
     expect(reviewDecisionService).toContain('transactionTypeId');
     expect(reviewDecisionService).toContain('categoryId');

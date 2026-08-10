@@ -96,6 +96,14 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
         month,
       });
 
+      if (!reconciliation.classificationReadiness.complete) {
+        throw Object.assign(new Error('CLASSIFICATION_INCOMPLETE'), {
+          code: 'CLASSIFICATION_INCOMPLETE',
+          statusCode: 422,
+          unbookedTransactionCount: reconciliation.classificationReadiness.unbookedTransactionCount,
+        });
+      }
+
       // 2a. Generate live snapshot (now with correct absolute-value arithmetic)
       const snapshotResult = await generateLiveMonthlyReportSnapshot(tx, {
         actor: { userId, role: actor.role },
@@ -306,7 +314,22 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
   } catch (err: unknown) {
     console.error('[POST /api/reports/monthly/send]', err instanceof Error ? err.message : String(err));
 
-    // Handle ReportSnapshotError (e.g. unbooked transactions)
+    if (
+      err &&
+      typeof err === 'object' &&
+      'code' in err &&
+      err.code === 'CLASSIFICATION_INCOMPLETE'
+    ) {
+      const count = 'unbookedTransactionCount' in err && typeof err.unbookedTransactionCount === 'number'
+        ? err.unbookedTransactionCount
+        : 0;
+      return res.status(422).json({
+        error: `Er zijn nog ${count} ongecategoriseerde transacties. Categoriseer deze transacties voordat je het maandrapport verstuurt.`,
+        code: 'CLASSIFICATION_INCOMPLETE',
+      });
+    }
+
+    // Defensive snapshot-level classification check.
     if (err instanceof ReportSnapshotError) {
       return res.status(err.statusCode).json({ error: err.message });
     }

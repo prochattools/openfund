@@ -29,6 +29,13 @@ export class ReportReconciliationError extends Error {
   }
 }
 
+export type ClassificationReadiness = {
+  transactionCount: number;
+  bookedTransactionCount: number;
+  unbookedTransactionCount: number;
+  complete: boolean;
+};
+
 export type ReconciliationResult = {
   bankStatementId: string;
   accountId: string;
@@ -46,7 +53,7 @@ export type ReconciliationResult = {
   ledgerExpenseMinor: bigint;
   ledgerNetMinor: bigint;
   ledgerTransactionCount: number;
-  bookedTransactionCount: number;
+  classificationReadiness: ClassificationReadiness;
   passed: true;
 };
 
@@ -126,17 +133,10 @@ export const reconcileMonthlyReport = async (
   });
   const bookedIds = new Set(bookings.map((b) => b.transactionId));
 
-  // Invariant H: Every transaction must have a confirmed booking
+  // Classification readiness is intentionally separate from bank reconciliation.
+  // A bank statement may reconcile perfectly even while one or more transactions still
+  // need project/type/category metadata. Reporting can enforce that separately.
   const unbookedCount = transactions.length - bookedIds.size;
-  if (unbookedCount > 0) {
-    throw new ReportReconciliationError(
-      `Er zijn ${unbookedCount} ongeboekte transacties in ${input.year}-${String(input.month).padStart(2, '0')}. ` +
-      `Alle transacties moeten geboekt zijn voordat een rapport kan worden verzonden.`,
-      'UNBOOKED_TRANSACTIONS',
-      '0',
-      String(unbookedCount),
-    );
-  }
 
   // Step 4: Compute ledger totals using absolute amounts
   let ledgerIncome = 0n;
@@ -314,7 +314,12 @@ export const reconcileMonthlyReport = async (
     ledgerExpenseMinor: ledgerExpense,
     ledgerNetMinor: ledgerNet,
     ledgerTransactionCount: transactions.length,
-    bookedTransactionCount: bookedIds.size,
+    classificationReadiness: {
+      transactionCount: transactions.length,
+      bookedTransactionCount: bookedIds.size,
+      unbookedTransactionCount: unbookedCount,
+      complete: unbookedCount === 0,
+    },
     passed: true,
     counterparties,
   };

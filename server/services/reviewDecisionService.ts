@@ -90,15 +90,6 @@ const assertAdminActor = (actor: ReviewDecisionActor) => {
   }
 };
 
-const assertUnlockedLedger = (transaction: { ledger?: { lockedAt: Date | null } | null }) => {
-  if (process.env.RECONCILIATION_LOCKS_ENABLED !== 'false' && transaction.ledger?.lockedAt) {
-    throw new ReviewDecisionError(
-      'Deze maand is vergrendeld. Ontgrendel de maand voordat je deze transactie wijzigt.',
-      423,
-    );
-  }
-};
-
 const assertSameWorkspace = (
   workspaceIds: Array<string | null | undefined>,
 ): string => {
@@ -123,11 +114,6 @@ export const assignManualBooking = async (db: TxClient, input: AssignManualBooki
       userId: input.actor.userId,
     },
     include: {
-      ledger: {
-        select: {
-          lockedAt: true,
-        },
-      },
       transactionBooking: true,
     },
   });
@@ -136,8 +122,9 @@ export const assignManualBooking = async (db: TxClient, input: AssignManualBooki
     throw new ReviewDecisionError('Transactie niet gevonden.', 404);
   }
 
-  assertUnlockedLedger(transaction);
-
+  // Financial reconciliation protects imported monetary facts. Project/type/category
+  // are mutable classification metadata and may be corrected in any reconciled or
+  // previously reported period without reopening the bank statement.
   const [project, transactionType, category] = await Promise.all([
     db.project.findUnique({ where: { id: input.projectId } }),
     db.transactionType.findUnique({ where: { id: input.transactionTypeId } }),

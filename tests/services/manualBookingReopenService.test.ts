@@ -223,6 +223,26 @@ describe('manual booking reopen service', () => {
     expect(auditLogs[0]).toMatchObject({ action: 'transaction.booking.reopened' });
   });
 
+  it('allows classification correction on a financially locked ledger', async () => {
+    const { db, transaction } = makeDb();
+    transaction.ledger = { lockedAt: new Date('2026-06-01T00:00:00.000Z') };
+
+    const plan = await buildLatestManualBookingReopenPlan(db, criteria);
+    expect(plan.sideEffects.mutatesImportedBankFacts).toBe(false);
+    expect(plan.sideEffects.resetsTransactionClassification).toBe(true);
+
+    const result = await executeLatestManualBookingReopen(db, {
+      ...criteria,
+      actorId: userId,
+      confirmedPlanHash: plan.planHash,
+    });
+
+    expect(result.status).toBe('REOPENED');
+    if (result.status !== 'REOPENED') throw new Error('expected reopened');
+    expect(result.sideEffects.changedImportedBankFactCount).toBe(0);
+    expect(transaction.transactionBooking).toBeNull();
+  });
+
   it('rejects ambiguous matching confirmations before execution', async () => {
     const { db, decisions } = makeDb();
     decisions.push({ ...decisions[0], id: 'decision-older', decidedAt: new Date('2026-08-05T16:00:00.000Z') });

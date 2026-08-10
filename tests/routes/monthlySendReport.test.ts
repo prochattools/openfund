@@ -172,7 +172,12 @@ const MOCK_RECONCILIATION = {
   ledgerExpenseMinor: 50000n,
   ledgerNetMinor: 50000n,
   ledgerTransactionCount: 2,
-  bookedTransactionCount: 2,
+  classificationReadiness: {
+    transactionCount: 2,
+    bookedTransactionCount: 2,
+    unbookedTransactionCount: 0,
+    complete: true,
+  },
   passed: true as const,
   counterparties: [],
 };
@@ -327,37 +332,34 @@ describe('POST /api/reports/monthly/send', () => {
     });
   });
 
-  describe('unbooked transactions block send', () => {
-    it('returns 422 when reconcileMonthlyReport throws ReportReconciliationError for unbooked transactions', async () => {
+  describe('classification readiness blocks categorized reporting', () => {
+    it('returns 422 CLASSIFICATION_INCOMPLETE after bank reconciliation passes', async () => {
       (prisma.emailRecipient.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
         { email: 'test@example.com', name: 'Test' },
       ]);
+      (reconcileMonthlyReport as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ...MOCK_RECONCILIATION,
+        classificationReadiness: {
+          transactionCount: 2,
+          bookedTransactionCount: 0,
+          unbookedTransactionCount: 2,
+          complete: false,
+        },
+      });
 
-      const { ReportReconciliationError } = await import('../../server/services/reportReconciliationService');
-      const unbookedError = new ReportReconciliationError(
-        'Er zijn 2 ongeboekte transacties in 2024-01. Alle transacties moeten geboekt zijn.',
-        'UNBOOKED_TRANSACTIONS',
-        '0',
-        '2',
-      );
-
-      const tx: any = {
-        reportSnapshotLine: { findMany: vi.fn() },
-        reportDispatch: { findFirst: vi.fn() },
-        reportArtifact: { findUnique: vi.fn() },
-      };
+      const tx: any = {};
       (prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation(
         async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
       );
-      (reconcileMonthlyReport as ReturnType<typeof vi.fn>).mockRejectedValue(unbookedError);
 
       const req = mockReq({ year: 2024, month: 1, confirmed: true });
       const res = mockRes();
       await postMonthlySendReport(req, res);
 
       expect((res as any).statusCode).toBe(422);
-      expect((res as any).jsonData.error).toContain('ongeboekte transacties');
-      expect((res as any).jsonData.invariant).toBe('UNBOOKED_TRANSACTIONS');
+      expect((res as any).jsonData.code).toBe('CLASSIFICATION_INCOMPLETE');
+      expect((res as any).jsonData.error).toContain('ongecategoriseerde transacties');
+      expect(generateLiveMonthlyReportSnapshot).not.toHaveBeenCalled();
     });
   });
 

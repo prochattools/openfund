@@ -211,28 +211,54 @@ describe('review decision service', () => {
     expect(calls).toHaveLength(0);
   });
 
-  it('rejects locked ledger periods before writing bookings', async () => {
+  it('allows audited recategorization in a financially reconciled/locked ledger', async () => {
     const { calls, db } = makeDb({
       transaction: {
         id: 'tx-locked',
         userId: 'user-1',
-        projectId: null,
-        transactionTypeId: null,
-        categoryId: null,
+        projectId: 'project-old',
+        transactionTypeId: 'type-old',
+        categoryId: 'cat-old',
         ledger: { lockedAt: new Date('2026-05-31T00:00:00.000Z') },
-        transactionBooking: null,
+        transactionBooking: {
+          id: 'booking-old',
+          projectId: 'project-old',
+          transactionTypeId: 'type-old',
+          categoryId: 'cat-old',
+        },
       },
     });
 
-    await expect(assignManualBooking(db, {
-      actor: { userId: 'user-1', role: 'admin' },
+    const result = await assignManualBooking(db, {
+      actor: { userId: 'user-1', role: 'admin', actorId: 'actor-1' },
       transactionId: 'tx-locked',
       projectId: 'project-1',
       transactionTypeId: 'type-1',
       categoryId: 'cat-1',
-    })).rejects.toMatchObject({ statusCode: 423 });
+      reason: 'Correctie categorie',
+    });
 
-    expect(calls.some((call) => call.model === 'transactionBooking')).toBe(false);
+    expect(result.booking.id).toBe('booking-1');
+    const bookingCall = calls.find((call) => call.model === 'transactionBooking');
+    const decisionCall = calls.find((call) => call.model === 'reviewDecision');
+    const transactionUpdateCall = calls.find((call) => call.model === 'transaction' && call.method === 'update');
+    expect(bookingCall.args.update).toMatchObject({
+      projectId: 'project-1',
+      transactionTypeId: 'type-1',
+      categoryId: 'cat-1',
+    });
+    expect(decisionCall.args.data).toMatchObject({
+      beforeProjectId: 'project-old',
+      beforeTypeId: 'type-old',
+      beforeCategoryId: 'cat-old',
+      afterProjectId: 'project-1',
+      afterTypeId: 'type-1',
+      afterCategoryId: 'cat-1',
+      reason: 'Correctie categorie',
+    });
+    expect(transactionUpdateCall.args.data).not.toHaveProperty('amountMinor');
+    expect(transactionUpdateCall.args.data).not.toHaveProperty('direction');
+    expect(transactionUpdateCall.args.data).not.toHaveProperty('bankDate');
   });
 
   it('rejects cross-workspace dimensions', async () => {

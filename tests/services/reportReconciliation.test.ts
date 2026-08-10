@@ -170,16 +170,23 @@ describe('reconcileMonthlyReport', () => {
     }
   });
 
-  it('throws UNBOOKED_TRANSACTIONS when not all transactions have bookings', async () => {
+  it('passes bank reconciliation when categorization is incomplete and reports readiness separately', async () => {
     const db = buildMockDb({ bookingCount: 35 }); // 35 of 37 booked
 
-    try {
-      await reconcileMonthlyReport(db, { workspaceId: WORKSPACE_ID, userId: USER_ID, year: 2026, month: 6 });
-      expect.fail('Should have thrown');
-    } catch (err: any) {
-      expect(err).toBeInstanceOf(ReportReconciliationError);
-      expect(err.invariant).toBe('UNBOOKED_TRANSACTIONS');
-    }
+    const result = await reconcileMonthlyReport(db, {
+      workspaceId: WORKSPACE_ID,
+      userId: USER_ID,
+      year: 2026,
+      month: 6,
+    });
+
+    expect(result.passed).toBe(true);
+    expect(result.classificationReadiness).toEqual({
+      transactionCount: 37,
+      bookedTransactionCount: 35,
+      unbookedTransactionCount: 2,
+      complete: false,
+    });
   });
 
   it('throws TRANSACTION_COUNT_MISMATCH when count differs from statement', async () => {

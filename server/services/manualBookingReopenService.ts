@@ -104,7 +104,6 @@ export const buildLatestManualBookingReopenPlan = async (
     include: {
       transaction: {
         include: {
-          ledger: { select: { lockedAt: true } },
           transactionBooking: true,
         },
       },
@@ -141,12 +140,9 @@ export const buildLatestManualBookingReopenPlan = async (
     );
   }
 
-  if (process.env.RECONCILIATION_LOCKS_ENABLED !== 'false' && transaction.ledger?.lockedAt) {
-    throw new ManualBookingReopenError(
-      'LEDGER_LOCKED',
-      'The transaction ledger is locked and cannot be reopened.',
-    );
-  }
+  // Classification correction is always allowed regardless of ledger lock state.
+  // The ledger lock protects imported bank facts (amount, date, direction, account);
+  // project/type/category are mutable classification metadata.
 
   if (
     latestDecision.beforeBookingId
