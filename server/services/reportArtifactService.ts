@@ -21,7 +21,7 @@ import type { Prisma, ReportSnapshotLine, ReportArtifactFormat } from '@prisma/c
 import { hashEvidence } from './reviewDecisionService';
 import type { ReportLineInput } from './periodCloseService';
 import { formatDutchMonthYear } from '../utils/dutchPeriodFormatter';
-import type { CounterpartySummary } from './reportReconciliationService';
+import type { CustomerSummary } from './reportReconciliationService';
 
 export class ReportArtifactError extends Error {
   statusCode: number;
@@ -53,7 +53,7 @@ export type ArtifactSnapshotInput = {
   generatedBy: string;
   generatedAt: Date;
   lines: ReportLineInput[];
-  counterparties?: CounterpartySummary[];
+  customers?: CustomerSummary[];
 };
 
 export type ArtifactGenerationResult = {
@@ -116,17 +116,17 @@ export const generateHtmlArtifact = (snapshot: ArtifactSnapshotInput): Buffer =>
       )
       .join('\n');
 
-  const renderCounterparties = (counterparties: CounterpartySummary[]): string => {
-    if (!counterparties.length) return '<tr><td colspan="4">Geen klantgegevens.</td></tr>';
-    return counterparties
-      .map((cp) => {
-        const diff = cp.differenceMinor;
+  const renderCustomers = (customers: CustomerSummary[]): string => {
+    if (!customers.length) return '<tr><td colspan="4">Geen klantgegevens.</td></tr>';
+    return customers
+      .map((customer) => {
+        const diff = customer.differenceMinor;
         const color = diff > 0n ? '#2e7d32' : diff < 0n ? '#c62828' : '#333';
         return `<tr>
-          <td>${escapeHtml(cp.counterparty)}</td>
-          <td>${centsToEuro(cp.incomeMinor)}</td>
-          <td>${centsToEuro(cp.expenseMinor)}</td>
-          <td style="color: ${color}; font-weight: bold;">${centsToEuro(cp.differenceMinor)}</td>
+          <td>${escapeHtml(customer.customer)}</td>
+          <td>${centsToEuro(customer.incomeMinor)}</td>
+          <td>${centsToEuro(customer.expenseMinor)}</td>
+          <td style="color: ${color}; font-weight: bold;">${centsToEuro(customer.differenceMinor)}</td>
         </tr>`;
       })
       .join('\n');
@@ -187,7 +187,7 @@ export const generateHtmlArtifact = (snapshot: ArtifactSnapshotInput): Buffer =>
       <tr><th>Klant</th><th>Inkomsten</th><th>Uitgaven</th><th>Verschil</th></tr>
     </thead>
     <tbody>
-      ${renderCounterparties(snapshot.counterparties ?? [])}
+      ${renderCustomers(snapshot.customers ?? [])}
     </tbody>
   </table>
 

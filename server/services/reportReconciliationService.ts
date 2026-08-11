@@ -57,16 +57,16 @@ export type ReconciliationResult = {
   passed: true;
 };
 
-export type CounterpartySummary = {
-  counterparty: string;
+export type CustomerSummary = {
+  customer: string;
   incomeMinor: bigint;
   expenseMinor: bigint;
   differenceMinor: bigint;
   transactionCount: number;
 };
 
-export type ReconciliationWithCounterparties = ReconciliationResult & {
-  counterparties: CounterpartySummary[];
+export type ReconciliationWithCustomers = ReconciliationResult & {
+  customers: CustomerSummary[];
 };
 
 const toBigInt = (v: bigint | number): bigint => BigInt(v);
@@ -81,7 +81,7 @@ export const reconcileMonthlyReport = async (
     year: number;
     month: number;
   },
-): Promise<ReconciliationWithCounterparties> => {
+): Promise<ReconciliationWithCustomers> => {
   const periodStart = new Date(Date.UTC(input.year, input.month - 1, 1));
   const periodEnd = new Date(Date.UTC(input.year, input.month, 0, 23, 59, 59, 999));
 
@@ -129,9 +129,12 @@ export const reconcileMonthlyReport = async (
       workspaceId: input.workspaceId,
       transactionId: { in: transactionIds },
     },
-    select: { transactionId: true },
+    select: { transactionId: true, literalProjectLabel: true },
   });
   const bookedIds = new Set(bookings.map((b) => b.transactionId));
+  const customerByTransactionId = new Map(
+    bookings.map((b) => [b.transactionId, b.literalProjectLabel?.trim() || 'Ongecategoriseerd']),
+  );
 
   // Classification readiness is intentionally separate from bank reconciliation.
   // A bank statement may reconcile perfectly even while one or more transactions still
@@ -247,18 +250,19 @@ export const reconcileMonthlyReport = async (
     );
   }
 
-  // Step 5: Build counterparty summary
-  const counterpartyMap = new Map<string, { income: bigint; expense: bigint; count: number }>();
+  // Step 5: Build Klant summary from confirmed project/customer classification.
+  // Bank counterparties remain immutable bank evidence and are not the product's Klant dimension.
+  const customerMap = new Map<string, { income: bigint; expense: bigint; count: number }>();
   for (const t of transactions) {
-    const key = t.counterparty?.trim() || t.description?.trim() || 'Onbekende relatie';
+    const key = customerByTransactionId.get(t.id) ?? 'Ongecategoriseerd';
     const amount = abs(toBigInt(t.amountMinor));
-    const existing = counterpartyMap.get(key);
+    const existing = customerMap.get(key);
     if (existing) {
       if (t.direction === 'credit') existing.income += amount;
       else existing.expense += amount;
       existing.count += 1;
     } else {
-      counterpartyMap.set(key, {
+      customerMap.set(key, {
         income: t.direction === 'credit' ? amount : 0n,
         expense: t.direction === 'debit' ? amount : 0n,
         count: 1,
@@ -266,34 +270,29 @@ export const reconcileMonthlyReport = async (
     }
   }
 
-  const counterparties: CounterpartySummary[] = Array.from(counterpartyMap.entries())
+  const customers: CustomerSummary[] = Array.from(customerMap.entries())
     .map(([name, data]) => ({
-      counterparty: name,
+      customer: name,
       incomeMinor: data.income,
       expenseMinor: data.expense,
       differenceMinor: data.income - data.expense,
       transactionCount: data.count,
     }))
-    .sort((a, b) => {
-      const aActivity = a.incomeMinor + a.expenseMinor;
-      const bActivity = b.incomeMinor + b.expenseMinor;
-      if (bActivity !== aActivity) return bActivity > aActivity ? 1 : -1;
-      return a.counterparty.localeCompare(b.counterparty, 'nl');
-    });
+    .sort((a, b) => a.customer.localeCompare(b.customer, 'nl'));
 
-  // Verify counterparty totals reconcile
-  let cpIncome = 0n;
-  let cpExpense = 0n;
-  for (const cp of counterparties) {
-    cpIncome += cp.incomeMinor;
-    cpExpense += cp.expenseMinor;
+  // Verify Klant totals reconcile exactly to the bank-authoritative headline totals.
+  let customerIncome = 0n;
+  let customerExpense = 0n;
+  for (const customer of customers) {
+    customerIncome += customer.incomeMinor;
+    customerExpense += customer.expenseMinor;
   }
-  if (cpIncome !== ledgerIncome || cpExpense !== ledgerExpense) {
+  if (customerIncome !== ledgerIncome || customerExpense !== ledgerExpense) {
     throw new ReportReconciliationError(
       `Klanttotalen komen niet overeen met rapporttotalen.`,
-      'COUNTERPARTY_RECONCILIATION',
+      'CUSTOMER_RECONCILIATION',
       `income=${ledgerIncome.toString()}, expense=${ledgerExpense.toString()}`,
-      `income=${cpIncome.toString()}, expense=${cpExpense.toString()}`,
+      `income=${customerIncome.toString()}, expense=${customerExpense.toString()}`,
     );
   }
 
@@ -321,6 +320,6 @@ export const reconcileMonthlyReport = async (
       complete: unbookedCount === 0,
     },
     passed: true,
-    counterparties,
+    customers,
   };
 };

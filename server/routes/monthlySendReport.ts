@@ -161,7 +161,7 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
           transactionCount: l.transactionCount,
           sortOrder: l.sortOrder,
         })),
-        counterparties: reconciliation.counterparties,
+        customers: reconciliation.customers,
       };
 
       const artifactResult = await generateAndStoreReportArtifacts(tx, artifactInput);

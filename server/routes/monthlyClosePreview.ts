@@ -10,6 +10,11 @@ import {
   buildCloseControlPreview,
 } from '../services/categoryControlTotalsService';
 import { buildCloseControlHashFromParts } from '../services/strictPeriodCloseService';
+import {
+  buildStatementPeriodMonthSlice,
+  calendarMonthBounds,
+  statementPeriodFullyCoversMonth,
+} from '../services/statementPeriodMonthSliceService';
 
 export type PeriodClosePreviewItem = {
   statementPeriodId: string;
@@ -70,18 +75,67 @@ export const getMonthlyClosePreview = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Geen bankafschriften voor deze maand.' });
     }
 
-    // Build preview for each statement period
+    const monthBounds = calendarMonthBounds(year, month);
+    const selectedByAccount = new Map<string, (typeof statementPeriods)[number]>();
+    const rankPeriod = (sp: (typeof statementPeriods)[number]) => {
+      const exact = sp.periodStart.getTime() === monthBounds.start.getTime()
+        && sp.periodEnd.getTime() === monthBounds.end.getTime();
+      const full = statementPeriodFullyCoversMonth(sp.periodStart, sp.periodEnd, year, month);
+      const exactComplete = exact && sp.coverageStatus === 'COMPLETE';
+      const span = sp.periodEnd.getTime() - sp.periodStart.getTime();
+      return { tier: exactComplete ? 4 : exact ? 3 : full ? 2 : 1, span };
+    };
+    for (const sp of statementPeriods) {
+      const current = selectedByAccount.get(sp.accountId);
+      if (!current) {
+        selectedByAccount.set(sp.accountId, sp);
+        continue;
+      }
+      const candidateRank = rankPeriod(sp);
+      const currentRank = rankPeriod(current);
+      if (candidateRank.tier > currentRank.tier
+        || (candidateRank.tier === currentRank.tier && candidateRank.span < currentRank.span)) {
+        selectedByAccount.set(sp.accountId, sp);
+      }
+    }
+
+    // Build one preview per account for the selected calendar month.
     const previews: PeriodClosePreviewItem[] = [];
 
-    for (const sp of statementPeriods) {
+    for (const sp of selectedByAccount.values()) {
+      const sourceTransactions = await prisma.transaction.findMany({
+        where: {
+          userId: actor.userId,
+          accountId: sp.accountId,
+          date: { gte: sp.periodStart, lte: sp.periodEnd },
+        },
+        select: { date: true, amountMinor: true, direction: true },
+      });
+      const slice = buildStatementPeriodMonthSlice({
+        source: {
+          periodStart: sp.periodStart,
+          periodEnd: sp.periodEnd,
+          coverageStatus: sp.coverageStatus,
+          openingBalanceMinor: sp.openingBalanceMinor,
+          incomeMinor: sp.incomeMinor,
+          expenseMinor: sp.expenseMinor,
+          closingBalanceMinor: sp.closingBalanceMinor,
+          transactionCount: sp.transactionCount,
+        },
+        year,
+        month,
+        transactions: sourceTransactions.map((tx) => ({
+          date: tx.date,
+          amountMinor: tx.amountMinor,
+          direction: tx.direction as 'credit' | 'debit',
+        })),
+      });
+
       const transactions = await prisma.transaction.findMany({
         where: {
           userId: actor.userId,
           accountId: sp.accountId,
-          date: {
-            gte: sp.periodStart,
-            lte: sp.periodEnd,
-          },
+          date: { gte: slice.periodStart, lte: slice.periodEnd },
         },
         select: {
           id: true,
@@ -147,15 +201,15 @@ export const getMonthlyClosePreview = async (req: Request, res: Response) => {
         accountId: sp.accountId,
         accountIdentifier: sp.statement.bankAccountIdentifier,
         statementPeriodId: sp.id,
-        periodStart: sp.periodStart,
-        periodEnd: sp.periodEnd,
-        coverageStatus: sp.coverageStatus,
+        periodStart: slice.periodStart,
+        periodEnd: slice.periodEnd,
+        coverageStatus: slice.coverageStatus,
         statementTotals: {
-          openingBalanceMinor: sp.openingBalanceMinor,
-          incomeMinor: sp.incomeMinor,
-          expenseMinor: sp.expenseMinor,
-          closingBalanceMinor: sp.closingBalanceMinor,
-          transactionCount: sp.transactionCount,
+          openingBalanceMinor: slice.openingBalanceMinor,
+          incomeMinor: slice.incomeMinor,
+          expenseMinor: slice.expenseMinor,
+          closingBalanceMinor: slice.closingBalanceMinor,
+          transactionCount: slice.transactionCount,
         },
         bookedTransactions,
       });
@@ -164,20 +218,20 @@ export const getMonthlyClosePreview = async (req: Request, res: Response) => {
         workspaceId: sp.workspaceId,
         accountId: sp.accountId,
         accountIdentifier: sp.statement.bankAccountIdentifier,
-        periodStart: sp.periodStart,
-        periodEnd: sp.periodEnd,
-        statementIncomeMinor: sp.incomeMinor,
-        statementExpenseMinor: sp.expenseMinor,
-        statementTransactionCount: sp.transactionCount,
+        periodStart: slice.periodStart,
+        periodEnd: slice.periodEnd,
+        statementIncomeMinor: slice.incomeMinor,
+        statementExpenseMinor: slice.expenseMinor,
+        statementTransactionCount: slice.transactionCount,
         transactions: categoryTransactions,
       });
 
       const combined = buildCloseControlPreview(statementPreview, categoryControls);
       const closeControlHash = buildCloseControlHashFromParts(sp.id, ledger.id, combined);
 
-      // Load latest close (any status) by highest version
+      // Load latest close for this selected monthly ledger and source period.
       const latestClose = await prisma.periodClose.findFirst({
-        where: { statementPeriodId: sp.id },
+        where: { statementPeriodId: sp.id, ledgerId: ledger.id },
         select: { version: true, status: true },
         orderBy: { version: 'desc' },
       });
@@ -185,8 +239,8 @@ export const getMonthlyClosePreview = async (req: Request, res: Response) => {
       previews.push({
         statementPeriodId: sp.id,
         accountIdentifier: sp.statement.bankAccountIdentifier,
-        periodStart: sp.periodStart.toISOString().slice(0, 10),
-        periodEnd: sp.periodEnd.toISOString().slice(0, 10),
+        periodStart: slice.periodStart.toISOString().slice(0, 10),
+        periodEnd: slice.periodEnd.toISOString().slice(0, 10),
         closeControlHash,
         latestCloseStatus: latestClose?.status ?? null,
         latestCloseVersion: latestClose?.version ?? null,

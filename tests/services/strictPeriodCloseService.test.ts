@@ -61,24 +61,27 @@ const makeStatementPeriod = (overrides: Partial<{
 const balancedTransactions = [
   {
     id: 'tx-1',
+    date: new Date('2026-01-10T00:00:00Z'),
     amountMinor: 5000n,
     direction: 'credit' as const,
     transactionBooking: { projectId: 'p1', transactionTypeId: 't1', categoryId: 'c1', literalProjectLabel: 'Klant A', literalTypeLabel: 'Inkomsten', literalCategoryLabel: 'Donaties' },
-    categorizationSuggestions: [],
+    categorizationSuggestions: [] as { id: string }[],
   },
   {
     id: 'tx-2',
+    date: new Date('2026-01-15T00:00:00Z'),
     amountMinor: 3000n,
     direction: 'credit' as const,
     transactionBooking: { projectId: 'p2', transactionTypeId: 't1', categoryId: 'c1', literalProjectLabel: 'Klant B', literalTypeLabel: 'Inkomsten', literalCategoryLabel: 'Donaties' },
-    categorizationSuggestions: [],
+    categorizationSuggestions: [] as { id: string }[],
   },
   {
     id: 'tx-3',
+    date: new Date('2026-01-20T00:00:00Z'),
     amountMinor: 3000n,
     direction: 'debit' as const,
     transactionBooking: { projectId: 'p1', transactionTypeId: 't2', categoryId: 'c2', literalProjectLabel: 'Klant A', literalTypeLabel: 'Uitgaven', literalCategoryLabel: 'Huur' },
-    categorizationSuggestions: [],
+    categorizationSuggestions: [] as { id: string }[],
   },
 ];
 
@@ -91,6 +94,9 @@ const makeDb = (overrides: {
   const captured: { periodClose?: object } = {};
 
   const db = {
+    ledger: {
+      findFirst: async () => ({ id: 'ledger-1', year: 2026, month: 1 }),
+    },
     statementPeriod: {
       findFirst: async () => overrides.statementPeriod !== undefined
         ? overrides.statementPeriod
@@ -118,14 +124,15 @@ const makeDb = (overrides: {
   return { db: db as any, captured };
 };
 
-const makeInput = (overrides: Partial<StrictPeriodCloseInput> = {}): StrictPeriodCloseInput => ({
+const makeInput = (overrides: Partial<StrictPeriodCloseInput> = {}) => ({
   actor: adminActor,
   workspaceId: 'workspace-1',
   ledgerId: 'ledger-1',
   statementPeriodId: 'period-1',
+  expectedCloseControlHash: null as string | null,
   confirmed: true,
   ...overrides,
-});
+}) satisfies StrictPeriodCloseInput;
 
 describe('strict period close service — close gate', () => {
   it.skip('balanced complete combined preview can close with confirmation and creates exactly one PeriodClose', async () => {
@@ -532,10 +539,10 @@ describe('hash helper hardening — CLOSE-003 fix', () => {
         periodEnd,
         coverageStatus: StatementCoverageStatus.COMPLETE,
         statementTotals: {
-          openingBalanceMinor: '100000',
-          incomeMinor: '8000',
-          expenseMinor: '3000',
-          closingBalanceMinor: '105000',
+          openingBalanceMinor: 100000n,
+          incomeMinor: 8000n,
+          expenseMinor: 3000n,
+          closingBalanceMinor: 105000n,
           transactionCount: 3,
         },
         bookedTransactions: [
@@ -581,10 +588,10 @@ describe('hash helper hardening — CLOSE-003 fix', () => {
         periodEnd,
         coverageStatus: StatementCoverageStatus.COMPLETE,
         statementTotals: {
-          openingBalanceMinor: '100000',
-          incomeMinor: '8000',
-          expenseMinor: '3000',
-          closingBalanceMinor: '105000',
+          openingBalanceMinor: 100000n,
+          incomeMinor: 8000n,
+          expenseMinor: 3000n,
+          closingBalanceMinor: 105000n,
           transactionCount: 3,
         },
         bookedTransactions: [
@@ -631,10 +638,10 @@ describe('hash helper hardening — CLOSE-003 fix', () => {
         periodEnd,
         coverageStatus: StatementCoverageStatus.COMPLETE,
         statementTotals: {
-          openingBalanceMinor: '100000',
-          incomeMinor: '8000',
-          expenseMinor: '3000',
-          closingBalanceMinor: '105000',
+          openingBalanceMinor: 100000n,
+          incomeMinor: 8000n,
+          expenseMinor: 3000n,
+          closingBalanceMinor: 105000n,
           transactionCount: 3,
         },
         bookedTransactions: [

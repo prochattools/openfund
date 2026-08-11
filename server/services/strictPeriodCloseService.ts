@@ -13,6 +13,7 @@ import {
 } from './categoryControlTotalsService';
 import { createPeriodClose, PeriodCloseError, type BalancedReconciliationEvidence } from './periodCloseService';
 import type { AppRole } from '../auth/requestContext';
+import { buildStatementPeriodMonthSlice } from './statementPeriodMonthSliceService';
 
 export class StrictPeriodCloseError extends Error {
   statusCode: number;
@@ -151,11 +152,11 @@ const assertHashRequiredWhenConfirmed = (
 
 const assertNoActiveClose = async (
   db: TxClient,
-  statementPeriodId: string,
+  ledgerId: string,
 ) => {
   const existing = await db.periodClose.findFirst({
     where: {
-      statementPeriodId,
+      ledgerId,
       status: 'CLOSED',
     },
   });
@@ -184,15 +185,57 @@ export const executeStrictPeriodClose = async (
     throw new StrictPeriodCloseError('Afschriftperiode niet gevonden.', 404);
   }
 
-  await assertNoActiveClose(db, input.statementPeriodId);
+  const ledger = await db.ledger.findFirst({
+    where: { id: input.ledgerId, userId: input.actor.userId },
+    select: { id: true, year: true, month: true },
+  });
+  if (!ledger) {
+    throw new StrictPeriodCloseError('Grootboek niet gevonden.', 404);
+  }
+
+  await assertNoActiveClose(db, input.ledgerId);
+
+  const sourceTransactions = await db.transaction.findMany({
+    where: {
+      userId: input.actor.userId,
+      accountId: statementPeriod.accountId,
+      date: { gte: statementPeriod.periodStart, lte: statementPeriod.periodEnd },
+    },
+    select: { date: true, amountMinor: true, direction: true },
+  });
+  const slice = buildStatementPeriodMonthSlice({
+    source: {
+      periodStart: statementPeriod.periodStart,
+      periodEnd: statementPeriod.periodEnd,
+      coverageStatus: statementPeriod.coverageStatus,
+      openingBalanceMinor: statementPeriod.openingBalanceMinor,
+      incomeMinor: statementPeriod.incomeMinor,
+      expenseMinor: statementPeriod.expenseMinor,
+      closingBalanceMinor: statementPeriod.closingBalanceMinor,
+      transactionCount: statementPeriod.transactionCount,
+    },
+    year: ledger.year,
+    month: ledger.month,
+    transactions: sourceTransactions.map((tx) => ({
+      date: tx.date,
+      amountMinor: tx.amountMinor,
+      direction: tx.direction as 'credit' | 'debit',
+    })),
+  });
+  if (slice.coverageStatus !== 'COMPLETE') {
+    throw new StrictPeriodCloseError(
+      'Dit bankafschrift dekt de geselecteerde kalendermaand niet volledig. Alleen volledig gedekte maanden kunnen worden afgesloten.',
+      409,
+    );
+  }
 
   const transactions = await db.transaction.findMany({
     where: {
       userId: input.actor.userId,
       accountId: statementPeriod.accountId,
       date: {
-        gte: statementPeriod.periodStart,
-        lte: statementPeriod.periodEnd,
+        gte: slice.periodStart,
+        lte: slice.periodEnd,
       },
     },
     select: {
@@ -259,15 +302,15 @@ export const executeStrictPeriodClose = async (
     accountId: statementPeriod.accountId,
     accountIdentifier: statementPeriod.statement.bankAccountIdentifier,
     statementPeriodId: statementPeriod.id,
-    periodStart: statementPeriod.periodStart,
-    periodEnd: statementPeriod.periodEnd,
-    coverageStatus: statementPeriod.coverageStatus,
+    periodStart: slice.periodStart,
+    periodEnd: slice.periodEnd,
+    coverageStatus: slice.coverageStatus,
     statementTotals: {
-      openingBalanceMinor: statementPeriod.openingBalanceMinor,
-      incomeMinor: statementPeriod.incomeMinor,
-      expenseMinor: statementPeriod.expenseMinor,
-      closingBalanceMinor: statementPeriod.closingBalanceMinor,
-      transactionCount: statementPeriod.transactionCount,
+      openingBalanceMinor: slice.openingBalanceMinor,
+      incomeMinor: slice.incomeMinor,
+      expenseMinor: slice.expenseMinor,
+      closingBalanceMinor: slice.closingBalanceMinor,
+      transactionCount: slice.transactionCount,
     },
     bookedTransactions,
   });
@@ -276,11 +319,11 @@ export const executeStrictPeriodClose = async (
     workspaceId: statementPeriod.statement.workspaceId,
     accountId: statementPeriod.accountId,
     accountIdentifier: statementPeriod.statement.bankAccountIdentifier,
-    periodStart: statementPeriod.periodStart,
-    periodEnd: statementPeriod.periodEnd,
-    statementIncomeMinor: statementPeriod.incomeMinor,
-    statementExpenseMinor: statementPeriod.expenseMinor,
-    statementTransactionCount: statementPeriod.transactionCount,
+    periodStart: slice.periodStart,
+    periodEnd: slice.periodEnd,
+    statementIncomeMinor: slice.incomeMinor,
+    statementExpenseMinor: slice.expenseMinor,
+    statementTransactionCount: slice.transactionCount,
     transactions: categoryTransactions,
   });
 
@@ -318,13 +361,13 @@ export const executeStrictPeriodClose = async (
     ledgerId: input.ledgerId,
     statementId: statementPeriod.statementId,
     statementPeriodId: input.statementPeriodId,
-    periodStart: statementPeriod.periodStart,
-    periodEnd: statementPeriod.periodEnd,
-    openingBalanceMinor: statementPeriod.openingBalanceMinor,
-    incomeMinor: statementPeriod.incomeMinor,
-    expenseMinor: statementPeriod.expenseMinor,
-    closingBalanceMinor: statementPeriod.closingBalanceMinor,
-    transactionCount: statementPeriod.transactionCount,
+    periodStart: slice.periodStart,
+    periodEnd: slice.periodEnd,
+    openingBalanceMinor: slice.openingBalanceMinor,
+    incomeMinor: slice.incomeMinor,
+    expenseMinor: slice.expenseMinor,
+    closingBalanceMinor: slice.closingBalanceMinor,
+    transactionCount: slice.transactionCount,
     closedBy: input.actor.actorId ?? input.actor.userId,
     reconciliationEvidence,
     classificationEvidence: { closeControlHash, validatorVersion: reconciliationEvidence.validatorVersion },
@@ -336,8 +379,8 @@ export const executeStrictPeriodClose = async (
     version: periodClose.version,
     statementPeriodId: input.statementPeriodId,
     ledgerId: input.ledgerId,
-    periodStart: statementPeriod.periodStart.toISOString().slice(0, 10),
-    periodEnd: statementPeriod.periodEnd.toISOString().slice(0, 10),
+    periodStart: slice.periodStart.toISOString().slice(0, 10),
+    periodEnd: slice.periodEnd.toISOString().slice(0, 10),
     closeControlHash,
     combinedPreview: combined,
     sideEffects: {

@@ -179,7 +179,7 @@ const MOCK_RECONCILIATION = {
     complete: true,
   },
   passed: true as const,
-  counterparties: [],
+  customers: [],
 };
 
 const configureSuccessfulWorkflow = (

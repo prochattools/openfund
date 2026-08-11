@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { generateHtmlArtifact, type ArtifactSnapshotInput } from '../../server/services/reportArtifactService';
-import type { CounterpartySummary } from '../../server/services/reportReconciliationService';
+import type { CustomerSummary } from '../../server/services/reportReconciliationService';
 
 const buildJuneSnapshot = (overrides?: Partial<ArtifactSnapshotInput>): ArtifactSnapshotInput => ({
   snapshotId: 'snap-test-001',
@@ -46,30 +46,30 @@ const buildJuneSnapshot = (overrides?: Partial<ArtifactSnapshotInput>): Artifact
       sortOrder: 2,
     },
   ],
-  counterparties: [
+  customers: [
     {
-      counterparty: 'Student A',
+      customer: 'Student A',
       incomeMinor: 700000n,
       expenseMinor: 0n,
       differenceMinor: 700000n,
       transactionCount: 10,
     },
     {
-      counterparty: 'Student B',
+      customer: 'Student B',
       incomeMinor: 605798n,
       expenseMinor: 0n,
       differenceMinor: 605798n,
       transactionCount: 10,
     },
     {
-      counterparty: 'Leverancier X',
+      customer: 'Leverancier X',
       incomeMinor: 0n,
       expenseMinor: 800000n,
       differenceMinor: -800000n,
       transactionCount: 10,
     },
     {
-      counterparty: 'Leverancier Y',
+      customer: 'Leverancier Y',
       incomeMinor: 0n,
       expenseMinor: 503656n,
       differenceMinor: -503656n,
@@ -124,12 +124,12 @@ describe('generateHtmlArtifact — public report content', () => {
     expect(html).not.toContain('juni 2026');
   });
 
-  it('includes counterparty section heading', () => {
+  it('includes Klant summary section heading', () => {
     const html = generateHtmlArtifact(buildJuneSnapshot()).toString('utf-8');
     expect(html).toContain('Inkomsten en uitgaven per klant');
   });
 
-  it('includes counterparty names in HTML', () => {
+  it('includes Klant names in HTML', () => {
     const html = generateHtmlArtifact(buildJuneSnapshot()).toString('utf-8');
     expect(html).toContain('Student A');
     expect(html).toContain('Leverancier X');
@@ -156,8 +156,8 @@ describe('generateHtmlArtifact — public report content', () => {
     expect(html).toContain('EUR 21.42');
   });
 
-  it('shows empty counterparty placeholder when no counterparties provided', () => {
-    const html = generateHtmlArtifact(buildJuneSnapshot({ counterparties: [] })).toString('utf-8');
+  it('shows empty Klant placeholder when no customers are provided', () => {
+    const html = generateHtmlArtifact(buildJuneSnapshot({ customers: [] })).toString('utf-8');
     expect(html).toContain('Geen klantgegevens');
   });
 

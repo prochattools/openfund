@@ -83,7 +83,10 @@ const buildMockDb = (overrides?: {
     },
     transactionBooking: {
       findMany: vi.fn().mockResolvedValue(
-        transactions.slice(0, bookingCount).map((t) => ({ transactionId: t.id })),
+        transactions.slice(0, bookingCount).map((t, index) => ({
+          transactionId: t.id,
+          literalProjectLabel: index % 2 === 0 ? 'YA' : 'FTK',
+        })),
       ),
     },
   } as any;
@@ -108,7 +111,7 @@ describe('reconcileMonthlyReport', () => {
     expect(result.transactionCount).toBe(JUNE_TX_COUNT);
   });
 
-  it('returns counterparty summary with correct totals', async () => {
+  it('returns Klant summary from confirmed project labels with correct totals', async () => {
     const db = buildMockDb();
     const result = await reconcileMonthlyReport(db, {
       workspaceId: WORKSPACE_ID,
@@ -117,10 +120,12 @@ describe('reconcileMonthlyReport', () => {
       month: 6,
     });
 
-    const totalCpIncome = result.counterparties.reduce((s, cp) => s + cp.incomeMinor, 0n);
-    const totalCpExpense = result.counterparties.reduce((s, cp) => s + cp.expenseMinor, 0n);
-    expect(totalCpIncome).toBe(JUNE_INCOME);
-    expect(totalCpExpense).toBe(JUNE_EXPENSE);
+    expect(result.customers.map((customer) => customer.customer)).toEqual(['FTK', 'YA']);
+    const totalCustomerIncome = result.customers.reduce((sum, customer) => sum + customer.incomeMinor, 0n);
+    const totalCustomerExpense = result.customers.reduce((sum, customer) => sum + customer.expenseMinor, 0n);
+    expect(totalCustomerIncome).toBe(JUNE_INCOME);
+    expect(totalCustomerExpense).toBe(JUNE_EXPENSE);
+    expect(result.customers.some((customer) => customer.customer.startsWith('Klant '))).toBe(false);
   });
 
   it('throws STATEMENT_MISSING when no bank statement exists', async () => {
