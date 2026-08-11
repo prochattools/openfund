@@ -261,14 +261,15 @@ describe('runBestPrefillComparisonCli — scope validation', () => {
 const makeTxDb = (transactions: any[]): any =>
   makeMockDb({
     transaction: {
-      findMany: async (_args: any): Promise<any[]> => {
-        // The first call is from buildOwnerHistoryProposalPlan (open transactions),
-        // the second is from the main CLI loop (unresolved transactions).
-        // Both should return the same list in test context.
+      findMany: async (args: any): Promise<any[]> => {
+        // loadConfirmedHistoryEligibility queries booked transactions (transactionBooking.is)
+        // Return empty for that query since test txs have no booking provenance.
+        if (args?.where?.transactionBooking && typeof args.where.transactionBooking === 'object' && 'is' in args.where.transactionBooking) {
+          return [];
+        }
         return transactions;
       },
     },
-    transactionBooking: { findMany: async (): Promise<any[]> => [] },
     project: { findMany: async (): Promise<any[]> => [] },
     transactionType: { findMany: async (): Promise<any[]> => [] },
     category: { findMany: async (): Promise<any[]> => [] },

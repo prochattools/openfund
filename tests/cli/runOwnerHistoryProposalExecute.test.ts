@@ -9,7 +9,7 @@ const makePlan = (overrides: Partial<OwnerHistoryProposalPlan> = {}): OwnerHisto
   workspaceId: 'ws-1',
   planHash: 'abc123',
   sideEffects: { writesPerformed: false, createsTransactionBooking: false, createsReviewDecision: false, requiresAdministratorApproval: true },
-  provenanceProof: { evidenceBookingsLoadedFromSource: 'HISTORICAL', reviewDecisionRequired: false, qualifiesUnderConfirmedHistoryEligibilityService: false, exclusionReason: 'MISSING_REVIEW_DECISION' },
+  provenanceProof: { evidenceBookingsLoadedFromSource: 'CONFIRMED_HISTORY_ELIGIBILITY', reviewDecisionRequired: true, qualifiesUnderConfirmedHistoryEligibilityService: true, exclusionReason: null, eligibilityVersion: 'confirmed-history-v1', exclusionSummary: {} },
   counts: { evidenceCandidates: 10, disqualifiedIncomplete: 0, disqualifiedCrossWorkspace: 0, disqualifiedInactiveOrUnauthorizedTriple: 0, disqualifiedMissingSourceDirection: 0, eligibleEvidence: 10, openTransactions: 5, covered: 4, uncovered: 1, abstainedWeak: 1, abstainedMissingTargetDirection: 0, abstainedNoFactualDirectionMatch: 0, abstainedNoRankedCandidate: 0, abstained: 1 },
   matcherDistribution: { NORMALIZED_HISTORY: 4 },
   confidenceDistribution: { DEFAULT: 4 },
@@ -47,7 +47,7 @@ describe('runOwnerHistoryProposalExecuteCli', () => {
     const code = await runOwnerHistoryProposalExecuteCli({
       args: [], env: minimalEnv,
       createDb: async () => ({
-        db: { transactionBooking: { findMany: async () => [] }, transaction: { findMany: async () => [] }, categorizationSuggestion: { findMany: async () => [] }, $transaction: async (fn: (db: unknown) => unknown) => fn({}) } as never,
+        db: { transaction: { findMany: async () => [] }, categorizationSuggestion: { findMany: async () => [] }, $transaction: async (fn: (db: unknown) => unknown) => fn({}) } as never,
         disconnect: async () => {},
       }),
       write: (v) => output.push(v),
@@ -68,7 +68,6 @@ describe('runOwnerHistoryProposalExecuteCli', () => {
     let capturedHash = '';
     let callCount = 0;
     const mockDb = {
-      transactionBooking: { findMany: async () => [] },
       transaction: { findMany: async () => [] },
       categorizationSuggestion: { findMany: async () => [], updateMany: async () => ({ count: 0 }), createMany: async () => ({ count: 0 }) },
       $transaction: async (fn: (db: unknown) => unknown) => fn(mockDb),
@@ -100,7 +99,6 @@ describe('runOwnerHistoryProposalExecuteCli', () => {
   it('execute with wrong hash returns HASH_DRIFT and exits 1', async () => {
     const output: string[] = [];
     const mockDb = {
-      transactionBooking: { findMany: async () => [] },
       transaction: { findMany: async () => [] },
       categorizationSuggestion: { findMany: async () => [] },
       $transaction: async (fn: (db: unknown) => unknown) => fn(mockDb),

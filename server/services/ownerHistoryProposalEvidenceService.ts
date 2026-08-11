@@ -7,6 +7,7 @@ import {
   type RankedHistorySuggestion,
 } from './historySuggestionService';
 import { compareHistoricalFactualDirections } from './historicalDirectionCompatibilityService';
+import { loadConfirmedHistoryEligibility } from './confirmedHistoryEligibilityService';
 
 export const OWNER_HISTORY_PROPOSAL_VERSION = 'owner-history-proposal-v2';
 export const OWNER_HISTORY_PRODUCER_KEY = 'owner-history';
@@ -48,10 +49,12 @@ export type OwnerHistoryProposalPlan = {
     requiresAdministratorApproval: true;
   };
   provenanceProof: {
-    evidenceBookingsLoadedFromSource: 'HISTORICAL';
-    reviewDecisionRequired: false;
-    qualifiesUnderConfirmedHistoryEligibilityService: false;
-    exclusionReason: 'MISSING_REVIEW_DECISION';
+    evidenceBookingsLoadedFromSource: 'CONFIRMED_HISTORY_ELIGIBILITY';
+    reviewDecisionRequired: true;
+    qualifiesUnderConfirmedHistoryEligibilityService: true;
+    exclusionReason: null;
+    eligibilityVersion: string;
+    exclusionSummary: Record<string, number>;
   };
   counts: {
     evidenceCandidates: number;
@@ -106,7 +109,7 @@ export type OwnerHistoryProposalExecutionResult = {
 
 type OwnerHistoryDb = Pick<
   PrismaClient,
-  'transactionBooking' | 'transaction' | 'categorizationSuggestion' | '$transaction'
+  'transaction' | 'categorizationSuggestion' | '$transaction'
 >;
 
 const stableValue = (value: unknown): unknown => {
@@ -169,31 +172,8 @@ export const buildOwnerHistoryProposalPlan = async (
 ): Promise<OwnerHistoryProposalPlan> => {
   const { workspaceId, userId } = input;
 
-  const rawBookings = await db.transactionBooking.findMany({
-    where: { workspaceId, source: 'HISTORICAL' },
-    select: {
-      id: true,
-      workspaceId: true,
-      projectId: true,
-      transactionTypeId: true,
-      categoryId: true,
-      evidenceHash: true,
-      project: { select: { workspaceId: true, isActive: true } },
-      transactionType: { select: { workspaceId: true, isActive: true } },
-      category: { select: { workspaceId: true, isActive: true } },
-      transaction: {
-        select: {
-          id: true,
-          date: true,
-          direction: true,
-          amountMinor: true,
-          counterparty: true,
-          description: true,
-          accountId: true,
-        },
-      },
-    },
-  });
+  const eligibility = await loadConfirmedHistoryEligibility(db, { workspaceId, userId });
+  const eligible = eligibility.eligibleHistory;
 
   let disqualifiedIncomplete = 0;
   let disqualifiedCrossWorkspace = 0;
@@ -203,67 +183,43 @@ export const buildOwnerHistoryProposalPlan = async (
   const evidenceEntries: OwnerHistoryEvidenceEntry[] = [];
   const approvedHistory: ApprovedHistoryBooking[] = [];
 
-  for (const booking of rawBookings) {
-    if (!booking.projectId || !booking.transactionTypeId || !booking.categoryId) {
+  for (const entry of eligible) {
+    if (!entry.projectId || !entry.transactionTypeId || !entry.categoryId) {
       disqualifiedIncomplete += 1;
       continue;
     }
-    if (
-      booking.workspaceId !== workspaceId
-      || booking.project.workspaceId !== workspaceId
-      || booking.transactionType.workspaceId !== workspaceId
-      || booking.category.workspaceId !== workspaceId
-    ) {
-      disqualifiedCrossWorkspace += 1;
-      continue;
-    }
-    if (!booking.project.isActive || !booking.transactionType.isActive || !booking.category.isActive) {
-      disqualifiedInactiveOrUnauthorizedTriple += 1;
-      continue;
-    }
-    const compatibility = compareHistoricalFactualDirections(booking.transaction.direction, 'credit');
+    const compatibility = compareHistoricalFactualDirections(entry.direction, 'credit');
     if (compatibility.reason === 'MISSING_SOURCE_DIRECTION') {
       disqualifiedMissingSourceDirection += 1;
       continue;
     }
 
-    const entry: OwnerHistoryEvidenceEntry = {
-      bookingId: booking.id,
-      transactionId: booking.transaction.id,
-      workspaceId: booking.workspaceId,
-      projectId: booking.projectId,
-      transactionTypeId: booking.transactionTypeId,
-      categoryId: booking.categoryId,
-      direction: booking.transaction.direction,
-      evidenceHash: booking.evidenceHash,
+    const evidenceEntry: OwnerHistoryEvidenceEntry = {
+      bookingId: entry.bookingId,
+      transactionId: entry.transactionId,
+      workspaceId,
+      projectId: entry.projectId,
+      transactionTypeId: entry.transactionTypeId,
+      categoryId: entry.categoryId,
+      direction: entry.direction,
+      evidenceHash: entry.bookingEvidenceHash,
       sourceFactHash: digest({
-        transactionId: booking.transaction.id,
-        date: booking.transaction.date,
-        direction: booking.transaction.direction,
-        amountMinor: booking.transaction.amountMinor,
-        accountId: booking.transaction.accountId,
-        counterparty: booking.transaction.counterparty,
-        description: booking.transaction.description,
+        transactionId: entry.transactionId,
+        date: entry.date,
+        direction: entry.direction,
+        amountMinor: entry.amountMinor,
+        accountId: entry.accountId,
+        counterparty: entry.counterparty,
+        description: entry.description,
       }),
     };
-    evidenceEntries.push(entry);
+    evidenceEntries.push(evidenceEntry);
+    approvedHistory.push(entry);
+  }
 
-    approvedHistory.push({
-      bookingId: booking.id,
-      transactionId: booking.transaction.id,
-      date: booking.transaction.date,
-      accountId: booking.transaction.accountId,
-      direction: booking.transaction.direction,
-      amountMinor: booking.transaction.amountMinor,
-      counterparty: booking.transaction.counterparty,
-      counterpartyIban: null,
-      description: booking.transaction.description,
-      paymentPurpose: null,
-      projectId: booking.projectId,
-      transactionTypeId: booking.transactionTypeId,
-      categoryId: booking.categoryId,
-      bookingEvidenceHash: booking.evidenceHash,
-    });
+  const exclusionSummary: Record<string, number> = {};
+  for (const ex of eligibility.exclusions) {
+    exclusionSummary[ex.reason] = (exclusionSummary[ex.reason] ?? 0) + 1;
   }
 
   const openTransactions = await db.transaction.findMany({
@@ -332,8 +288,9 @@ export const buildOwnerHistoryProposalPlan = async (
     + abstainedNoFactualDirectionMatch
     + abstainedNoRankedCandidate;
 
+  const totalCandidates = eligible.length + eligibility.exclusions.length;
   const counts: OwnerHistoryProposalPlan['counts'] = {
-    evidenceCandidates: rawBookings.length,
+    evidenceCandidates: totalCandidates,
     disqualifiedIncomplete,
     disqualifiedCrossWorkspace,
     disqualifiedInactiveOrUnauthorizedTriple,
@@ -391,10 +348,12 @@ export const buildOwnerHistoryProposalPlan = async (
       requiresAdministratorApproval: true,
     },
     provenanceProof: {
-      evidenceBookingsLoadedFromSource: 'HISTORICAL',
-      reviewDecisionRequired: false,
-      qualifiesUnderConfirmedHistoryEligibilityService: false,
-      exclusionReason: 'MISSING_REVIEW_DECISION',
+      evidenceBookingsLoadedFromSource: 'CONFIRMED_HISTORY_ELIGIBILITY',
+      reviewDecisionRequired: true,
+      qualifiesUnderConfirmedHistoryEligibilityService: true,
+      exclusionReason: null,
+      eligibilityVersion: eligibility.eligibilityVersion,
+      exclusionSummary,
     },
     counts,
     matcherDistribution,
