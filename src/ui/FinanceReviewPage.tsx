@@ -7,7 +7,6 @@ import { FinanceAppFrame } from '@/ui/FinanceAppFrame';
 import {
   canConfirmReviewRow,
   getReviewConfirmLabel,
-  getReviewPrefillPresentation,
   getReviewReliability,
   getReviewSelectionValidity,
   type ReviewConfidenceFilter,
@@ -182,22 +181,22 @@ function ReviewRow({
 
   return (
     <article className="min-w-0 border-b border-[#ded5c8] bg-[#fbf8f2] p-4 last:border-b-0">
-      <div className="grid gap-3 xl:grid-cols-[110px_minmax(190px,1.2fr)_minmax(220px,1.5fr)_110px_minmax(170px,1fr)_minmax(170px,1fr)_minmax(180px,1fr)_145px_140px] xl:items-center">
-        <div className="text-sm text-[#6f6253]"><span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Datum</span>{dateFormatter.format(new Date(item.displayDate))}</div>
-        <div>
-          <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Tegenpartij</span>
-          <p className="font-semibold">{item.counterparty ?? 'Onbekende tegenpartij'}</p>
-          <p className="text-xs text-[#7d6d5a]">{item.counterpartyIban ?? item.accountIdentifier ?? ''}</p>
+      <div className="grid grid-cols-[auto_1fr_1fr_auto] items-center gap-x-3 gap-y-1 sm:grid-cols-[auto_1fr_1fr_auto]">
+        <div className="text-sm text-[#6f6253]">{dateFormatter.format(new Date(item.displayDate))}</div>
+        <div className="min-w-0">
+          <p className="truncate font-semibold">{item.counterparty ?? 'Onbekende tegenpartij'}</p>
+          <p className="truncate text-xs text-[#7d6d5a]">{item.counterpartyIban ?? item.accountIdentifier ?? ''}</p>
         </div>
         <div className="min-w-0">
-          <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Omschrijving</span>
           <p className="truncate font-medium" title={item.description}>{item.description}</p>
           <p className="truncate text-xs text-[#7d6d5a]" title={item.paymentPurpose ?? ''}>{item.paymentPurpose ?? 'Geen extra omschrijving'}</p>
         </div>
-        <div className={`font-semibold xl:text-right ${item.amount < 0 ? 'text-[#914f35]' : 'text-[#1f5f4a]'}`}><span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Bedrag</span>{moneyFormatter.format(item.amount)}</div>
-        <div className="grid gap-1" aria-describedby={projectIssue ? projectWarningId : undefined}>
-          <span className="text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Klant</span>
-          <select aria-label="Klant" aria-invalid={Boolean(projectIssue)} disabled={!admin || interactionBusy} value={projectValue} onChange={(event) => setProjectId(event.target.value)} className="w-full rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
+        <div className={`text-right font-semibold whitespace-nowrap ${item.amount < 0 ? 'text-[#914f35]' : 'text-[#1f5f4a]'}`}>{moneyFormatter.format(item.amount)}</div>
+      </div>
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+        <div className="grid min-w-0 gap-1" aria-describedby={projectIssue ? projectWarningId : undefined}>
+          <span className="text-xs font-semibold uppercase tracking-wide text-[#8a7965]">Klant</span>
+          <select aria-label="Klant" aria-invalid={Boolean(projectIssue)} disabled={!admin || interactionBusy} value={projectValue} onChange={(event) => setProjectId(event.target.value)} className="min-w-0 w-full rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
             {projectIssue?.code === 'unavailable-project' ? <option value={INVALID_SELECT_VALUE} disabled>Ongeldig voorstel — kies opnieuw</option> : null}
             <option value="">Kies klant</option>
             {projects.map((project) => <option key={project.id} value={project.id}>{project.code === project.name ? project.name : `${project.code} · ${project.name}`}</option>)}
@@ -205,9 +204,9 @@ function ReviewRow({
           {admin ? <button type="button" disabled={interactionBusy} onClick={() => openInlineReference('project')} className="text-left text-xs font-semibold text-[#1f5f4a] disabled:opacity-50">+ Nieuwe Klant</button> : null}
           {projectIssue ? renderSelectionWarning(projectIssue, 'Voorgestelde project-id', projectWarningId) : null}
         </div>
-        <div className="grid gap-1" aria-describedby={transactionTypeIssue ? transactionTypeWarningId : undefined}>
-          <span className="text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Type</span>
-          <select aria-label="Transactietype" aria-invalid={Boolean(transactionTypeIssue)} disabled={!admin || interactionBusy} value={transactionTypeValue} onChange={(event) => setTransactionTypeId(event.target.value)} className="w-full rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
+        <div className="grid min-w-0 gap-1" aria-describedby={transactionTypeIssue ? transactionTypeWarningId : undefined}>
+          <span className="text-xs font-semibold uppercase tracking-wide text-[#8a7965]">Type</span>
+          <select aria-label="Transactietype" aria-invalid={Boolean(transactionTypeIssue)} disabled={!admin || interactionBusy} value={transactionTypeValue} onChange={(event) => setTransactionTypeId(event.target.value)} className="min-w-0 w-full rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
             {transactionTypeIssue?.code === 'unavailable-transaction-type' || transactionTypeIssue?.code === 'wrong-direction-transaction-type'
               ? <option value={INVALID_SELECT_VALUE} disabled>Ongeldig voorstel — kies opnieuw</option>
               : null}
@@ -219,9 +218,9 @@ function ReviewRow({
           {admin ? <button type="button" disabled={interactionBusy} onClick={() => openInlineReference('transactionType')} className="text-left text-xs font-semibold text-[#1f5f4a] disabled:opacity-50">+ Nieuw Type</button> : null}
           {transactionTypeIssue ? renderSelectionWarning(transactionTypeIssue, 'Voorgestelde transactietype-id', transactionTypeWarningId) : null}
         </div>
-        <div className="grid gap-1" aria-describedby={categoryIssue ? categoryWarningId : undefined}>
-          <span className="text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Category</span>
-          <select aria-label="Category" aria-invalid={Boolean(categoryIssue)} disabled={!admin || interactionBusy} value={categoryValue} onChange={(event) => setCategoryId(event.target.value)} className="w-full rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
+        <div className="grid min-w-0 gap-1" aria-describedby={categoryIssue ? categoryWarningId : undefined}>
+          <span className="text-xs font-semibold uppercase tracking-wide text-[#8a7965]">Category</span>
+          <select aria-label="Category" aria-invalid={Boolean(categoryIssue)} disabled={!admin || interactionBusy} value={categoryValue} onChange={(event) => setCategoryId(event.target.value)} className="min-w-0 w-full rounded-xl border border-[#d7cdbf] bg-white px-3 py-2 text-sm">
             {categoryIssue?.code === 'unavailable-category' ? <option value={INVALID_SELECT_VALUE} disabled>Ongeldig voorstel — kies opnieuw</option> : null}
             <option value="">Kies Category</option>
             {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
@@ -229,26 +228,18 @@ function ReviewRow({
           {admin ? <button type="button" disabled={interactionBusy} onClick={() => openInlineReference('category')} className="text-left text-xs font-semibold text-[#1f5f4a] disabled:opacity-50">+ Nieuwe Category</button> : null}
           {categoryIssue ? renderSelectionWarning(categoryIssue, 'Voorgestelde Category-id', categoryWarningId) : null}
         </div>
-        <div><span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Betrouwbaarheid</span><div className={`rounded-xl border px-3 py-2 text-xs font-semibold ${reliability.className}`}>
-          <span aria-hidden="true">● </span>{reliability.score === null ? reliability.label : `${reliability.score}% · ${reliability.label}`}
-        </div></div>
-        {(() => {
-          const prefillPresentation = getReviewPrefillPresentation(item.prefill);
-          const prefillClassName = prefillPresentation.tone === 'warning'
-            ? 'rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800'
-            : prefillPresentation.tone === 'muted'
-            ? 'rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-xs font-medium text-stone-500'
-            : 'rounded-xl border border-stone-300 bg-stone-100 px-3 py-2 text-xs font-medium text-stone-600';
-          return (
-            <div>
-              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[#8a7965] xl:hidden">Voorstel</span>
-              <div className={prefillClassName}>{prefillPresentation.label}</div>
-            </div>
-          );
-        })()}
-        <button type="button" onClick={confirm} disabled={!canConfirm} aria-describedby={hasSelectionWarnings ? warningId : undefined} className="w-full rounded-xl bg-[#1f5f4a] px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 xl:w-auto">
-          {getReviewConfirmLabel({ admin, busy, changed })}
-        </button>
+        <div className="grid min-w-0 gap-1">
+          <span className="text-xs font-semibold uppercase tracking-wide text-[#8a7965]">Betrouwbaarheid</span>
+          <div className={`rounded-xl border px-3 py-2 text-xs font-semibold ${reliability.className}`}>
+            <span aria-hidden="true">● </span>{reliability.score === null ? reliability.label : `${reliability.score}% · ${reliability.label}`}
+          </div>
+        </div>
+        <div className="grid min-w-0 gap-1">
+          <span className="text-xs font-semibold uppercase tracking-wide text-[#8a7965]">Actie</span>
+          <button type="button" onClick={confirm} disabled={!canConfirm} aria-describedby={hasSelectionWarnings ? warningId : undefined} className="w-full rounded-xl bg-[#1f5f4a] px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
+            {getReviewConfirmLabel({ admin, busy, changed })}
+          </button>
+        </div>
       </div>
       {inlineReferenceKind ? (
         <div className="mt-3 rounded-2xl border border-[#c9dfd5] bg-[#eef7f2] p-4" role="region" aria-label="Nieuwe referentiewaarde toevoegen">
@@ -409,11 +400,8 @@ export default function FinanceReviewPage() {
       {!loading && data && data.pagination.totalItems === 0 ? <EmptyReviewState /> : null}
       {data && data.pagination.totalItems > 0 ? (
         <section className="rounded-2xl border border-[#ded5c8] bg-[#fbf8f2]">
-          <div className="overflow-x-auto">
-            <div className="hidden min-w-[1100px] bg-[#f5f1ea] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[#7d6d5a] xl:grid xl:grid-cols-[110px_minmax(190px,1.2fr)_minmax(220px,1.5fr)_110px_minmax(170px,1fr)_minmax(170px,1fr)_minmax(180px,1fr)_145px_140px] xl:gap-3"><span>Datum</span><span>Tegenpartij</span><span>Omschrijving</span><span className="text-right">Bedrag</span><span>Klant</span><span>Type</span><span>Category</span><span>Betrouwbaarheid</span><span>Actie</span></div>
-            {visibleTransactions.map((item) => <ReviewRow key={item.transactionId} item={item} categories={data.categories} projects={data.projects} transactionTypes={data.transactionTypes} onConfirmed={load} onCreateProject={createProjectOption} onCreateTransactionType={createTransactionTypeOption} onCreateCategory={createCategoryOption} />)}
-            {!visibleTransactions.length ? <div className="p-8 text-center text-sm text-[#6f6253]">Geen transacties op deze pagina voldoen aan de filters.</div> : null}
-          </div>
+          {visibleTransactions.map((item) => <ReviewRow key={item.transactionId} item={item} categories={data.categories} projects={data.projects} transactionTypes={data.transactionTypes} onConfirmed={load} onCreateProject={createProjectOption} onCreateTransactionType={createTransactionTypeOption} onCreateCategory={createCategoryOption} />)}
+          {!visibleTransactions.length ? <div className="p-8 text-center text-sm text-[#6f6253]">Geen transacties op deze pagina voldoen aan de filters.</div> : null}
         </section>
       ) : null}
 

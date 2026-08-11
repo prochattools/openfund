@@ -14,6 +14,7 @@ import {
   MonthlyImportPreviewError,
   type MonthlyImportPreview,
 } from '../services/monthlyImportPreviewService';
+import { executeOwnerHistoryProposalPlan } from '../services/ownerHistoryProposalEvidenceService';
 
 const ALLOWED_MIME_TYPES = new Set([
   'text/csv',
@@ -145,6 +146,31 @@ export const handleStatementPackageImport = async (req: Request, res: Response) 
           code: pairingCode,
         });
         pairingWarning = 'Het bestand is veilig opgeslagen. De koppeling met het andere bestand wordt opnieuw geprobeerd bij de volgende upload.';
+      }
+    }
+
+    if (result.status === 'CSV_IMPORTED' || result.status === 'IMPORTED') {
+      try {
+        await executeOwnerHistoryProposalPlan(prisma, {
+          workspaceId: actor.workspaceId,
+          userId: actor.userId,
+          execute: true,
+          executionAllowed: true,
+          confirmedPlanHash: undefined,
+        }).then(async (dryResult) => {
+          if (dryResult.status === 'CONFIRMATION_REQUIRED') {
+            return executeOwnerHistoryProposalPlan(prisma, {
+              workspaceId: actor.workspaceId,
+              userId: actor.userId,
+              execute: true,
+              executionAllowed: true,
+              confirmedPlanHash: dryResult.plan.planHash,
+            });
+          }
+          return dryResult;
+        });
+      } catch (suggestionError) {
+        console.error('Post-import suggestion generation failed (non-blocking)', suggestionError);
       }
     }
 

@@ -324,11 +324,6 @@ export const buildOwnerHistoryProposalPlan = async (
     }
 
     const rank1 = ranked[0]!;
-    if (rank1.matcher === 'DIRECTION_DEFAULT') {
-      abstainedWeak += 1;
-      continue;
-    }
-
     proposals.push({ transactionId: tx.id, rank1, allRanks: ranked });
   }
 

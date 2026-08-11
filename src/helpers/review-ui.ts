@@ -17,17 +17,21 @@ export type ReviewReliability = {
 
 export const getReviewReliability = (item: EvidenceRichReviewItem): ReviewReliability => {
   const first = item.alternatives[0];
+  const actualScore = item.prefill.scoreBasisPoints !== null
+    ? Math.round(item.prefill.scoreBasisPoints / 100)
+    : null;
+
   if (item.deterministicStatus === 'conflict') {
-    return { band: 'red', score: 60, label: 'Onzeker', className: 'border-rose-300 bg-rose-50 text-rose-800' };
+    return { band: 'red', score: actualScore ?? 60, label: 'Onzeker', className: 'border-rose-300 bg-rose-50 text-rose-800' };
   }
   if (item.deterministicStatus === 'finalized' || first?.confidence === 'EXACT_FALLBACK') {
-    return { band: 'green', score: 97, label: 'Zeer betrouwbaar', className: 'border-emerald-300 bg-emerald-50 text-emerald-800' };
+    return { band: 'green', score: actualScore ?? 97, label: 'Zeer betrouwbaar', className: 'border-emerald-300 bg-emerald-50 text-emerald-800' };
   }
   if (first?.confidence === 'OVERALL') {
-    return { band: 'amber', score: 85, label: 'Controleer zorgvuldig', className: 'border-amber-300 bg-amber-50 text-amber-900' };
+    return { band: 'amber', score: actualScore ?? 85, label: 'Controleer zorgvuldig', className: 'border-amber-300 bg-amber-50 text-amber-900' };
   }
   if (first?.confidence === 'FUZZY') {
-    return { band: 'red', score: 60, label: 'Onzeker', className: 'border-rose-300 bg-rose-50 text-rose-800' };
+    return { band: 'red', score: actualScore ?? 60, label: 'Onzeker', className: 'border-rose-300 bg-rose-50 text-rose-800' };
   }
   return { band: 'gray', score: null, label: 'Onvoldoende bewijs', className: 'border-stone-300 bg-stone-100 text-stone-700' };
 };

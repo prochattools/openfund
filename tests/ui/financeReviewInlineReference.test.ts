@@ -12,7 +12,9 @@ describe('Finance review inline reference creation', () => {
     expect(pageSource).toContain('aria-label="Klant"');
     expect(pageSource).toContain('aria-label="Transactietype"');
     expect(pageSource).toContain('aria-label="Category"');
-    expect(pageSource).toContain('<span>Klant</span><span>Type</span><span>Category</span>');
+    expect(pageSource).toContain('>Klant</span>');
+    expect(pageSource).toContain('>Type</span>');
+    expect(pageSource).toContain('>Category</span>');
   });
 
   it('offers administrator inline creation beside all three dropdowns', () => {
