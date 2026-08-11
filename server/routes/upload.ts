@@ -175,8 +175,18 @@ export const handleStatementPackageImport = async (req: Request, res: Response) 
     const message = error instanceof MonthlyStatementPackageError || error instanceof IngStatementPdfError
       ? error.message
       : 'Het maandafschrift kon niet veilig worden verwerkt.';
-    const code = error instanceof MonthlyStatementPackageError ? error.code : undefined;
-    console.error('Maandafschriftpakket kon niet worden verwerkt', { code, message });
+    const prismaCode = error && typeof error === 'object' && 'code' in error && typeof (error as { code?: unknown }).code === 'string'
+      ? String((error as { code: string }).code)
+      : undefined;
+    const code = error instanceof MonthlyStatementPackageError
+      ? error.code
+      : prismaCode && /^P\d{4}$/.test(prismaCode)
+        ? `DATABASE_${prismaCode}`
+        : 'STATEMENT_IMPORT_INTERNAL';
+    console.error('Maandafschriftpakket kon niet worden verwerkt', {
+      name: error instanceof Error ? error.name : 'UnknownError',
+      code,
+    });
     return res.status(statusCode).json({ error: message, code });
   }
 };

@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { parseIngCsv } from '../../lib/import/csv_ING';
 import { normalizeAccountIdentifier } from '../../lib/import/normalizers';
-import { processImportBufferWithClient } from './importService';
+import { importStatementCsvRows, StatementCsvImportError } from './statementCsvImportService';
 import {
   acceptBankStatement,
   hashSourceContent,
@@ -64,6 +64,25 @@ const bankFactKey = (date: Date, amountMinor: bigint): string =>
 
 const expectedBankFacts = (rows: Awaited<ReturnType<typeof parseIngCsv>>['successes']): string[] =>
   rows.map((row) => bankFactKey(row.date, row.amountMinor)).sort();
+
+const runStatementCsvImport = async (
+  db: Tx,
+  params: {
+    userId: string;
+    rows: Awaited<ReturnType<typeof parseIngCsv>>['successes'];
+    csvBuffer: Buffer;
+    filename: string;
+  },
+) => {
+  try {
+    return await importStatementCsvRows(db, params);
+  } catch (error) {
+    if (error instanceof StatementCsvImportError) {
+      throw new MonthlyStatementPackageError(error.message, error.code, error.statusCode);
+    }
+    throw error;
+  }
+};
 
 const classifyExistingTransactions = async (
   db: Tx,
@@ -228,7 +247,7 @@ export const importMonthlyStatementPackage = async ({
   }
 
   const expected = expectedBankFacts(parsed.successes);
-  let importSummary: Awaited<ReturnType<typeof processImportBufferWithClient>> | null = null;
+  let importSummary: Awaited<ReturnType<typeof runStatementCsvImport>> | null = null;
   let resolvedAccount = account;
   let status: MonthlyStatementPackageResult['status'] = 'IMPORTED';
 
@@ -243,17 +262,16 @@ export const importMonthlyStatementPackage = async ({
     if (coverage === 'EXACT') {
       status = 'EVIDENCE_BACKFILLED';
     }
-    // SUBSET intentionally continues through the normal duplicate-aware importer.
-    // This is how a historical partial month (for example the first five July rows)
-    // gains only the missing transactions from the complete monthly export.
+    // SUBSET intentionally continues through the statement bank-fact importer.
+    // This preserves existing rows and adds only missing immutable bank transactions.
   }
 
   if (status === 'IMPORTED') {
-    importSummary = await processImportBufferWithClient(db, {
-      buffer: csv.buffer,
-      filename: csv.filename,
+    importSummary = await runStatementCsvImport(db, {
       userId,
-      allowLockedLedgerCompletion: true,
+      rows: parsed.successes,
+      csvBuffer: csv.buffer,
+      filename: csv.filename,
     });
     resolvedAccount = await db.account.findUnique({
       where: { userId_identifier: { userId, identifier: csvAccount } },
@@ -607,7 +625,7 @@ export const importMonthlyStatementEvidence = async ({
     let resolvedAccount = await db.account.findUnique({
       where: { userId_identifier: { userId, identifier: inspected.accountIdentifier } },
     });
-    let importSummary: Awaited<ReturnType<typeof processImportBufferWithClient>> | null = null;
+    let importSummary: Awaited<ReturnType<typeof runStatementCsvImport>> | null = null;
     let coverage: 'NONE' | 'SUBSET' | 'EXACT' = 'NONE';
 
     if (resolvedAccount) {
@@ -620,11 +638,11 @@ export const importMonthlyStatementEvidence = async ({
       });
     }
     if (coverage !== 'EXACT') {
-      importSummary = await processImportBufferWithClient(db, {
-        buffer: csv.buffer,
-        filename: csv.filename,
+      importSummary = await runStatementCsvImport(db, {
         userId,
-        allowLockedLedgerCompletion: true,
+        rows: inspected.parsed.successes,
+        csvBuffer: csv.buffer,
+        filename: csv.filename,
       });
       resolvedAccount = await db.account.findUnique({
         where: { userId_identifier: { userId, identifier: inspected.accountIdentifier } },

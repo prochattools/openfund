@@ -7,8 +7,12 @@ vi.mock('../../server/services/ingStatementPdfService', () => ({
   extractIngStatementPdfControls: vi.fn(),
   IngStatementPdfError: class IngStatementPdfError extends Error { statusCode = 422; },
 }));
-vi.mock('../../server/services/importService', () => ({
-  processImportBufferWithClient: vi.fn(),
+vi.mock('../../server/services/statementCsvImportService', () => ({
+  importStatementCsvRows: vi.fn(),
+  StatementCsvImportError: class StatementCsvImportError extends Error {
+    code = 'STATEMENT_IMPORT_FAILED';
+    statusCode = 409;
+  },
 }));
 vi.mock('../../server/services/statementControlService', () => ({
   hashSourceContent: vi.fn((buffer: Buffer) => `sha:${buffer.toString('utf8')}`),
@@ -18,7 +22,7 @@ vi.mock('../../server/services/statementControlService', () => ({
 
 import { parseIngCsv } from '../../lib/import/csv_ING';
 import { extractIngStatementPdfControls } from '../../server/services/ingStatementPdfService';
-import { processImportBufferWithClient } from '../../server/services/importService';
+import { importStatementCsvRows } from '../../server/services/statementCsvImportService';
 import { acceptBankStatement, storeSourceFile } from '../../server/services/statementControlService';
 import {
   finalizeStagedMonthlyStatement,
@@ -71,7 +75,7 @@ describe('monthly statement package historical backfill', () => {
     });
 
     expect(result.status).toBe('EVIDENCE_BACKFILLED');
-    expect(processImportBufferWithClient).not.toHaveBeenCalled();
+    expect(importStatementCsvRows).not.toHaveBeenCalled();
     expect(storeSourceFile).toHaveBeenCalledTimes(2);
     expect(acceptBankStatement).toHaveBeenCalledTimes(1);
   });
@@ -109,7 +113,7 @@ describe('monthly statement package partial completion and staged evidence', () 
     db.transaction.findMany
       .mockResolvedValueOnce([{ date: rows[0].date, amountMinor: rows[0].amountMinor }])
       .mockResolvedValueOnce(rows.map((row) => ({ date: row.date, amountMinor: row.amountMinor })));
-    (processImportBufferWithClient as ReturnType<typeof vi.fn>).mockResolvedValue({
+    (importStatementCsvRows as ReturnType<typeof vi.fn>).mockResolvedValue({
       importedCount: 1,
       duplicateCount: 1,
       batchId: 'batch-1',
@@ -123,8 +127,10 @@ describe('monthly statement package partial completion and staged evidence', () 
     });
 
     expect(result.status).toBe('IMPORTED');
-    expect(processImportBufferWithClient).toHaveBeenCalledWith(db, expect.objectContaining({
-      allowLockedLedgerCompletion: true,
+    expect(importStatementCsvRows).toHaveBeenCalledWith(db, expect.objectContaining({
+      userId: 'user-1',
+      rows,
+      filename: 'june.csv',
     }));
     expect(result.importedCount).toBe(1);
     expect(acceptBankStatement).toHaveBeenCalledTimes(1);
@@ -137,7 +143,7 @@ describe('monthly statement package partial completion and staged evidence', () 
     db.transaction.findMany
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce(rows.map((row: any) => ({ date: row.date, amountMinor: row.amountMinor })));
-    (processImportBufferWithClient as ReturnType<typeof vi.fn>).mockResolvedValue({
+    (importStatementCsvRows as ReturnType<typeof vi.fn>).mockResolvedValue({
       importedCount: 2,
       duplicateCount: 0,
       batchId: 'batch-csv',
@@ -194,7 +200,7 @@ describe('monthly statement package partial completion and staged evidence', () 
     });
 
     expect(result?.status).toBe('EVIDENCE_BACKFILLED');
-    expect(processImportBufferWithClient).not.toHaveBeenCalled();
+    expect(importStatementCsvRows).not.toHaveBeenCalled();
     expect(acceptBankStatement).toHaveBeenCalledTimes(1);
   });
 });
