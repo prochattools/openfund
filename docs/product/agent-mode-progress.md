@@ -1,6 +1,6 @@
 # Agent Mode Progress — All Phases Complete
 
-Updated: 2026-08-11 (July CSV import repair — two-phase commit deployed)
+Updated: 2026-08-11 (dedicated bank-fact CSV import deployed)
 
 ## Repository lock
 
@@ -10,7 +10,58 @@ Updated: 2026-08-11 (July CSV import repair — two-phase commit deployed)
 
 Do not switch source, branch, or repository.
 
-## Status: COMPLETE — JULY CSV IMPORT REPAIR DEPLOYED
+## Status: COMPLETE — DEDICATED BANK-FACT CSV IMPORT DEPLOYED
+
+### 2026-08-11 dedicated bank-fact CSV import — COMPLETE
+
+Previous deployment `cc6636c` remained broken: deployed logs showed `code undefined`, hiding an underlying exception from the legacy `processImportBufferWithClient()` importer which mixes bank-fact ingestion with categorization, history, rules, and reconciliation — none of which exist for a fresh July account with no prior history or categories.
+
+**Root cause of continued failure (`cc6636c`):**
+- `monthlyStatementPackageService` was still calling `processImportBufferWithClient()` for statement CSV rows
+- That legacy importer requires categorization infrastructure (history, rules, merchant aliases) that is absent for a first-import month
+- Failure was swallowed as `code undefined` in the route handler
+
+**Fix — dedicated bank-fact ingestion (`statementCsvImportService.ts`):**
+
+New `server/services/statementCsvImportService.ts` — bank-fact only, no categorization dependency:
+- Upserts bank Account; upserts monthly Ledger
+- Compares existing rows using date + signed amount + multiplicity
+- Preserves existing historical rows; links them to Ledger when needed
+- Inserts only missing transactions; preserves same-day/same-amount multiplicity
+- Creates ImportBatch evidence for actual inserts
+- Leaves `classificationSource=none` — no project/type/category assigned
+- Verifies final DB bank facts exactly equal uploaded CSV
+- Returns typed errors for all business invariants
+
+`server/services/monthlyStatementPackageService.ts`:
+- Both CSV-only and CSV+PDF paths now call `importStatementCsvRows()` instead of legacy importer
+- Exact existing month remains idempotent; subset adds only missing bank facts
+- Staged PDF finalization remains a separate transaction
+
+`server/routes/upload.ts`:
+- Unknown failures no longer log `code undefined`
+- Prisma errors classified as `DATABASE_Pxxxx`; others as `STATEMENT_IMPORT_INTERNAL`
+- No secrets or internal messages leaked into logs
+
+**Validation evidence:**
+- statementCsvImportService: 4/4 (partial completion, full idempotency, conflict protection, multiplicity)
+- monthly statement package: 7/7
+- upload-route coverage: 12 PASS
+- ING PDF parser: 11/11
+- monthlySendReport workflow: 24/24
+- full suite: 1,989 tests / 5 skipped / 205 files PASS
+- Next production build: PASS
+- Prisma validate: PASS
+- validate:release-candidate: EXIT 0
+- git diff --check: ✓
+- secret scan: zero findings
+
+**Final runtime SHA:** `775068825e9c524c9f540790b4faa98c312cda76`
+**GitHub Actions #31469901561:** SUCCESS
+**Production buildSha:** `775068825e9c524c9f540790b4faa98c312cda76`
+**Production verified:** /api/health 200, ledger 902 transactions, July 5 rows unchanged, review 0, no owner data mutated by deployment
+
+---
 
 ### 2026-08-10 July CSV import repair — two-phase file commit — COMPLETE
 
