@@ -84,7 +84,7 @@ export const postDirectionInference = async (req: Request, res: Response) => {
 // POST /api/operator/owner-history-proposals
 // Dry-run or guarded execution of owner-history suggestion seeding.
 // Body: { execute?: boolean, confirmedPlanHash?: string }
-// Requires: admin + ALLOW_OWNER_HISTORY_PROPOSAL_EXECUTION=true env var for writes.
+// Requires: admin. Only creates PENDING suggestions — no bookings, decisions, or bank-fact mutations.
 export const postOwnerHistoryProposals = async (req: Request, res: Response) => {
   const actor = await requireAdmin(req, res);
   if (!actor) return;
@@ -117,7 +117,7 @@ export const postOwnerHistoryProposals = async (req: Request, res: Response) => 
       workspaceId,
       userId: actor.userId,
       execute,
-      executionAllowed: process.env.ALLOW_OWNER_HISTORY_PROPOSAL_EXECUTION === 'true',
+      executionAllowed: true,
       confirmedPlanHash: body.confirmedPlanHash?.trim() || null,
     });
 
