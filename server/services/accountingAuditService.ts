@@ -29,11 +29,11 @@ export const APPROVED_ACCOUNTING_BASELINES: Record<number, YearlyBaselineControl
     closingMinor: '1035086',
   },
   2026: {
-    transactionCount: 221,
+    transactionCount: 253,
     openingMinor: '1035086',
-    incomeMinor: '5878408',
-    expenseMinor: '6129769',
-    closingMinor: '783725',
+    incomeMinor: '6812658',
+    expenseMinor: '6773084',
+    closingMinor: '1074660',
   },
 };
 
@@ -162,6 +162,20 @@ const getYearPeriod = (
   };
 };
 
+const hasCompleteMonthEvidence = (
+  periods: AccountingAuditStatementPeriod[],
+  year: number,
+  month: number,
+): boolean => {
+  const monthStart = new Date(Date.UTC(year, month - 1, 1));
+  const monthEndDate = new Date(Date.UTC(year, month, 0));
+  return periods.some((period) =>
+    period.coverageStatus === 'COMPLETE'
+    && period.periodStart.getTime() <= monthStart.getTime()
+    && period.periodEnd.getTime() >= monthEndDate.getTime()
+  );
+};
+
 const groupTransactions = (transactions: AccountingAuditTransaction[]) => {
   const grouped = new Map<string, AccountingAuditTransaction[]>();
   for (const transaction of transactions) {
@@ -182,9 +196,6 @@ export const buildAccountingAudit = (input: AccountingAuditBuildInput): Accounti
   const validatorVersion = input.validatorVersion ?? ACCOUNTING_AUDIT_VERSION;
   const grouped = groupTransactions(input.transactions);
   const years = Object.keys(expectedCoverage).map(Number).sort((left, right) => left - right);
-  const openPeriodYears = input.statementPeriods
-    .filter((period) => period.coverageStatus === 'PARTIAL')
-    .map((period) => period.periodStart.getUTCFullYear());
 
   const firstYear = years[0];
   const expectedOpening = firstYear == null ? 0n : BigInt(baselineControls[firstYear]?.openingMinor ?? 0);
@@ -201,7 +212,8 @@ export const buildAccountingAudit = (input: AccountingAuditBuildInput): Accounti
       const transactions = grouped.get(monthKey(year, month)) ?? [];
       const openingMinor = previousClosing ?? actualOpening;
       const isPartialMonth = yearPeriod?.coverageStatus === 'PARTIAL'
-        && yearPeriod.periodEnd.getUTCMonth() + 1 === month;
+        && yearPeriod.periodEnd.getUTCMonth() + 1 === month
+        && !hasCompleteMonthEvidence(input.statementPeriods, year, month);
       const isFinalMonth = finalMonth === month;
 
       const result = buildMonthlyReconciliation({
@@ -244,6 +256,12 @@ export const buildAccountingAudit = (input: AccountingAuditBuildInput): Accounti
       previousClosing = BigInt(result.closingBalanceMinor);
     }
   }
+
+  const openPeriodYears = [...new Set(
+    months
+      .filter((m) => m.coverageStatus !== 'COMPLETE')
+      .map((m) => m.year),
+  )];
 
   const strictAudit = auditMonthlyReconciliations({
     months,

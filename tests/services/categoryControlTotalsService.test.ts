@@ -272,6 +272,25 @@ describe('category control totals service', () => {
     );
   });
 
+  it('normalizes negative-stored debit amounts to abs before computing directional totals (signed-debit regression)', () => {
+    const result = buildCategoryControlTotals({
+      ...balancedCategoryInput,
+      statementIncomeMinor: 5000n,
+      statementExpenseMinor: 3000n,
+      statementTransactionCount: 2,
+      transactions: [
+        makeCategoryTransaction({ amountMinor: 5000n, direction: 'credit' }),
+        makeCategoryTransaction({ amountMinor: -3000n, direction: 'debit', literalTypeLabel: 'Uitgaven', literalCategoryLabel: 'Huur' }),
+      ],
+    });
+
+    expect(result.status).toBe('BALANCED');
+    expect(result.category.incomeMinor).toBe('5000');
+    expect(result.category.expenseMinor).toBe('3000');
+    expect(result.differences.categoryIncomeDifferenceMinor).toBe('0');
+    expect(result.differences.categoryExpenseDifferenceMinor).toBe('0');
+  });
+
   it('groups transactions by exact dimension triple and direction', () => {
     const result = buildCategoryControlTotals({
       ...balancedCategoryInput,

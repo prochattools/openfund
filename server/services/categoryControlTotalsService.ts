@@ -153,7 +153,8 @@ export const buildCategoryControlTotals = (
   const lineMap = new Map<LineKey, LineAccumulator>();
 
   for (const tx of input.transactions) {
-    const amount = toBigInt(tx.amountMinor);
+    const rawAmount = toBigInt(tx.amountMinor);
+    const amount = rawAmount < 0n ? -rawAmount : rawAmount;
 
     if (tx.hasCompleteBooking) {
       bookedCount += 1;

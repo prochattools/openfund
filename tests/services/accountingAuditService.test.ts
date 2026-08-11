@@ -85,11 +85,11 @@ describe('accounting audit service', () => {
         closingMinor: '1035086',
       },
       2026: {
-        transactionCount: 221,
+        transactionCount: 253,
         openingMinor: '1035086',
-        incomeMinor: '5878408',
-        expenseMinor: '6129769',
-        closingMinor: '783725',
+        incomeMinor: '6812658',
+        expenseMinor: '6773084',
+        closingMinor: '1074660',
       },
     });
   });
@@ -235,5 +235,95 @@ describe('accounting audit service', () => {
       cashDifferenceMinor: '0',
       categoryIncomeDifferenceMinor: '500',
     });
+  });
+
+  it('COMPLETE monthly evidence overrides overlapping PARTIAL cumulative evidence for that month', () => {
+    const result = buildAccountingAudit(baseInput({
+      transactions: [
+        bookedTransaction('jul-income', '2026-07-10T00:00:00.000Z', 1000n, 'credit'),
+        bookedTransaction('jul-expense', '2026-07-20T00:00:00.000Z', 400n, 'debit'),
+      ],
+      statementPeriods: [
+        {
+          workspaceId: 'workspace-1',
+          accountId: 'account-1',
+          periodStart: new Date('2026-01-01T00:00:00.000Z'),
+          periodEnd: new Date('2026-07-31T23:59:59.999Z'),
+          coverageStatus: 'PARTIAL',
+          openingBalanceMinor: 5000n,
+          closingBalanceMinor: 5600n,
+        },
+        {
+          workspaceId: 'workspace-1',
+          accountId: 'account-1',
+          periodStart: new Date('2026-07-01T00:00:00.000Z'),
+          periodEnd: new Date('2026-07-31T23:59:59.999Z'),
+          coverageStatus: 'COMPLETE',
+          openingBalanceMinor: 5000n,
+          closingBalanceMinor: 5600n,
+        },
+      ],
+      openingBalance: {
+        id: 'opening-1',
+        effectiveDate: new Date('2026-01-01T00:00:00.000Z'),
+        amountMinor: 5000n,
+        lockedAt: null,
+      },
+      expectedCoverage: { 2026: [7] },
+      baselineControls: {
+        2026: {
+          transactionCount: 2,
+          openingMinor: '5000',
+          incomeMinor: '1000',
+          expenseMinor: '400',
+          closingMinor: '5600',
+        },
+      },
+    }));
+
+    expect(result.status).toBe('PASSED');
+    expect(result.cashStatus).toBe('PASSED');
+    expect(result.months[0].coverageStatus).toBe('COMPLETE');
+    expect(result.months[0].closeEligible).toBe(true);
+  });
+
+  it('treats negative-stored debit amounts correctly via abs normalization in monthly totals', () => {
+    const result = buildAccountingAudit(baseInput({
+      transactions: [
+        bookedTransaction('income-1', '2024-01-15T00:00:00.000Z', 2000n, 'credit'),
+        bookedTransaction('expense-neg', '2024-01-20T00:00:00.000Z', -800n, 'debit'),
+      ],
+      statementPeriods: [{
+        workspaceId: 'workspace-1',
+        accountId: 'account-1',
+        periodStart: new Date('2024-01-01T00:00:00.000Z'),
+        periodEnd: new Date('2024-01-31T23:59:59.999Z'),
+        coverageStatus: 'COMPLETE',
+        openingBalanceMinor: 1000n,
+        closingBalanceMinor: 2200n,
+      }],
+      openingBalance: {
+        id: 'opening-1',
+        effectiveDate: new Date('2024-01-01T00:00:00.000Z'),
+        amountMinor: 1000n,
+        lockedAt: null,
+      },
+      expectedCoverage: { 2024: [1] },
+      baselineControls: {
+        2024: {
+          transactionCount: 2,
+          openingMinor: '1000',
+          incomeMinor: '2000',
+          expenseMinor: '800',
+          closingMinor: '2200',
+        },
+      },
+    }));
+
+    expect(result.status).toBe('PASSED');
+    expect(result.cashStatus).toBe('PASSED');
+    expect(result.totals.cashDifferenceMinor).toBe('0');
+    expect(result.months[0].incomeMinor).toBe('2000');
+    expect(result.months[0].expenseMinor).toBe('800');
   });
 });

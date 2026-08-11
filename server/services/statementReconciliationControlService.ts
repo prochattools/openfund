@@ -94,7 +94,8 @@ const computeBookedTotals = (transactions: BookedTransactionSummary[]) => {
   let unresolvedCount = 0;
 
   for (const tx of transactions) {
-    const amount = toBigInt(tx.amountMinor);
+    const rawAmount = toBigInt(tx.amountMinor);
+    const amount = rawAmount < 0n ? -rawAmount : rawAmount;
     if (tx.direction === 'credit') {
       incomeMinor += amount;
     } else {

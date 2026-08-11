@@ -327,4 +327,23 @@ describe('statement reconciliation control service', () => {
       },
     })).toThrow(StatementReconciliationControlError);
   });
+
+  it('normalizes negative-stored debit amounts to abs before computing directional totals (signed-debit regression)', () => {
+    const preview = buildStatementReconciliationPreview({
+      ...balancedInput,
+      bookedTransactions: [
+        makeBookedTransaction({ amountMinor: 5000n, direction: 'credit' }),
+        makeBookedTransaction({ amountMinor: -2000n, direction: 'debit' }),
+        makeBookedTransaction({ amountMinor: -1000n, direction: 'debit' }),
+      ],
+    });
+
+    expect(preview.status).toBe('BALANCED');
+    expect(preview.booked.incomeMinor).toBe('5000');
+    expect(preview.booked.expenseMinor).toBe('3000');
+    expect(preview.booked.netMinor).toBe('2000');
+    expect(preview.differences.balanceDifferenceMinor).toBe('0');
+    expect(preview.differences.incomeDifferenceMinor).toBe('0');
+    expect(preview.differences.expenseDifferenceMinor).toBe('0');
+  });
 });
