@@ -11,9 +11,11 @@ This file converts the roadmap into concise, unambiguous tasks that an AI coding
 
 ## Current authentication contract
 
-The production authentication standardization is deployed in
-`f9e967f54632f86bad2ef3c5774334a48cda85ad` (`fix: restore authenticated
-finance data scope`) on 2026-07-14. Clerk is the only
+The production authentication standardization was implemented in historical
+application commit `f9e967f54632f86bad2ef3c5774334a48cda85ad` (`fix: restore
+authenticated finance data scope`) on 2026-07-14. The August 2026 pre-import
+readiness release was separately validated at
+`3ac4b7f4adde5895aead98b4b0c93a6e8e74f32e` on 2026-08-30. Clerk is the only
 production provider and is configured for email sign-in only. `/sign-in` is
 the canonical public authentication route; public application sign-up is
 disabled, there is no supported `/sign-up` route, and Google/social providers
@@ -37,6 +39,7 @@ Release configuration: GitHub Actions requires the named
 `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` secret and validates its publishable-key
 shape before Docker execution. Dokploy supplies `AUTH_PROVIDER=clerk`,
 `NEXT_PUBLIC_AUTH_PROVIDER=clerk`, the public Clerk variables, runtime-only
+`ALLOW_PRODUCTION_AUTH_BYPASS=false`,
 `CLERK_SECRET_KEY`, `NEXT_PUBLIC_SIGN_IN_URL=/sign-in`,
 `NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in`, `NEXT_PUBLIC_SIGN_UP_URL=/sign-in`,
 `NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-in`, application URLs, CORS origin, and
@@ -45,11 +48,19 @@ been removed from the production authentication path; no Ory variables or
 cookie fallbacks are present in Dokploy. The active
 finance administrator is pre-provisioned locally and its verified Clerk
 primary email matches case-insensitively; the identity is not recorded here.
-Final production state (2026-08-07): 902 transactions, 902 confirmed bookings, 0 unresolved, 223 ReviewDecisions from owner manual confirmations, 663 review-only suggestions from history-v1 prefill.
+Historical production observation (2026-08-07): 902 transactions, 902 confirmed
+bookings, 0 unresolved, 223 ReviewDecisions from owner manual confirmations,
+and 663 review-only suggestions from history-v1 prefill.
 
 Unauthenticated production smoke tests passed: the three protected APIs return
 `401` JSON and `/review` plus `/reports` redirect to `/sign-in`; `/sign-up`
 redirects to `/sign-in`. No financial or review mutation was attempted.
+
+The complete August 30 readiness evidence, including the final validation
+totals, exact-SHA workflow, production snapshot, and intentionally deferred
+August certification steps, is recorded once in
+`docs/finance-rebuild-run.md` under **August 2026 pre-import readiness closure
+(2026-08-30)**.
 
 ## Status legend
 
@@ -132,9 +143,9 @@ App/provider secret remediation: complete 2026-07-08; all provider secrets (Cler
 Phase 17 — Month-by-month accounting reconciliation and administrator reporting: COMPLETE (2026-07-09; formula-based monthly chaining model; read-only production audit passed; baseline controls: 2024 closing 1218415, 2025 closing 1035086, 2026 partial closing 783725)
 Phase 18 — Cent-exact accounting integrity and opening-balance repair: COMPLETE; implementation and the one-time owner-approved production repair completed 2026-07-14; never repeat
 Phase 19 — History-based review prefill: DEPLOYED AND COMPLETE; controlled history-v1 suggestion persistence with 663 review-only suggestions; 223 administrator manual confirmations completed
-Production session authentication hardening: Clerk-only standardization is deployed; workspace configuration is valid, unauthenticated denial/redirect checks pass, and authenticated production reads return the populated finance dataset. The client waits for Clerk session readiness before loading finance data, preventing a transient sign-in `401` from becoming a permanent empty state.
-Production ownership diagnosis: a read-only audit confirmed the authenticated administrator owns the 902 imported transactions, 663 persisted review-only suggestions, 902 bookings, and approved opening balance. No `FINANCE_DATA_OWNER_USER_ID` variable, ownership reassignment, migration, reimport, or data copy was required.
-Final status: do not repeat the completed opening-balance repair. Classification is complete with 902/902 bookings finalized and 223 ReviewDecisions recorded. All accounting is closed through 2026-06. Monthly reporting and send are operational and ready for owner use.
+Production session authentication hardening: Clerk-only standardization is deployed; workspace configuration is valid, unauthenticated denial/redirect checks pass, and the final production verification is recorded in `docs/finance-rebuild-run.md` under the 2026-08-30 closure. The client waits for Clerk session readiness before loading finance data, preventing a transient sign-in `401` from becoming a permanent empty state.
+Production ownership diagnosis: a dated read-only audit confirmed the authenticated administrator owned the historical imported dataset. The 902-transaction observation belongs to that historical audit and is not the August 30 production snapshot. No `FINANCE_DATA_OWNER_USER_ID` variable, ownership reassignment, migration, reimport, or data copy was required.
+Final status: do not repeat the completed opening-balance repair. The application is ready for controlled August 2026 statement import, but August itself is not financially certified until the authoritative ING statement is imported, reconciled, categorized, audited, and closed.
 
 Current review category contract: production review options are flat `{ id, name }` records because the deployed `Category` model has no parent relation. The Review page presents one authoritative category selector and approval sends only `projectId`, `transactionTypeId`, `categoryId`, and an optional reason. Legacy main/subcategory fields remain display-only compatibility data and are not authoritative booking dimensions. All 902 transactions are now classified and confirmed through manual administrator review.
 Historical RC7 release-evidence gate: Phase 17 complete; superseded by the
@@ -169,7 +180,7 @@ GitHub Actions #280: SUCCESS (run 31280488648)
 Production state: 902 transactions, 902 bookings, 0 unresolved, 223 ReviewDecisions, accounting/cash/classification PASSED, Prisma 11/11 clean.
 Deployment incident CLOSED. No remaining implementation work.
 
-FINAL STATUS: READY FOR OWNER USE — ALL PHASES COMPLETE
+FINAL STATUS: READY FOR CONTROLLED AUGUST 2026 STATEMENT IMPORT — ALL PHASES COMPLETE; AUGUST CERTIFICATION REMAINS INTENTIONALLY UNDONE
 ```
 
 ## Authoritative Progress

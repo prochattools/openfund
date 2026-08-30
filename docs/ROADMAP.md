@@ -12,6 +12,20 @@ Execution detail: `docs/IMPLEMENTATION_PLAN.md`
 - Every phase ends with tests, builds, financial-control validation, diff review, and documentation updates.
 - No production import, deployment, or migration occurs without an explicit approved task.
 
+## August 2026 pre-import readiness closure
+
+The Finance application is **GO — ready for controlled August 2026 production
+statement import**. The dated operational evidence is recorded in
+`docs/finance-rebuild-run.md` under **August 2026 pre-import readiness closure
+(2026-08-30)**.
+
+The readiness decision was validated against application release
+`3ac4b7f4adde5895aead98b4b0c93a6e8e74f32e`, GitHub Actions run `33339272582`
+(attempt 2), exact-SHA Docker/Dokploy deployment, healthy production routing,
+and read-only production readiness. This is release evidence, not a
+self-referential claim about the repository HEAD created by a later
+documentation commit.
+
 ## Current authentication standardization
 
 The Clerk-only authentication hardening is configured for email sign-in only.
@@ -28,18 +42,24 @@ by this slice.
 
 The deployed release uses the GitHub Actions publishable-key secret and the
 Dokploy Clerk runtime variables, including the configured active workspace UUID.
-Current application implementation commit:
-`f9e967f54632f86bad2ef3c5774334a48cda85ad`.
-The current running production build SHA is verified from the no-cache
-deployment-info endpoint after each release; it is not duplicated here as a
+The authentication implementation milestone is the historical application
+commit `f9e967f54632f86bad2ef3c5774334a48cda85ad`; the August 2026 readiness
+release was separately validated at `3ac4b7f4adde5895aead98b4b0c93a6e8e74f32e`.
+The running production build SHA is verified from the no-cache
+deployment-info endpoint after each release and is not duplicated here as a
 self-referential static value.
+Production runtime authentication is explicitly configured as:
+`AUTH_PROVIDER=clerk`, `NEXT_PUBLIC_AUTH_PROVIDER=clerk`, and
+`ALLOW_PRODUCTION_AUTH_BYPASS=false`.
 The Clerk secret remains runtime-only. Ory is historical only; no Ory variables
 or generic cookie fallbacks are present. Dokploy uses the four sign-in-only route variables:
 `NEXT_PUBLIC_SIGN_IN_URL`, `NEXT_PUBLIC_CLERK_SIGN_IN_URL`,
 `NEXT_PUBLIC_SIGN_UP_URL`, and `NEXT_PUBLIC_CLERK_SIGN_UP_URL`. The active
 finance administrator was verified against the local `ADMIN` membership
 without recording the identity. Unauthenticated API/page smoke tests pass.
-Final production state (2026-08-07): 902 transactions, 902 confirmed bookings, 0 unresolved, 223 ReviewDecisions, 663 review-only suggestions from history-v1 prefill.
+Historical production observation (2026-08-07): 902 transactions, 902 confirmed
+bookings, 0 unresolved, 223 ReviewDecisions, and 663 review-only suggestions
+from history-v1 prefill.
 
 The empty authenticated-portal report was diagnosed as a client timing race:
 `LedgerProvider` could fetch before Clerk had established the session, swallow
@@ -80,12 +100,15 @@ Phase 22 — Production deployment convergence        COMPLETE (2026-08-08; env 
 
 ## Final Status
 
-**READY FOR OWNER USE**
+**READY FOR CONTROLLED AUGUST 2026 STATEMENT IMPORT**
 
-All implementation phases complete. Production deployment converged at
-`189c7d6a2278bb53a6c090d6b19ddd318f93f08f` (GitHub Actions #280 SUCCESS).
-No remaining implementation, deployment, or migration work.
-Deployment incident closed 2026-08-09.
+All accounting implementation phases and release gates are complete. The
+August pre-import readiness release was validated at
+`3ac4b7f4adde5895aead98b4b0c93a6e8e74f32e` with production health, routing,
+Clerk authentication enforcement, protected unauthenticated APIs, and
+read-only readiness all verified. August 2026 itself remains uncertified until
+the authoritative ING statement is imported and reconciled through the
+controlled workflow.
 
 ## Authoritative Progress
 
@@ -116,7 +139,7 @@ Phase 19 — History-based review prefill: 100%
 Phase 20 — Owner-history-v2 best-prefill: 100%
 Phase 21 — Manual transaction review and confirmation: 100%
 Phase 22 — Production deployment convergence: 100%
-Overall: 100% — READY FOR OWNER USE
+Overall: 100% — READY FOR CONTROLLED AUGUST 2026 STATEMENT IMPORT
 ```
 
 ## Phase 0 — Governance and verified controls

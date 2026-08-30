@@ -1,9 +1,12 @@
 # Yeshua Academy Finance - Auth Readiness
 
-Status: Clerk-only production email sign-in configured; public sign-up and Google disabled
-Date: 2026-07-14
+Status: Clerk-only production email sign-in configured and verified; public sign-up and Google disabled
+Date: 2026-08-30 (latest production verification)
 
-Current application implementation commit: `f9e967f54632f86bad2ef3c5774334a48cda85ad`.
+Authentication implementation milestone: `f9e967f54632f86bad2ef3c5774334a48cda85ad`
+(historical application commit). The August 2026 pre-import readiness release
+was validated separately at
+`3ac4b7f4adde5895aead98b4b0c93a6e8e74f32e`.
 The running production build SHA is verified from the no-cache deployment-info
 endpoint after each release; the normal GitHub Actions and Dokploy rollout is
 the source of runtime truth.
@@ -36,6 +39,7 @@ Dokploy production runtime configuration must provide:
 ```bash
 AUTH_PROVIDER=clerk
 NEXT_PUBLIC_AUTH_PROVIDER=clerk
+ALLOW_PRODUCTION_AUTH_BYPASS=false
 NEXT_PUBLIC_SIGN_IN_URL=/sign-in
 NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
 NEXT_PUBLIC_SIGN_UP_URL=/sign-in
@@ -108,7 +112,18 @@ This authentication cutover changes no financial records. The 221 unresolved
 transactions, 663 review-only suggestions, cash/classification/close controls,
 and all booking and review-decision records remain unchanged.
 
-## Rollout verification
+## Final production authentication verification (2026-08-30)
+
+- `AUTH_PROVIDER=clerk` and `NEXT_PUBLIC_AUTH_PROVIDER=clerk` were verified in
+  the production deployment; `ALLOW_PRODUCTION_AUTH_BYPASS=false`.
+- `/sign-in` returned `200`; protected application pages redirected
+  unauthenticated requests to the sign-in flow.
+- Protected Finance APIs returned `401` JSON without a Clerk session.
+- No Clerk secret value or credential was recorded here.
+- No financial data, import, review decision, booking, or opening-balance
+  mutation was performed.
+
+## Historical auth-cutover rollout verification (2026-07-14)
 
 - The three protected APIs returned `401` JSON without a Clerk session.
 - `/review` and `/reports` returned `307` redirects to the internal `/sign-in`
@@ -119,7 +134,7 @@ and all booking and review-decision records remain unchanged.
 - No transaction approval, booking, review decision, suggestion backfill,
   opening-balance repair, or other financial write was submitted.
 
-## Authenticated portal regression diagnosis
+## Historical authenticated portal regression diagnosis (2026-07-14)
 
 The empty authenticated-portal report was a client session-readiness race:
 `LedgerProvider` could read before Clerk had finished establishing the session,

@@ -97,12 +97,33 @@ confirmed that the authenticated administrator already owns the imported
 finance records, so no separate finance-owner variable or ownership
 reassignment was required.
 
-Current application implementation commit: `f9e967f54632f86bad2ef3c5774334a48cda85ad`.
-The running production build SHA is verified from the no-cache deployment-info
-endpoint after each release; it is intentionally not duplicated as a
-self-referential static value in this document.
-The authenticated portal is populated with 902 ledger transactions, 221
-unresolved review items, and 663 persisted review-only suggestions. The
-one-time Phase 18 opening-balance repair is complete and must not be repeated;
-cash status is passed, classification remains pending, and close remains
-blocked until administrator review decisions are completed.
+The authentication implementation milestone is the historical application
+commit `f9e967f54632f86bad2ef3c5774334a48cda85ad`; it is not the current
+production release identity. The August 2026 pre-import readiness release was
+validated at application release
+`3ac4b7f4adde5895aead98b4b0c93a6e8e74f32e`. The running production build SHA
+is verified from the no-cache deployment-info endpoint after each release; it
+is intentionally not duplicated as a self-referential static value in this
+document.
+
+Production runtime authentication is explicitly configured as:
+
+```text
+AUTH_PROVIDER=clerk
+NEXT_PUBLIC_AUTH_PROVIDER=clerk
+ALLOW_PRODUCTION_AUTH_BYPASS=false
+```
+
+Historical authenticated-portal observation (2026-08-07): 902 ledger
+transactions, 221 unresolved review items, and 663 persisted review-only
+suggestions. The dated August 30 pre-import snapshot is recorded in
+`docs/finance-rebuild-run.md`; it is operational evidence, not a hard-coded
+accounting baseline.
+
+The one-time Phase 18 opening-balance repair is complete and must not be
+repeated; cash status is passed, classification remains pending, and close
+remains blocked until administrator review decisions are completed.
+
+August 2026 itself has not yet been financially certified. Certification
+requires the authoritative ING statement to be imported and reconciled through
+the controlled workflow described in `docs/finance-rebuild-run.md`.

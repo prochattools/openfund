@@ -1,45 +1,39 @@
 # Yeshua Academy Finance rebuild run
 
 Date: 2026-07-02 (initial)  
-Latest: 2026-08-03 (Phase 20 launch complete)  
-Run: `agent-f961650b-de17-4282-ab18-7a716cc72958` (original); finalization run 2026-08-03  
+Latest: 2026-08-30 (August 2026 pre-import readiness closure)
+Run: `agent-f961650b-de17-4282-ab18-7a716cc72958` (original); finalization run 2026-08-30
 Source: `yeshuaacademy-finance`  
 Branch: `main`  
-Status: **CORE APPLICATION LIVE AND PRODUCTION-READY** — Phase 0 through Phase 20 complete; history-based prefill deployed and live; 221 transactions ready for manual confirmation; LLM/Bedrock roadmap deferred indefinitely
+Status: **CORE APPLICATION LIVE AND PRODUCTION-READY** — **GO — ready for controlled August 2026 production statement import**; no August statement has been imported; LLM/Bedrock roadmap deferred indefinitely
 
 Historical evidence convention: dated packet, phase, and preflight sections
 below describe earlier implementation states. They are superseded by the
-current release facts in this opening section and are not current runtime
+current release facts and the dated closure record below; they are not current runtime
 instructions.
 
-**Current production deployment:**
-- Commit: `678525766159919927771abf2042a47b19757f55` (feat(review): deploy producer-aware best-prefill selection)
-- Deployed: 2026-08-03
-- Status: Live and verified healthy
+**August 2026 readiness release verification (2026-08-30):**
+- Application release: `3ac4b7f4adde5895aead98b4b0c93a6e8e74f32e`
+- GitHub Actions: run `33339272582`, attempt 2, successful
+- Image digest: `sha256:8f5ac889da18023853c4de68dccaa01f5702e0b99bf0b4a4eb110b73a2e4b8c4`
+- Exact-SHA Docker/Dokploy deployment, production health, and Finance routing verified
+- Clerk production authentication enforced; production auth bypass disabled
+- Read-only production readiness passed
 
-**Completed activities (Phase 0–Phase 20):**
-- Phase 18: one-time opening-balance repair (2026-07-14) — must never be repeated
-- Phase 19: history-v1 suggestion persistence (663 review-only suggestions)
-- Phase 20: owner-history-v2 best-prefill deployed (178 suggestions persisted, live in production)
-- All 221 unresolved transactions completely prefilled (178 v2 + 43 legacy)
-
-**Current production controls:**
-- `cashStatus = PASSED` ✓
-- `classificationStatus = PENDING` (awaiting manual owner review)
-- `closeStatus = BLOCKED` (pending transaction review completion)
-- Transaction count: 902
-- Confirmed bookings: 681
-- Unresolved (ready for manual review): 221
-- All 221 rows have complete prefills
+**Dated pre-import production snapshot (2026-08-30):**
+- 934 transactions and 934 bookings
+- 0 duplicate fingerprints
+- 1 existing partial 2026 statement period
+- This is an operational observation, not a hard-coded accounting baseline or future expected count
 
 **Deferred roadmap:**
 - Phase 5 (LLM/Bedrock decision engine): indefinitely deferred; no deployment, no AWS access, no credentials
 - Foundation code committed locally (disabled, not active)
 - Core application is fully functional without Phase 5 features
 
-The authenticated portal is live, Clerk-only email sign-in is active, and manual administrator review/confirmation workflow is operational. No automatic posting occurs; all bookings require human confirmation.
+The authenticated portal is live, Clerk-only email sign-in is active, and manual administrator review/confirmation workflow is operational. No automatic posting occurs; all bookings require human confirmation. August 2026 itself has not yet been financially certified.
 
-## Current authentication standardization
+## Production authentication contract (verified 2026-08-30)
 
 The Clerk-only authentication hardening is configured for email sign-in only.
 `/sign-in` is the canonical public authentication route; public application
@@ -51,8 +45,16 @@ invalid sessions return `401` JSON; authenticated users without membership
 return `403`; `/review` and `/reports` redirect unauthenticated users to
 `/sign-in`. Client identity headers are ignored, permitted users may read
 review/accounting/evaluation data, and all mutations remain administrator-only.
-This slice performs no opening-balance repair, suggestion backfill, review
-decision, or other financial write.
+Production runtime authentication is explicitly configured as:
+
+```text
+AUTH_PROVIDER=clerk
+NEXT_PUBLIC_AUTH_PROVIDER=clerk
+ALLOW_PRODUCTION_AUTH_BYPASS=false
+```
+
+This release-closure verification performed no opening-balance repair,
+suggestion backfill, review decision, import, or other financial write.
 The release requires the GitHub Actions `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
 secret for the browser bundle and Dokploy runtime-only `CLERK_SECRET_KEY` plus
 the real active `DEFAULT_WORKSPACE_ID`; no Clerk secret is passed to Docker.
@@ -63,11 +65,77 @@ administrator is verified against the active local `ADMIN` membership without
 recording the identity.
 Ory is historical only and has been removed from the production authentication
 path; no Ory variables or generic cookie fallbacks are present in the Dokploy
-runtime. Unauthenticated production checks returned `401` JSON for the three
-protected APIs and `307` sign-in redirects for `/review` and `/reports`;
-`/sign-up` also redirects to `/sign-in`. This release changes
-no financial data: 221 transactions remain unresolved and 663 suggestions
-remain review-only; no mutation was submitted.
+runtime. Unauthenticated production checks returned `401` JSON for protected
+Finance APIs, `307` sign-in redirects for protected pages, and `200` for
+`/sign-in`. No financial data changed.
+
+## August 2026 pre-import readiness closure (2026-08-30)
+
+### Accounting readiness
+
+- Exact minor-unit / BigInt financial arithmetic
+- Calendar-safe import parsing
+- Strong occurrence-aware bank-fact identity
+- Idempotent statement imports
+- Atomic paired imports
+- Statement transaction-count reconciliation
+- Exact opening + credits - debits = closing controls
+- July-to-August chain enforcement
+- Incomplete or conflicting statements fail closed
+- Category, booking, and reconciliation close gates
+- Reports derive from authoritative and reconciled facts
+
+### Validation evidence
+
+The following are validation evidence, not live accounting figures:
+
+- Focused regression tests passed
+- Full suite: 2,048 tests passed without a database
+- Serialized PostgreSQL suite: 2,050 tests passed; 3 skipped
+- Server TypeScript build passed
+- Next.js production build passed
+- Prisma validation and client generation passed
+- Production read-only readiness verification passed
+
+### Deployment readiness
+
+- Hardened release: `3ac4b7f4adde5895aead98b4b0c93a6e8e74f32e`
+- Exact-SHA Docker/Dokploy deployment enforcement verified
+- Production health returned HTTP 200
+- Finance routing was repaired and verified healthy
+- Clerk authentication was enforced and `ALLOW_PRODUCTION_AUTH_BYPASS` was disabled
+- Protected unauthenticated Finance APIs returned HTTP 401
+- Read-only production readiness passed
+
+### Production readiness snapshot
+
+The dated 2026-08-30 pre-import observation was:
+
+- 934 transactions/bookings
+- 0 duplicate fingerprints
+- 1 existing partial 2026 statement period
+
+These values are an operational snapshot only. They are not a hard-coded
+accounting baseline and do not certify August 2026.
+
+### August certification remains intentionally undone
+
+**August 2026 itself has NOT yet been financially certified.** Certification
+starts only after the authoritative ING CSV/PDF is available:
+
+1. Obtain the authoritative August ING CSV/PDF.
+2. Verify the correct account and month.
+3. Import through the controlled statement workflow.
+4. Verify the exact transaction population and count.
+5. Verify July closing equals August opening.
+6. Verify exact opening + credits - debits = closing.
+7. Complete required categorization and bookings.
+8. Run reconciliation and audit.
+9. Verify reports.
+10. Close and certify August only after every invariant passes.
+
+No August CSV/PDF import, financial-record mutation, database migration, or
+secret change occurred during this closure.
 
 ## Authenticated portal regression diagnosis
 
