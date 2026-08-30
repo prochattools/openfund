@@ -3,8 +3,8 @@ import { runDokployRollout } from '../../scripts/dokploy-rollout.mjs';
 
 const APP_ID = 'finance-app';
 const API_KEY = 'test-key';
-const TARGET_IMAGE = 'ghcr.io/yeshuaacademy/finance:main';
 const TARGET_SHA = '9efd4d2c5ef64204b6788d16b701785b1654064d';
+const TARGET_IMAGE = `ghcr.io/yeshuaacademy/finance:${TARGET_SHA}`;
 
 const jsonResponse = (status: number, body: unknown) => ({
   ok: status >= 200 && status < 300,

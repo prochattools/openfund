@@ -89,7 +89,7 @@ export async function runDokployRollout({
     });
     log(`Dokploy dockerImage normalized to ${targetImage}.`);
   } else {
-    log('Dokploy dockerImage already matches the expected floating tag.');
+    log('Dokploy dockerImage already matches the expected image.');
   }
 
   const deployResponse = await dokployRequest('/application.redeploy', {
