@@ -382,6 +382,9 @@ export const toCombinedReconciliationEvidence = (
   if (preview.differences.incomeDifferenceMinor !== '0') return null;
   if (preview.differences.expenseDifferenceMinor !== '0') return null;
   if (preview.differences.transactionCountDifference !== 0) return null;
+  if (preview.integrity.duplicateFingerprintCount !== 0) return null;
+  if (preview.integrity.runningBalanceErrorCount !== 0) return null;
+  if (preview.integrity.monthChainErrorCount !== 0) return null;
   if (preview.booked.unresolvedTransactionCount !== 0) return null;
   if (preview.booked.bookedTransactionCount !== preview.booked.transactionCount) return null;
 

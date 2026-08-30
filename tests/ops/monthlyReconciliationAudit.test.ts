@@ -12,6 +12,8 @@ const makeMonth = (
   coverageStatus: 'COMPLETE',
   netMinor: (BigInt(overrides.incomeMinor) - BigInt(overrides.expenseMinor)).toString(),
   transactionCount: 2,
+  statementTransactionCount: null,
+  transactionCountDifference: null,
   bookedTransactionCount: 2,
   unresolvedTransactionCount: 0,
   duplicateFingerprintCount: 0,

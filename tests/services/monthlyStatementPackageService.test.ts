@@ -44,12 +44,21 @@ const controls = {
   closingBalanceMinor: 1300n,
 };
 
+const persistedRow = (row: typeof rows[number]) => ({
+  date: row.date,
+  amountMinor: row.amountMinor,
+  description: row.description,
+  counterparty: row.counterparty,
+  reference: row.reference,
+  rawRow: row.raw,
+});
+
 const makeDb = () => ({
   account: { findUnique: vi.fn().mockResolvedValue({ id: 'account-1' }) },
   bankStatement: { findFirst: vi.fn().mockResolvedValue(null) },
   transaction: {
     count: vi.fn().mockResolvedValue(2),
-    findMany: vi.fn().mockResolvedValue(rows.map((row) => ({ date: row.date, amountMinor: row.amountMinor }))),
+    findMany: vi.fn().mockResolvedValue(rows.map(persistedRow)),
   },
   ledger: { findFirst: vi.fn().mockResolvedValue({ id: 'ledger-1', lockedAt: new Date() }), update: vi.fn() },
 });
@@ -65,7 +74,7 @@ beforeEach(() => {
 });
 
 describe('monthly statement package historical backfill', () => {
-  it('backfills evidence when existing transactions match immutable bank date+amount facts', async () => {
+  it('backfills evidence when existing transactions match the complete immutable bank facts', async () => {
     const db = makeDb();
     const result = await importMonthlyStatementPackage({
       db: db as any,
@@ -91,15 +100,42 @@ describe('monthly statement package historical backfill', () => {
     expect(storeSourceFile).not.toHaveBeenCalled();
   });
 
-  it('blocks historical backfill when immutable bank date+amount facts differ', async () => {
+  it('blocks historical backfill when immutable bank facts differ', async () => {
     const db = makeDb();
-    db.transaction.findMany.mockResolvedValue([{ date: rows[0].date, amountMinor: 999n }, { date: rows[1].date, amountMinor: -200n }]);
+    db.transaction.findMany.mockResolvedValue([
+      persistedRow({ ...rows[0], amountMinor: 999n }),
+      persistedRow(rows[1]),
+    ]);
     await expect(importMonthlyStatementPackage({
       db: db as any,
       userId: 'user-1', workspaceId: 'workspace-1', expectedMonthKey: '2026-06',
       csv: { buffer: Buffer.from('csv'), filename: 'june.csv', mediaType: 'text/csv' },
       pdf: { buffer: Buffer.from('pdf'), filename: 'june.pdf', mediaType: 'application/pdf' },
     })).rejects.toMatchObject({ code: 'EXISTING_LEDGER_MISMATCH', statusCode: 409 });
+    expect(storeSourceFile).not.toHaveBeenCalled();
+  });
+
+  it('does not treat matching files on a partial statement as complete evidence', async () => {
+    const db = makeDb();
+    db.bankStatement.findFirst.mockResolvedValue({
+      id: 'partial-statement',
+      sourceFile: { sha256: 'sha:csv' },
+      supportingPdfFile: { sha256: 'sha:pdf' },
+      coverageStatus: 'PARTIAL',
+      openingBalanceMinor: controls.openingBalanceMinor,
+      incomeMinor: controls.incomeMinor,
+      expenseMinor: controls.expenseMinor,
+      closingBalanceMinor: controls.closingBalanceMinor,
+      transactionCount: rows.length,
+      importBatchId: null,
+    });
+
+    await expect(importMonthlyStatementPackage({
+      db: db as any,
+      userId: 'user-1', workspaceId: 'workspace-1', expectedMonthKey: '2026-06',
+      csv: { buffer: Buffer.from('csv'), filename: 'june.csv', mediaType: 'text/csv' },
+      pdf: { buffer: Buffer.from('pdf'), filename: 'june.pdf', mediaType: 'application/pdf' },
+    })).rejects.toMatchObject({ code: 'STATEMENT_CONFLICT', statusCode: 409 });
     expect(storeSourceFile).not.toHaveBeenCalled();
   });
 });
@@ -111,8 +147,8 @@ describe('monthly statement package partial completion and staged evidence', () 
   it('completes a partial historical month instead of treating an exact subset as a conflict', async () => {
     const db = makeDb();
     db.transaction.findMany
-      .mockResolvedValueOnce([{ date: rows[0].date, amountMinor: rows[0].amountMinor }])
-      .mockResolvedValueOnce(rows.map((row) => ({ date: row.date, amountMinor: row.amountMinor })));
+      .mockResolvedValueOnce([persistedRow(rows[0])])
+      .mockResolvedValueOnce(rows.map(persistedRow));
     (importStatementCsvRows as ReturnType<typeof vi.fn>).mockResolvedValue({
       importedCount: 1,
       duplicateCount: 1,
@@ -142,7 +178,7 @@ describe('monthly statement package partial completion and staged evidence', () 
     db.bankStatement.findFirst.mockResolvedValue(null);
     db.transaction.findMany
       .mockResolvedValueOnce([])
-      .mockResolvedValueOnce(rows.map((row: any) => ({ date: row.date, amountMinor: row.amountMinor })));
+      .mockResolvedValueOnce(rows.map(persistedRow));
     (importStatementCsvRows as ReturnType<typeof vi.fn>).mockResolvedValue({
       importedCount: 2,
       duplicateCount: 0,
@@ -188,7 +224,7 @@ describe('monthly statement package partial completion and staged evidence', () 
     ];
     db.sourceFile = { findMany: vi.fn().mockResolvedValue(stagedFiles) };
     db.bankStatement.findFirst.mockResolvedValue(null);
-    db.transaction.findMany.mockResolvedValue(rows.map((row: any) => ({ date: row.date, amountMinor: row.amountMinor })));
+    db.transaction.findMany.mockResolvedValue(rows.map(persistedRow));
     (storeSourceFile as ReturnType<typeof vi.fn>)
       .mockReset()
       .mockResolvedValueOnce({ id: 'csv-source' })

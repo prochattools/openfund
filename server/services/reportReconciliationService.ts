@@ -104,11 +104,22 @@ export const reconcileMonthlyReport = async (
       'geen',
     );
   }
+  if (statement.coverageStatus !== 'COMPLETE') {
+    throw new ReportReconciliationError(
+      'Een rapport kan niet worden gemaakt voor een onvolledig bankafschrift.',
+      'STATEMENT_INCOMPLETE',
+      'COMPLETE',
+      statement.coverageStatus,
+    );
+  }
 
-  // Step 2: Load all transactions for the month belonging to this user
+  // Step 2: Load only the statement account's transactions for the month.
+  // A workspace may contain multiple bank accounts; mixing them would allow
+  // unrelated ledger facts to affect an otherwise valid statement report.
   const transactions = await db.transaction.findMany({
     where: {
       userId: input.userId,
+      accountId: statement.accountId,
       date: { gte: periodStart, lte: periodEnd },
     },
     select: {

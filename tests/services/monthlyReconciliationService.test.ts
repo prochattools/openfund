@@ -212,4 +212,26 @@ describe('monthlyReconciliationService', () => {
       'Maandketen is niet continu.',
     ]));
   });
+
+  it('flags a first-row running balance that does not start from the statement opening balance', () => {
+    const result = buildMonthlyReconciliation({
+      workspaceId: 'workspace-1',
+      accountId: 'account-1',
+      year: 2026,
+      month: 5,
+      importedTransactions: [{
+        ...balancedTransactions[0],
+        resultingBalanceMinor: 106000n,
+      }],
+      statementEvidence: {
+        coverageStatus: StatementCoverageStatus.COMPLETE,
+        openingBalanceMinor: 100000n,
+        closingBalanceMinor: 105000n,
+      },
+    });
+
+    expect(result.runningBalanceErrorCount).toBe(1);
+    expect(result.status).toBe('UNBALANCED');
+    expect(result.closeEligible).toBe(false);
+  });
 });

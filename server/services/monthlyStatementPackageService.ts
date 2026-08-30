@@ -11,6 +11,7 @@ import {
   extractIngStatementPdfControls,
   IngStatementPdfError,
 } from './ingStatementPdfService';
+import { buildBankFactIdentity } from './transactionFingerprint';
 
 export class MonthlyStatementPackageError extends Error {
   statusCode: number;
@@ -59,11 +60,26 @@ const nextDay = (date: Date): Date => new Date(Date.UTC(
 
 const sameInstant = (a: Date, b: Date): boolean => a.getTime() === b.getTime();
 
-const bankFactKey = (date: Date, amountMinor: bigint): string =>
-  `${date.toISOString().slice(0, 10)}|${amountMinor.toString()}`;
+const bankFactKey = (row: {
+  accountIdentifier: string;
+  date: Date;
+  amountMinor: bigint;
+  description?: string | null;
+  counterparty?: string | null;
+  reference?: string | null;
+  raw?: Record<string, unknown> | null;
+}): string => buildBankFactIdentity({
+  accountIdentifier: row.accountIdentifier,
+  date: row.date,
+  amountMinor: row.amountMinor,
+  description: row.description ?? '',
+  counterparty: row.counterparty,
+  reference: row.reference,
+  raw: row.raw,
+});
 
 const expectedBankFacts = (rows: Awaited<ReturnType<typeof parseIngCsv>>['successes']): string[] =>
-  rows.map((row) => bankFactKey(row.date, row.amountMinor)).sort();
+  rows.map((row) => bankFactKey(row)).sort();
 
 const runStatementCsvImport = async (
   db: Tx,
@@ -89,6 +105,7 @@ const classifyExistingTransactions = async (
   params: {
     userId: string;
     accountId: string;
+    accountIdentifier: string;
     periodStart: Date;
     periodEnd: Date;
     expected: string[];
@@ -100,14 +117,31 @@ const classifyExistingTransactions = async (
       accountId: params.accountId,
       date: { gte: params.periodStart, lt: nextDay(params.periodEnd) },
     },
-    select: { date: true, amountMinor: true },
+    select: {
+      date: true,
+      amountMinor: true,
+      description: true,
+      counterparty: true,
+      reference: true,
+      rawRow: true,
+    },
   });
   if (transactions.length === 0) return 'NONE';
 
   const remaining = new Map<string, number>();
   for (const key of params.expected) remaining.set(key, (remaining.get(key) ?? 0) + 1);
   for (const row of transactions) {
-    const key = bankFactKey(row.date, row.amountMinor);
+    const key = bankFactKey({
+      accountIdentifier: params.accountIdentifier,
+      date: row.date,
+      amountMinor: row.amountMinor,
+      description: row.description,
+      counterparty: row.counterparty,
+      reference: row.reference,
+      raw: row.rawRow && typeof row.rawRow === 'object' && !Array.isArray(row.rawRow)
+        ? row.rawRow as Record<string, unknown>
+        : null,
+    });
     const available = remaining.get(key) ?? 0;
     if (available <= 0) {
       throw new MonthlyStatementPackageError(
@@ -220,6 +254,7 @@ export const importMonthlyStatementPackage = async ({
     if (existingStatement) {
       const exactEvidence = existingStatement.sourceFile.sha256 === csvSha
         && existingStatement.supportingPdfFile?.sha256 === pdfSha
+        && existingStatement.coverageStatus === 'COMPLETE'
         && existingStatement.openingBalanceMinor === controls.openingBalanceMinor
         && existingStatement.incomeMinor === controls.incomeMinor
         && existingStatement.expenseMinor === controls.expenseMinor
@@ -255,6 +290,7 @@ export const importMonthlyStatementPackage = async ({
     const coverage = await classifyExistingTransactions(db, {
       userId,
       accountId: resolvedAccount.id,
+      accountIdentifier: csvAccount,
       periodStart: controls.periodStart,
       periodEnd: controls.periodEnd,
       expected,
@@ -282,6 +318,7 @@ export const importMonthlyStatementPackage = async ({
     const finalCoverage = await classifyExistingTransactions(db, {
       userId,
       accountId: resolvedAccount.id,
+      accountIdentifier: csvAccount,
       periodStart: controls.periodStart,
       periodEnd: controls.periodEnd,
       expected,
@@ -632,6 +669,7 @@ export const importMonthlyStatementEvidence = async ({
       coverage = await classifyExistingTransactions(db, {
         userId,
         accountId: resolvedAccount.id,
+        accountIdentifier: inspected.accountIdentifier,
         periodStart: inspected.periodStart,
         periodEnd: inspected.periodEnd,
         expected: inspected.expectedFacts,
@@ -653,6 +691,7 @@ export const importMonthlyStatementEvidence = async ({
       const finalCoverage = await classifyExistingTransactions(db, {
         userId,
         accountId: resolvedAccount.id,
+        accountIdentifier: inspected.accountIdentifier,
         periodStart: inspected.periodStart,
         periodEnd: inspected.periodEnd,
         expected: inspected.expectedFacts,

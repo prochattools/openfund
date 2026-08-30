@@ -26,6 +26,7 @@ const buildJuneStatement = () => ({
   netMinor: JUNE_NET,
   closingBalanceMinor: JUNE_CLOSING,
   transactionCount: JUNE_TX_COUNT,
+  coverageStatus: 'COMPLETE',
   createdAt: new Date(),
 });
 
@@ -73,13 +74,17 @@ const buildMockDb = (overrides?: {
   const statement = overrides?.statement !== undefined ? overrides.statement : buildJuneStatement();
   const transactions = overrides?.transactions ?? buildJuneTransactions();
   const bookingCount = overrides?.bookingCount ?? transactions.length;
+  let transactionFindManyArgs: any = null;
 
   return {
     bankStatement: {
       findFirst: vi.fn().mockResolvedValue(statement),
     },
     transaction: {
-      findMany: vi.fn().mockResolvedValue(transactions),
+      findMany: vi.fn().mockImplementation(async (args: any) => {
+        transactionFindManyArgs = args;
+        return transactions;
+      }),
     },
     transactionBooking: {
       findMany: vi.fn().mockResolvedValue(
@@ -88,6 +93,9 @@ const buildMockDb = (overrides?: {
           literalProjectLabel: index % 2 === 0 ? 'YA' : 'FTK',
         })),
       ),
+    },
+    get transactionFindManyArgs() {
+      return transactionFindManyArgs;
     },
   } as any;
 };
@@ -109,6 +117,7 @@ describe('reconcileMonthlyReport', () => {
     expect(result.netMinor).toBe(JUNE_NET);
     expect(result.closingBalanceMinor).toBe(JUNE_CLOSING);
     expect(result.transactionCount).toBe(JUNE_TX_COUNT);
+    expect(db.transactionFindManyArgs.where.accountId).toBe('acct-001');
   });
 
   it('returns Klant summary from confirmed project labels with correct totals', async () => {
@@ -133,6 +142,19 @@ describe('reconcileMonthlyReport', () => {
     await expect(
       reconcileMonthlyReport(db, { workspaceId: WORKSPACE_ID, userId: USER_ID, year: 2026, month: 6 }),
     ).rejects.toThrow(ReportReconciliationError);
+  });
+
+  it('throws STATEMENT_INCOMPLETE when bank evidence is partial', async () => {
+    const statement = { ...buildJuneStatement(), coverageStatus: 'PARTIAL' };
+    const db = buildMockDb({ statement });
+
+    try {
+      await reconcileMonthlyReport(db, { workspaceId: WORKSPACE_ID, userId: USER_ID, year: 2026, month: 6 });
+      expect.fail('Should have thrown');
+    } catch (err: any) {
+      expect(err).toBeInstanceOf(ReportReconciliationError);
+      expect(err.invariant).toBe('STATEMENT_INCOMPLETE');
+    }
   });
 
   it('throws INCOME_MISMATCH when ledger income does not match bank', async () => {

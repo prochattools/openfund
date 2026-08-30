@@ -16,6 +16,8 @@ const balancedReconciliation: MonthlyReconciliationResult = {
   netMinor: '3000',
   closingBalanceMinor: '103000',
   transactionCount: 2,
+  statementTransactionCount: 2,
+  transactionCountDifference: 0,
   bookedTransactionCount: 2,
   unresolvedTransactionCount: 0,
   duplicateFingerprintCount: 0,

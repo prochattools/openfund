@@ -110,6 +110,7 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
         workspaceId,
         year,
         month,
+        reconciliation,
       });
 
       // 2b. Load snapshot lines
@@ -292,7 +293,7 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
 
     if (sendResult.status === 'FAILED') {
       const providerReason = (sendResult.errorMessage || 'onbekende providerfout.')
-        .replace(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g, '[EMAIL]')
+        .replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL]')
         .slice(0, 500);
       return res.status(502).json({
         error: `E-mail kon niet worden verzonden via Resend: ${providerReason}`,
@@ -351,7 +352,7 @@ export const postMonthlySendReport = async (req: Request, res: Response) => {
 
     const message = err instanceof Error ? err.message : 'Onbekende fout.';
     // Sanitize any PII from error messages before returning
-    const sanitized = message.replace(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g, '[EMAIL]');
+    const sanitized = message.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL]');
     return res.status(500).json({ error: `Rapport verzenden mislukt: ${sanitized}` });
   }
 };

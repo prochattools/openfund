@@ -68,6 +68,11 @@ describe('ingStatementPdfService', () => {
       expect(() => parseIngStatementPdfText(text)).toThrow('De afschriftperiode kon niet uit het PDF-bankafschrift worden gelezen.');
     });
 
+    it('rejects an impossible calendar day instead of allowing Date.UTC rollover', () => {
+      const text = ENGLISH_JUNE_FIXTURE.replace('01/06/2026 till 30/06/2026', '01/06/2026 till 31/06/2026');
+      expect(() => parseIngStatementPdfText(text)).toThrow('Datum kon niet uit het PDF-bankafschrift worden gelezen');
+    });
+
     it('throws with opening balance message when opening balance is missing', () => {
       // Remove the label and value lines
       const text = ENGLISH_JUNE_FIXTURE.replace('Opening balance (EUR)\n9,390.82\n', '');

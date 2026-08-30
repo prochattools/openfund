@@ -1,4 +1,4 @@
-import { buildImportFingerprint } from './transactionFingerprint';
+import { buildImportFingerprint, buildLegacyImportFingerprint } from './transactionFingerprint';
 import {
   checkRunningBalanceContinuity,
   computeHistoricalTotals,
@@ -157,6 +157,17 @@ const buildPreviewFingerprint = (row: ParsedIngCsvRow): string =>
     raw: row.rawRow,
   });
 
+const buildLegacyPreviewFingerprint = (row: ParsedIngCsvRow): string =>
+  buildLegacyImportFingerprint({
+    accountIdentifier: row.accountIdentifier ?? '',
+    date: row.date,
+    amountMinor: row.amountMinor,
+    description: rowDescription(row),
+    counterparty: row.counterparty,
+    reference: row.reference,
+    raw: row.rawRow,
+  });
+
 const sortForStatementControls = (rows: ParsedIngCsvRow[]): ParsedIngCsvRow[] =>
   [...rows].sort((left, right) => {
     const byDate = left.date.getTime() - right.date.getTime();
@@ -178,14 +189,26 @@ const collectRepeatedFingerprints = (fingerprints: string[]): Set<string> => {
   return repeated;
 };
 
-const countDuplicateRows = (fingerprints: string[], existingFingerprints: Set<string>): number => {
+const countDuplicateRows = (
+  fingerprints: string[],
+  legacyFingerprints: string[],
+  existingFingerprints: Set<string>,
+): number => {
   const seenInUpload = new Set<string>();
   let duplicateRows = 0;
-  for (const fingerprint of fingerprints) {
-    if (existingFingerprints.has(fingerprint) || seenInUpload.has(fingerprint)) {
+  for (let index = 0; index < fingerprints.length; index += 1) {
+    const fingerprint = fingerprints[index]!;
+    const legacyFingerprint = legacyFingerprints[index]!;
+    if (
+      existingFingerprints.has(fingerprint)
+      || existingFingerprints.has(legacyFingerprint)
+      || seenInUpload.has(fingerprint)
+      || seenInUpload.has(legacyFingerprint)
+    ) {
       duplicateRows += 1;
     }
     seenInUpload.add(fingerprint);
+    seenInUpload.add(legacyFingerprint);
   }
   return duplicateRows;
 };
@@ -250,21 +273,25 @@ export const buildMonthlyImportPreview = async (
   const runningChecks = checkRunningBalanceContinuity(controlRows);
   const runningFindings = runningChecks.filter((check) => !check.valid).map(serializeFinding);
   const fingerprints = controlRows.map(buildPreviewFingerprint);
+  const legacyFingerprints = controlRows.map(buildLegacyPreviewFingerprint);
   const repeatedFingerprints = collectRepeatedFingerprints(fingerprints);
   const existingFingerprints = options.findExistingImportFingerprints
     ? normalizeExistingFingerprints(await options.findExistingImportFingerprints({
         workspaceId: input.workspaceId,
         accountId: input.accountId ?? null,
         accountIdentifier: input.accountIdentifier ?? readAccountIdentifier(controlRows),
-        fingerprints,
+        fingerprints: [...new Set([...fingerprints, ...legacyFingerprints])],
       }))
     : new Set<string>();
 
+  const existingRowFingerprints = fingerprints.filter((fingerprint, index) => (
+    existingFingerprints.has(fingerprint) || existingFingerprints.has(legacyFingerprints[index]!)
+  ));
   const potentialDuplicateTransactionFingerprints = [...new Set([
     ...repeatedFingerprints,
-    ...existingFingerprints,
+    ...existingRowFingerprints,
   ])].sort();
-  const duplicateCount = countDuplicateRows(fingerprints, existingFingerprints);
+  const duplicateCount = countDuplicateRows(fingerprints, legacyFingerprints, existingFingerprints);
   const accountIdentifier = readAccountIdentifier(controlRows, input.accountIdentifier);
   const categorizationResults = options.categorizePreviewTransactions
     ? await options.categorizePreviewTransactions({

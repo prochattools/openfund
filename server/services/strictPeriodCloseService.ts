@@ -14,6 +14,7 @@ import {
 import { createPeriodClose, PeriodCloseError, type BalancedReconciliationEvidence } from './periodCloseService';
 import type { AppRole } from '../auth/requestContext';
 import { buildStatementPeriodMonthSlice } from './statementPeriodMonthSliceService';
+import { inspectMonthlyTransactionIntegrity } from './monthlyReconciliationService';
 
 export class StrictPeriodCloseError extends Error {
   statusCode: number;
@@ -83,6 +84,11 @@ export type CloseControlHashInput = {
     categoryExpenseDifferenceMinor: string;
     transactionCountDifference: number;
   };
+  integrity: {
+    duplicateFingerprintCount: number;
+    runningBalanceErrorCount: number;
+    monthChainErrorCount: number;
+  };
   closeEligible: boolean;
   validatorVersions: string;
 };
@@ -115,6 +121,7 @@ export const buildCloseControlHashFromParts = (
       categoryExpenseDifferenceMinor: combined.categoryControls.differences.categoryExpenseDifferenceMinor,
       transactionCountDifference: combined.categoryControls.differences.transactionCountDifference,
     },
+    integrity: combined.statementReconciliation.integrity,
     closeEligible: combined.combinedCloseEligible,
     validatorVersions: `${combined.statementReconciliation.validatorVersion}+${combined.categoryControls.validatorVersion}`,
   };
@@ -193,6 +200,19 @@ export const executeStrictPeriodClose = async (
     throw new StrictPeriodCloseError('Grootboek niet gevonden.', 404);
   }
 
+  const previousStatementPeriodCandidate = await db.statementPeriod.findFirst({
+    where: {
+      workspaceId: statementPeriod.statement.workspaceId,
+      accountId: statementPeriod.accountId,
+      periodEnd: { lt: statementPeriod.periodStart },
+    },
+    orderBy: { periodEnd: 'desc' },
+    select: { id: true, coverageStatus: true, closingBalanceMinor: true },
+  });
+  const previousStatementPeriod = previousStatementPeriodCandidate?.id === statementPeriod.id
+    ? null
+    : previousStatementPeriodCandidate;
+
   await assertNoActiveClose(db, input.ledgerId);
 
   const sourceTransactions = await db.transaction.findMany({
@@ -240,8 +260,11 @@ export const executeStrictPeriodClose = async (
     },
     select: {
       id: true,
+      date: true,
       amountMinor: true,
       direction: true,
+      importFingerprint: true,
+      rawRow: true,
       transactionBooking: {
         select: {
           projectId: true,
@@ -297,6 +320,24 @@ export const executeStrictPeriodClose = async (
     };
   });
 
+  const transactionIntegrity = inspectMonthlyTransactionIntegrity({
+    workspaceId: statementPeriod.statement.workspaceId,
+    accountId: statementPeriod.accountId,
+    year: ledger.year,
+    month: ledger.month,
+    openingBalanceMinor: slice.openingBalanceMinor,
+    transactions: transactions.map((tx) => ({
+      transactionId: tx.id,
+      date: tx.date,
+      amountMinor: tx.amountMinor,
+      direction: tx.direction as 'credit' | 'debit',
+      importFingerprint: tx.importFingerprint,
+      rawRow: tx.rawRow && typeof tx.rawRow === 'object' && !Array.isArray(tx.rawRow)
+        ? tx.rawRow as Record<string, unknown>
+        : null,
+    })),
+  });
+
   const statementPreview = buildStatementReconciliationPreview({
     workspaceId: statementPeriod.statement.workspaceId,
     accountId: statementPeriod.accountId,
@@ -313,6 +354,9 @@ export const executeStrictPeriodClose = async (
       transactionCount: slice.transactionCount,
     },
     bookedTransactions,
+    ...transactionIntegrity,
+    previousStatementClosingBalanceMinor: previousStatementPeriod?.closingBalanceMinor ?? null,
+    previousStatementCoverageStatus: previousStatementPeriod?.coverageStatus ?? null,
   });
 
   const categoryControls = buildCategoryControlTotals({

@@ -10,6 +10,7 @@ import {
   buildCloseControlPreview,
 } from '../services/categoryControlTotalsService';
 import { buildCloseControlHashFromParts } from '../services/strictPeriodCloseService';
+import { inspectMonthlyTransactionIntegrity } from '../services/monthlyReconciliationService';
 import {
   buildStatementPeriodMonthSlice,
   calendarMonthBounds,
@@ -139,8 +140,11 @@ export const getMonthlyClosePreview = async (req: Request, res: Response) => {
         },
         select: {
           id: true,
+          date: true,
           amountMinor: true,
           direction: true,
+          importFingerprint: true,
+          rawRow: true,
           transactionBooking: {
             select: {
               projectId: true,
@@ -157,6 +161,37 @@ export const getMonthlyClosePreview = async (req: Request, res: Response) => {
           },
         },
       });
+
+      const transactionIntegrity = inspectMonthlyTransactionIntegrity({
+        workspaceId: sp.workspaceId,
+        accountId: sp.accountId,
+        year,
+        month,
+        openingBalanceMinor: slice.openingBalanceMinor,
+        transactions: transactions.map((tx) => ({
+          transactionId: tx.id,
+          date: tx.date,
+          amountMinor: tx.amountMinor,
+          direction: tx.direction as 'credit' | 'debit',
+          importFingerprint: tx.importFingerprint,
+          rawRow: tx.rawRow && typeof tx.rawRow === 'object' && !Array.isArray(tx.rawRow)
+            ? tx.rawRow as Record<string, unknown>
+            : null,
+        })),
+      });
+
+      const previousStatementPeriodCandidate = await prisma.statementPeriod.findFirst({
+        where: {
+          workspaceId: sp.workspaceId,
+          accountId: sp.accountId,
+          periodEnd: { lt: sp.periodStart },
+        },
+        orderBy: { periodEnd: 'desc' },
+        select: { id: true, coverageStatus: true, closingBalanceMinor: true },
+      });
+      const previousStatementPeriod = previousStatementPeriodCandidate?.id === sp.id
+        ? null
+        : previousStatementPeriodCandidate;
 
       const bookedTransactions: BookedTransactionSummary[] = transactions.map((tx) => {
         const booking = tx.transactionBooking;
@@ -212,6 +247,9 @@ export const getMonthlyClosePreview = async (req: Request, res: Response) => {
           transactionCount: slice.transactionCount,
         },
         bookedTransactions,
+        ...transactionIntegrity,
+        previousStatementClosingBalanceMinor: previousStatementPeriod?.closingBalanceMinor ?? null,
+        previousStatementCoverageStatus: previousStatementPeriod?.coverageStatus ?? null,
       });
 
       const categoryControls = buildCategoryControlTotals({

@@ -31,6 +31,7 @@ export type MonthlyReconciliationAuditInput = {
   expectedCoverage: MonthlyAuditExpectedCoverage;
   validatorVersion?: string;
   baselineControls?: Record<number, YearlyBaselineControl>;
+  baselineCoverage?: MonthlyAuditExpectedCoverage;
   allowUnresolvedForPartial?: boolean;
   openPeriodYears?: number[];
 };
@@ -41,12 +42,32 @@ export type MonthlyReconciliationAuditResult = {
   monthCount: number;
   issues: MonthlyAuditIssue[];
   yearSummaries: MonthlyAuditYearSummary[];
+  baselineYearSummaries: MonthlyAuditYearSummary[];
 };
 
 const toMinor = (value: string | bigint | number): bigint => BigInt(value);
 
 const addIssue = (issues: MonthlyAuditIssue[], year: number, month: number, message: string) => {
   issues.push({ year, month, message });
+};
+
+const summarizeYear = (year: number, months: MonthlyReconciliationResult[]): MonthlyAuditYearSummary => {
+  const ordered = [...months].sort((left, right) => left.month - right.month);
+  const openingBalanceMinor = ordered[0] ? ordered[0].openingBalanceMinor : '0';
+  const closingBalanceMinor = ordered[ordered.length - 1] ? ordered[ordered.length - 1].closingBalanceMinor : '0';
+  const incomeMinor = ordered.reduce((total, month) => total + toMinor(month.incomeMinor), 0n);
+  const expenseMinor = ordered.reduce((total, month) => total + toMinor(month.expenseMinor), 0n);
+  const transactionCount = ordered.reduce((total, month) => total + month.transactionCount, 0);
+
+  return {
+    year,
+    monthCount: ordered.length,
+    transactionCount,
+    openingBalanceMinor: openingBalanceMinor.toString(),
+    incomeMinor: incomeMinor.toString(),
+    expenseMinor: expenseMinor.toString(),
+    closingBalanceMinor: closingBalanceMinor.toString(),
+  };
 };
 
 export const auditMonthlyReconciliations = (
@@ -91,6 +112,9 @@ export const auditMonthlyReconciliations = (
     if (month.categoryExpenseDifferenceMinor !== '0') {
       addIssue(issues, month.year, month.month, 'Categorie-uitgaven sluiten niet exact.');
     }
+    if (month.transactionCountDifference != null && month.transactionCountDifference !== 0) {
+      addIssue(issues, month.year, month.month, 'Transactieaantal wijkt af van het bronafschrift.');
+    }
 
     const yearMonths = byYear.get(month.year) ?? [];
     yearMonths.push(month);
@@ -123,23 +147,15 @@ export const auditMonthlyReconciliations = (
 
   const yearSummaries: MonthlyAuditYearSummary[] = Array.from(byYear.entries())
     .sort(([leftYear], [rightYear]) => leftYear - rightYear)
-    .map(([year, months]) => {
-      const ordered = [...months].sort((left, right) => left.month - right.month);
-      const openingBalanceMinor = ordered[0] ? ordered[0].openingBalanceMinor : '0';
-      const closingBalanceMinor = ordered[ordered.length - 1] ? ordered[ordered.length - 1].closingBalanceMinor : '0';
-      const incomeMinor = ordered.reduce((total, month) => total + toMinor(month.incomeMinor), 0n);
-      const expenseMinor = ordered.reduce((total, month) => total + toMinor(month.expenseMinor), 0n);
-      const transactionCount = ordered.reduce((total, month) => total + month.transactionCount, 0);
+    .map(([year, months]) => summarizeYear(year, months));
 
-      return {
-        year,
-        monthCount: ordered.length,
-        transactionCount,
-        openingBalanceMinor: openingBalanceMinor.toString(),
-        incomeMinor: incomeMinor.toString(),
-        expenseMinor: expenseMinor.toString(),
-        closingBalanceMinor: closingBalanceMinor.toString(),
-      };
+  const baselineYearSummaries = Object.keys(input.baselineControls ?? {})
+    .map(Number)
+    .sort((left, right) => left - right)
+    .map((year) => {
+      const baselineMonths = input.baselineCoverage?.[year] ?? input.expectedCoverage[year] ?? [];
+      const observed = (byYear.get(year) ?? []).filter((month) => baselineMonths.includes(month.month));
+      return summarizeYear(year, observed);
     });
 
   for (const summary of yearSummaries) {
@@ -153,7 +169,9 @@ export const auditMonthlyReconciliations = (
       );
     }
 
-    // Enforce baseline controls if provided
+  }
+
+  for (const summary of baselineYearSummaries) {
     const baseline = input.baselineControls?.[summary.year];
     if (baseline) {
       if (summary.transactionCount !== baseline.transactionCount) {
@@ -207,5 +225,6 @@ export const auditMonthlyReconciliations = (
     monthCount: sortedMonths.length,
     issues,
     yearSummaries,
+    baselineYearSummaries,
   };
 };

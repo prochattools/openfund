@@ -1,7 +1,10 @@
 import { Prisma } from '@prisma/client';
-import { buildTransactionHash } from '../../lib/import/dedupe';
 import type { ParsedRowSuccess } from '../../lib/import/types';
-import { buildImportFingerprint } from './transactionFingerprint';
+import {
+  buildBankFactHash,
+  buildBankFactIdentity,
+  buildImportFingerprint,
+} from './transactionFingerprint';
 import { hashSourceContent } from './statementControlService';
 
 export class StatementCsvImportError extends Error {
@@ -24,8 +27,39 @@ export type StatementCsvImportResult = {
 
 type Tx = Prisma.TransactionClient;
 
-const dayAmountKey = (date: Date, amountMinor: bigint): string =>
-  `${date.toISOString().slice(0, 10)}|${amountMinor.toString()}`;
+type ExistingBankFact = {
+  date: Date;
+  amountMinor: bigint;
+  description?: string | null;
+  counterparty?: string | null;
+  reference?: string | null;
+  rawRow?: unknown;
+};
+
+const asRawRecord = (value: unknown): Record<string, unknown> | null => (
+  value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null
+);
+
+const bankFactKey = (
+  row: Pick<ExistingBankFact, 'date' | 'amountMinor' | 'description' | 'counterparty' | 'reference' | 'rawRow'>,
+  accountIdentifier: string,
+): string => buildBankFactIdentity({
+  accountIdentifier,
+  date: row.date,
+  amountMinor: row.amountMinor,
+  description: row.description ?? '',
+  counterparty: row.counterparty,
+  reference: row.reference,
+  raw: asRawRecord(row.rawRow ?? (row as ExistingBankFact & { raw?: unknown }).raw),
+});
+
+const countKeys = (keys: string[]): Map<string, number> => {
+  const counts = new Map<string, number>();
+  for (const key of keys) counts.set(key, (counts.get(key) ?? 0) + 1);
+  return counts;
+};
 
 const periodBounds = (rows: ParsedRowSuccess[]) => {
   const times = rows.map((row) => row.date.getTime());
@@ -93,23 +127,35 @@ export const importStatementCsvRows = async (
       accountId: account.id,
       date: { gte: period.start, lt: period.endExclusive },
     },
-    select: { id: true, date: true, amountMinor: true, ledgerId: true },
+    select: {
+      id: true,
+      date: true,
+      amountMinor: true,
+      ledgerId: true,
+      description: true,
+      counterparty: true,
+      reference: true,
+      rawRow: true,
+    },
   });
 
   const remainingExisting = new Map<string, number>();
   for (const row of existing) {
-    const key = dayAmountKey(row.date, row.amountMinor);
+    const key = bankFactKey(row, accountIdentifier);
     remainingExisting.set(key, (remainingExisting.get(key) ?? 0) + 1);
   }
 
-  const missingRows: ParsedRowSuccess[] = [];
+  const rowOccurrences = new Map<string, number>();
+  const missingRows: Array<{ row: ParsedRowSuccess; occurrence: number }> = [];
   for (const row of params.rows) {
-    const key = dayAmountKey(row.date, row.amountMinor);
+    const key = bankFactKey(row, accountIdentifier);
+    const occurrence = (rowOccurrences.get(key) ?? 0) + 1;
+    rowOccurrences.set(key, occurrence);
     const remaining = remainingExisting.get(key) ?? 0;
     if (remaining > 0) {
       remainingExisting.set(key, remaining - 1);
     } else {
-      missingRows.push(row);
+      missingRows.push({ row, occurrence });
     }
   }
 
@@ -155,7 +201,7 @@ export const importStatementCsvRows = async (
     },
   });
 
-  const records = missingRows.map((row) => ({
+  const records = missingRows.map(({ row, occurrence }) => ({
     userId: params.userId,
     accountId: account.id,
     ledgerId: ledger.id,
@@ -169,13 +215,16 @@ export const importStatementCsvRows = async (
     source: row.source,
     counterparty: row.counterparty,
     reference: row.reference,
-    hash: buildTransactionHash({
+    hash: buildBankFactHash({
       userId: params.userId,
       accountIdentifier: row.accountIdentifier,
       date: row.date,
-      normalizedDescription: row.normalizedDescription,
       amountMinor: row.amountMinor,
+      description: row.description,
+      counterparty: row.counterparty,
       reference: row.reference,
+      raw: row.raw,
+      occurrence,
     }),
     sourceFile: params.filename,
     rawRow: row.raw as Prisma.InputJsonValue,
@@ -188,6 +237,7 @@ export const importStatementCsvRows = async (
       counterparty: row.counterparty,
       reference: row.reference,
       raw: row.raw,
+      occurrence,
     }),
   }));
 
@@ -199,18 +249,17 @@ export const importStatementCsvRows = async (
       accountId: account.id,
       date: { gte: period.start, lt: period.endExclusive },
     },
-    select: { date: true, amountMinor: true },
+    select: {
+      date: true,
+      amountMinor: true,
+      description: true,
+      counterparty: true,
+      reference: true,
+      rawRow: true,
+    },
   });
-  const expectedCounts = new Map<string, number>();
-  const actualCounts = new Map<string, number>();
-  for (const row of params.rows) {
-    const key = dayAmountKey(row.date, row.amountMinor);
-    expectedCounts.set(key, (expectedCounts.get(key) ?? 0) + 1);
-  }
-  for (const row of finalRows) {
-    const key = dayAmountKey(row.date, row.amountMinor);
-    actualCounts.set(key, (actualCounts.get(key) ?? 0) + 1);
-  }
+  const expectedCounts = countKeys(params.rows.map((row) => bankFactKey(row, accountIdentifier)));
+  const actualCounts = countKeys(finalRows.map((row) => bankFactKey(row, accountIdentifier)));
   const exact = expectedCounts.size === actualCounts.size
     && [...expectedCounts.entries()].every(([key, count]) => actualCounts.get(key) === count);
   if (!exact) {

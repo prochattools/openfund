@@ -1,6 +1,9 @@
 import crypto from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { buildImportFingerprint } from '../../server/services/transactionFingerprint';
+import {
+  buildImportFingerprint,
+  buildLegacyImportFingerprint,
+} from '../../server/services/transactionFingerprint';
 import {
   buildMonthlyImportPreview,
   MonthlyImportPreviewError,
@@ -28,6 +31,28 @@ const baseInput = {
 };
 
 const firstRowFingerprint = buildImportFingerprint({
+  accountIdentifier: 'NL89INGB0006369960',
+  date: new Date('2026-05-01T00:00:00.000Z'),
+  amountMinor: 5000n,
+  description: 'Gift Alpha',
+  counterparty: 'Donor A',
+  reference: 'MONTH-1',
+  raw: {
+    Date: '2026-05-01',
+    'Name / Description': 'Gift Alpha',
+    Account: 'NL89INGB0006369960',
+    Counterparty: 'Donor A',
+    Code: 'GT',
+    'Debit/credit': 'Credit',
+    'Amount (EUR)': '50,00',
+    'Transaction type': 'Online',
+    Notifications: 'Reference: MONTH-1',
+    'Resulting balance': '1050,00',
+    Tag: '',
+  },
+});
+
+const firstRowLegacyFingerprint = buildLegacyImportFingerprint({
   accountIdentifier: 'NL89INGB0006369960',
   date: new Date('2026-05-01T00:00:00.000Z'),
   amountMinor: 5000n,
@@ -120,6 +145,19 @@ describe('monthly import preview service', () => {
       closesPeriod: false,
     });
     expect(preview.categorization).toBeNull();
+  });
+
+  it('detects transactions persisted with the legacy fingerprint format', async () => {
+    const preview = await buildMonthlyImportPreview(baseInput, {
+      findExistingImportFingerprints: async ({ fingerprints }) => {
+        expect(fingerprints).toContain(firstRowLegacyFingerprint);
+        return [firstRowLegacyFingerprint];
+      },
+    });
+
+    expect(preview.duplicateCount).toBe(1);
+    expect(preview.newTransactionCount).toBe(2);
+    expect(preview.potentialDuplicateTransactionFingerprints).toEqual([firstRowFingerprint]);
   });
 
   it('counts only repeated upload rows as in-file duplicates', async () => {

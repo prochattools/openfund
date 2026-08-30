@@ -1,4 +1,5 @@
 import { StatementCoverageStatus } from '@prisma/client';
+import { toMinorUnits } from '../../lib/import/normalizers';
 
 type BigIntLike = bigint | number | string;
 
@@ -27,6 +28,7 @@ export type MonthlyReconciliationStatementEvidence = {
   coverageStatus: StatementCoverageStatus;
   openingBalanceMinor?: BigIntLike | null;
   closingBalanceMinor?: BigIntLike | null;
+  transactionCount?: number | null;
   sourceFileHashes?: string[];
   periodStart?: Date | string | null;
   periodEnd?: Date | string | null;
@@ -61,6 +63,8 @@ export type MonthlyReconciliationResult = {
   netMinor: string;
   closingBalanceMinor: string;
   transactionCount: number;
+  statementTransactionCount: number | null;
+  transactionCountDifference: number | null;
   bookedTransactionCount: number;
   unresolvedTransactionCount: number;
   duplicateFingerprintCount: number;
@@ -96,32 +100,10 @@ const toMinor = (value: BigIntLike | null | undefined): bigint => BigInt(value ?
 
 const parseMinorAmount = (value: unknown): bigint | null => {
   if (value == null) return null;
-  if (typeof value === 'bigint') return value;
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return BigInt(Math.round(value * 100));
-  }
-  if (typeof value !== 'string') return null;
-
-  const normalized = value.trim();
-  if (!normalized) return null;
-
-  if (/^\d+(?:\.\d{3})*(?:,\d{1,2})?$/.test(normalized)) {
-    const compact = normalized.replace(/\./g, '').replace(',', '.');
-    const parsed = Number(compact);
-    return Number.isFinite(parsed) ? BigInt(Math.round(parsed * 100)) : null;
-  }
-
-  if (/^\d+(?:,\d{1,2})?$/.test(normalized)) {
-    const compact = normalized.replace(',', '.');
-    const parsed = Number(compact);
-    return Number.isFinite(parsed) ? BigInt(Math.round(parsed * 100)) : null;
-  }
-
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? BigInt(Math.round(parsed * 100)) : null;
+  return toMinorUnits(value);
 };
 
-const extractRunningBalanceMinor = (rawRow: Record<string, unknown> | null | undefined): bigint | null => {
+export const extractRunningBalanceMinor = (rawRow: Record<string, unknown> | null | undefined): bigint | null => {
   if (!rawRow || typeof rawRow !== 'object' || Array.isArray(rawRow)) {
     return null;
   }
@@ -149,6 +131,42 @@ const extractRunningBalanceMinor = (rawRow: Record<string, unknown> | null | und
   }
 
   return null;
+};
+
+/**
+ * Reuse the monthly reconciliation implementation for close-time integrity
+ * controls. Callers provide immutable source rows; raw running balances are
+ * promoted to explicit values only when the source actually contains one.
+ */
+export const inspectMonthlyTransactionIntegrity = (input: {
+  workspaceId: string;
+  accountId: string;
+  year: number;
+  month: number;
+  openingBalanceMinor: BigIntLike;
+  transactions: MonthlyReconciliationTransactionInput[];
+}): Pick<MonthlyReconciliationResult, 'duplicateFingerprintCount' | 'runningBalanceErrorCount'> => {
+  const result = buildMonthlyReconciliation({
+    workspaceId: input.workspaceId,
+    accountId: input.accountId,
+    year: input.year,
+    month: input.month,
+    importedTransactions: input.transactions.map((transaction) => ({
+      ...transaction,
+      resultingBalanceMinor: transaction.resultingBalanceMinor
+        ?? extractRunningBalanceMinor(transaction.rawRow),
+    })),
+    statementEvidence: {
+      coverageStatus: StatementCoverageStatus.COMPLETE,
+      openingBalanceMinor: input.openingBalanceMinor,
+      transactionCount: null,
+    },
+  });
+
+  return {
+    duplicateFingerprintCount: result.duplicateFingerprintCount,
+    runningBalanceErrorCount: result.runningBalanceErrorCount,
+  };
 };
 
 const toDate = (value: Date | string): Date => (value instanceof Date ? value : new Date(value));
@@ -306,6 +324,16 @@ export const buildMonthlyReconciliation = (
   const expenseMinor = sumByDirection(transactions, 'debit');
   const netMinor = incomeMinor - expenseMinor;
   const transactionCount = transactions.length;
+  const statementTransactionCount = input.statementEvidence.transactionCount ?? null;
+  if (
+    statementTransactionCount != null
+    && (!Number.isInteger(statementTransactionCount) || statementTransactionCount < 0)
+  ) {
+    throw new Error('Ongeldig aantal brontransacties.');
+  }
+  const transactionCountDifference = statementTransactionCount == null
+    ? null
+    : transactionCount - statementTransactionCount;
 
   let duplicateFingerprintCount = 0;
   const seenFingerprints = new Set<string>();
@@ -327,13 +355,18 @@ export const buildMonthlyReconciliation = (
       ? extractRunningBalanceMinor(transaction.rawRow)
       : toMinor(transaction.resultingBalanceMinor);
 
-    // Per-transaction balances are often unreliable. Only use them if they're explicitly provided
-    // (not extracted from raw rows). Skip running balance checks when resultingBalanceMinor is null,
-    // which signals that source evidence is not per-transaction.
+    // Per-transaction balances are only reliable when explicitly provided or
+    // present in the raw bank row; otherwise the running-balance checks are skipped.
     const hasReliableBalance = transaction.resultingBalanceMinor != null;
 
     if (index === 0) {
       if (hasReliableBalance && actualBalanceMinor != null) {
+        if (
+          input.statementEvidence.openingBalanceMinor != null
+          && actualBalanceMinor !== toMinor(input.statementEvidence.openingBalanceMinor) + delta
+        ) {
+          runningBalanceErrorCount += 1;
+        }
         derivedOpeningBalanceMinor = actualBalanceMinor - delta;
         previousBalanceMinor = actualBalanceMinor;
       } else if (input.statementEvidence.openingBalanceMinor != null) {
@@ -429,6 +462,9 @@ export const buildMonthlyReconciliation = (
   if (balanceDifferenceMinor !== 0n) {
     addReason(reasons, 'Openingssaldo plus inkomsten min uitgaven wijkt af van het eindsaldo.');
   }
+  if (transactionCountDifference != null && transactionCountDifference !== 0) {
+    addReason(reasons, 'Het aantal transacties wijkt af van het bronafschrift.');
+  }
 
   const monthChainErrorCount = [
     input.previousMonthClosingBalanceMinor != null && toMinor(input.previousMonthClosingBalanceMinor) !== openingBalanceMinor,
@@ -451,6 +487,7 @@ export const buildMonthlyReconciliation = (
     categoryIncomeDifferenceMinor !== 0n ||
     categoryExpenseDifferenceMinor !== 0n ||
     balanceDifferenceMinor !== 0n ||
+    (transactionCountDifference != null && transactionCountDifference !== 0) ||
     monthChainErrorCount > 0
   ) {
     status = 'UNBALANCED';
@@ -472,6 +509,8 @@ export const buildMonthlyReconciliation = (
     netMinor: moneyToString(netMinor),
     closingBalanceMinor: moneyToString(closingBalanceMinor),
     transactionCount,
+    statementTransactionCount,
+    transactionCountDifference,
     bookedTransactionCount,
     unresolvedTransactionCount,
     duplicateFingerprintCount,

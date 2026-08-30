@@ -3,11 +3,8 @@ import { LockedPeriodError, processImportBuffer } from '../services/importServic
 import { LedgerMismatchError, MissingOpeningBalanceError } from '../services/reconciliationService';
 import { requireAdmin } from '../auth/requestContext';
 import { prisma } from '../prismaClient';
-import {
-  finalizeStagedMonthlyStatement,
-  importMonthlyStatementEvidence,
-  MonthlyStatementPackageError,
-} from '../services/monthlyStatementPackageService';
+import { MonthlyStatementPackageError } from '../services/monthlyStatementPackageService';
+import { runStatementImportTransaction } from '../services/statementImportTransactionService';
 import { IngStatementPdfError } from '../services/ingStatementPdfService';
 import {
   buildMonthlyImportPreview,
@@ -118,36 +115,13 @@ export const handleStatementPackageImport = async (req: Request, res: Response) 
   }
 
   try {
-    let result = await prisma.$transaction((tx) => importMonthlyStatementEvidence({
-      db: tx,
+    const result = await runStatementImportTransaction(prisma, {
       userId: actor.userId,
       workspaceId: actor.workspaceId,
       expectedMonthKey: periodKey || null,
       csv: csv ? { buffer: csv.buffer, filename: csv.originalname, mediaType: csv.mimetype } : null,
       pdf: pdf ? { buffer: pdf.buffer, filename: pdf.originalname, mediaType: pdf.mimetype } : null,
-    }), { timeout: 60_000 });
-
-    let pairingWarning: string | null = null;
-    if (result.status === 'CSV_IMPORTED' || result.status === 'CSV_STAGED' || result.status === 'PDF_STAGED') {
-      try {
-        const finalized = await prisma.$transaction((tx) => finalizeStagedMonthlyStatement({
-          db: tx,
-          userId: actor.userId,
-          workspaceId: actor.workspaceId,
-          expectedMonthKey: periodKey || null,
-        }), { timeout: 60_000 });
-        if (finalized) result = finalized;
-      } catch (pairingError) {
-        const pairingCode = pairingError && typeof pairingError === 'object' && 'code' in pairingError
-          ? String((pairingError as { code?: unknown }).code ?? '') || undefined
-          : undefined;
-        console.error('Maandafschriftbestanden konden na opslag nog niet worden gekoppeld', {
-          name: pairingError instanceof Error ? pairingError.name : 'UnknownError',
-          code: pairingCode,
-        });
-        pairingWarning = 'Het bestand is veilig opgeslagen. De koppeling met het andere bestand wordt opnieuw geprobeerd bij de volgende upload.';
-      }
-    }
+    });
 
     if (result.status === 'CSV_IMPORTED' || result.status === 'IMPORTED') {
       try {
@@ -188,7 +162,7 @@ export const handleStatementPackageImport = async (req: Request, res: Response) 
 
     return res.json({
       ...result,
-      message: pairingWarning ? `${message} ${pairingWarning}` : message,
+      message,
       periodStart: result.periodStart.toISOString(),
       periodEnd: result.periodEnd.toISOString(),
     });

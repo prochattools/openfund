@@ -23,6 +23,12 @@ export type StatementReconciliationSourceTotals = {
   transactionCount: number;
 };
 
+export type StatementReconciliationIntegrity = {
+  duplicateFingerprintCount: number;
+  runningBalanceErrorCount: number;
+  monthChainErrorCount: number;
+};
+
 export type StatementReconciliationBookedTotals = {
   incomeMinor: string;
   expenseMinor: string;
@@ -53,6 +59,7 @@ export type StatementReconciliationPreview = {
   source: StatementReconciliationSourceTotals;
   booked: StatementReconciliationBookedTotals;
   differences: StatementReconciliationDifferences;
+  integrity: StatementReconciliationIntegrity;
   status: ReconciliationPreviewStatus;
   closeEligibility: StatementReconciliationCloseEligibility;
   validatorVersion: string;
@@ -73,6 +80,10 @@ export type StatementReconciliationInput = {
   coverageStatus: StatementCoverageStatus;
   statementTotals: StatementTotalsInput & { transactionCount: number };
   bookedTransactions: BookedTransactionSummary[];
+  duplicateFingerprintCount?: number;
+  runningBalanceErrorCount?: number;
+  previousStatementClosingBalanceMinor?: bigint | number | null;
+  previousStatementCoverageStatus?: StatementCoverageStatus | null;
 };
 
 export type BookedTransactionSummary = {
@@ -144,6 +155,27 @@ export const buildStatementReconciliationPreview = (
   }
 
   const booked = computeBookedTotals(input.bookedTransactions);
+  const duplicateFingerprintCount = input.duplicateFingerprintCount ?? 0;
+  const runningBalanceErrorCount = input.runningBalanceErrorCount ?? 0;
+  if (
+    !Number.isInteger(duplicateFingerprintCount)
+    || duplicateFingerprintCount < 0
+    || !Number.isInteger(runningBalanceErrorCount)
+    || runningBalanceErrorCount < 0
+  ) {
+    throw new StatementReconciliationControlError(
+      'Integriteitscontroles moeten geldige niet-negatieve gehele aantallen zijn.',
+    );
+  }
+
+  const monthChainErrorCount = input.previousStatementClosingBalanceMinor != null
+    && (
+      (input.previousStatementCoverageStatus != null
+        && input.previousStatementCoverageStatus !== 'COMPLETE')
+      || toBigInt(input.previousStatementClosingBalanceMinor) !== sourceTotals.openingBalanceMinor
+    )
+    ? 1
+    : 0;
 
   const balanceDifference = booked.netMinor - sourceTotals.netMinor;
   const incomeDifference = booked.incomeMinor - sourceTotals.incomeMinor;
@@ -168,6 +200,16 @@ export const buildStatementReconciliationPreview = (
     closeReasons.push(
       'Niet alle transacties hebben een volledige boeking met Klant, Type en Categorie.',
     );
+  }
+
+  if (duplicateFingerprintCount > 0) {
+    closeReasons.push('Dubbele importvingerafdrukken zijn aanwezig.');
+  }
+  if (runningBalanceErrorCount > 0) {
+    closeReasons.push('Running-balance controles bevatten fouten.');
+  }
+  if (monthChainErrorCount > 0) {
+    closeReasons.push('De vorige maand sluit niet aan op het openingssaldo van deze maand.');
   }
 
   const isBalanceDifferenceZero = balanceDifference === 0n;
@@ -201,10 +243,14 @@ export const buildStatementReconciliationPreview = (
     isIncomeDifferenceZero &&
     isExpenseDifferenceZero &&
     isCountDifferenceZero;
+  const allIntegrityControlsPass =
+    duplicateFingerprintCount === 0
+    && runningBalanceErrorCount === 0
+    && monthChainErrorCount === 0;
 
   if (booked.unresolvedTransactionCount > 0 || hasMissingBookings) {
     status = 'INCOMPLETE';
-  } else if (!allTotalsMatch) {
+  } else if (!allTotalsMatch || !allIntegrityControlsPass) {
     status = 'UNBALANCED';
   } else {
     status = 'BALANCED';
@@ -238,6 +284,11 @@ export const buildStatementReconciliationPreview = (
       expenseDifferenceMinor: expenseDifference.toString(),
       transactionCountDifference,
     },
+    integrity: {
+      duplicateFingerprintCount,
+      runningBalanceErrorCount,
+      monthChainErrorCount,
+    },
     status,
     closeEligibility: {
       eligible: closeReasons.length === 0,
@@ -261,6 +312,9 @@ export const toBalancedReconciliationEvidence = (
   if (preview.differences.incomeDifferenceMinor !== '0') return null;
   if (preview.differences.expenseDifferenceMinor !== '0') return null;
   if (preview.differences.transactionCountDifference !== 0) return null;
+  if (preview.integrity.duplicateFingerprintCount !== 0) return null;
+  if (preview.integrity.runningBalanceErrorCount !== 0) return null;
+  if (preview.integrity.monthChainErrorCount !== 0) return null;
   if (preview.booked.unresolvedTransactionCount !== 0) return null;
   if (preview.booked.bookedTransactionCount !== preview.booked.transactionCount) return null;
 

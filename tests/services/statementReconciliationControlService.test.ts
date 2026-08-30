@@ -171,6 +171,45 @@ describe('statement reconciliation control service', () => {
     );
   });
 
+  it('blocks close when duplicate fingerprint controls report an error', () => {
+    const preview = buildStatementReconciliationPreview({
+      ...balancedInput,
+      duplicateFingerprintCount: 1,
+    });
+
+    expect(preview.status).toBe('UNBALANCED');
+    expect(preview.integrity.duplicateFingerprintCount).toBe(1);
+    expect(preview.closeEligibility.eligible).toBe(false);
+    expect(toBalancedReconciliationEvidence(preview)).toBeNull();
+  });
+
+  it('blocks close when running-balance controls report an error', () => {
+    const preview = buildStatementReconciliationPreview({
+      ...balancedInput,
+      runningBalanceErrorCount: 1,
+    });
+
+    expect(preview.status).toBe('UNBALANCED');
+    expect(preview.integrity.runningBalanceErrorCount).toBe(1);
+    expect(preview.closeEligibility.eligible).toBe(false);
+    expect(toBalancedReconciliationEvidence(preview)).toBeNull();
+  });
+
+  it('blocks close when the previous statement does not chain to the opening balance', () => {
+    const preview = buildStatementReconciliationPreview({
+      ...balancedInput,
+      previousStatementClosingBalanceMinor: 99999n,
+      previousStatementCoverageStatus: StatementCoverageStatus.COMPLETE,
+    });
+
+    expect(preview.status).toBe('UNBALANCED');
+    expect(preview.integrity.monthChainErrorCount).toBe(1);
+    expect(preview.closeEligibility.eligible).toBe(false);
+    expect(preview.closeEligibility.reasons).toContain(
+      'De vorige maand sluit niet aan op het openingssaldo van deze maand.',
+    );
+  });
+
   it('returns INCOMPLETE when unresolved review transactions exist', () => {
     const preview = buildStatementReconciliationPreview({
       ...balancedInput,

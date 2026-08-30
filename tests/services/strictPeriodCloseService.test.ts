@@ -98,9 +98,12 @@ const makeDb = (overrides: {
       findFirst: async () => ({ id: 'ledger-1', year: 2026, month: 1 }),
     },
     statementPeriod: {
-      findFirst: async () => overrides.statementPeriod !== undefined
-        ? overrides.statementPeriod
-        : makeStatementPeriod(),
+      findFirst: async (args: { where?: { periodEnd?: unknown } }) => {
+        if (args?.where?.periodEnd) return null;
+        return overrides.statementPeriod !== undefined
+          ? overrides.statementPeriod
+          : makeStatementPeriod();
+      },
     },
     transaction: {
       findMany: async () => overrides.transactions !== undefined
@@ -197,6 +200,29 @@ describe('strict period close service — close gate', () => {
         { ...balancedTransactions[0], transactionBooking: null, categorizationSuggestions: [] },
         balancedTransactions[1],
         balancedTransactions[2],
+      ],
+    });
+
+    await expect(executeStrictPeriodClose(db, makeInput())).rejects.toThrow(StrictPeriodCloseError);
+  });
+
+  it('rejects duplicate import fingerprints before creating a close', async () => {
+    const { db } = makeDb({
+      transactions: balancedTransactions.map((transaction, index) => ({
+        ...transaction,
+        importFingerprint: index < 2 ? 'duplicate-fingerprint' : `fingerprint-${index}`,
+      })),
+    });
+
+    await expect(executeStrictPeriodClose(db, makeInput())).rejects.toThrow(StrictPeriodCloseError);
+  });
+
+  it('rejects running-balance continuity errors before creating a close', async () => {
+    const { db } = makeDb({
+      transactions: [
+        { ...balancedTransactions[0], rawRow: { 'Resulting balance': '1050.00' } },
+        { ...balancedTransactions[1], rawRow: { 'Resulting balance': '1090.00' } },
+        { ...balancedTransactions[2], rawRow: { 'Resulting balance': '1060.00' } },
       ],
     });
 

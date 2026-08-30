@@ -1,8 +1,5 @@
 import { NormalizedTransaction } from './types';
 
-const DECIMAL_SEPARATOR_REGEX = /[.,]/;
-const NON_NUMERIC_REGEX = /[^0-9]/g;
-
 export const normalizeWhitespace = (value: string): string =>
   value.replace(/\s+/g, ' ').trim();
 
@@ -26,6 +23,22 @@ export const normalizeAccountIdentifier = (value: string): string =>
     .replace(/[^A-Z0-9]/gi, '')
     .toUpperCase();
 
+/**
+ * Builds a UTC calendar date without allowing the JavaScript Date constructor
+ * to roll invalid days or months into a different calendar date.
+ */
+export const createUtcCalendarDate = (year: number, month: number, day: number): Date | null => {
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return null;
+  if (year < 1 || month < 1 || month > 12 || day < 1 || day > 31) return null;
+
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year
+    && date.getUTCMonth() + 1 === month
+    && date.getUTCDate() === day
+    ? date
+    : null;
+};
+
 const ensureString = (value: unknown): string | null => {
   if (value == null) return null;
   if (typeof value === 'string') {
@@ -42,21 +55,21 @@ export const parseDate = (value: unknown): Date | null => {
   if (value == null) return null;
 
   if (value instanceof Date) {
-    return Number.isNaN(value.getTime()) ? null : new Date(Date.UTC(
-      value.getUTCFullYear(),
-      value.getUTCMonth(),
-      value.getUTCDate(),
-    ));
+    return Number.isNaN(value.getTime())
+      ? null
+      : createUtcCalendarDate(value.getUTCFullYear(), value.getUTCMonth() + 1, value.getUTCDate());
   }
 
   if (typeof value === 'number') {
     const text = value.toString();
-    if (text.length === 8) {
-      const year = Number(text.slice(0, 4));
-      const month = Number(text.slice(4, 6)) - 1;
-      const day = Number(text.slice(6, 8));
-      return new Date(Date.UTC(year, month, day));
+    if (/^\d{8}$/.test(text)) {
+      return createUtcCalendarDate(
+        Number(text.slice(0, 4)),
+        Number(text.slice(4, 6)),
+        Number(text.slice(6, 8)),
+      );
     }
+    return null;
   }
 
   if (typeof value === 'string') {
@@ -64,31 +77,31 @@ export const parseDate = (value: unknown): Date | null => {
     if (!trimmed) return null;
 
     if (/^\d{8}$/.test(trimmed)) {
-      const year = Number(trimmed.slice(0, 4));
-      const month = Number(trimmed.slice(4, 6)) - 1;
-      const day = Number(trimmed.slice(6, 8));
-      return new Date(Date.UTC(year, month, day));
+      return createUtcCalendarDate(
+        Number(trimmed.slice(0, 4)),
+        Number(trimmed.slice(4, 6)),
+        Number(trimmed.slice(6, 8)),
+      );
     }
 
     if (/^\d{2}[/-]\d{2}[/-]\d{4}$/.test(trimmed)) {
       const [day, month, year] = trimmed.replace(/-/g, '/').split('/');
-      return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+      return createUtcCalendarDate(Number(year), Number(month), Number(day));
     }
 
-    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-      const [year, month, day] = trimmed.split('-');
-      return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+    const isoDateMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|T|\s)/);
+    if (isoDateMatch) {
+      return createUtcCalendarDate(
+        Number(isoDateMatch[1]),
+        Number(isoDateMatch[2]),
+        Number(isoDateMatch[3]),
+      );
     }
   }
 
-  const attempt = new Date(String(value));
-  return Number.isNaN(attempt.getTime())
-    ? null
-    : new Date(Date.UTC(
-        attempt.getUTCFullYear(),
-        attempt.getUTCMonth(),
-        attempt.getUTCDate(),
-      ));
+  // Unknown textual formats are rejected rather than delegated to the
+  // implementation-dependent Date parser, which can normalize invalid dates.
+  return null;
 };
 
 const normalizeAmountInput = (value: unknown): string | null => {
@@ -104,37 +117,72 @@ const normalizeAmountInput = (value: unknown): string | null => {
 };
 
 export const toMinorUnits = (value: unknown, decimals = 2): bigint | null => {
+  if (!Number.isInteger(decimals) || decimals < 0) return null;
   const input = normalizeAmountInput(value);
   if (!input) return null;
 
-  let normalized = input.replace(/\s+/g, '');
-
-  if (normalized.includes(',') && normalized.includes('.')) {
-    normalized = normalized.replace(/\./g, '');
-  }
-
+  const normalized = input.replace(/\s+/g, '');
   const sign = normalized.startsWith('-') ? -1n : 1n;
   const unsigned = normalized.replace(/^[+-]/, '');
+  if (!unsigned || !/^\d[\d.,]*$/.test(unsigned)) return null;
 
+  const hasComma = unsigned.includes(',');
+  const hasDot = unsigned.includes('.');
+  const commaCount = (unsigned.match(/,/g) ?? []).length;
+  const dotCount = (unsigned.match(/\./g) ?? []).length;
   let integerPart = unsigned;
   let fractionPart = '';
 
-  const separatorMatch = unsigned.match(DECIMAL_SEPARATOR_REGEX);
-  if (separatorMatch) {
-    const separatorIndex = separatorMatch.index ?? unsigned.length;
-    integerPart = unsigned.slice(0, separatorIndex);
-    fractionPart = unsigned.slice(separatorIndex + 1);
+  const isGroupedInteger = (candidate: string, separator: '.' | ','): boolean => {
+    const parts = candidate.split(separator);
+    return parts.length > 1
+      && parts[0]!.length >= 1
+      && parts[0]!.length <= 3
+      && parts.slice(1).every((part) => /^\d{3}$/.test(part));
+  };
+
+  if (hasComma && hasDot) {
+    const decimalSeparator = unsigned.lastIndexOf(',') > unsigned.lastIndexOf('.') ? ',' : '.';
+    const groupingSeparator = decimalSeparator === ',' ? '.' : ',';
+    const decimalCount = decimalSeparator === ',' ? commaCount : dotCount;
+    const decimalIndex = unsigned.lastIndexOf(decimalSeparator);
+    const candidateInteger = unsigned.slice(0, decimalIndex);
+    fractionPart = unsigned.slice(decimalIndex + 1);
+    if (
+      decimalCount !== 1
+      || !fractionPart.match(new RegExp(`^\\d{0,${decimals}}$`))
+      || !isGroupedInteger(candidateInteger, groupingSeparator)
+    ) return null;
+    integerPart = candidateInteger.replace(new RegExp(`\\${groupingSeparator}`, 'g'), '');
+  } else if (hasComma) {
+    if (commaCount !== 1) return null;
+    const decimalIndex = unsigned.indexOf(',');
+    integerPart = unsigned.slice(0, decimalIndex);
+    fractionPart = unsigned.slice(decimalIndex + 1);
+    if (!/^\d+$/.test(integerPart) || !new RegExp(`^\\d{0,${decimals}}$`).test(fractionPart)) return null;
+  } else if (hasDot) {
+    if (dotCount === 1) {
+      const decimalIndex = unsigned.indexOf('.');
+      const candidateInteger = unsigned.slice(0, decimalIndex);
+      const candidateFraction = unsigned.slice(decimalIndex + 1);
+      if (new RegExp(`^\\d{0,${decimals}}$`).test(candidateFraction)) {
+        integerPart = candidateInteger;
+        fractionPart = candidateFraction;
+      } else if (isGroupedInteger(unsigned, '.')) {
+        integerPart = unsigned.replace(/\./g, '');
+      } else {
+        return null;
+      }
+    } else if (isGroupedInteger(unsigned, '.')) {
+      integerPart = unsigned.replace(/\./g, '');
+    } else {
+      return null;
+    }
   }
 
-  integerPart = integerPart.replace(NON_NUMERIC_REGEX, '');
-  fractionPart = fractionPart.replace(NON_NUMERIC_REGEX, '').slice(0, decimals);
-
-  if (!integerPart && !fractionPart) {
-    return null;
-  }
-
+  if (!/^\d+$/.test(integerPart) || !/^\d*$/.test(fractionPart)) return null;
   const paddedFraction = fractionPart.padEnd(decimals, '0');
-  const combined = `${integerPart || '0'}${paddedFraction}`;
+  const combined = `${integerPart || '0'}${paddedFraction || (decimals === 0 ? '' : '0'.repeat(decimals))}`;
 
   try {
     return BigInt(combined) * sign;

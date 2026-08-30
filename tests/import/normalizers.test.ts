@@ -17,6 +17,20 @@ describe('normalizers', () => {
     expect(toMinorUnits('-12,3')).toEqual(-1230n);
   });
 
+  it('parses decimal amounts exactly without floating-point rounding', () => {
+    expect(toMinorUnits('0.29')).toEqual(29n);
+    expect(toMinorUnits('99999999999999.99')).toEqual(9999999999999999n);
+    expect(toMinorUnits(0.29)).toEqual(29n);
+  });
+
+  it('rejects malformed or over-precise amounts instead of silently changing them', () => {
+    expect(toMinorUnits('12.3.4')).toBeNull();
+    expect(toMinorUnits('12,3,4')).toBeNull();
+    expect(toMinorUnits('12,345')).toBeNull();
+    expect(toMinorUnits('12.3456')).toBeNull();
+    expect(toMinorUnits('EUR 12,34')).toBeNull();
+  });
+
   it('applies debit/credit markers to signed amounts', () => {
     const base = toMinorUnits('250')!;
     expect(applyDebitCredit(base, 'Credit')).toEqual(25000n);
@@ -37,6 +51,14 @@ describe('normalizers', () => {
 
     const isoText = parseDate('2025-01-09');
     expect(isoText?.toISOString()).toEqual('2025-01-09T00:00:00.000Z');
+  });
+
+  it('rejects invalid calendar dates and preserves leap-year rules', () => {
+    expect(parseDate('20260230')).toBeNull();
+    expect(parseDate('31/04/2026')).toBeNull();
+    expect(parseDate('2026-13-01')).toBeNull();
+    expect(parseDate('29/02/2025')).toBeNull();
+    expect(parseDate('2024-02-29')?.toISOString()).toBe('2024-02-29T00:00:00.000Z');
   });
 
   it('normalizes descriptions and account identifiers consistently', () => {

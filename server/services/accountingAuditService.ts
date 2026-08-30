@@ -43,6 +43,17 @@ export const APPROVED_ACCOUNTING_COVERAGE: MonthlyAuditExpectedCoverage = {
   2026: Array.from({ length: 7 }, (_, index) => index + 1),
 };
 
+/**
+ * The approved controls cover only the evidence that was independently
+ * approved. New complete statement months may extend audit scope, but never
+ * extend this baseline implicitly or derive a new approval from ledger totals.
+ */
+export const APPROVED_ACCOUNTING_BASELINE_COVERAGE: MonthlyAuditExpectedCoverage = {
+  2024: [...APPROVED_ACCOUNTING_COVERAGE[2024]!],
+  2025: [...APPROVED_ACCOUNTING_COVERAGE[2025]!],
+  2026: [...APPROVED_ACCOUNTING_COVERAGE[2026]!],
+};
+
 type AccountingAuditDb = Pick<
   PrismaClient,
   'account' | 'openingBalance' | 'statementPeriod' | 'transaction'
@@ -73,6 +84,9 @@ export type AccountingAuditStatementPeriod = {
   coverageStatus: StatementCoverageStatus;
   openingBalanceMinor: bigint;
   closingBalanceMinor: bigint;
+  transactionCount: number;
+  /** SHA-256 of the authoritative source file retained by BankStatement. */
+  sourceFileHash?: string | null;
 };
 
 export type AccountingAuditBuildInput = {
@@ -91,6 +105,7 @@ export type AccountingAuditBuildInput = {
     lockedAt: Date | null;
   } | null;
   expectedCoverage?: MonthlyAuditExpectedCoverage;
+  baselineCoverage?: MonthlyAuditExpectedCoverage;
   baselineControls?: Record<number, YearlyBaselineControl>;
   validatorVersion?: string;
 };
@@ -123,6 +138,7 @@ export type AccountingAuditResult = {
     unresolvedTransactionCount: number;
     duplicateFingerprintCount: number;
     runningBalanceErrorCount: number;
+    outOfScopeTransactionCount: number;
     cashDifferenceMinor: string;
     categoryIncomeDifferenceMinor: string;
     categoryExpenseDifferenceMinor: string;
@@ -140,6 +156,57 @@ export type AccountingAuditResult = {
 };
 
 const monthKey = (year: number, month: number): string => `${year}-${String(month).padStart(2, '0')}`;
+
+const isExactCalendarMonth = (period: AccountingAuditStatementPeriod): boolean => {
+  const year = period.periodStart.getUTCFullYear();
+  const month = period.periodStart.getUTCMonth() + 1;
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return period.periodStart.getUTCDate() === 1
+    && period.periodEnd.getUTCFullYear() === year
+    && period.periodEnd.getUTCMonth() + 1 === month
+    && period.periodEnd.getUTCDate() === lastDay;
+};
+
+const completeMonthEvidence = (
+  periods: AccountingAuditStatementPeriod[],
+  year: number,
+  month: number,
+): AccountingAuditStatementPeriod | null => periods
+  .filter((period) => period.coverageStatus === 'COMPLETE')
+  .filter((period) => Boolean(period.sourceFileHash?.trim()))
+  .filter((period) => period.periodStart.getUTCFullYear() === year)
+  .filter((period) => period.periodStart.getUTCMonth() + 1 === month)
+  .filter(isExactCalendarMonth)
+  .sort((left, right) => left.periodStart.getTime() - right.periodStart.getTime())[0] ?? null;
+
+const cloneCoverage = (coverage: MonthlyAuditExpectedCoverage): MonthlyAuditExpectedCoverage =>
+  Object.fromEntries(
+    Object.entries(coverage).map(([year, months]) => [Number(year), [...months].sort((left, right) => left - right)]),
+  );
+
+/**
+ * Extends the approved audit scope only from complete exact-month statement
+ * evidence. This is deliberately independent of transaction-derived totals.
+ */
+export const extendAccountingCoverageFromCompleteStatements = (
+  periods: AccountingAuditStatementPeriod[],
+  baseCoverage: MonthlyAuditExpectedCoverage = APPROVED_ACCOUNTING_COVERAGE,
+): MonthlyAuditExpectedCoverage => {
+  const coverage = cloneCoverage(baseCoverage);
+  for (const period of periods) {
+    if (
+      period.coverageStatus !== 'COMPLETE'
+      || !period.sourceFileHash?.trim()
+      || !isExactCalendarMonth(period)
+    ) continue;
+    const year = period.periodStart.getUTCFullYear();
+    const month = period.periodStart.getUTCMonth() + 1;
+    const months = coverage[year] ?? [];
+    if (!months.includes(month)) months.push(month);
+    coverage[year] = months.sort((left, right) => left - right);
+  }
+  return coverage;
+};
 
 const getYearPeriod = (
   periods: AccountingAuditStatementPeriod[],
@@ -171,6 +238,7 @@ const hasCompleteMonthEvidence = (
   const monthEndDate = new Date(Date.UTC(year, month, 0));
   return periods.some((period) =>
     period.coverageStatus === 'COMPLETE'
+    && Boolean(period.sourceFileHash?.trim())
     && period.periodStart.getTime() <= monthStart.getTime()
     && period.periodEnd.getTime() >= monthEndDate.getTime()
   );
@@ -191,11 +259,28 @@ const sumMinor = (values: string[]): string =>
   values.reduce((total, value) => total + BigInt(value), 0n).toString();
 
 export const buildAccountingAudit = (input: AccountingAuditBuildInput): AccountingAuditResult => {
-  const expectedCoverage = input.expectedCoverage ?? APPROVED_ACCOUNTING_COVERAGE;
+  const expectedCoverage = input.expectedCoverage
+    ?? extendAccountingCoverageFromCompleteStatements(input.statementPeriods);
   const baselineControls = input.baselineControls ?? APPROVED_ACCOUNTING_BASELINES;
+  const baselineCoverage = input.baselineCoverage
+    ?? (input.baselineControls
+      ? input.expectedCoverage ?? expectedCoverage
+      : APPROVED_ACCOUNTING_BASELINE_COVERAGE);
   const validatorVersion = input.validatorVersion ?? ACCOUNTING_AUDIT_VERSION;
   const grouped = groupTransactions(input.transactions);
   const years = Object.keys(expectedCoverage).map(Number).sort((left, right) => left - right);
+  const expectedMonthKeys = new Set(
+    Object.entries(expectedCoverage).flatMap(([year, months]) =>
+      months.map((month) => monthKey(Number(year), month))),
+  );
+  const outOfScopeMonthKeys = [...new Set(
+    input.transactions
+      .map((transaction) => monthKey(transaction.date.getUTCFullYear(), transaction.date.getUTCMonth() + 1))
+      .filter((key) => !expectedMonthKeys.has(key)),
+  )].sort();
+  const outOfScopeTransactionCount = input.transactions.filter((transaction) =>
+    !expectedMonthKeys.has(monthKey(transaction.date.getUTCFullYear(), transaction.date.getUTCMonth() + 1)),
+  ).length;
 
   const firstYear = years[0];
   const expectedOpening = firstYear == null ? 0n : BigInt(baselineControls[firstYear]?.openingMinor ?? 0);
@@ -210,11 +295,21 @@ export const buildAccountingAudit = (input: AccountingAuditBuildInput): Accounti
 
     for (const month of expectedMonths) {
       const transactions = grouped.get(monthKey(year, month)) ?? [];
-      const openingMinor = previousClosing ?? actualOpening;
-      const isPartialMonth = yearPeriod?.coverageStatus === 'PARTIAL'
-        && yearPeriod.periodEnd.getUTCMonth() + 1 === month
-        && !hasCompleteMonthEvidence(input.statementPeriods, year, month);
+      const exactEvidence = completeMonthEvidence(input.statementPeriods, year, month);
+      const baselineMonthApproved = baselineCoverage[year]?.includes(month) ?? false;
+      const openingMinor = exactEvidence?.openingBalanceMinor ?? previousClosing ?? actualOpening;
+      const isPartialMonth = (
+        !exactEvidence && !baselineMonthApproved
+      ) || (
+          yearPeriod?.coverageStatus === 'PARTIAL'
+          && yearPeriod.periodEnd.getUTCMonth() + 1 === month
+          && !hasCompleteMonthEvidence(input.statementPeriods, year, month)
+        );
       const isFinalMonth = finalMonth === month;
+      const closingMinor = exactEvidence?.closingBalanceMinor
+        ?? (isFinalMonth ? yearPeriod?.closingBalanceMinor ?? null : null);
+      const coverageStatus = exactEvidence?.coverageStatus
+        ?? (isPartialMonth ? 'PARTIAL' : 'COMPLETE');
 
       const result = buildMonthlyReconciliation({
         workspaceId: yearPeriod?.workspaceId ?? 'unknown-workspace',
@@ -239,15 +334,20 @@ export const buildAccountingAudit = (input: AccountingAuditBuildInput): Accounti
           unresolved: transaction.transactionBooking == null,
           sourceFileHash: transaction.sourceFile,
         })),
+        previousMonthClosingBalanceMinor: previousClosing,
         statementEvidence: {
-          coverageStatus: isPartialMonth ? 'PARTIAL' : 'COMPLETE',
+          coverageStatus,
           openingBalanceMinor: openingMinor,
-          closingBalanceMinor: isFinalMonth ? yearPeriod?.closingBalanceMinor ?? null : null,
-          sourceFileHashes: Array.from(new Set(transactions.map((transaction) => transaction.sourceFile).filter((value): value is string => Boolean(value)))),
-          periodStart: new Date(Date.UTC(year, month - 1, 1)),
-          periodEnd: isPartialMonth && yearPeriod
+          closingBalanceMinor: closingMinor,
+          transactionCount: exactEvidence?.transactionCount ?? null,
+          sourceFileHashes: Array.from(new Set([
+            exactEvidence?.sourceFileHash ?? '',
+            ...transactions.map((transaction) => transaction.sourceFile ?? ''),
+          ].filter(Boolean))),
+          periodStart: exactEvidence?.periodStart ?? new Date(Date.UTC(year, month - 1, 1)),
+          periodEnd: exactEvidence?.periodEnd ?? (isPartialMonth && yearPeriod
             ? yearPeriod.periodEnd
-            : new Date(Date.UTC(year, month, 0, 23, 59, 59, 999)),
+            : new Date(Date.UTC(year, month, 0, 23, 59, 59, 999))),
         },
         validatorVersion: `${validatorVersion}-monthly`,
       });
@@ -267,12 +367,36 @@ export const buildAccountingAudit = (input: AccountingAuditBuildInput): Accounti
     months,
     expectedCoverage,
     baselineControls,
+    baselineCoverage,
     validatorVersion,
     allowUnresolvedForPartial: true,
     openPeriodYears,
   });
 
   const openingDifference = actualOpening - expectedOpening;
+  const firstAuditedMonth = months[0] ?? null;
+  const firstExactEvidence = firstAuditedMonth
+    ? completeMonthEvidence(input.statementPeriods, firstAuditedMonth.year, firstAuditedMonth.month)
+    : null;
+  const firstStatementOpeningDifference = firstExactEvidence
+    ? actualOpening - firstExactEvidence.openingBalanceMinor
+    : 0n;
+  const auditIssues = [...strictAudit.issues];
+  for (const key of outOfScopeMonthKeys) {
+    const [year, month] = key.split('-').map(Number);
+    auditIssues.push({
+      year,
+      month,
+      message: 'Transacties vallen buiten de met onafhankelijke bron-evidence vastgestelde auditdekking.',
+    });
+  }
+  if (firstStatementOpeningDifference !== 0n && firstAuditedMonth) {
+    auditIssues.push({
+      year: firstAuditedMonth.year,
+      month: firstAuditedMonth.month,
+      message: 'Het openingssaldo van het eerste volledige bankafschrift wijkt af van het gecontroleerde openingssaldo.',
+    });
+  }
   const duplicateFingerprintCount = months.reduce((total, month) => total + month.duplicateFingerprintCount, 0);
   const runningBalanceErrorCount = months.reduce((total, month) => total + month.runningBalanceErrorCount, 0);
   const unresolvedTransactionCount = months.reduce((total, month) => total + month.unresolvedTransactionCount, 0);
@@ -287,7 +411,14 @@ export const buildAccountingAudit = (input: AccountingAuditBuildInput): Accounti
     && strictAudit.yearSummaries.every(
       (summary) => summary.monthCount === (expectedCoverage[summary.year]?.length ?? 0),
     );
-  const yearlyBaselinesMatch = strictAudit.yearSummaries.every((summary) => {
+  const everyExpectedMonthHasApprovedOrCompleteEvidence = months.length === expectedMonthKeys.size
+    && months.every((month) =>
+      month.coverageStatus === 'COMPLETE'
+      || baselineCoverage[month.year]?.includes(month.month) === true,
+    );
+  const everyExpectedMonthIsComplete = months.length === expectedMonthKeys.size
+    && months.every((month) => month.coverageStatus === 'COMPLETE');
+  const yearlyBaselinesMatch = strictAudit.baselineYearSummaries.every((summary) => {
     const baseline = baselineControls[summary.year];
     if (!baseline) return true;
     return summary.transactionCount === baseline.transactionCount
@@ -297,11 +428,14 @@ export const buildAccountingAudit = (input: AccountingAuditBuildInput): Accounti
       && summary.closingBalanceMinor === baseline.closingMinor;
   });
   const cashStatus = openingDifference === 0n
+    && firstStatementOpeningDifference === 0n
     && everyMonthlyCashDifferenceIsZero
     && expectedCoverageIsComplete
+    && everyExpectedMonthHasApprovedOrCompleteEvidence
     && yearlyBaselinesMatch
     && duplicateFingerprintCount === 0
     && runningBalanceErrorCount === 0
+    && outOfScopeTransactionCount === 0
       ? 'PASSED'
       : 'FAILED';
   const classificationStatus = unresolvedTransactionCount === 0
@@ -316,7 +450,7 @@ export const buildAccountingAudit = (input: AccountingAuditBuildInput): Accounti
       : 'BLOCKED';
 
   return {
-    status: cashStatus === 'PASSED' && strictAudit.status === 'PASSED' ? 'PASSED' : 'FAILED',
+    status: cashStatus === 'PASSED' && auditIssues.length === 0 ? 'PASSED' : 'FAILED',
     cashStatus,
     classificationStatus,
     closeStatus,
@@ -336,13 +470,14 @@ export const buildAccountingAudit = (input: AccountingAuditBuildInput): Accounti
       unresolvedTransactionCount,
       duplicateFingerprintCount,
       runningBalanceErrorCount,
+      outOfScopeTransactionCount,
       cashDifferenceMinor,
       categoryIncomeDifferenceMinor,
       categoryExpenseDifferenceMinor,
     },
     months,
     yearSummaries: strictAudit.yearSummaries,
-    issues: strictAudit.issues,
+    issues: auditIssues,
     sideEffects: {
       createsOpeningBalance: false,
       createsTransactionBooking: false,
@@ -407,6 +542,8 @@ export const getAccountingAudit = async (
         coverageStatus: true,
         openingBalanceMinor: true,
         closingBalanceMinor: true,
+        transactionCount: true,
+        statement: { select: { sourceFile: { select: { sha256: true } } } },
       },
     }),
     db.openingBalance.findFirst({
@@ -419,7 +556,10 @@ export const getAccountingAudit = async (
   return buildAccountingAudit({
     account,
     transactions,
-    statementPeriods,
+    statementPeriods: statementPeriods.map(({ statement, ...period }) => ({
+      ...period,
+      sourceFileHash: statement.sourceFile.sha256,
+    })),
     openingBalance,
   });
 };

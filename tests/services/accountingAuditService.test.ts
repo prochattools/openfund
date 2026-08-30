@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   APPROVED_ACCOUNTING_BASELINES,
   buildAccountingAudit,
+  extendAccountingCoverageFromCompleteStatements,
   type AccountingAuditBuildInput,
   type AccountingAuditTransaction,
 } from '../../server/services/accountingAuditService';
@@ -47,6 +48,7 @@ const baseInput = (overrides: Partial<AccountingAuditBuildInput> = {}): Accounti
     coverageStatus: 'COMPLETE',
     openingBalanceMinor: 1000n,
     closingBalanceMinor: 1300n,
+    transactionCount: 2,
   }],
   openingBalance: {
     id: 'opening-1',
@@ -156,6 +158,7 @@ describe('accounting audit service', () => {
           coverageStatus: 'COMPLETE',
           openingBalanceMinor: 1000n,
           closingBalanceMinor: 1100n,
+          transactionCount: 0,
         },
         {
           workspaceId: 'workspace-1',
@@ -165,6 +168,7 @@ describe('accounting audit service', () => {
           coverageStatus: 'COMPLETE',
           openingBalanceMinor: 1100n,
           closingBalanceMinor: 1000n,
+          transactionCount: 0,
         },
       ],
       expectedCoverage: { 2024: [1], 2025: [1] },
@@ -208,6 +212,7 @@ describe('accounting audit service', () => {
         coverageStatus: 'PARTIAL',
         openingBalanceMinor: 1000n,
         closingBalanceMinor: 1500n,
+        transactionCount: 1,
       }],
       openingBalance: {
         id: 'opening-1',
@@ -252,6 +257,7 @@ describe('accounting audit service', () => {
           coverageStatus: 'PARTIAL',
           openingBalanceMinor: 5000n,
           closingBalanceMinor: 5600n,
+          transactionCount: 2,
         },
         {
           workspaceId: 'workspace-1',
@@ -261,6 +267,8 @@ describe('accounting audit service', () => {
           coverageStatus: 'COMPLETE',
           openingBalanceMinor: 5000n,
           closingBalanceMinor: 5600n,
+          transactionCount: 2,
+          sourceFileHash: 'hash-2026-july',
         },
       ],
       openingBalance: {
@@ -301,6 +309,7 @@ describe('accounting audit service', () => {
         coverageStatus: 'COMPLETE',
         openingBalanceMinor: 1000n,
         closingBalanceMinor: 2200n,
+        transactionCount: 2,
       }],
       openingBalance: {
         id: 'opening-1',
@@ -325,5 +334,142 @@ describe('accounting audit service', () => {
     expect(result.totals.cashDifferenceMinor).toBe('0');
     expect(result.months[0].incomeMinor).toBe('2000');
     expect(result.months[0].expenseMinor).toBe('800');
+  });
+
+  it('extends July-approved scope to August only from complete exact-month statement evidence', () => {
+    const july: AccountingAuditBuildInput['statementPeriods'][number] = {
+      workspaceId: 'workspace-1',
+      accountId: 'account-1',
+      periodStart: new Date('2026-07-01T00:00:00.000Z'),
+      periodEnd: new Date('2026-07-31T23:59:59.999Z'),
+      coverageStatus: 'COMPLETE',
+      openingBalanceMinor: 5000n,
+      closingBalanceMinor: 6000n,
+      transactionCount: 1,
+      sourceFileHash: 'hash-2026-july',
+    };
+    const august: AccountingAuditBuildInput['statementPeriods'][number] = {
+      ...july,
+      periodStart: new Date('2026-08-01T00:00:00.000Z'),
+      periodEnd: new Date('2026-08-31T23:59:59.999Z'),
+      openingBalanceMinor: 6000n,
+      closingBalanceMinor: 5800n,
+      transactionCount: 1,
+      sourceFileHash: 'hash-2026-august',
+    };
+
+    expect(extendAccountingCoverageFromCompleteStatements(
+      [{ ...august, coverageStatus: 'PARTIAL' }, august],
+      { 2026: [1, 2, 3, 4, 5, 6, 7] },
+    )).toEqual({ 2026: [1, 2, 3, 4, 5, 6, 7, 8] });
+    expect(extendAccountingCoverageFromCompleteStatements(
+      [{ ...august, sourceFileHash: null }],
+      { 2026: [1, 2, 3, 4, 5, 6, 7] },
+    )).toEqual({ 2026: [1, 2, 3, 4, 5, 6, 7] });
+
+    const result = buildAccountingAudit(baseInput({
+      transactions: [
+        bookedTransaction('july-income', '2026-07-10T00:00:00.000Z', 1000n, 'credit'),
+        bookedTransaction('august-expense', '2026-08-10T00:00:00.000Z', 200n, 'debit'),
+      ],
+      statementPeriods: [july, august],
+      openingBalance: {
+        id: 'opening-1',
+        effectiveDate: new Date('2026-07-01T00:00:00.000Z'),
+        amountMinor: 5000n,
+        lockedAt: new Date('2026-08-01T00:00:00.000Z'),
+      },
+      expectedCoverage: { 2026: [7, 8] },
+      baselineCoverage: { 2026: [7] },
+      baselineControls: {
+        2026: {
+          transactionCount: 1,
+          openingMinor: '5000',
+          incomeMinor: '1000',
+          expenseMinor: '0',
+          closingMinor: '6000',
+        },
+      },
+    }));
+
+    expect(result.status).toBe('PASSED');
+    expect(result.closeStatus).toBe('ELIGIBLE');
+    expect(result.months.map((month) => month.month)).toEqual([7, 8]);
+    expect(result.months.map((month) => month.transactionCountDifference)).toEqual([0, 0]);
+    expect(result.months.map((month) => month.openingBalanceMinor)).toEqual(['5000', '6000']);
+    expect(result.months.map((month) => month.closingBalanceMinor)).toEqual(['6000', '5800']);
+    expect(result.months[1].sourceFileHashes).toContain('hash-2026-august');
+  });
+
+  it('blocks an August audit when statement transaction count does not match the ledger', () => {
+    const result = buildAccountingAudit(baseInput({
+      transactions: [bookedTransaction('august-income', '2026-08-10T00:00:00.000Z', 1000n, 'credit')],
+      statementPeriods: [{
+        workspaceId: 'workspace-1',
+        accountId: 'account-1',
+        periodStart: new Date('2026-08-01T00:00:00.000Z'),
+        periodEnd: new Date('2026-08-31T23:59:59.999Z'),
+        coverageStatus: 'COMPLETE',
+        openingBalanceMinor: 5000n,
+        closingBalanceMinor: 6000n,
+        transactionCount: 2,
+        sourceFileHash: 'hash-2026-august',
+      }],
+      openingBalance: {
+        id: 'opening-1',
+        effectiveDate: new Date('2026-08-01T00:00:00.000Z'),
+        amountMinor: 5000n,
+        lockedAt: null,
+      },
+      expectedCoverage: { 2026: [8] },
+      baselineCoverage: { 2026: [] },
+      baselineControls: {},
+    }));
+
+    expect(result.status).toBe('FAILED');
+    expect(result.cashStatus).toBe('FAILED');
+    expect(result.months[0]).toMatchObject({
+      statementTransactionCount: 2,
+      transactionCountDifference: -1,
+      closeEligible: false,
+    });
+    expect(result.issues.some((issue) => issue.message.includes('Transactieaantal'))).toBe(true);
+  });
+
+  it('does not treat an August database ledger as audited without exact statement evidence', () => {
+    const result = buildAccountingAudit(baseInput({
+      transactions: [bookedTransaction('august-income', '2026-08-10T00:00:00.000Z', 1000n, 'credit')],
+      statementPeriods: [],
+      expectedCoverage: { 2026: [8] },
+      baselineCoverage: { 2026: [] },
+      baselineControls: {},
+      openingBalance: {
+        id: 'opening-1',
+        effectiveDate: new Date('2026-08-01T00:00:00.000Z'),
+        amountMinor: 0n,
+        lockedAt: null,
+      },
+    }));
+
+    expect(result.months[0].coverageStatus).toBe('PARTIAL');
+    expect(result.status).toBe('FAILED');
+    expect(result.cashStatus).toBe('FAILED');
+    expect(result.closeStatus).toBe('BLOCKED');
+    expect(result.totals.outOfScopeTransactionCount).toBe(0);
+  });
+
+  it('fails closed when August transactions fall outside the approved January-July scope', () => {
+    const result = buildAccountingAudit(baseInput({
+      transactions: [bookedTransaction('august-income', '2026-08-10T00:00:00.000Z', 1000n, 'credit')],
+      statementPeriods: [],
+      expectedCoverage: { 2026: [1, 2, 3, 4, 5, 6, 7] },
+      baselineCoverage: { 2026: [1, 2, 3, 4, 5, 6, 7] },
+      baselineControls: {},
+    }));
+
+    expect(result.totals.outOfScopeTransactionCount).toBe(1);
+    expect(result.status).toBe('FAILED');
+    expect(result.cashStatus).toBe('FAILED');
+    expect(result.issues.some((issue) => issue.message.includes('onafhankelijke bron-evidence'))).toBe(true);
   });
 });

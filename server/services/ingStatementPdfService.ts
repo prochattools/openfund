@@ -1,3 +1,5 @@
+import { createUtcCalendarDate } from '../../lib/import/normalizers';
+
 const DUTCH_MONTHS: Record<string, number> = {
   januari: 0,
   februari: 1,
@@ -62,19 +64,25 @@ const parseMoneyMinor = (value: string): bigint => {
 
 const parseDutchDate = (value: string): Date => {
   const trimmed = value.trim().toLowerCase();
-  let match = trimmed.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
-  if (match) return new Date(Date.UTC(Number(match[3]), Number(match[2]) - 1, Number(match[1])));
+  let match = trimmed.match(/^(\d{1,2})[-\x2f](\d{1,2})[-\x2f](\d{4})$/);
+  if (match) {
+    const date = createUtcCalendarDate(Number(match[3]), Number(match[2]), Number(match[1]));
+    if (date) return date;
+  }
   match = trimmed.match(/^(\d{1,2})\s+([a-zé]+)\s+(\d{4})$/i);
   if (match) {
     const month = DUTCH_MONTHS[match[2]];
-    if (month != null) return new Date(Date.UTC(Number(match[3]), month, Number(match[1])));
+    const date = month == null
+      ? null
+      : createUtcCalendarDate(Number(match[3]), month + 1, Number(match[1]));
+    if (date) return date;
   }
   throw new IngStatementPdfError(`Datum kon niet uit het PDF-bankafschrift worden gelezen: ${value}`);
 };
 
 export const parseIngStatementPdfText = (rawText: string): IngStatementPdfControls => {
   // Normalize: preserve newlines, collapse other whitespace
-  const text = rawText.replace(/ /g, ' ').replace(/[ \t]+/g, ' ');
+  const text = rawText.replace(/\u00a0/g, ' ').replace(/[ \t]+/g, ' ');
   const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
   // Helper: find the value on the next non-empty line after a line matching labelPattern
@@ -121,8 +129,8 @@ export const parseIngStatementPdfText = (rawText: string): IngStatementPdfContro
   // Period: look on next line after "Period" / "Periode", or search full text inline
   const periodLineValue = findNextLineAfter(/^period$/i) ?? findNextLineAfter(/^periou?de?$/i);
   const periodSource = periodLineValue ?? text;
-  const periodMatch = periodSource.match(/(\d{1,2}[\/-]\d{1,2}[\/-]\d{4})\s*(?:t\/m|till|tot|[-–])\s*(\d{1,2}[\/-]\d{1,2}[\/-]\d{4})/i)
-    ?? text.match(/(?:periode|afschriftperiode|period)[^\d]{0,25}(\d{1,2}[\/-]\d{1,2}[\/-]\d{4})\s*(?:t\/m|till|tot|[-–])\s*(\d{1,2}[\/-]\d{1,2}[\/-]\d{4})/i)
+  const periodMatch = periodSource.match(/(\d{1,2}[-\x2f]\d{1,2}[-\x2f]\d{4})\s*(?:t\/m|till|tot|[-–])\s*(\d{1,2}[-\x2f]\d{1,2}[-\x2f]\d{4})/i)
+    ?? text.match(/(?:periode|afschriftperiode|period)[^\d]{0,25}(\d{1,2}[-\x2f]\d{1,2}[-\x2f]\d{4})\s*(?:t\/m|till|tot|[-–])\s*(\d{1,2}[-\x2f]\d{1,2}[-\x2f]\d{4})/i)
     ?? text.match(/(\d{1,2}\s+[a-zé]+\s+\d{4})\s*(?:t\/m|tot|[-–])\s*(\d{1,2}\s+[a-zé]+\s+\d{4})/i);
   if (!periodMatch) throw new IngStatementPdfError('De afschriftperiode kon niet uit het PDF-bankafschrift worden gelezen.');
 

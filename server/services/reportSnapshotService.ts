@@ -43,6 +43,19 @@ export type MonthlyReportInput = {
   /** Explicit periodCloseIds to include; if omitted the service queries for the
    *  single CLOSED record for the given year/month. */
   periodCloseIds?: string[];
+  /** Reconciliation result already verified by the report-send transaction. */
+  reconciliation?: LiveReportReconciliation;
+};
+
+export type LiveReportReconciliation = {
+  bankStatementId: string;
+  accountId: string;
+  openingBalanceMinor: bigint;
+  incomeMinor: bigint;
+  expenseMinor: bigint;
+  netMinor: bigint;
+  closingBalanceMinor: bigint;
+  transactionCount: number;
 };
 
 export type YearlyReportInput = {
@@ -92,6 +105,8 @@ const assertAdminActor = (actor: MonthlyReportActor) => {
 
 const toBigInt = (v: bigint | number): bigint => BigInt(v);
 
+const absoluteMinor = (value: bigint): bigint => (value < 0n ? -value : value);
+
 type RawClose = {
   id: string;
   workspaceId: string;
@@ -106,6 +121,95 @@ type RawClose = {
   transactionCount: number;
   classificationHash: string;
   sourceDataHash: string;
+  statementPeriod?: { accountId: string };
+};
+
+const assertCloseTotals = (close: RawClose) => {
+  const income = toBigInt(close.incomeMinor);
+  const expense = toBigInt(close.expenseMinor);
+  const net = toBigInt(close.netMinor);
+  const opening = toBigInt(close.openingBalanceMinor);
+  const closing = toBigInt(close.closingBalanceMinor);
+
+  if (net !== income - expense || closing !== opening + net) {
+    throw new ReportSnapshotError(
+      `Periode-afsluiting '${close.id}' bevat inconsistente financiële totalen.`,
+      422,
+    );
+  }
+  if (!Number.isInteger(close.transactionCount) || close.transactionCount < 0) {
+    throw new ReportSnapshotError(
+      `Periode-afsluiting '${close.id}' bevat een ongeldig transactietotaal.`,
+      422,
+    );
+  }
+};
+
+const assertCloseSequence = (closes: RawClose[]) => {
+  for (const close of closes) assertCloseTotals(close);
+  const closesByAccount = new Map<string, RawClose[]>();
+  for (const close of closes) {
+    // A close without a statement-period account cannot be safely chained to
+    // another account, so keep it isolated rather than comparing unrelated
+    // balances in a multi-account report.
+    const accountKey = close.statementPeriod?.accountId ?? close.id;
+    const accountCloses = closesByAccount.get(accountKey) ?? [];
+    accountCloses.push(close);
+    closesByAccount.set(accountKey, accountCloses);
+  }
+
+  for (const accountCloses of closesByAccount.values()) {
+    accountCloses.sort((left, right) => left.periodStart.getTime() - right.periodStart.getTime());
+    for (let index = 1; index < accountCloses.length; index += 1) {
+      const previous = accountCloses[index - 1]!;
+      const current = accountCloses[index]!;
+      const nextDay = new Date(Date.UTC(
+        previous.periodEnd.getUTCFullYear(),
+        previous.periodEnd.getUTCMonth(),
+        previous.periodEnd.getUTCDate() + 1,
+      ));
+      if (
+        current.periodStart.getTime() === nextDay.getTime()
+        && toBigInt(current.openingBalanceMinor) !== toBigInt(previous.closingBalanceMinor)
+      ) {
+        throw new ReportSnapshotError(
+          `Aaneengesloten periode-afsluitingen '${previous.id}' en '${current.id}' sluiten niet op elkaar aan.`,
+          422,
+        );
+      }
+    }
+  }
+};
+
+const assertReportLinesMatchTotals = (
+  lines: ReportLineInput[],
+  totals: {
+    incomeMinor: bigint;
+    expenseMinor: bigint;
+    transactionCount: number;
+  },
+) => {
+  let incomeMinor = 0n;
+  let expenseMinor = 0n;
+  let transactionCount = 0;
+
+  for (const line of lines) {
+    const amount = absoluteMinor(toBigInt(line.amountMinor));
+    if (line.direction === 'credit') incomeMinor += amount;
+    else if (line.direction === 'debit') expenseMinor += amount;
+    transactionCount += line.transactionCount;
+  }
+
+  if (
+    incomeMinor !== totals.incomeMinor
+    || expenseMinor !== totals.expenseMinor
+    || transactionCount !== totals.transactionCount
+  ) {
+    throw new ReportSnapshotError(
+      'Rapportregels komen niet exact overeen met de gereconcilieerde maandtotalen.',
+      422,
+    );
+  }
 };
 
 type RawBooking = {
@@ -134,6 +238,7 @@ const loadAndValidateCloses = async (
       workspaceId,
     },
     orderBy: { periodStart: 'asc' },
+    include: { statementPeriod: { select: { accountId: true } } },
   });
 
   const foundIds = new Set(closes.map((c) => c.id));
@@ -157,6 +262,8 @@ const loadAndValidateCloses = async (
     );
   }
 
+  assertCloseSequence(closes);
+
   return closes;
 };
 
@@ -175,8 +282,9 @@ const buildReportLines = async (
   if (closes.length === 0) return [];
 
   // Determine overall date range
-  const periodStart = closes[0].periodStart;
-  const periodEnd = closes[closes.length - 1].periodEnd;
+  const accountIds = [...new Set(
+    closes.map((close) => close.statementPeriod?.accountId).filter((id): id is string => Boolean(id)),
+  )];
 
   // Load all booked transactions in the date range via TransactionBooking
   const bookings = await db.transactionBooking.findMany({
@@ -184,10 +292,10 @@ const buildReportLines = async (
       workspaceId: closes[0].workspaceId,
       transaction: {
         userId: actor.userId,
-        date: {
-          gte: periodStart,
-          lte: periodEnd,
-        },
+        ...(accountIds.length ? { accountId: { in: accountIds } } : {}),
+        OR: closes.map((close) => ({
+          date: { gte: close.periodStart, lte: close.periodEnd },
+        })),
       },
     },
     select: {
@@ -226,7 +334,7 @@ const buildReportLines = async (
     const dir = b.transaction.direction as 'credit' | 'debit';
     const key = [b.projectId, b.transactionTypeId, b.categoryId, dir].join('\x00');
     const existing = lineMap.get(key);
-    const amount = toBigInt(b.transaction.amountMinor);
+    const amount = absoluteMinor(toBigInt(b.transaction.amountMinor));
     if (existing) {
       existing.amountMinor += amount;
       existing.transactionCount += 1;
@@ -362,6 +470,7 @@ export const generateMonthlyReportSnapshot = async (
 
   const totals = sumCloseTotals(closes);
   const lines = await buildReportLines(db, closes, input.actor);
+  assertReportLinesMatchTotals(lines, totals);
 
   // Reject if a snapshot already exists for this period/version to prevent
   // unintended duplicates (schema unique constraint enforces workspace/kind/year/month/version).
@@ -436,6 +545,7 @@ const findYearlyCloses = async (
       periodEnd: { lte: yearEnd },
     },
     orderBy: { periodStart: 'asc' },
+    include: { statementPeriod: { select: { accountId: true } } },
   });
 };
 
@@ -463,6 +573,8 @@ export const generateYearlyReportSnapshot = async (
     );
   }
 
+  assertCloseSequence(closes);
+
   // Determine which months are closed and which are missing
   const closedMonths = new Set(closes.map((c) => getMonthFromDate(c.periodStart)));
   const missingMonths: number[] = [];
@@ -472,6 +584,7 @@ export const generateYearlyReportSnapshot = async (
 
   const totals = sumCloseTotals(closes);
   const lines = await buildReportLines(db, closes, input.actor);
+  assertReportLinesMatchTotals(lines, totals);
 
   // Version: find highest existing version for this year
   const existingVersion = await db.reportSnapshot.findFirst({
@@ -617,8 +730,8 @@ export const classifyReportLines = (lines: ReportLineInput[]): ClassifiedReportL
  * All transactions in the month must have a TransactionBooking in the workspace;
  * unbooked transactions cause a 422 error with a Dutch message.
  *
- * The opening balance is taken from the most recent CLOSED PeriodClose whose
- * periodEnd falls before this month. If none exists, opening balance = 0.
+ * The opening balance and headline totals are taken from the complete,
+ * authoritative BankStatement for this month.
  *
  * periodCloseLinks are NOT created (live snapshot has no period close evidence).
  */
@@ -631,13 +744,48 @@ export const generateLiveMonthlyReportSnapshot = async (
   const periodStart = new Date(Date.UTC(input.year, input.month - 1, 1));
   const periodEnd = new Date(Date.UTC(input.year, input.month, 0, 23, 59, 59, 999));
 
-  // Step 1: All transactions for the month belonging to this user
+  // A live report still requires independent bank-statement evidence. The
+  // preceding close is optional for e-mail delivery, but the statement is not.
+  const statement = await db.bankStatement.findFirst({
+    where: {
+      workspaceId: input.workspaceId,
+      periodStart: { gte: periodStart },
+      periodEnd: { lte: periodEnd },
+    },
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true,
+      accountId: true,
+      coverageStatus: true,
+      openingBalanceMinor: true,
+      incomeMinor: true,
+      expenseMinor: true,
+      netMinor: true,
+      closingBalanceMinor: true,
+      transactionCount: true,
+    },
+  });
+  if (!statement) {
+    throw new ReportSnapshotError(
+      `Geen bankafschrift gevonden voor ${input.year}-${String(input.month).padStart(2, '0')}. Importeer eerst het bankafschrift.`,
+      422,
+    );
+  }
+  if (statement.coverageStatus !== 'COMPLETE') {
+    throw new ReportSnapshotError(
+      'Een rapport kan niet worden gemaakt voor een onvolledig bankafschrift.',
+      422,
+    );
+  }
+
+  // Step 1: All transactions for the statement account and month
   const transactions = await db.transaction.findMany({
     where: {
       userId: input.actor.userId,
+      accountId: statement.accountId,
       date: { gte: periodStart, lte: periodEnd },
     },
-    select: { id: true, amountMinor: true, direction: true },
+    select: { id: true, amountMinor: true, direction: true, importFingerprint: true },
     orderBy: { date: 'asc' },
   });
 
@@ -668,54 +816,71 @@ export const generateLiveMonthlyReportSnapshot = async (
     );
   }
 
-  // Step 4: Compute totals directly from transactions using absolute amounts
+  const fingerprints = transactions
+    .map((transaction) => transaction.importFingerprint)
+    .filter((fingerprint): fingerprint is string => fingerprint != null);
+  if (new Set(fingerprints).size !== fingerprints.length) {
+    throw new ReportSnapshotError(
+      'Er zijn dubbele importvingerafdrukken in de rapportageperiode.',
+      422,
+    );
+  }
+
+  // Step 4: Compute totals directly from transactions using exact absolute amounts
   let income = 0n;
   let expense = 0n;
   for (const t of transactions) {
-    const amount = toBigInt(t.amountMinor);
+    const amount = absoluteMinor(toBigInt(t.amountMinor));
     if (t.direction === 'credit') {
-      income += amount < 0n ? -amount : amount;
+      income += amount;
     } else {
-      expense += amount < 0n ? -amount : amount;
+      expense += amount;
     }
   }
   const net = income - expense;
 
-  // Opening balance: from authoritative BankStatement for this month, or
-  // most recent CLOSED PeriodClose ending before this month as fallback
-  const statement = await db.bankStatement.findFirst({
-    where: {
-      workspaceId: input.workspaceId,
-      periodStart: { gte: periodStart },
-      periodEnd: { lte: periodEnd },
-    },
-    orderBy: { createdAt: 'desc' },
-    select: { openingBalanceMinor: true },
-  });
-  let opening: bigint;
-  if (statement) {
-    opening = toBigInt(statement.openingBalanceMinor);
-  } else {
-    const precedingClose = await db.periodClose.findFirst({
-      where: {
-        workspaceId: input.workspaceId,
-        status: 'CLOSED',
-        periodEnd: { lt: periodStart },
-      },
-      orderBy: { periodEnd: 'desc' },
-      select: { closingBalanceMinor: true },
-    });
-    opening = precedingClose ? toBigInt(precedingClose.closingBalanceMinor) : 0n;
-  }
-  const closing = opening + net;
-
-  const totals = {
-    openingBalanceMinor: opening,
+  const computedTotals = {
+    openingBalanceMinor: toBigInt(statement.openingBalanceMinor),
     incomeMinor: income,
     expenseMinor: expense,
     netMinor: net,
-    closingBalanceMinor: closing,
+    closingBalanceMinor: toBigInt(statement.openingBalanceMinor) + net,
     transactionCount: transactions.length,
+  };
+  const authoritativeTotals = input.reconciliation ?? {
+    bankStatementId: statement.id,
+    accountId: statement.accountId,
+    openingBalanceMinor: toBigInt(statement.openingBalanceMinor),
+    incomeMinor: toBigInt(statement.incomeMinor),
+    expenseMinor: toBigInt(statement.expenseMinor),
+    netMinor: toBigInt(statement.netMinor),
+    closingBalanceMinor: toBigInt(statement.closingBalanceMinor),
+    transactionCount: statement.transactionCount,
+  };
+  if (
+    authoritativeTotals.bankStatementId !== statement.id
+    || authoritativeTotals.accountId !== statement.accountId
+    || authoritativeTotals.openingBalanceMinor !== computedTotals.openingBalanceMinor
+    || authoritativeTotals.incomeMinor !== computedTotals.incomeMinor
+    || authoritativeTotals.expenseMinor !== computedTotals.expenseMinor
+    || authoritativeTotals.netMinor !== computedTotals.netMinor
+    || authoritativeTotals.closingBalanceMinor !== computedTotals.closingBalanceMinor
+    || authoritativeTotals.transactionCount !== computedTotals.transactionCount
+    || authoritativeTotals.netMinor !== authoritativeTotals.incomeMinor - authoritativeTotals.expenseMinor
+    || authoritativeTotals.closingBalanceMinor !== authoritativeTotals.openingBalanceMinor + authoritativeTotals.netMinor
+  ) {
+    throw new ReportSnapshotError(
+      'Rapporttotalen komen niet exact overeen met de gereconcilieerde bankgegevens.',
+      422,
+    );
+  }
+  const totals = {
+    openingBalanceMinor: authoritativeTotals.openingBalanceMinor,
+    incomeMinor: authoritativeTotals.incomeMinor,
+    expenseMinor: authoritativeTotals.expenseMinor,
+    netMinor: authoritativeTotals.netMinor,
+    closingBalanceMinor: authoritativeTotals.closingBalanceMinor,
+    transactionCount: authoritativeTotals.transactionCount,
   };
 
   // Step 5: Build report lines from bookings
@@ -738,7 +903,7 @@ export const generateLiveMonthlyReportSnapshot = async (
     const dir = b.transaction.direction as 'credit' | 'debit';
     const key = [b.projectId, b.transactionTypeId, b.categoryId, dir].join('\x00');
     const existing = lineMap.get(key);
-    const amount = toBigInt(b.transaction.amountMinor);
+    const amount = absoluteMinor(toBigInt(b.transaction.amountMinor));
     if (existing) {
       existing.amountMinor += amount;
       existing.transactionCount += 1;
@@ -780,6 +945,7 @@ export const generateLiveMonthlyReportSnapshot = async (
     transactionCount: acc.transactionCount,
     sortOrder: index + 1,
   }));
+  assertReportLinesMatchTotals(lines, totals);
 
   // Step 6: Determine version
   const existingVersion = await db.reportSnapshot.findFirst({

@@ -57,4 +57,10 @@ describe('transaction import fingerprint', () => {
     expect(buildImportFingerprint({ ...baseInput, amountMinor: 12346n })).not.toBe(base);
     expect(buildImportFingerprint({ ...baseInput, date: new Date(Date.UTC(2026, 0, 16)) })).not.toBe(base);
   });
+
+  it('includes non-duplicate source fields and distinguishes repeated occurrences', () => {
+    const first = buildImportFingerprint({ ...baseInput, raw: { Code: 'TRF' }, occurrence: 1 });
+    expect(buildImportFingerprint({ ...baseInput, raw: { Code: 'PIN' }, occurrence: 1 })).not.toBe(first);
+    expect(buildImportFingerprint({ ...baseInput, raw: { Code: 'TRF' }, occurrence: 2 })).not.toBe(first);
+  });
 });

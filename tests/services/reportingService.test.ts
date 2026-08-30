@@ -179,4 +179,27 @@ describe('reporting service', () => {
       { label: 'Giften', amountMinor: 0, transactionCount: 1 },
     ]);
   });
+
+  it('sums large minor-unit values with integer arithmetic before the safe API conversion', () => {
+    const summary = buildPeriodReportSummary(
+      [
+        {
+          date: new Date('2026-04-01T00:00:00.000Z'),
+          amountMinor: 9007199254740000n,
+          direction: 'credit',
+          categoryName: 'Giften',
+        },
+        {
+          date: new Date('2026-04-02T00:00:00.000Z'),
+          amountMinor: 500n,
+          direction: 'credit',
+          categoryName: 'Giften',
+        },
+      ],
+      { year: 2026, month: 4 },
+    );
+
+    expect(summary.incomeMinor).toBe(9007199254740500);
+    expect(summary.incomeByCategory[0]?.amountMinor).toBe(9007199254740500);
+  });
 });

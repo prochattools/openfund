@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { PeriodCloseStatus, ReportKind, ReportLineKind } from '@prisma/client';
 import {
   generateMonthlyReportSnapshot,
   generateYearlyReportSnapshot,
+  generateLiveMonthlyReportSnapshot,
   classifyReportLines,
   classifyReportLinePresentation,
   computePresentationTotals,
@@ -56,7 +57,73 @@ const bookings = [
     literalProjectLabel: 'YA',
     literalTypeLabel: 'Schenking',
     literalCategoryLabel: 'Giften in',
-    transaction: { amountMinor: 250000n, direction: 'credit' },
+    transaction: { amountMinor: 100000n, direction: 'credit' },
+  },
+  {
+    projectId: 'project-ya',
+    transactionTypeId: 'type-schenking',
+    categoryId: 'cat-giften-in',
+    literalProjectLabel: 'YA',
+    literalTypeLabel: 'Schenking',
+    literalCategoryLabel: 'Giften in',
+    transaction: { amountMinor: 100000n, direction: 'credit' },
+  },
+  {
+    projectId: 'project-ya',
+    transactionTypeId: 'type-schenking',
+    categoryId: 'cat-giften-in',
+    literalProjectLabel: 'YA',
+    literalTypeLabel: 'Schenking',
+    literalCategoryLabel: 'Giften in',
+    transaction: { amountMinor: 50000n, direction: 'credit' },
+  },
+  {
+    projectId: 'project-ya',
+    transactionTypeId: 'type-algemeen',
+    categoryId: 'cat-kosten-uit',
+    literalProjectLabel: 'YA',
+    literalTypeLabel: 'Algemeen',
+    literalCategoryLabel: 'Administratiekosten uit',
+    transaction: { amountMinor: 60000n, direction: 'debit' },
+  },
+  {
+    projectId: 'project-ya',
+    transactionTypeId: 'type-algemeen',
+    categoryId: 'cat-kosten-uit',
+    literalProjectLabel: 'YA',
+    literalTypeLabel: 'Algemeen',
+    literalCategoryLabel: 'Administratiekosten uit',
+    transaction: { amountMinor: -40000n, direction: 'debit' },
+  },
+];
+
+const febBookings = [
+  {
+    projectId: 'project-ya',
+    transactionTypeId: 'type-schenking',
+    categoryId: 'cat-giften-in',
+    literalProjectLabel: 'YA',
+    literalTypeLabel: 'Schenking',
+    literalCategoryLabel: 'Giften in',
+    transaction: { amountMinor: 100000n, direction: 'credit' },
+  },
+  {
+    projectId: 'project-ya',
+    transactionTypeId: 'type-schenking',
+    categoryId: 'cat-giften-in',
+    literalProjectLabel: 'YA',
+    literalTypeLabel: 'Schenking',
+    literalCategoryLabel: 'Giften in',
+    transaction: { amountMinor: 100000n, direction: 'credit' },
+  },
+  {
+    projectId: 'project-ya',
+    transactionTypeId: 'type-schenking',
+    categoryId: 'cat-giften-in',
+    literalProjectLabel: 'YA',
+    literalTypeLabel: 'Schenking',
+    literalCategoryLabel: 'Giften in',
+    transaction: { amountMinor: 100000n, direction: 'credit' },
   },
   {
     projectId: 'project-ya',
@@ -66,6 +133,42 @@ const bookings = [
     literalTypeLabel: 'Algemeen',
     literalCategoryLabel: 'Administratiekosten uit',
     transaction: { amountMinor: 100000n, direction: 'debit' },
+  },
+  {
+    projectId: 'project-ya',
+    transactionTypeId: 'type-algemeen',
+    categoryId: 'cat-kosten-uit',
+    literalProjectLabel: 'YA',
+    literalTypeLabel: 'Algemeen',
+    literalCategoryLabel: 'Administratiekosten uit',
+    transaction: { amountMinor: 50000n, direction: 'debit' },
+  },
+  {
+    projectId: 'project-ya',
+    transactionTypeId: 'type-algemeen',
+    categoryId: 'cat-kosten-uit',
+    literalProjectLabel: 'YA',
+    literalTypeLabel: 'Algemeen',
+    literalCategoryLabel: 'Administratiekosten uit',
+    transaction: { amountMinor: 0n, direction: 'debit' },
+  },
+  {
+    projectId: 'project-ya',
+    transactionTypeId: 'type-algemeen',
+    categoryId: 'cat-kosten-uit',
+    literalProjectLabel: 'YA',
+    literalTypeLabel: 'Algemeen',
+    literalCategoryLabel: 'Administratiekosten uit',
+    transaction: { amountMinor: 0n, direction: 'debit' },
+  },
+  {
+    projectId: 'project-ya',
+    transactionTypeId: 'type-algemeen',
+    categoryId: 'cat-kosten-uit',
+    literalProjectLabel: 'YA',
+    literalTypeLabel: 'Algemeen',
+    literalCategoryLabel: 'Administratiekosten uit',
+    transaction: { amountMinor: 0n, direction: 'debit' },
   },
 ];
 
@@ -97,7 +200,10 @@ const makeDb = (opts: {
     transactionBooking: {
       findMany: async (_args: any) => {
         calls.push('transactionBooking.findMany');
-        return opts.bookings ?? bookings;
+        if (opts.bookings) return opts.bookings;
+        return _args?.where?.transaction?.OR?.length > 1
+          ? [...bookings, ...febBookings]
+          : bookings;
       },
     },
     reportSnapshot: {
@@ -340,6 +446,30 @@ describe('yearly report snapshot', () => {
     expect(result.periodCloseIds).toHaveLength(2);
   });
 
+  it('chains yearly closes independently for each bank account', async () => {
+    const januaryAccountA = {
+      ...closedClose,
+      id: 'close-jan-account-a',
+      statementPeriod: { accountId: 'account-a' },
+    };
+    const februaryAccountB = {
+      ...closedFeb,
+      id: 'close-feb-account-b',
+      statementPeriod: { accountId: 'account-b' },
+      openingBalanceMinor: 2000000n,
+      closingBalanceMinor: 2150000n,
+    };
+    const db = makeDb({ findManyCloses: [januaryAccountA, februaryAccountB] });
+
+    await expect(generateYearlyReportSnapshot(db, {
+      actor: adminActor,
+      workspaceId: 'workspace-1',
+      year: 2026,
+    })).resolves.toMatchObject({
+      periodCloseIds: ['close-jan-account-a', 'close-feb-account-b'],
+    });
+  });
+
   it('opening + income - expenses = closing exactly', async () => {
     const db = makeDb({ findManyCloses: [closedClose, closedFeb] });
     const result = await generateYearlyReportSnapshot(db, {
@@ -440,6 +570,141 @@ describe('yearly report snapshot', () => {
     expect(result.sideEffects.createsReportApproval).toBe(false);
     expect(result.sideEffects.createsReportArtifact).toBe(false);
     expect(result.sideEffects.dispatchesReport).toBe(false);
+  });
+});
+
+// ─── REPORT-001b: Live monthly report snapshot ──────────────────────────────
+
+describe('live monthly report snapshot', () => {
+  const statement = {
+    id: 'statement-aug-2026',
+    accountId: 'account-1',
+    coverageStatus: 'COMPLETE',
+    openingBalanceMinor: 100000n,
+    incomeMinor: 5000n,
+    expenseMinor: 3000n,
+    netMinor: 2000n,
+    closingBalanceMinor: 102000n,
+    transactionCount: 2,
+  };
+  const transactions = [
+    { id: 'tx-income', amountMinor: 5000n, direction: 'credit', importFingerprint: 'fp-income' },
+    { id: 'tx-expense', amountMinor: -3000n, direction: 'debit', importFingerprint: 'fp-expense' },
+  ];
+  const liveBookings = [
+    {
+      transactionId: 'tx-income',
+      projectId: 'project-ya',
+      transactionTypeId: 'type-gift',
+      categoryId: 'category-income',
+      literalProjectLabel: 'YA',
+      literalTypeLabel: 'Schenking',
+      literalCategoryLabel: 'Giften in',
+      transaction: { amountMinor: 5000n, direction: 'credit' },
+    },
+    {
+      transactionId: 'tx-expense',
+      projectId: 'project-ya',
+      transactionTypeId: 'type-cost',
+      categoryId: 'category-expense',
+      literalProjectLabel: 'YA',
+      literalTypeLabel: 'Algemeen',
+      literalCategoryLabel: 'Administratiekosten uit',
+      transaction: { amountMinor: -3000n, direction: 'debit' },
+    },
+  ];
+
+  const makeLiveDb = (overrides: { statement?: typeof statement | null; transactions?: typeof transactions } = {}) => {
+    const db = {
+      bankStatement: {
+        findFirst: vi.fn().mockResolvedValue(overrides.statement === undefined ? statement : overrides.statement),
+      },
+      transaction: {
+        findMany: vi.fn().mockResolvedValue(overrides.transactions ?? transactions),
+      },
+      transactionBooking: {
+        findMany: vi.fn().mockResolvedValue(liveBookings),
+      },
+      reportSnapshot: {
+        findFirst: vi.fn().mockResolvedValue(null),
+        create: vi.fn().mockImplementation(async (args: any) => ({
+          id: 'live-snapshot-1',
+          snapshotHash: 'a'.repeat(64),
+          generatedAt: new Date('2026-09-01T10:00:00Z'),
+          ...args.data,
+        })),
+      },
+    } as any;
+    return db;
+  };
+
+  const reconciliation = {
+    bankStatementId: statement.id,
+    accountId: statement.accountId,
+    openingBalanceMinor: statement.openingBalanceMinor,
+    incomeMinor: statement.incomeMinor,
+    expenseMinor: statement.expenseMinor,
+    netMinor: statement.netMinor,
+    closingBalanceMinor: statement.closingBalanceMinor,
+    transactionCount: statement.transactionCount,
+  };
+
+  it('uses complete bank evidence, isolates the statement account, and preserves exact live totals', async () => {
+    const db = makeLiveDb();
+    const result = await generateLiveMonthlyReportSnapshot(db, {
+      actor: adminActor,
+      workspaceId: 'workspace-1',
+      year: 2026,
+      month: 8,
+      reconciliation,
+    });
+
+    expect(db.transaction.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ accountId: 'account-1' }),
+    }));
+    expect(result.openingBalanceMinor).toBe('100000');
+    expect(result.incomeMinor).toBe('5000');
+    expect(result.expenseMinor).toBe('3000');
+    expect(result.netMinor).toBe('2000');
+    expect(result.closingBalanceMinor).toBe('102000');
+    expect(result.transactionCount).toBe(2);
+    expect(result.lines.find((line) => line.direction === 'debit')?.amountMinor).toBe(3000n);
+    expect(db.reportSnapshot.create.mock.calls[0][0].data.periodCloseLinks).toBeUndefined();
+  });
+
+  it('rejects reconciliation totals that do not match the authoritative statement and ledger', async () => {
+    const db = makeLiveDb();
+
+    await expect(generateLiveMonthlyReportSnapshot(db, {
+      actor: adminActor,
+      workspaceId: 'workspace-1',
+      year: 2026,
+      month: 8,
+      reconciliation: { ...reconciliation, incomeMinor: 5001n },
+    })).rejects.toThrow(/gereconcilieerde bankgegevens/);
+    expect(db.reportSnapshot.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects missing evidence and duplicate import fingerprints', async () => {
+    await expect(generateLiveMonthlyReportSnapshot(makeLiveDb({ statement: null }), {
+      actor: adminActor,
+      workspaceId: 'workspace-1',
+      year: 2026,
+      month: 8,
+      reconciliation,
+    })).rejects.toThrow(/Geen bankafschrift/);
+
+    const duplicateTransactions = [
+      transactions[0],
+      { ...transactions[1], importFingerprint: 'fp-income' },
+    ];
+    await expect(generateLiveMonthlyReportSnapshot(makeLiveDb({ transactions: duplicateTransactions }), {
+      actor: adminActor,
+      workspaceId: 'workspace-1',
+      year: 2026,
+      month: 8,
+      reconciliation,
+    })).rejects.toThrow(/dubbele importvingerafdrukken/);
   });
 });
 
