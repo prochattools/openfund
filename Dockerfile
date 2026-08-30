@@ -17,8 +17,8 @@ RUN npm ci --ignore-scripts || npm install --ignore-scripts
 COPY . .
 
 # Compile the client with the same auth mode used by production runtime.
-# Clerk stays available as an optional public client key, but Finance is owner-configured with auth disabled.
-ARG NEXT_PUBLIC_AUTH_PROVIDER=disabled
+# Finance production authentication is Clerk-only; the secret remains runtime-only.
+ARG NEXT_PUBLIC_AUTH_PROVIDER=clerk
 ENV NEXT_PUBLIC_AUTH_PROVIDER=$NEXT_PUBLIC_AUTH_PROVIDER
 ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY

@@ -4,18 +4,18 @@ import { describe, expect, it } from 'vitest';
 const read = (path: string) => readFileSync(path, 'utf8');
 
 describe('Clerk deployment configuration', () => {
-  it('builds the client in disabled-auth mode without embedding Clerk secrets', () => {
+  it('builds the client in Clerk mode without embedding Clerk secrets', () => {
     const workflow = read('.github/workflows/dokploy.yml');
 
-    expect(workflow).toContain('NEXT_PUBLIC_AUTH_PROVIDER=disabled');
+    expect(workflow).toContain('NEXT_PUBLIC_AUTH_PROVIDER=clerk');
     expect(workflow).toContain('NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}');
     expect(workflow).not.toContain('CLERK_SECRET_KEY=${{ secrets');
   });
 
-  it('passes the disabled auth provider and only the publishable Clerk key into the Dockerfile', () => {
+  it('passes the Clerk auth provider and only the publishable Clerk key into the Dockerfile', () => {
     const dockerfile = read('Dockerfile');
 
-    expect(dockerfile).toContain('ARG NEXT_PUBLIC_AUTH_PROVIDER=disabled');
+    expect(dockerfile).toContain('ARG NEXT_PUBLIC_AUTH_PROVIDER=clerk');
     expect(dockerfile).toContain('ENV NEXT_PUBLIC_AUTH_PROVIDER=$NEXT_PUBLIC_AUTH_PROVIDER');
     expect(dockerfile).toContain('ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY');
     expect(dockerfile).toContain('ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY');
@@ -23,10 +23,10 @@ describe('Clerk deployment configuration', () => {
     expect(dockerfile).not.toContain('ENV CLERK_SECRET_KEY=');
   });
 
-  it('keeps Dokploy on the latest image while verifying the exact commit SHA', () => {
+  it('keeps Dokploy on the immutable release image while verifying the exact commit SHA', () => {
     const workflow = read('.github/workflows/dokploy.yml');
 
-    expect(workflow).toContain('DOKPLOY_EXPECTED_IMAGE: ghcr.io/${{ github.repository }}:latest');
+    expect(workflow).toContain('DOKPLOY_EXPECTED_IMAGE: ghcr.io/${{ github.repository }}:${{ github.sha }}');
     expect(workflow).toContain('EXPECTED_BUILD_SHA: ${{ github.sha }}');
   });
 
