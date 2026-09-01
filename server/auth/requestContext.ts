@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { createClerkClient } from '@clerk/backend';
 import { prisma } from '../prismaClient';
 import { AUTH_PROVIDER, isValidWorkspaceId } from '../../src/utils/auth';
+import { canUseProductionAuthBypass } from '../../src/utils/production-auth-bypass';
 import { verifyClerkSession } from '../../src/utils/session-auth';
 
 export type AppRole = 'admin' | 'viewer';
@@ -72,9 +73,7 @@ const resolveConfiguredLocalActor = async (): Promise<AuthResolution> => {
     return unauthenticated();
   }
 
-  const explicitProductionBypass =
-    process.env.NODE_ENV === 'production' &&
-    process.env.ALLOW_PRODUCTION_AUTH_BYPASS === 'true';
+  const explicitProductionBypass = canUseProductionAuthBypass();
 
   if (process.env.NODE_ENV === 'production' && !explicitProductionBypass) {
     return unauthenticated();

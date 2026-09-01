@@ -5,6 +5,7 @@ import {
   isValidSecretKey,
   isValidWorkspaceId,
 } from '@/utils/auth';
+import { isProductionAuthBypassEnabled } from '@/utils/production-auth-bypass';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -17,7 +18,7 @@ export async function GET() {
     nodeEnv: process.env.NODE_ENV ?? null,
     hasDatabaseUrl: Boolean(process.env.DATABASE_URL),
     authProvider: AUTH_PROVIDER,
-    productionAuthBypassEnabled: process.env.ALLOW_PRODUCTION_AUTH_BYPASS === 'true',
+    productionAuthBypassEnabled: isProductionAuthBypassEnabled(),
     productionAuthBypassConfigured: Boolean(process.env.DEFAULT_USER_ID?.trim() && process.env.DEFAULT_WORKSPACE_ID?.trim()),
     clerkPublishableKeyConfigured: isValidPublishableKey(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY),
     clerkSecretConfigured: isValidSecretKey(process.env.CLERK_SECRET_KEY),

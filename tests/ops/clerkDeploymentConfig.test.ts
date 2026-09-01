@@ -37,6 +37,7 @@ describe('Clerk deployment configuration', () => {
     expect(route).toContain('clerkPublishableKeyConfigured');
     expect(route).toContain('clerkSecretConfigured');
     expect(route).toContain('workspaceConfigured');
+    expect(route).toContain('productionAuthBypassEnabled: isProductionAuthBypassEnabled()');
     expect(route).not.toContain('process.env.CLERK_SECRET_KEY ?? null');
     expect(route).not.toContain('process.env.DEFAULT_WORKSPACE_ID ?? null');
   });

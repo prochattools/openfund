@@ -55,6 +55,21 @@ describe('production route authentication middleware', () => {
     });
   });
 
+  it('does not honor the bypass flag in production Clerk mode', async () => {
+    await withEnv({
+      NODE_ENV: 'production',
+      AUTH_PROVIDER: 'clerk',
+      NEXT_PUBLIC_AUTH_PROVIDER: 'clerk',
+      ALLOW_PRODUCTION_AUTH_BYPASS: 'true',
+      DEFAULT_USER_ID: 'configured-admin',
+      DEFAULT_WORKSPACE_ID: '123e4567-e89b-42d3-a456-426614174000',
+    }, async () => {
+      const response = await middleware(new NextRequest('http://localhost/api/review'));
+      expect(response.status).toBe(401);
+      await expect(response.json()).resolves.toEqual({ error: 'Authenticatie vereist.' });
+    });
+  });
+
   it('redirects unauthenticated review pages to the sign-in route', async () => {
     await withProductionEnv(async () => {
       const response = await middleware(new NextRequest('http://localhost/review'));
