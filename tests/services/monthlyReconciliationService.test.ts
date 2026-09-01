@@ -234,4 +234,58 @@ describe('monthlyReconciliationService', () => {
     expect(result.status).toBe('UNBALANCED');
     expect(result.closeEligible).toBe(false);
   });
+
+  it('reconstructs ING same-day order from resulting balances instead of transaction IDs', () => {
+    const result = buildMonthlyReconciliation({
+      workspaceId: 'workspace-1',
+      accountId: 'account-1',
+      year: 2026,
+      month: 8,
+      importedTransactions: [
+        {
+          transactionId: 'z-bank-last',
+          date: '2026-08-01T00:00:00.000Z',
+          amountMinor: 600n,
+          direction: 'credit',
+          resultingBalanceMinor: 101000n,
+          importFingerprint: 'same-day-3',
+          projectId: 'project-1',
+          transactionTypeId: 'type-1',
+          categoryId: 'cat-1',
+        },
+        {
+          transactionId: 'm-bank-middle',
+          date: '2026-08-01T00:00:00.000Z',
+          amountMinor: -100n,
+          direction: 'debit',
+          resultingBalanceMinor: 100400n,
+          importFingerprint: 'same-day-2',
+          projectId: 'project-1',
+          transactionTypeId: 'type-1',
+          categoryId: 'cat-1',
+        },
+        {
+          transactionId: 'a-bank-first',
+          date: '2026-08-01T00:00:00.000Z',
+          amountMinor: 500n,
+          direction: 'credit',
+          resultingBalanceMinor: 100500n,
+          importFingerprint: 'same-day-1',
+          projectId: 'project-1',
+          transactionTypeId: 'type-1',
+          categoryId: 'cat-1',
+        },
+      ],
+      statementEvidence: {
+        coverageStatus: StatementCoverageStatus.COMPLETE,
+        openingBalanceMinor: 100000n,
+        closingBalanceMinor: 101000n,
+        transactionCount: 3,
+      },
+    });
+
+    expect(result.runningBalanceErrorCount).toBe(0);
+    expect(result.status).toBe('BALANCED');
+    expect(result.closeEligible).toBe(true);
+  });
 });

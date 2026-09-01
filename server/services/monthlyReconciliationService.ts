@@ -185,6 +185,84 @@ const txSort = (left: MonthlyReconciliationTransactionInput, right: MonthlyRecon
   return left.transactionId.localeCompare(right.transactionId, 'en');
 };
 
+const transactionDelta = (transaction: MonthlyReconciliationTransactionInput): bigint => {
+  const amountMinor = toMinor(transaction.amountMinor);
+  const absoluteAmount = amountMinor < 0n ? -amountMinor : amountMinor;
+  return transaction.direction === 'credit' ? absoluteAmount : -absoluteAmount;
+};
+
+const transactionRunningBalance = (
+  transaction: MonthlyReconciliationTransactionInput,
+): bigint | null => (
+  transaction.resultingBalanceMinor == null
+    ? extractRunningBalanceMinor(transaction.rawRow)
+    : toMinor(transaction.resultingBalanceMinor)
+);
+
+/**
+ * ING exports can contain several transactions on one calendar date. Their
+ * resulting balances preserve the bank's order, while database IDs do not.
+ * Reconstruct that order from the known opening balance and each row's
+ * resulting balance before running the authoritative continuity checks.
+ */
+const orderTransactionsForReconciliation = (
+  input: MonthlyReconciliationTransactionInput[],
+  openingBalanceMinor: BigIntLike | null | undefined,
+): MonthlyReconciliationTransactionInput[] => {
+  const fallback = [...input].sort(txSort);
+  if (openingBalanceMinor == null) return fallback;
+  if (fallback.some((transaction) => !Number.isFinite(toDate(transaction.date).getTime()))) {
+    return fallback;
+  }
+
+  const groups = new Map<string, MonthlyReconciliationTransactionInput[]>();
+  for (const transaction of fallback) {
+    const dateKey = toDate(transaction.date).toISOString().slice(0, 10);
+    const group = groups.get(dateKey) ?? [];
+    group.push(transaction);
+    groups.set(dateKey, group);
+  }
+
+  const ordered: MonthlyReconciliationTransactionInput[] = [];
+  let previousBalance = toMinor(openingBalanceMinor);
+
+  for (const dateKey of [...groups.keys()].sort()) {
+    const group = [...groups.get(dateKey)!].sort(txSort);
+    const pending = [...group];
+    const bankOrder: MonthlyReconciliationTransactionInput[] = [];
+    let canReconstruct = group.every((transaction) => transactionRunningBalance(transaction) != null);
+
+    while (canReconstruct && pending.length > 0) {
+      const candidates = pending.filter((transaction) => {
+        const actualBalance = transactionRunningBalance(transaction);
+        return actualBalance != null && actualBalance === previousBalance + transactionDelta(transaction);
+      });
+
+      if (candidates.length === 0) {
+        canReconstruct = false;
+        break;
+      }
+
+      const next = candidates.sort(txSort)[0]!;
+      bankOrder.push(next);
+      pending.splice(pending.indexOf(next), 1);
+      previousBalance = transactionRunningBalance(next)!;
+    }
+
+    if (canReconstruct) {
+      ordered.push(...bankOrder);
+      continue;
+    }
+
+    // If a source group is incomplete or inconsistent, retain deterministic
+    // ordering so the normal validator reports the failure rather than
+    // silently accepting an unverified bank sequence.
+    ordered.push(...group);
+  }
+
+  return ordered;
+};
+
 const isBooked = (transaction: MonthlyReconciliationTransactionInput): boolean =>
   Boolean(
     transaction.projectId &&
@@ -308,7 +386,10 @@ export const buildMonthlyReconciliation = (
   }
 
   const validatorVersion = input.validatorVersion ?? DEFAULT_VALIDATOR_VERSION;
-  const transactions = [...input.importedTransactions].sort(txSort);
+  const transactions = orderTransactionsForReconciliation(
+    input.importedTransactions,
+    input.statementEvidence.openingBalanceMinor,
+  );
   const reasons: string[] = [];
 
   const sourceFileHashes = Array.from(
